@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { IconBrandGithub, IconBrandX, IconInfoCircle, IconMoon, IconSun } from '@tabler/icons-vue';
 import { useStyleStore } from '@/stores/style.store';
+import { config } from '@/config';
 
 const styleStore = useStyleStore();
 const { isDarkTheme } = toRefs(styleStore);
+const repositoryUrl = config.app.repositoryUrl;
 </script>
 
 <template>
@@ -11,7 +13,7 @@ const { isDarkTheme } = toRefs(styleStore);
     <c-button
       circle
       variant="text"
-      href="https://github.com/CorentinTh/it-tools"
+      :href="`${repositoryUrl}`"
       target="_blank"
       rel="noopener noreferrer"
       :aria-label="$t('home.nav.githubRepository')"
