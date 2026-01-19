@@ -38,8 +38,7 @@ about:
   content: >
     # Über IT-Tools
 
-    Diese wunderbare Website, erstellt mit ❤ von [Corentin
-    Thomasset](https://corentin.tech?utm_source=it-tools&utm_medium=about), sammelt nützliche Tools für
+    Diese wunderbare Website, erstellt mit ❤ von { authorUrl }, sammelt nützliche Tools für
     Entwickler und Menschen, die in der IT arbeiten. Wenn du sie nützlich
     findest, teile sie gerne mit Personen, von denen du denkst, dass sie sie
     ebenfalls nützlich finden könnten, und vergiss nicht, sie in deiner
@@ -49,7 +48,7 @@ about:
     immer sein, aber es kostet mich Geld, die Website zu hosten und den
     Domainnamen zu erneuern. Wenn du meine Arbeit unterstützen möchtest und mich
     ermutigen möchtest, mehr Tools hinzuzufügen, überlege bitte, mich durch
-    [Sponsoring](https://www.buymeacoffee.com/cthmsst) zu unterstützen.
+    [Sponsoring]({ sponsoringUrl }) zu unterstützen.
 
     ## Technologien
 
@@ -57,7 +56,7 @@ about:
     erstellt und wird von Vercel gehostet und kontinuierlich bereitgestellt. In
     einigen Tools werden Drittanbieter-Open-Source-Bibliotheken verwendet. Du
     findest die vollständige Liste in der
-    [package.json](https://github.com/CorentinTh/it-tools/blob/main/package.json)-Datei
+    [package.json]({ repositoryUrl }/blob/main/package.json)-Datei
     des Repositorys.
 
     ## Einen Fehler gefunden? Ein Tool fehlt?
@@ -65,12 +64,12 @@ about:
     Wenn du ein Tool benötigst, das hier noch nicht vorhanden ist, und du
     denkst, dass es nützlich sein könnte, bist du herzlich eingeladen, einen
     Feature-Request im
-    [Issues-Bereich](https://github.com/CorentinTh/it-tools/issues/new/choose)
+    [Issues-Bereich]({ repositoryUrl }/issues/new/choose)
     im GitHub-Repository einzureichen.
 
     Und wenn du einen Fehler gefunden hast oder etwas nicht wie erwartet
     funktioniert, melde bitte einen Fehler im
-    [Issues-Bereich](https://github.com/CorentinTh/it-tools/issues/new/choose)
+    [Issues-Bereich]({ repositoryUrl }/issues/new/choose)
     im GitHub-Repository.
 favoriteButton:
   remove: Aus Favoriten entfernen
