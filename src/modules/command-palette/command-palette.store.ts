@@ -10,14 +10,16 @@ import GithubIcon from '~icons/mdi/github';
 import BugIcon from '~icons/mdi/bug-outline';
 import DiceIcon from '~icons/mdi/dice-5';
 import InfoIcon from '~icons/mdi/information-outline';
+import { config } from '@/config';
 
 export const useCommandPaletteStore = defineStore('command-palette', () => {
   const toolStore = useToolStore();
   const styleStore = useStyleStore();
   const router = useRouter();
   const searchPrompt = ref('');
+  const repositoryUrl = config.app.repositoryUrl;
 
-  const toolsOptions = toolStore.tools.map(tool => ({
+  const toolsOptions = toolStore.tools.map((tool) => ({
     ...tool,
     to: tool.path,
     toolCategory: tool.category,
@@ -48,7 +50,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
     },
     {
       name: 'Github repository',
-      href: 'https://github.com/CorentinTh/it-tools',
+      href: `${repositoryUrl}`,
       category: 'External',
       description: 'View the source code of it-tools on Github.',
       keywords: ['github', 'repo', 'repository', 'source', 'code'],
@@ -57,7 +59,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
     {
       name: 'Report a bug or an issue',
       description: 'Report a bug or an issue to help improve it-tools.',
-      href: 'https://github.com/CorentinTh/it-tools/issues/new/choose',
+      href: `${repositoryUrl}/issues/new/choose`,
       category: 'Actions',
       keywords: ['report', 'issue', 'bug', 'problem', 'error'],
       icon: BugIcon,
@@ -82,7 +84,11 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
   });
 
   const filteredSearchResult = computed(() =>
-    _.chain(searchResult.value).groupBy('category').mapValues(categoryOptions => _.take(categoryOptions, 5)).value());
+    _.chain(searchResult.value)
+      .groupBy('category')
+      .mapValues((categoryOptions) => _.take(categoryOptions, 5))
+      .value(),
+  );
 
   return {
     filteredSearchResult,

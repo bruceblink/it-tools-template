@@ -14,6 +14,7 @@ useHead({ title: 'IT Tools - Handy online tools for developers' });
 const { t } = useI18n();
 
 const favoriteTools = computed(() => toolStore.favoriteTools);
+const repositoryUrl = config.app.repositoryUrl;
 
 // Update favorite tools order when drag is finished
 function onUpdateFavoriteTools() {
@@ -27,19 +28,9 @@ function onUpdateFavoriteTools() {
       <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
         <ColoredCard v-if="config.showBanner" :title="$t('home.follow.title')" :icon="IconHeart">
           {{ $t('home.follow.p1') }}
-          <a
-            href="https://github.com/CorentinTh/it-tools"
-            rel="noopener"
-            target="_blank"
-            :aria-label="$t('home.follow.githubRepository')"
-          >GitHub</a>
-          {{ $t('home.follow.p2') }}
-          <a
-            href="https://x.com/ittoolsdottech"
-            rel="noopener"
-            target="_blank"
-            :aria-label="$t('home.follow.twitterXAccount')"
-          >X</a>.
+          <a :href="`${repositoryUrl}`" rel="noopener" target="_blank" :aria-label="$t('home.follow.githubRepository')"
+            >GitHub</a
+          >.
           {{ $t('home.follow.thankYou') }}
           <n-icon :component="IconHeart" />
         </ColoredCard>
@@ -118,7 +109,7 @@ function onUpdateFavoriteTools() {
   }
   100% {
     opacity: 0.4;
-    transform: scale(1.0);
+    transform: scale(1);
   }
 }
 </style>
