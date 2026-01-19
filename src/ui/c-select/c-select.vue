@@ -9,11 +9,11 @@ import { useFuzzySearch } from '@/composable/fuzzySearch';
 const props = withDefaults(
   defineProps<
     {
-      options?: CSelectOption<T>[] | string[];
-      value?: T;
-      placeholder?: string;
-      size?: 'small' | 'medium' | 'large';
-      searchable?: boolean;
+      options?: CSelectOption<T>[] | string[]
+      value?: T
+      placeholder?: string
+      size?: 'small' | 'medium' | 'large'
+      searchable?: boolean
     } & CLabelProps
   >(),
   {
@@ -118,7 +118,8 @@ function handleKeydown(event: KeyboardEvent) {
 
     if (valueCanBeSelected) {
       selectOption({ option: filteredOptions.value[focusIndex.value] });
-    } else {
+    }
+    else {
       toggleOpen();
     }
 
@@ -171,7 +172,7 @@ function onSearchInput() {
               color-current
               lh-normal
               @input="onSearchInput"
-            />
+            >
             <span v-else-if="selectedOption" lh-normal>
               {{ selectedOption.label }}
             </span>
@@ -198,7 +199,9 @@ function onSearchInput() {
         >
           <template v-if="!filteredOptions.length">
             <slot name="empty">
-              <div px-4 py-1 opacity-70>No results found</div>
+              <div px-4 py-1 opacity-70>
+                No results found
+              </div>
             </slot>
           </template>
           <template v-else>

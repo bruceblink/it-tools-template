@@ -68,7 +68,7 @@ function getOptionIndex(option: PaletteOption) {
   return _.chain(filteredSearchResult.value)
     .values()
     .flatten()
-    .findIndex((o) => o === option)
+    .findIndex(o => o === option)
     .value();
 }
 

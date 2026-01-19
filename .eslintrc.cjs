@@ -6,7 +6,7 @@ module.exports = {
   extends: ['@antfu', './.eslintrc-auto-import.json', '@unocss'],
   ignorePatterns: ['src/libs/*', 'scripts/*'],
   rules: {
-    curly: ['error', 'all'],
+    'curly': ['error', 'all'],
     '@typescript-eslint/semi': ['error', 'always'],
     '@typescript-eslint/no-use-before-define': ['error', { allowNamedExports: true, functions: false }],
     'vue/no-empty-component-block': ['error'],

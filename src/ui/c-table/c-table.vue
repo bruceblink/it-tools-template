@@ -4,10 +4,10 @@ import type { HeaderConfiguration } from './c-table.types';
 
 const props = withDefaults(
   defineProps<{
-    data?: Record<string, unknown>[];
-    headers?: HeaderConfiguration;
-    hideHeaders?: boolean;
-    description?: string;
+    data?: Record<string, unknown>[]
+    headers?: HeaderConfiguration
+    hideHeaders?: boolean
+    description?: string
   }>(),
   { data: () => [], headers: undefined, hideHeaders: false, description: 'Data table' },
 );
@@ -37,10 +37,10 @@ const headers = computed(() => {
   }
 
   return _.chain(data.value)
-    .map((row) => Object.keys(row))
+    .map(row => Object.keys(row))
     .flatten()
     .uniq()
-    .map((key) => ({ key, label: key }))
+    .map(key => ({ key, label: key }))
     .value();
 });
 </script>
