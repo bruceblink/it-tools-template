@@ -43,7 +43,9 @@ const tools = computed<ToolCategory[]>(() => [
       <RouterLink to="/" class="hero-wrapper">
         <HeroGradient class="gradient" />
         <div class="text-wrapper">
-          <div class="title">IT - TOOLS</div>
+          <div class="title">
+            IT - TOOLS
+          </div>
           <div class="divider" />
           <div class="subtitle">
             {{ $t('home.subtitle') }}
@@ -66,7 +68,9 @@ const tools = computed<ToolCategory[]>(() => [
           <div>
             IT-Tools
 
-            <c-link target="_blank" rel="noopener" :href="`${repositoryUrl}/tree/v${version}`"> v{{ version }} </c-link>
+            <c-link target="_blank" rel="noopener" :href="`${repositoryUrl}/tree/v${version}`">
+              v{{ version }}
+            </c-link>
 
             <template v-if="commitSha && commitSha.length > 0">
               -
@@ -77,7 +81,9 @@ const tools = computed<ToolCategory[]>(() => [
           </div>
           <div>
             © {{ new Date().getFullYear() }}
-            <c-link target="_blank" rel="noopener" :href="`${authorUrl}`"> likanug </c-link>
+            <c-link target="_blank" rel="noopener" :href="`${authorUrl}`">
+              likanug
+            </c-link>
           </div>
         </div>
       </div>

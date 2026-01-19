@@ -19,7 +19,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
   const searchPrompt = ref('');
   const repositoryUrl = config.app.repositoryUrl;
 
-  const toolsOptions = toolStore.tools.map((tool) => ({
+  const toolsOptions = toolStore.tools.map(tool => ({
     ...tool,
     to: tool.path,
     toolCategory: tool.category,
@@ -86,7 +86,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
   const filteredSearchResult = computed(() =>
     _.chain(searchResult.value)
       .groupBy('category')
-      .mapValues((categoryOptions) => _.take(categoryOptions, 5))
+      .mapValues(categoryOptions => _.take(categoryOptions, 5))
       .value(),
   );
 

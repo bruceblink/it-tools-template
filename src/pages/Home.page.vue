@@ -28,9 +28,7 @@ function onUpdateFavoriteTools() {
       <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
         <ColoredCard v-if="config.showBanner" :title="$t('home.follow.title')" :icon="IconHeart">
           {{ $t('home.follow.p1') }}
-          <a :href="`${repositoryUrl}`" rel="noopener" target="_blank" :aria-label="$t('home.follow.githubRepository')"
-            >GitHub</a
-          >.
+          <a :href="`${repositoryUrl}`" rel="noopener" target="_blank" :aria-label="$t('home.follow.githubRepository')">GitHub</a>.
           {{ $t('home.follow.thankYou') }}
           <n-icon :component="IconHeart" />
         </ColoredCard>
