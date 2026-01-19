@@ -106,6 +106,9 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(pkg.version),
+    'import.meta.env.AUTHOR_URL': JSON.stringify(pkg.authorUrl),
+    'import.meta.env.SPONSORING_URL': JSON.stringify(pkg.sponsoringUrl),
+    'import.meta.env.REPOSITORY_URL': JSON.stringify(pkg.repository.url),
   },
   test: {
     exclude: [...configDefaults.exclude, '**/*.e2e.spec.ts'],

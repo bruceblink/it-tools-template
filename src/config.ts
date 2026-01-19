@@ -8,6 +8,24 @@ export const config = figue({
       default: '0.0.0',
       env: 'PACKAGE_VERSION',
     },
+    authorUrl: {
+      doc: 'Application author url',
+      format: 'string',
+      default: 'https://likanug.top',
+      env: 'AUTHOR_URL',
+    },
+    sponsoringUrl: {
+      doc: 'Application sponsoring url',
+      format: 'string',
+      default: 'https://buymeacoffee.com/bruceblink',
+      env: 'SPONSORING_URL',
+    },
+    repositoryUrl: {
+      doc: 'Application repository url',
+      format: 'string',
+      default: 'https://github.com/bruceblink/it-tools',
+      env: 'REPOSITORY_URL',
+    },
     lastCommitSha: {
       doc: 'Application last commit SHA version',
       format: 'string',
@@ -70,6 +88,9 @@ export const config = figue({
     ...import.meta.env,
     // Because the string 'import.meta.env.PACKAGE_VERSION' is statically replaced during build time (see 'define' in vite.config.ts)
     PACKAGE_VERSION: import.meta.env.PACKAGE_VERSION,
+    AUTHOR_URL: import.meta.env.AUTHOR_URL,
+    SPONSORING_URL: import.meta.env.SPONSORING_URL,
+    REPOSITORY_URL: import.meta.env.REPOSITORY_URL,
   })
   .validate()
   .getConfig();
