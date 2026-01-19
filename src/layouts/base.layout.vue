@@ -18,6 +18,9 @@ import CollapsibleToolMenu from '@/components/CollapsibleToolMenu.vue';
 const themeVars = useThemeVars();
 const styleStore = useStyleStore();
 const version = config.app.version;
+const authorUrl = config.app.authorUrl;
+const sponsoringUrl = config.app.sponsoringUrl;
+const repositoryUrl = config.app.repositoryUrl;
 const commitSha = config.app.lastCommitSha.slice(0, 7);
 
 const { tracker } = useTracker();
@@ -27,7 +30,9 @@ const toolStore = useToolStore();
 const { favoriteTools, toolsByCategory } = storeToRefs(toolStore);
 
 const tools = computed<ToolCategory[]>(() => [
-  ...(favoriteTools.value.length > 0 ? [{ name: t('tools.categories.favorite-tools'), components: favoriteTools.value }] : []),
+  ...(favoriteTools.value.length > 0
+    ? [{ name: t('tools.categories.favorite-tools'), components: favoriteTools.value }]
+    : []),
   ...toolsByCategory.value,
 ]);
 </script>
@@ -38,9 +43,7 @@ const tools = computed<ToolCategory[]>(() => [
       <RouterLink to="/" class="hero-wrapper">
         <HeroGradient class="gradient" />
         <div class="text-wrapper">
-          <div class="title">
-            IT - TOOLS
-          </div>
+          <div class="title">IT - TOOLS</div>
           <div class="divider" />
           <div class="subtitle">
             {{ $t('home.subtitle') }}
@@ -63,27 +66,18 @@ const tools = computed<ToolCategory[]>(() => [
           <div>
             IT-Tools
 
-            <c-link target="_blank" rel="noopener" :href="`https://github.com/CorentinTh/it-tools/tree/v${version}`">
-              v{{ version }}
-            </c-link>
+            <c-link target="_blank" rel="noopener" :href="`${repositoryUrl}/tree/v${version}`"> v{{ version }} </c-link>
 
             <template v-if="commitSha && commitSha.length > 0">
               -
-              <c-link
-                target="_blank"
-                rel="noopener"
-                type="primary"
-                :href="`https://github.com/CorentinTh/it-tools/tree/${commitSha}`"
-              >
+              <c-link target="_blank" rel="noopener" type="primary" :href="`${repositoryUrl}/tree/${commitSha}`">
                 {{ commitSha }}
               </c-link>
             </template>
           </div>
           <div>
             © {{ new Date().getFullYear() }}
-            <c-link target="_blank" rel="noopener" href="https://corentin.tech?utm_source=it-tools&utm_medium=footer">
-              Corentin Thomasset
-            </c-link>
+            <c-link target="_blank" rel="noopener" :href="`${authorUrl}`"> likanug </c-link>
           </div>
         </div>
       </div>
@@ -107,7 +101,13 @@ const tools = computed<ToolCategory[]>(() => [
         </c-tooltip>
 
         <c-tooltip :tooltip="$t('home.uiLib')" position="bottom">
-          <c-button v-if="config.app.env === 'development'" to="/c-lib" circle variant="text" :aria-label="$t('home.uiLib')">
+          <c-button
+            v-if="config.app.env === 'development'"
+            to="/c-lib"
+            circle
+            variant="text"
+            :aria-label="$t('home.uiLib')"
+          >
             <icon-mdi:brush-variant text-20px />
           </c-button>
         </c-tooltip>
@@ -123,7 +123,7 @@ const tools = computed<ToolCategory[]>(() => [
         <c-tooltip position="bottom" :tooltip="$t('home.support')">
           <c-button
             round
-            href="https://www.buymeacoffee.com/cthmsst"
+            :href="`${sponsoringUrl}`"
             rel="noopener"
             target="_blank"
             class="support-button"
