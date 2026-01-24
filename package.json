@@ -2,7 +2,7 @@
   "name": "it-tools",
   "type": "module",
   "version": "2026.01.19-dcdbb846",
-  "packageManager": "pnpm@9.11.0",
+  "packageManager": "pnpm@10.28.1",
   "description": "Collection of handy online tools for developers, with great UX. ",
   "author": "[likanug <likanug.g@qq.com>](https://likanug.top)",
   "authorUrl": "https://likanug.top",
