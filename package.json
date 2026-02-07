@@ -1,7 +1,7 @@
 {
   "name": "it-tools",
   "type": "module",
-  "version": "2026.01.19-dcdbb846",
+  "version": "2026.02.07-f49e1384",
   "engines": {
     "node": ">=22",
     "npm": "please-use-pnpm"
