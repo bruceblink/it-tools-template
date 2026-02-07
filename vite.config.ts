@@ -25,7 +25,6 @@ export default defineConfig({
   plugins: [
     VueI18n({
       runtimeOnly: true,
-      jitCompilation: true,
       compositionOnly: true,
       fullInstall: true,
       strictMessage: false,
