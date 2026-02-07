@@ -102,7 +102,7 @@
     "unplugin-auto-import": "^21.0.0",
     "uuid": "^13.0.0",
     "valibot": "^1.2.0",
-    "vite-plugin-vue-markdown": "^0.23.8",
+    "unplugin-vue-markdown": "^29.2.0",
     "vue": "^3.5.27",
     "vue-i18n": "^11.2.8",
     "vue-router": "^4.6.4",
