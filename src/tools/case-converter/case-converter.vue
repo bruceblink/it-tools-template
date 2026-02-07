@@ -1,22 +1,38 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue';
 import {
   camelCase,
   capitalCase,
   constantCase,
   dotCase,
-  headerCase,
   noCase,
-  paramCase,
+  kebabCase,
   pascalCase,
   pathCase,
   sentenceCase,
   snakeCase,
 } from 'change-case';
-import InputCopyable from '../../components/InputCopyable.vue';
+import InputCopyable from '@/components/InputCopyable.vue';
 
 const baseConfig = {
   stripRegexp: /[^A-Za-zÀ-ÖØ-öø-ÿ]+/gi,
 };
+
+/**
+ * change-case@5 已移除 headerCase
+ * 这里本地实现一个等价、稳定的 Header-Case
+ */
+function headerCase(input: string, config?: { stripRegexp?: RegExp }) {
+  const stripped = config?.stripRegexp
+    ? input.replace(config.stripRegexp, ' ')
+    : input;
+
+  return stripped
+    .trim()
+    .split(/\s+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('-');
+}
 
 const input = ref('lorem ipsum dolor sit amet');
 
@@ -31,19 +47,19 @@ const formats = computed(() => [
   },
   {
     label: 'Camelcase:',
-    value: camelCase(input.value, baseConfig),
+    value: camelCase(input.value),
   },
   {
     label: 'Capitalcase:',
-    value: capitalCase(input.value, baseConfig),
+    value: capitalCase(input.value),
   },
   {
     label: 'Constantcase:',
-    value: constantCase(input.value, baseConfig),
+    value: constantCase(input.value),
   },
   {
     label: 'Dotcase:',
-    value: dotCase(input.value, baseConfig),
+    value: dotCase(input.value),
   },
   {
     label: 'Headercase:',
@@ -51,33 +67,35 @@ const formats = computed(() => [
   },
   {
     label: 'Nocase:',
-    value: noCase(input.value, baseConfig),
+    value: noCase(input.value),
   },
   {
     label: 'Paramcase:',
-    value: paramCase(input.value, baseConfig),
+    value: kebabCase(input.value),
   },
   {
     label: 'Pascalcase:',
-    value: pascalCase(input.value, baseConfig),
+    value: pascalCase(input.value),
   },
   {
     label: 'Pathcase:',
-    value: pathCase(input.value, baseConfig),
+    value: pathCase(input.value),
   },
   {
     label: 'Sentencecase:',
-    value: sentenceCase(input.value, baseConfig),
+    value: sentenceCase(input.value),
   },
   {
     label: 'Snakecase:',
-    value: snakeCase(input.value, baseConfig),
+    value: snakeCase(input.value),
   },
   {
     label: 'Mockingcase:',
     value: input.value
       .split('')
-      .map((char, index) => (index % 2 === 0 ? char.toUpperCase() : char.toLowerCase()))
+      .map((char, index) =>
+        index % 2 === 0 ? char.toUpperCase() : char.toLowerCase(),
+      )
       .join(''),
   },
 ]);
