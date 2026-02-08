@@ -41,7 +41,6 @@ Self host solutions for your homelab
 
 - [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur)
 - [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
-- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
 - [i18n Ally](https://marketplace.visualstudio.com/items?itemName=lokalise.i18n-ally)
 
 with the following settings:
@@ -92,12 +91,6 @@ If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has a
   pnpm test
 ```
 
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-  pnpm lint
-```
-
 ### Create a new tool
 
 To create a new tool, there is a script that generate the boilerplate of the new tool, simply run:
@@ -112,7 +105,7 @@ It will create a directory in `src/tools` with the correct files, and a the impo
 
 Big thanks to all the people who have already contributed!
 
-[![contributors](https://contrib.rocks/image?repo=bruceblink/it-tools&refresh=1)](https://github.com/bruceblink/it-tools/graphs/contributors)
+[![contributors](https://contrib.rocks/image?repo=bruceblink/it-tools-template&refresh=1)](https://github.com/bruceblink/it-tools-template/graphs/contributors)
 
 ## License
 
