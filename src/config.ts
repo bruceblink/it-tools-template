@@ -83,4 +83,7 @@ export const { config } = defineConfig({
     default: false,
     env: 'VITE_SHOW_SPONSOR_BANNER',
   },
+}, {
+  // provide Vite's runtime environment so figue can read our defined variables
+  envSource: import.meta.env as Record<string, unknown>
 });

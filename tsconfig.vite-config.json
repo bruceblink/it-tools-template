@@ -3,6 +3,10 @@
   "include": ["vite.config.*"],
   "compilerOptions": {
     "composite": true,
-    "types": ["node", "vitest"]
+    "types": ["node", "vitest"],
+    // allow importing JSON files like package.json from TS modules
+    "resolveJsonModule": true,
+    // enable interoperability when importing CommonJS defaults (pkg)
+    "esModuleInterop": true
   }
 }
