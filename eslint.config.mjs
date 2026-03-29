@@ -16,24 +16,28 @@ export default [
       'node_modules/**',
       'scripts/**',
       'src/libs/**',
+      'eslint.config.mjs',
     ],
   },
 
   // ========================
   // JS 推荐规则
   // ========================
-  js.configs.recommended,
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    ...js.configs.recommended,
+  },
 
   // ========================
   // TypeScript
   // ========================
   {
+    files: ['**/*.{ts,tsx,mts,cts}'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
         ecmaVersion: 2023,
         sourceType: 'module',
-        project: './tsconfig.json',
         extraFileExtensions: ['.vue'],
       },
     },
@@ -54,6 +58,7 @@ export default [
   // Vue
   // ========================
   {
+    files: ['**/*.vue'],
     languageOptions: {
       parser: vueParser, // <--- 改这里
       parserOptions: {
@@ -75,6 +80,7 @@ export default [
   // auto-import globals
   // ========================
   {
+    files: ['**/*.{js,mjs,cjs,ts,tsx,mts,cts,vue}'],
     languageOptions: {
       globals: autoImport.globals ?? {},
     },
@@ -84,6 +90,7 @@ export default [
   // 项目自定义规则
   // ========================
   {
+    files: ['**/*.{js,mjs,cjs,ts,tsx,mts,cts,vue}'],
     rules: {
       curly: ['error', 'all'],
       'no-restricted-imports': [
