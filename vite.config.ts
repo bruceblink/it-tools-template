@@ -17,7 +17,6 @@ import svgLoader from 'vite-svg-loader';
 import { configDefaults } from 'vitest/config';
 import pkg from './package.json';
 
-// eslint-disable-next-line n/prefer-global/process
 const baseUrl = process.env.BASE_URL ?? '/';
 
 // https://vitejs.dev/config/
@@ -95,6 +94,7 @@ export default defineConfig({
     }),
     Components({
       dirs: ['src/'],
+      dtsTsx: false,
       extensions: ['vue', 'md'],
       include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
       resolvers: [NaiveUiResolver(), IconsResolver({ prefix: 'icon' })],
