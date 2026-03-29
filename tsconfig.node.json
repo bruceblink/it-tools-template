@@ -13,6 +13,7 @@
     "noFallthroughCasesInSwitch": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "skipLibCheck": true,
     "esModuleInterop": true,
     "isolatedModules": true
   },
