@@ -85,6 +85,12 @@ If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has a
   pnpm build
 ```
 
+### Validate Before Release
+
+```sh
+  pnpm validate
+```
+
 ### Run Unit Tests with [Vitest](https://vitest.dev/)
 
 ```sh
