@@ -2,6 +2,85 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.04.06-4dfffff
+
+### Features
+- **i18n**: allow dynamic URL interpolation in about page markdown (02e6597)
+-  remove "X(twitter)" menu in navbar (f4d9501)
+-  add custom project info support (785e6da)
+
+### Bug fixes
+-  resolve undefined links on about page (1735e97)
+- **vue-components**: disable TSX dts generation to restore valid component declarations (73a3e53)
+- **pwa**: increase workbox maximumFileSizeToCacheInBytes (f49e138)
+- **pwa**: increase workbox maximumFileSizeToCacheInBytes (3f0d0fb)
+-  fix error in jwt-parser.service.ts (fe80791)
+-  fix error in case-converter.vue (9ff1d54)
+- **deps**: update vue-i18n to 11.1.10 to fix CVE-2025-27597 (e248b5e)
+
+### Refactoring
+-  Refactor code structure for improved readability and maintainability (272a3e5)
+-  replace hardcoded URLs with interpolated links (1c2a97b)
+- **i18n**: use interpolated links in vi translations (24d2af5)
+- **i18n**: use interpolated links in uk translations (adeb27a)
+- **i18n**: use interpolated links in pt translations (760a75b)
+- **i18n**: use interpolated links in no translations (ad3aa05)
+- **i18n**: use interpolated links in fr translations (f440757)
+- **i18n**: use interpolated links in es translations (d1fb9a4)
+- **i18n**: use interpolated links in de translations (da5a541)
+- **i18n**: use interpolated links in en translations (c64744e)
+- **i18n**: use interpolated links in zh translations (99833c7)
+-  use custom args update NavbarButtons.vue (7b47ea8)
+-  use custom args update footer info instead of constant string (03e44f7)
+
+### Tests
+-  update test case (e375c19)
+
+### Chores
+- **release**: automate local and GitHub releases (4dfffff)
+- **ci**: consolidate validation workflow (e18ad9b)
+-  update tsconfig settings for improved compatibility and features (10ee88d)
+-  update pnpm-lock.yaml and tsconfig for @types/node version and TypeScript options (99e088e)
+- **tooling**: align ESLint and scripts for dependency upgrade workflow (cb16fa4)
+-  update config for Vite's runtime environment and TypeScript options (110ff69)
+-  add permission in docker-nightly-release.yml (7693a3f)
+-  remove Type check step in ci (1e38cff)
+-  fix ci error (c31a81b)
+-  remove eslint deps in package.json (cafae99)
+-  remove eslint step in ci (d98949a)
+-  update eslint config (d527f5e)
+-  update node version to 22 in ci config (3f8340b)
+-  update eslint config (d5faa0b)
+-  update vite-plugin-vue-markdown to unplugin-vue-markdown (2b8f285)
+-  update version to 2026.02.07-f49e1384 (c8f30ab)
+-  remove deprecated args (79ce48a)
+-  update node version to 22 (d8036fb)
+-  upgrade dependencies and fix config compatibility (91da9fc)
+-  update project repository url (c87ad63)
+-  update pnpm version (357d74c)
+-  update chores username (4720fe4)
+-  update docker image url (2aa4def)
+-  update checkout version in CI (ad3b123)
+-  update version (aec30d3)
+-  update trigger in ci.yml and e2e-tests.yml (dcdbb84)
+-  update build script to fix OOM error in CI (53ebd45)
+
+### Other
+-  Initial commit (d056e4e)
+
+### Documentation
+-  update README.md (b6abcbe)
+-  update project url (21a010d)
+- **author**: update author information in package.json (87b0749)
+- **info**: update project's info and author's info (2f07944)
+- **readme**: update README.md (6eb8856)
+
+### Style
+-  format code (c83957b)
+-  format code (a755e4e)
+-  formate code use "pnpm lint . --fix" (c20b08a)
+-  use "pnpm lint . --fix" format code (a5b38ee)
+
 ## Version 2024.10.22-7ca5933
 
 ### Features
