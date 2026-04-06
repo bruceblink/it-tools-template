@@ -107,6 +107,29 @@ To create a new tool, there is a script that generate the boilerplate of the new
 
 It will create a directory in `src/tools` with the correct files, and a the import in `src/tools/index.ts`. You will just need to add the imported tool in the proper category and develop the tool.
 
+### Release Flow
+
+Create a release commit and tag locally:
+
+```sh
+  pnpm release
+```
+
+Preview the generated version and changelog without changing files:
+
+```sh
+  pnpm release:dry-run
+```
+
+The release script now:
+
+- requires a clean git working tree
+- runs `pnpm validate` before creating a release by default
+- updates `CHANGELOG.md` and `package.json`
+- creates a single release commit and the matching git tag
+
+Push the commit and tag afterwards to trigger the GitHub release workflow.
+
 ## Contributors
 
 Big thanks to all the people who have already contributed!
