@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.04.06-ae5c63b
+
+### Bug fixes
+- **tsconfig**: disable emit for node tooling config (ae5c63b)
+
 ## Version 2026.04.06-4dfffff
 
 ### Features
