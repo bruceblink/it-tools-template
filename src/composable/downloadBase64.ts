@@ -1,4 +1,4 @@
-import { extension as getExtensionFromMimeType, extension as getMimeTypeFromExtension } from 'mime-types';
+import { extension as getExtensionFromMimeType, lookup as getMimeTypeFromExtension } from 'mime-types';
 import type { Ref } from 'vue';
 import _ from 'lodash';
 
