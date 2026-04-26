@@ -5,33 +5,51 @@
 </picture>
 
 <p align="center">
-Useful tools for developer and people working in IT. <a href="https://it-tools.likanug.top">Try it!</a>
+Useful tools for developer and people working in IT. <a href="https://tools.likanug.app">Try it!</a>
 </p>
 
-## Functionalities and roadmap
+<p align="center">
+  <img alt="Latest release" src="https://img.shields.io/github/v/tag/bruceblink/it-tools-template?label=release&color=blue">
+  <img alt="License" src="https://img.shields.io/github/license/bruceblink/it-tools-template">
+  <img alt="Tech stack" src="https://img.shields.io/badge/stack-Vue3%20%2B%20Vite%20%2B%20Naive%20UI-42b883">
+</p>
 
-This Project is based
-on [CorentinTh/it-tools](https://github.com/CorentinTh/it-tools/tree/0de73e8971b4c977086d246b112f218ed3dcc3f8). Please
-check the [issues](https://github.com/bruceblink/it-tools/issues) to see if some feature listed to be
-implemented.
+## Overview
 
-You have an idea of a tool? Submit a [feature request](https://github.com/bruceblink/it-tools/issues/new/choose)!
+This project is a customized fork of [CorentinTh/it-tools](https://github.com/CorentinTh/it-tools), extended with additional tools, improved i18n coverage, enhanced UI interactions, and a more automated release workflow.
 
-## Self host
+**86 tools** across 11 categories: Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, Data, and Favorites.
 
-Self host solutions for your homelab
+**9 languages**: English, Chinese (zh), German (de), French (fr), Spanish (es), Portuguese (pt), Ukrainian (uk), Vietnamese (vi), Norwegian (no).
 
-**From docker hub:**
+Have an idea for a new tool? Submit a [feature request](https://github.com/bruceblink/it-tools/issues/new/choose)!
+
+## Self Host
+
+**From Docker Hub:**
 
 ```sh
-  docker run -d --name it-tools --restart unless-stopped -p 8080:80 bruceblink/it-tools:latest
+docker run -d --name it-tools --restart unless-stopped -p 8080:80 bruceblink/it-tools:latest
 ```
 
-**From github packages:**
+**From GitHub Packages:**
 
 ```sh
-  docker run -d --name it-tools --restart unless-stopped -p 8080:80 ghcr.io/bruceblink/it-tools:latest
+docker run -d --name it-tools --restart unless-stopped -p 8080:80 ghcr.io/bruceblink/it-tools:latest
 ```
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | Vue 3 + TypeScript |
+| Build | Vite 7 |
+| UI Library | Naive UI |
+| Styling | UnoCSS |
+| State | Pinia |
+| i18n | vue-i18n |
+| Testing | Vitest + Playwright |
+| Deployment | Vercel |
 
 ## Contribute
 
@@ -40,10 +58,10 @@ Self host solutions for your homelab
 [VSCode](https://code.visualstudio.com/) with the following extensions:
 
 - [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur)
-- [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+- [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin)
 - [i18n Ally](https://marketplace.visualstudio.com/items?itemName=lokalise.i18n-ally)
 
-with the following settings:
+Recommended workspace settings:
 
 ```json
 {
@@ -56,79 +74,73 @@ with the following settings:
 }
 ```
 
-### Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
-
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
-
-1. Disable the built-in TypeScript Extension
-   1. Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-   2. Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
-
 ### Project Setup
 
 ```sh
-  pnpm install
+pnpm install
 ```
 
 ### Compile and Hot-Reload for Development
 
 ```sh
-  pnpm dev
+pnpm dev
 ```
 
 ### Type-Check, Compile and Minify for Production
 
 ```sh
-  pnpm build
+pnpm build
 ```
 
-### Validate Before Release
+### Run Unit Tests
 
 ```sh
-  pnpm validate
+pnpm test
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+### Validate Before Release (tests + build)
 
 ```sh
-  pnpm test
+pnpm validate
 ```
 
-### Create a new tool
+### Create a New Tool
 
-To create a new tool, there is a script that generate the boilerplate of the new tool, simply run:
+Run the scaffold script to generate boilerplate under `src/tools/`:
 
 ```sh
-  pnpm run script:create:tool my-tool-name
+pnpm run script:create:tool my-tool-name
 ```
 
-It will create a directory in `src/tools` with the correct files, and a the import in `src/tools/index.ts`. You will just need to add the imported tool in the proper category and develop the tool.
+This creates the directory, component, service, and registers the tool in `src/tools/index.ts`. Add it to the appropriate category and implement the logic.
 
 ### Release Flow
 
-Create a release commit and tag locally:
+Preview the generated changelog without touching any files:
 
 ```sh
-  pnpm release
+pnpm release:dry-run
 ```
 
-Preview the generated version and changelog without changing files:
+Create the release commit and tag locally:
 
 ```sh
-  pnpm release:dry-run
+pnpm release
 ```
 
-The release script now:
+The release script:
 
-- requires a clean git working tree
-- runs `pnpm validate` before creating a release by default
-- updates `CHANGELOG.md` and `package.json`
-- creates a single release commit and the matching git tag
+1. Requires a clean git working tree
+2. Runs `pnpm validate` (tests + build)
+3. Generates a CalVer version: `YYYY.MM.DD-<short-sha>`
+4. Updates `CHANGELOG.md` and `package.json`
+5. Creates a single release commit and a matching git tag
 
-Push the commit and tag afterwards to trigger the GitHub release workflow.
+Push to trigger the GitHub release workflow:
+
+```sh
+git push && git push --tags
+```
 
 ## Contributors
 
