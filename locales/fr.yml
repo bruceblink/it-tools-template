@@ -80,3 +80,311 @@ tools:
     copied: Le token a été copié
     length: Longueur
     tokenPlaceholder: Le token...
+
+  password-strength-analyser:
+    title: Analyseur de force des mots de passe
+    description: Découvrez la force de votre mot de passe avec cet analyseur de force côté client et outil d'estimation du temps de craquage.
+
+  chronometer:
+    title: Chronomètre
+    description: Mesurez la durée d'une tâche. Un simple chronomètre avec des fonctionnalités basiques.
+
+  percentage-calculator:
+    title: Calculateur de pourcentages
+    description: Calculez facilement des pourcentages d'une valeur à une autre, ou d'un pourcentage à une valeur.
+
+  svg-placeholder-generator:
+    title: Générateur de placeholder SVG
+    description: Générez des images SVG à utiliser comme placeholders dans vos applications.
+
+  json-to-csv:
+    title: JSON vers CSV
+    description: Convertissez du JSON en CSV avec détection automatique des en-têtes.
+
+  camera-recorder:
+    title: Enregistreur de caméra
+    description: Prenez une photo ou enregistrez une vidéo depuis votre webcam ou caméra.
+
+  keycode-info:
+    title: Informations sur le code de touche
+    description: Trouvez le keycode JavaScript, le code, la position et les modificateurs de n'importe quelle touche.
+
+  emoji-picker:
+    title: Sélecteur d'emoji
+    description: Copiez et collez des emojis facilement et obtenez les valeurs unicode et code points de chaque emoji.
+
+  color-converter:
+    title: Convertisseur de couleurs
+    description: Convertissez les couleurs entre différents formats (hex, rgb, hsl et nom CSS).
+
+  bcrypt:
+    title: Bcrypt
+    description: Hachez et comparez des chaînes de texte avec bcrypt. Bcrypt est une fonction de hachage de mots de passe basée sur le chiffrement Blowfish.
+
+  crontab-generator:
+    title: Générateur de Crontab
+    description: Validez et générez des expressions crontab et obtenez la description lisible de la planification cron.
+
+  http-status-codes:
+    title: Codes de statut HTTP
+    description: La liste de tous les codes de statut HTTP, leurs noms et leurs significations.
+
+  sql-prettify:
+    title: Formater le SQL
+    description: Formatez et embellissez vos requêtes SQL en ligne (prend en charge différents dialectes SQL).
+
+  benchmark-builder:
+    title: Constructeur de benchmarks
+    description: Comparez facilement le temps d'exécution de tâches avec ce constructeur de benchmarks en ligne.
+
+  git-memo:
+    title: Cheatsheet Git
+    description: Git est un logiciel de gestion de versions décentralisé. Avec cette aide-mémoire, vous aurez un accès rapide aux commandes git les plus courantes.
+
+  slugify-string:
+    title: Slugifier une chaîne
+    description: Rend une chaîne sûre pour les URL, noms de fichier et identifiants.
+
+  encryption:
+    title: Chiffrer / déchiffrer du texte
+    description: Chiffrez du texte clair et déchiffrez du texte chiffré en utilisant des algorithmes comme AES, TripleDES, Rabbit ou RC4.
+
+  random-port-generator:
+    title: Générateur de ports aléatoires
+    description: Génère des numéros de port aléatoires en dehors de la plage des ports "connus" (0-1023).
+
+  yaml-prettify:
+    title: Formater le YAML
+    description: Embellissez votre chaîne YAML dans un format lisible et convivial.
+
+  eta-calculator:
+    title: Calculateur ETA
+    description: Un calculateur d'ETA (Estimated Time of Arrival) pour déterminer le temps de fin approximatif d'une tâche.
+
+  roman-numeral-converter:
+    title: Convertisseur de chiffres romains
+    description: Convertissez des chiffres romains en chiffres arabes et inversement.
+
+  hmac-generator:
+    title: Générateur HMAC
+    description: Calcule un code d'authentification de message basé sur le hachage (HMAC) en utilisant une clé secrète et votre fonction de hachage préférée.
+
+  bip39-generator:
+    title: Générateur de phrase secrète BIP39
+    description: Générez une phrase secrète BIP39 à partir d'un mnémonique existant ou aléatoire, ou obtenez le mnémonique à partir de la phrase secrète.
+
+  base64-file-converter:
+    title: Convertisseur de fichiers Base64
+    description: Convertissez une chaîne, un fichier ou une image en sa représentation Base64.
+
+  list-converter:
+    title: Convertisseur de listes
+    description: Cet outil peut traiter des données en colonnes et appliquer divers changements (transposer, ajouter préfixe/suffixe, inverser liste, trier liste, etc.) à chaque ligne.
+
+  base64-string-converter:
+    title: Encodeur/décodeur Base64
+    description: Encodez et décodez facilement des chaînes en leur représentation Base64.
+
+  toml-to-yaml:
+    title: TOML vers YAML
+    description: Analysez et convertissez TOML en YAML.
+
+  math-evaluator:
+    title: Évaluateur mathématique
+    description: Une calculatrice pour évaluer des expressions mathématiques. Vous pouvez utiliser des fonctions comme sqrt, cos, sin, abs, etc.
+
+  json-to-yaml-converter:
+    title: Convertisseur JSON vers YAML
+    description: Convertissez simplement du JSON en YAML avec ce convertisseur en ligne.
+
+  url-parser:
+    title: Analyseur d'URL
+    description: Analysez une URL en ses différentes parties (protocole, origine, paramètres, port, nom d'utilisateur/mot de passe, ...).
+
+  iban-validator-and-parser:
+    title: Validateur et analyseur d'IBAN
+    description: Validez et analysez des numéros IBAN. Vérifiez si un IBAN est valide et obtenez le pays, le BBAN, s'il s'agit d'un QR-IBAN et le format IBAN convivial.
+
+  user-agent-parser:
+    title: Analyseur User-Agent
+    description: Détectez et analysez le navigateur, le moteur, l'OS, le CPU et le type/modèle d'appareil à partir d'une chaîne user-agent.
+
+  numeronym-generator:
+    title: Générateur de numéronyms
+    description: Un numéronym est un mot où un nombre est utilisé pour former une abréviation. Par exemple, "i18n" est un numéronym de "internationalisation".
+
+  case-converter:
+    title: Convertisseur de casse
+    description: Transformez la casse d'une chaîne et choisissez entre différents formats.
+
+  html-entities:
+    title: Échapper les entités HTML
+    description: Échappez ou désé-chappez des entités HTML (remplacez des caractères comme <, >, &, " et \' par leur version HTML).
+
+  json-prettify:
+    title: Formater le JSON
+    description: Embellissez votre chaîne JSON dans un format lisible et convivial.
+
+  docker-run-to-docker-compose-converter:
+    title: Convertisseur docker run vers docker-compose
+    description: Transformez des commandes "docker run" en fichiers docker-compose !
+
+  mac-address-lookup:
+    title: Recherche d'adresse MAC
+    description: Trouvez le fournisseur et le fabricant d'un appareil par son adresse MAC.
+
+  mime-types:
+    title: Types MIME
+    description: Convertissez les types MIME en extensions de fichier et vice-versa.
+
+  toml-to-json:
+    title: TOML vers JSON
+    description: Analysez et convertissez TOML en JSON.
+
+  lorem-ipsum-generator:
+    title: Générateur de Lorem ipsum
+    description: Lorem ipsum est un texte de remplacement couramment utilisé pour démontrer la forme visuelle d'un document sans se baser sur un contenu significatif.
+
+  qrcode-generator:
+    title: Générateur de QR Code
+    description: Générez et téléchargez un QR code pour une URL (ou du texte simple), et personnalisez les couleurs de fond et de premier plan.
+
+  wifi-qrcode-generator:
+    title: Générateur de QR Code WiFi
+    description: Générez et téléchargez des codes QR pour des connexions rapides aux réseaux WiFi.
+
+  xml-formatter:
+    title: Formateur XML
+    description: Embellissez votre chaîne XML dans un format lisible et convivial.
+
+  temperature-converter:
+    title: Convertisseur de température
+    description: Conversions de degrés de température pour Kelvin, Celsius, Fahrenheit, Rankine, Delisle, Newton, Réaumur et Rømer.
+
+  chmod-calculator:
+    title: Calculateur Chmod
+    description: Calculez vos permissions chmod et commandes avec ce calculateur chmod en ligne.
+
+  rsa-key-pair-generator:
+    title: Générateur de paires de clés RSA
+    description: Générez un nouveau couple de clés RSA privée et publique au format PEM aléatoirement.
+
+  html-wysiwyg-editor:
+    title: Éditeur HTML WYSIWYG
+    description: Éditeur HTML WYSIWYG en ligne riche en fonctionnalités qui génère immédiatement le code source du contenu.
+
+  yaml-to-toml:
+    title: YAML vers TOML
+    description: Analysez et convertissez YAML en TOML.
+
+  mac-address-generator:
+    title: Générateur d'adresses MAC
+    description: Saisissez la quantité et le préfixe. Les adresses MAC seront générées dans la casse de votre choix (majuscules ou minuscules).
+
+  json-diff:
+    title: Différences JSON
+    description: Comparez deux objets JSON et obtenez les différences entre eux.
+
+  jwt-parser:
+    title: Analyseur JWT
+    description: Analysez et décodez votre JSON Web Token (JWT) et affichez son contenu.
+
+  date-converter:
+    title: Convertisseur de date et heure
+    description: Convertissez des dates et heures dans différents formats.
+
+  phone-parser-and-formatter:
+    title: Analyseur et formateur de numéros de téléphone
+    description: Analysez, validez et formatez des numéros de téléphone. Obtenez des informations sur le numéro, comme l'indicatif de pays, le type, etc.
+
+  ipv4-subnet-calculator:
+    title: Calculateur de sous-réseau IPv4
+    description: Analysez vos blocs CIDR IPv4 et obtenez toutes les informations sur votre sous-réseau.
+
+  og-meta-generator:
+    title: Générateur de méta Open Graph
+    description: Générez des métabalises HTML Open Graph et sociales pour votre site web.
+
+  ipv6-ula-generator:
+    title: Générateur d'IPv6 ULA
+    description: Générez vos propres adresses IP locales non-routables pour votre réseau selon la RFC4193.
+
+  hash-text:
+    title: Hachage de texte
+    description: 'Hachez une chaîne de texte en utilisant la fonction souhaitée : MD5, SHA1, SHA256, SHA224, SHA512, SHA384, SHA3 ou RIPEMD160'
+
+  json-to-toml:
+    title: JSON vers TOML
+    description: Analysez et convertissez JSON en TOML.
+
+  device-information:
+    title: Informations sur l'appareil
+    description: Obtenez des informations sur votre appareil actuel (taille de l'écran, ratio de pixels, user agent, ...).
+
+  pdf-signature-checker:
+    title: Vérificateur de signatures PDF
+    description: Vérifiez les signatures d'un fichier PDF. Un fichier PDF signé contient une ou plusieurs signatures qui peuvent être utilisées pour déterminer si le contenu a été modifié.
+
+  json-minify:
+    title: Minifier le JSON
+    description: Minifiez et compressez votre JSON en supprimant les espaces blancs inutiles.
+
+  ulid-generator:
+    title: Générateur d'ULID
+    description: Générez des ULID (Universally Unique Lexicographically Sortable Identifier) aléatoires.
+
+  string-obfuscator:
+    title: Obfuscateur de chaînes
+    description: Obfusquez une chaîne (comme un secret, un IBAN ou un token) pour la rendre partageable et identifiable sans révéler son contenu.
+
+  base-converter:
+    title: Convertisseur de base numérique
+    description: Convertissez un nombre entre différentes bases (décimal, hexadécimal, binaire, octal, base64, ...).
+
+  yaml-to-json-converter:
+    title: Convertisseur YAML vers JSON
+    description: Convertissez simplement du YAML en JSON avec ce convertisseur en ligne.
+
+  uuid-generator:
+    title: Générateur d'UUIDs
+    description: Un UUID (Universally Unique Identifier) est un nombre de 128 bits utilisé pour identifier des informations dans les systèmes informatiques.
+
+  ipv4-address-converter:
+    title: Convertisseur d'adresses IPv4
+    description: Convertissez une adresse IP en décimal, binaire, hexadécimal ou même en représentation IPv6.
+
+  text-statistics:
+    title: Statistiques de texte
+    description: Obtenez des informations sur un texte, le nombre de caractères, le nombre de mots, sa taille en octets, ...
+
+  text-to-nato-alphabet:
+    title: Texte vers alphabet NATO
+    description: Transformez du texte en alphabet phonétique NATO pour la transmission orale.
+
+  basic-auth-generator:
+    title: Générateur d'authentification de base
+    description: Générez un en-tête d'authentification de base Base64 à partir d'un nom d'utilisateur et d'un mot de passe.
+
+  text-to-unicode:
+    title: Texte vers Unicode
+    description: Analysez et convertissez du texte en Unicode et vice-versa.
+
+  ipv4-range-expander:
+    title: Expanseur de plage IPv4
+    description: À partir d'une adresse IPv4 de début et de fin, cet outil calcule un sous-réseau IPv4 valide avec sa notation CIDR.
+
+  text-diff:
+    title: Différences de texte
+    description: Comparez deux textes et voyez les différences entre eux.
+
+  otp-generator:
+    title: Générateur de codes OTP
+    description: Générez et validez des mots de passe à usage unique (OTP) basés sur le temps pour l'authentification multifacteur.
+
+  url-encoder:
+    title: Encoder/décoder des chaînes URL
+    description: Encodez du texte au format URL (également connu sous le nom de "encodage pourcent"), ou décodez-le depuis ce format.
+
+  text-to-binary:
+    title: Texte vers binaire ASCII
+    description: Convertissez du texte en sa représentation binaire ASCII et vice-versa.

@@ -70,3 +70,325 @@ tools:
     measurement: Вимірювання
     text: Текст
     data: Дані
+
+  password-strength-analyser:
+    title: Аналізатор надійності паролів
+    description: Дізнайтесь надійність свого пароля за допомогою цього клієнтського аналізатора та інструменту оцінки часу злому.
+
+  chronometer:
+    title: Хронометр
+    description: Відстежуйте тривалість завдання. По суті хронометр з базовими функціями.
+
+  token-generator:
+    title: Генератор токенів
+    description: Генеруйте випадкові рядки з потрібними символами — великі або малі літери, цифри та/або спецсимволи.
+    uppercase: Великі літери (ABC...)
+    lowercase: Малі літери (abc...)
+    numbers: Цифри (123...)
+    symbols: Символи (!-;...)
+    length: Довжина
+    tokenPlaceholder: 'Токен...'
+    copied: Токен скопійовано в буфер обміну
+    button:
+      copy: Копіювати
+      refresh: Оновити
+
+  percentage-calculator:
+    title: Калькулятор відсотків
+    description: Легко обчислюйте відсотки від одного значення до іншого або від відсотка до значення.
+
+  svg-placeholder-generator:
+    title: Генератор SVG-заповнювачів
+    description: Генеруйте SVG-зображення для використання як заповнювачів у ваших застосунках.
+
+  json-to-csv:
+    title: JSON у CSV
+    description: Конвертуйте JSON у CSV з автоматичним визначенням заголовків.
+
+  camera-recorder:
+    title: Запис з камери
+    description: Зробіть фото або запишіть відео з вашої веб-камери або камери.
+
+  keycode-info:
+    title: Інформація про код клавіші
+    description: Знайдіть JavaScript keycode, код, розташування та модифікатори будь-якої натиснутої клавіші.
+
+  emoji-picker:
+    title: Вибір emoji
+    description: Легко копіюйте та вставляйте emoji і отримуйте значення unicode та code points кожного emoji.
+
+  color-converter:
+    title: Конвертер кольорів
+    description: Конвертуйте кольори між різними форматами (hex, rgb, hsl та назва CSS).
+
+  bcrypt:
+    title: Bcrypt
+    description: Хешуйте та порівнюйте рядки тексту за допомогою bcrypt. Bcrypt — це функція хешування паролів на основі шифру Blowfish.
+
+  crontab-generator:
+    title: Генератор Crontab
+    description: Перевіряйте та генеруйте вирази crontab і отримуйте зрозумілий опис розкладу cron.
+
+  http-status-codes:
+    title: HTTP-коди статусу
+    description: Список усіх HTTP-кодів статусу, їх назв та значень.
+
+  sql-prettify:
+    title: Форматування SQL
+    description: Форматуйте та прикрашайте ваші SQL-запити онлайн (підтримує різні діалекти SQL).
+
+  benchmark-builder:
+    title: Конструктор бенчмарків
+    description: Легко порівнюйте час виконання завдань за допомогою цього онлайн-конструктора бенчмарків.
+
+  git-memo:
+    title: Шпаргалка з Git
+    description: Git — децентралізоване програмне забезпечення для керування версіями. Ця шпаргалка надасть швидкий доступ до найпоширеніших команд git.
+
+  slugify-string:
+    title: Перетворення рядка на slug
+    description: Зробіть рядок безпечним для URL, імен файлів та ідентифікаторів.
+
+  encryption:
+    title: Шифрування / розшифрування тексту
+    description: Шифруйте відкритий текст і розшифровуйте зашифрований текст за допомогою алгоритмів AES, TripleDES, Rabbit або RC4.
+
+  random-port-generator:
+    title: Генератор випадкових портів
+    description: Генеруйте випадкові номери портів поза діапазоном "відомих" портів (0-1023).
+
+  yaml-prettify:
+    title: Форматування YAML
+    description: Прикрасьте ваш YAML-рядок у зручний для читання формат.
+
+  eta-calculator:
+    title: Калькулятор ETA
+    description: Калькулятор ETA (орієнтовний час прибуття) для визначення приблизного часу завершення завдання.
+
+  roman-numeral-converter:
+    title: Конвертер римських цифр
+    description: Конвертуйте римські цифри в арабські і навпаки.
+
+  hmac-generator:
+    title: Генератор HMAC
+    description: Обчислює код автентифікації повідомлення на основі хешу (HMAC) за допомогою секретного ключа та вашої улюбленої хеш-функції.
+
+  bip39-generator:
+    title: Генератор парольної фрази BIP39
+    description: Генеруйте парольну фразу BIP39 з існуючого або випадкового мнемоніка, або отримайте мнемонік з парольної фрази.
+
+  base64-file-converter:
+    title: Конвертер файлів Base64
+    description: Конвертуйте рядок, файл або зображення в їх представлення Base64.
+
+  list-converter:
+    title: Конвертер списків
+    description: Цей інструмент обробляє дані на основі стовпців і застосовує різні зміни (транспонування, додавання префіксів/суфіксів, реверс, сортування тощо) до кожного рядка.
+
+  base64-string-converter:
+    title: Кодувальник/декодувальник рядків Base64
+    description: Кодуйте та декодуйте рядки в їх представлення Base64.
+
+  toml-to-yaml:
+    title: TOML у YAML
+    description: Аналізуйте та конвертуйте TOML у YAML.
+
+  math-evaluator:
+    title: Математичний обчислювач
+    description: Калькулятор для обчислення математичних виразів. Ви можете використовувати функції sqrt, cos, sin, abs тощо.
+
+  json-to-yaml-converter:
+    title: Конвертер JSON у YAML
+    description: Просто конвертуйте JSON у YAML за допомогою цього онлайн-конвертера.
+
+  url-parser:
+    title: Аналізатор URL
+    description: Розбирайте URL на складові частини (протокол, джерело, параметри, порт, ім'я користувача/пароль, ...).
+
+  iban-validator-and-parser:
+    title: Валідатор та аналізатор IBAN
+    description: Перевіряйте та аналізуйте номери IBAN. Дізнайтесь, чи є IBAN дійсним, і отримайте країну, BBAN, чи це QR-IBAN та зручний формат IBAN.
+
+  user-agent-parser:
+    title: Аналізатор User-Agent
+    description: Визначте та проаналізуйте браузер, рушій, ОС, ЦП і тип/модель пристрою з рядка user-agent.
+
+  numeronym-generator:
+    title: Генератор нумеронімів
+    description: Нумеронім — це слово, де число використовується для скорочення. Наприклад, "i18n" є нумеронімом слова "internationalization".
+
+  case-converter:
+    title: Конвертер регістру
+    description: Перетворюйте регістр рядка і вибирайте між різними форматами.
+
+  html-entities:
+    title: Екранування HTML-сутностей
+    description: Екрануйте або зніміть екранування HTML-сутностей (замініть символи <, >, &, " та \' на їх HTML-версії).
+
+  json-prettify:
+    title: Форматування JSON
+    description: Прикрасьте ваш JSON-рядок у зручний для читання формат.
+
+  docker-run-to-docker-compose-converter:
+    title: Конвертер docker run у docker-compose
+    description: Перетворює команди "docker run" у файли docker-compose!
+
+  mac-address-lookup:
+    title: Пошук MAC-адреси
+    description: Знайдіть постачальника та виробника пристрою за його MAC-адресою.
+
+  mime-types:
+    title: MIME-типи
+    description: Конвертуйте MIME-типи у розширення файлів і навпаки.
+
+  toml-to-json:
+    title: TOML у JSON
+    description: Аналізуйте та конвертуйте TOML у JSON.
+
+  lorem-ipsum-generator:
+    title: Генератор Lorem ipsum
+    description: Lorem ipsum — це текст-заповнювач, що зазвичай використовується для демонстрації зовнішнього вигляду документа без покладання на значущий вміст.
+
+  qrcode-generator:
+    title: Генератор QR-коду
+    description: Генеруйте та завантажуйте QR-код для URL (або простого тексту), налаштовуйте кольори фону та переднього плану.
+
+  wifi-qrcode-generator:
+    title: Генератор QR-коду WiFi
+    description: Генеруйте та завантажуйте QR-коди для швидкого підключення до мереж WiFi.
+
+  xml-formatter:
+    title: Форматувальник XML
+    description: Прикрасьте ваш XML-рядок у зручний для читання формат.
+
+  temperature-converter:
+    title: Конвертер температур
+    description: Перетворення температур у градусах для Кельвіна, Цельсія, Фаренгейта, Ранкіна, Деліля, Ньютона, Реомюра та Рьомера.
+
+  chmod-calculator:
+    title: Калькулятор Chmod
+    description: Обчислюйте дозволи chmod та команди за допомогою цього онлайн-калькулятора chmod.
+
+  rsa-key-pair-generator:
+    title: Генератор пари ключів RSA
+    description: Генеруйте нову випадкову пару приватного та публічного ключів RSA у форматі PEM.
+
+  html-wysiwyg-editor:
+    title: HTML WYSIWYG-редактор
+    description: Онлайн-редактор HTML WYSIWYG з багатим набором функцій, який одразу генерує вихідний код вмісту.
+
+  yaml-to-toml:
+    title: YAML у TOML
+    description: Аналізуйте та конвертуйте YAML у TOML.
+
+  mac-address-generator:
+    title: Генератор MAC-адрес
+    description: Введіть кількість і префікс. MAC-адреси будуть згенеровані у вибраному регістрі (великі або малі літери).
+
+  json-diff:
+    title: Порівняння JSON
+    description: Порівнюйте два JSON-об'єкти і отримуйте відмінності між ними.
+
+  jwt-parser:
+    title: Аналізатор JWT
+    description: Аналізуйте та декодуйте ваш JSON Web Token (JWT) і відображайте його вміст.
+
+  date-converter:
+    title: Конвертер дати і часу
+    description: Конвертуйте дату та час у різні формати.
+
+  phone-parser-and-formatter:
+    title: Аналізатор та форматувальник телефонів
+    description: Аналізуйте, перевіряйте та форматуйте телефонні номери. Отримуйте інформацію про номер — код країни, тип тощо.
+
+  ipv4-subnet-calculator:
+    title: Калькулятор підмереж IPv4
+    description: Аналізуйте ваші блоки CIDR IPv4 і отримуйте всю необхідну інформацію про підмережу.
+
+  og-meta-generator:
+    title: Генератор мета-тегів Open Graph
+    description: Генеруйте мета-теги HTML Open Graph та соціальних мереж для вашого веб-сайту.
+
+  ipv6-ula-generator:
+    title: Генератор IPv6 ULA
+    description: Генеруйте власні локальні IP-адреси, що не маршрутизуються, для вашої мережі згідно з RFC4193.
+
+  hash-text:
+    title: Хешування тексту
+    description: 'Хешуйте рядок тексту за допомогою потрібної функції: MD5, SHA1, SHA256, SHA224, SHA512, SHA384, SHA3 або RIPEMD160'
+
+  json-to-toml:
+    title: JSON у TOML
+    description: Аналізуйте та конвертуйте JSON у TOML.
+
+  device-information:
+    title: Інформація про пристрій
+    description: Отримуйте інформацію про поточний пристрій (розмір екрана, коефіцієнт пікселів, user agent, ...).
+
+  pdf-signature-checker:
+    title: Перевірник підписів PDF
+    description: Перевіряйте підписи файлу PDF. Підписаний PDF-файл містить один або кілька підписів, що дозволяють визначити, чи змінювався вміст після підписання.
+
+  json-minify:
+    title: Мінімізація JSON
+    description: Мінімізуйте та стискайте ваш JSON, видаляючи непотрібні пробіли.
+
+  ulid-generator:
+    title: Генератор ULID
+    description: Генеруйте випадкові ULID (Universally Unique Lexicographically Sortable Identifier).
+
+  string-obfuscator:
+    title: Обфускатор рядків
+    description: Обфускуйте рядок (наприклад, секрет, IBAN або токен), щоб зробити його спільним і розпізнаваним без розкриття вмісту.
+
+  base-converter:
+    title: Конвертер систем числення
+    description: Конвертуйте число між різними системами числення (десяткова, шістнадцяткова, двійкова, вісімкова, base64, ...).
+
+  yaml-to-json-converter:
+    title: Конвертер YAML у JSON
+    description: Просто конвертуйте YAML у JSON за допомогою цього онлайн-конвертера.
+
+  uuid-generator:
+    title: Генератор UUID
+    description: UUID (Universally Unique Identifier) — це 128-бітне число, що використовується для ідентифікації інформації в комп'ютерних системах.
+
+  ipv4-address-converter:
+    title: Конвертер IPv4-адрес
+    description: Конвертуйте IP-адресу в десяткове, двійкове, шістнадцяткове або навіть IPv6-представлення.
+
+  text-statistics:
+    title: Статистика тексту
+    description: Отримуйте інформацію про текст — кількість символів, слів, розмір у байтах тощо.
+
+  text-to-nato-alphabet:
+    title: Текст у NATO-алфавіт
+    description: Перетворюйте текст на фонетичний алфавіт NATO для усної передачі.
+
+  basic-auth-generator:
+    title: Генератор базової аутентифікації
+    description: Генеруйте заголовок базової аутентифікації Base64 з імені користувача та пароля.
+
+  text-to-unicode:
+    title: Текст у Unicode
+    description: Аналізуйте та конвертуйте текст у Unicode і навпаки.
+
+  ipv4-range-expander:
+    title: Розширювач діапазону IPv4
+    description: За початковою та кінцевою IPv4-адресами цей інструмент обчислює дійсну підмережу IPv4 з її нотацією CIDR.
+
+  text-diff:
+    title: Порівняння тексту
+    description: Порівнюйте два тексти і дивіться різницю між ними.
+
+  otp-generator:
+    title: Генератор OTP-кодів
+    description: Генеруйте та перевіряйте одноразові паролі (OTP) на основі часу для багатофакторної аутентифікації.
+
+  url-encoder:
+    title: Кодування/декодування URL-рядків
+    description: Кодуйте текст у URL-формат (також відомий як "відсоткове кодування") або декодуйте з нього.
+
+  text-to-binary:
+    title: Текст у двійковий ASCII
+    description: Конвертуйте текст у двійкове ASCII-представлення і навпаки.
