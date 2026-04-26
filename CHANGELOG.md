@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.04.26-2c5d445
+
+### Features
+- **composable**: add useToolState for shared async error handling (ff6ba65)
+-  improve tool functionality and test coverage (c3c185a)
+
+### Bug fixes
+- **test**: add jsdom environment to c-input-text tests (2c5d445)
+
+### Tests
+-  add unit tests for untested service modules and fix downloadBase64 bug (f62a31c)
+
+### I18n
+-  add complete tool translations for es, fr, pt, uk locales (12baaa1)
+
 ## Version 2026.04.06-ae5c63b
 
 ### Bug fixes
