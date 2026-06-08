@@ -108,6 +108,10 @@ tools:
     title: CSV 转 JSON
     description: 将 CSV 数据转换为 JSON，支持表头识别、自定义分隔符和可选类型推断。
 
+  csv-to-markdown-table:
+    title: CSV 转 Markdown 表格
+    description: 将 CSV 数据转换为 GitHub 风格的 Markdown 表格。
+
   camera-recorder:
     title: 摄像机记录器
     description: 从网络摄像头或照相机拍摄照片或录制视频。

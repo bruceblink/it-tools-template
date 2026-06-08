@@ -28,6 +28,7 @@ import { tool as tomlToYaml } from './toml-to-yaml';
 import { tool as tomlToJson } from './toml-to-json';
 import { tool as jsonToCsv } from './json-to-csv';
 import { tool as csvToJson } from './csv-to-json';
+import { tool as csvToMarkdownTable } from './csv-to-markdown-table';
 import { tool as cameraRecorder } from './camera-recorder';
 import { tool as listConverter } from './list-converter';
 import { tool as phoneParserAndFormatter } from './phone-parser-and-formatter';
@@ -154,6 +155,7 @@ export const toolsByCategory: ToolCategory[] = [
       jsonMinify,
       jsonToCsv,
       csvToJson,
+      csvToMarkdownTable,
       sqlPrettify,
       chmodCalculator,
       dockerRunToDockerComposeConverter,
