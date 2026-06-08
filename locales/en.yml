@@ -105,6 +105,10 @@ tools:
     title: JSON to CSV
     description: Convert JSON to CSV with automatic header detection.
 
+  csv-to-json:
+    title: CSV to JSON
+    description: Convert CSV data to JSON with header detection, custom delimiters, and optional type inference.
+
   camera-recorder:
     title: Camera recorder
     description: Take a picture or record a video from your webcam or camera.
