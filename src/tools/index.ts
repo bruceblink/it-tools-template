@@ -48,6 +48,7 @@ import { tool as rsaKeyPairGenerator } from './rsa-key-pair-generator';
 import { tool as textToNatoAlphabet } from './text-to-nato-alphabet';
 import { tool as slugifyString } from './slugify-string';
 import { tool as keycodeInfo } from './keycode-info';
+import { tool as lengthConverter } from './length-converter';
 import { tool as jsonMinify } from './json-minify';
 import { tool as jsonPathExtractor } from './json-path-extractor';
 import { tool as jsonKeySorter } from './json-key-sorter';
@@ -183,7 +184,7 @@ export const toolsByCategory: ToolCategory[] = [
   },
   {
     name: 'Measurement',
-    components: [chronometer, temperatureConverter, dataSizeConverter, benchmarkBuilder],
+    components: [chronometer, temperatureConverter, dataSizeConverter, lengthConverter, benchmarkBuilder],
   },
   {
     name: 'Text',

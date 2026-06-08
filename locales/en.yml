@@ -129,6 +129,10 @@ tools:
     title: Data size converter
     description: Convert between bits, bytes, and decimal or binary data size units.
 
+  length-converter:
+    title: Length converter
+    description: Convert between metric, imperial, and nautical length units.
+
   camera-recorder:
     title: Camera recorder
     description: Take a picture or record a video from your webcam or camera.

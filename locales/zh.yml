@@ -128,6 +128,10 @@ tools:
     title: 数据大小转换器
     description: 在 bit、byte、公制和二进制数据大小单位之间进行转换。
 
+  length-converter:
+    title: 长度转换器
+    description: 在公制、英制和海里等长度单位之间进行转换。
+
   camera-recorder:
     title: 摄像机记录器
     description: 从网络摄像头或照相机拍摄照片或录制视频。
