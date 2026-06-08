@@ -124,6 +124,10 @@ tools:
     title: URL Query 构建器
     description: 从参数行、Query 字符串或 JSON 对象构建编码后的 Query 和完整 URL。
 
+  data-size-converter:
+    title: 数据大小转换器
+    description: 在 bit、byte、公制和二进制数据大小单位之间进行转换。
+
   camera-recorder:
     title: 摄像机记录器
     description: 从网络摄像头或照相机拍摄照片或录制视频。

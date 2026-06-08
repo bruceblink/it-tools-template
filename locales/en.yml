@@ -125,6 +125,10 @@ tools:
     title: URL query builder
     description: Build encoded query strings and full URLs from parameter lines, query strings, or JSON objects.
 
+  data-size-converter:
+    title: Data size converter
+    description: Convert between bits, bytes, and decimal or binary data size units.
+
   camera-recorder:
     title: Camera recorder
     description: Take a picture or record a video from your webcam or camera.
