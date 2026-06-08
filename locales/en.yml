@@ -121,6 +121,10 @@ tools:
     title: JSON key sorter
     description: Sort JSON object keys recursively for stable diffs and deterministic output.
 
+  url-query-builder:
+    title: URL query builder
+    description: Build encoded query strings and full URLs from parameter lines, query strings, or JSON objects.
+
   camera-recorder:
     title: Camera recorder
     description: Take a picture or record a video from your webcam or camera.

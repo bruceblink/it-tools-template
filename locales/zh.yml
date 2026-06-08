@@ -120,6 +120,10 @@ tools:
     title: JSON 键名排序
     description: 递归排序 JSON 对象键名，便于稳定 diff 和确定性输出。
 
+  url-query-builder:
+    title: URL Query 构建器
+    description: 从参数行、Query 字符串或 JSON 对象构建编码后的 Query 和完整 URL。
+
   camera-recorder:
     title: 摄像机记录器
     description: 从网络摄像头或照相机拍摄照片或录制视频。

@@ -87,6 +87,7 @@ import { tool as tokenGenerator } from './token-generator';
 import type { ToolCategory } from './tools.types';
 import { tool as urlEncoder } from './url-encoder';
 import { tool as urlParser } from './url-parser';
+import { tool as urlQueryBuilder } from './url-query-builder';
 import { tool as uuidGenerator } from './uuid-generator';
 import { tool as macAddressLookup } from './mac-address-lookup';
 import { tool as xmlFormatter } from './xml-formatter';
@@ -128,6 +129,7 @@ export const toolsByCategory: ToolCategory[] = [
       urlEncoder,
       htmlEntities,
       urlParser,
+      urlQueryBuilder,
       deviceInformation,
       basicAuthGenerator,
       metaTagGenerator,
