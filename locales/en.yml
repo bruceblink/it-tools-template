@@ -113,6 +113,10 @@ tools:
     title: CSV to Markdown table
     description: Convert CSV data into a GitHub-flavored Markdown table.
 
+  json-path-extractor:
+    title: JSON path extractor
+    description: Extract values from JSON using dot, bracket, index, and wildcard paths.
+
   camera-recorder:
     title: Camera recorder
     description: Take a picture or record a video from your webcam or camera.

@@ -112,6 +112,10 @@ tools:
     title: CSV 转 Markdown 表格
     description: 将 CSV 数据转换为 GitHub 风格的 Markdown 表格。
 
+  json-path-extractor:
+    title: JSON Path 提取器
+    description: 使用点路径、方括号、索引和通配符从 JSON 中提取值。
+
   camera-recorder:
     title: 摄像机记录器
     description: 从网络摄像头或照相机拍摄照片或录制视频。
