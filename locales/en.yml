@@ -117,6 +117,10 @@ tools:
     title: JSON path extractor
     description: Extract values from JSON using dot, bracket, index, and wildcard paths.
 
+  json-key-sorter:
+    title: JSON key sorter
+    description: Sort JSON object keys recursively for stable diffs and deterministic output.
+
   camera-recorder:
     title: Camera recorder
     description: Take a picture or record a video from your webcam or camera.

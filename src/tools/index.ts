@@ -50,6 +50,7 @@ import { tool as slugifyString } from './slugify-string';
 import { tool as keycodeInfo } from './keycode-info';
 import { tool as jsonMinify } from './json-minify';
 import { tool as jsonPathExtractor } from './json-path-extractor';
+import { tool as jsonKeySorter } from './json-key-sorter';
 import { tool as bcrypt } from './bcrypt';
 import { tool as bip39 } from './bip39-generator';
 import { tool as caseConverter } from './case-converter';
@@ -154,6 +155,7 @@ export const toolsByCategory: ToolCategory[] = [
       crontabGenerator,
       jsonViewer,
       jsonPathExtractor,
+      jsonKeySorter,
       jsonMinify,
       jsonToCsv,
       csvToJson,
