@@ -7,7 +7,10 @@ const searchQuery = ref('');
 const memoRef = ref<HTMLElement | null>(null);
 
 function filterSections() {
-  if (!memoRef.value) return;
+  if (!memoRef.value) {
+    return;
+  }
+
   const query = searchQuery.value.toLowerCase().trim();
   const headings = memoRef.value.querySelectorAll('h3');
 
