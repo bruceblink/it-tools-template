@@ -21,7 +21,21 @@ const version = config.app.version;
 const authorUrl = config.app.authorUrl;
 const sponsoringUrl = config.app.sponsoringUrl;
 const repositoryUrl = config.app.repositoryUrl;
-const commitSha = config.app.lastCommitSha.slice(0, 7);
+const fullCommitSha = config.app.lastCommitSha;
+const commitSha = fullCommitSha.slice(0, 7);
+const versionTag = computed(() => {
+  const [calver, ...suffixParts] = version.split('-');
+  const [year, month, day] = calver.split('.');
+
+  if (!year || !month || !day) {
+    return `v${version}`;
+  }
+
+  return [
+    `v${[year, month.padStart(2, '0'), day.padStart(2, '0')].join('.')}`,
+    ...suffixParts,
+  ].join('-');
+});
 
 const { tracker } = useTracker();
 const { t } = useI18n();
@@ -68,13 +82,13 @@ const tools = computed<ToolCategory[]>(() => [
           <div>
             IT-Tools
 
-            <c-link target="_blank" rel="noopener" :href="`${repositoryUrl}/tree/v${version}`">
+            <c-link target="_blank" rel="noopener" :href="`${repositoryUrl}/tree/${versionTag}`">
               v{{ version }}
             </c-link>
 
             <template v-if="commitSha && commitSha.length > 0">
               -
-              <c-link target="_blank" rel="noopener" type="primary" :href="`${repositoryUrl}/tree/${commitSha}`">
+              <c-link target="_blank" rel="noopener" type="primary" :href="`${repositoryUrl}/commit/${fullCommitSha}`">
                 {{ commitSha }}
               </c-link>
             </template>
