@@ -68,6 +68,7 @@ import { tool as percentageCalculator } from './percentage-calculator';
 import { tool as gitMemo } from './git-memo';
 import { tool as hashText } from './hash-text';
 import { tool as hmacGenerator } from './hmac-generator';
+import { tool as httpHeadersParser } from './http-headers-parser';
 import { tool as htmlEntities } from './html-entities';
 import { tool as baseConverter } from './integer-base-converter';
 import { tool as jsonViewer } from './json-viewer';
@@ -143,6 +144,7 @@ export const toolsByCategory: ToolCategory[] = [
       htmlWysiwygEditor,
       userAgentParser,
       httpStatusCodes,
+      httpHeadersParser,
       jsonDiff,
       safelinkDecoder,
     ],

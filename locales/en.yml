@@ -125,6 +125,10 @@ tools:
     title: URL query builder
     description: Build encoded query strings and full URLs from parameter lines, query strings, or JSON objects.
 
+  http-headers-parser:
+    title: HTTP headers parser
+    description: Parse request or response headers, detect duplicates, and export normalized headers as JSON or cURL arguments.
+
   data-size-converter:
     title: Data size converter
     description: Convert between bits, bytes, and decimal or binary data size units.

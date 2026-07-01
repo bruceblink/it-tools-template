@@ -124,6 +124,10 @@ tools:
     title: URL Query 构建器
     description: 从参数行、Query 字符串或 JSON 对象构建编码后的 Query 和完整 URL。
 
+  http-headers-parser:
+    title: HTTP Headers 解析器
+    description: 解析请求或响应头，检测重复项，并导出规范化 Headers、JSON 或 cURL 参数。
+
   data-size-converter:
     title: 数据大小转换器
     description: 在 bit、byte、公制和二进制数据大小单位之间进行转换。
