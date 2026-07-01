@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.07.01-29bfaa9
+
+### Features
+-  add jwt signer tool (b207ff9)
+-  add http headers parser tool (421e229)
+-  add length converter tool (cd9fa9c)
+-  add data size converter tool (523b579)
+-  add url query builder tool (6f1daf0)
+-  add json key sorter tool (89d5ffe)
+-  add json path extractor tool (118e4ae)
+-  add csv to markdown table tool (a0d4dc5)
+-  add csv to json tool (2c50bc9)
+- **composable**: add useToolState for shared async error handling (ff6ba65)
+-  improve tool functionality and test coverage (c3c185a)
+
+### Bug fixes
+- **test**: add jsdom environment to c-input-text tests (2c5d445)
+
+### Tests
+-  add unit tests for untested service modules and fix downloadBase64 bug (f62a31c)
+
+### Chores
+-  refresh generated typings and ts config (29bfaa9)
+- **release**: v2026.04.26-2c5d445 (c7c44eb)
+
+### Documentation
+-  update README with tech stack, tool count, and language coverage (3310361)
+
+### I18n
+-  add complete tool translations for es, fr, pt, uk locales (12baaa1)
+
 ## Version 2026.04.26-2c5d445
 
 ### Features
