@@ -129,6 +129,10 @@ tools:
     title: HTTP headers parser
     description: Parse request or response headers, detect duplicates, and export normalized headers as JSON or cURL arguments.
 
+  jwt-signer:
+    title: JWT signer
+    description: Create client-side HMAC-signed JSON Web Tokens with editable header, payload, secret, and algorithm.
+
   data-size-converter:
     title: Data size converter
     description: Convert between bits, bytes, and decimal or binary data size units.
