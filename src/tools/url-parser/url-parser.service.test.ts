@@ -3,13 +3,13 @@ import { parseUrlDetails } from './url-parser.service';
 
 describe('url-parser service', () => {
   it('parses core URL parts and preserves repeated query parameters', () => {
-    expect(parseUrlDetails('https://me:pwd@example.com:8443/path?q=one&q=two#top')).toMatchObject({
+    expect(parseUrlDetails('https://me:pwd@example.com:8443/path/to/page?q=one&q=two#top')).toMatchObject({
       protocol: 'https:',
       username: 'me',
       password: 'pwd',
       hostname: 'example.com',
       port: '8443',
-      pathname: '/path',
+      pathname: '/path/to/page',
       search: '?q=one&q=two',
       hash: '#top',
       origin: 'https://example.com:8443',
@@ -18,6 +18,12 @@ describe('url-parser service', () => {
         { key: 'q', value: 'two' },
       ],
       duplicateParameterNames: ['q'],
+      summary: {
+        pathSegments: 3,
+        queryParameters: 2,
+        uniqueParameterNames: 1,
+        duplicateParameterNames: 1,
+      },
       warnings: [
         'URL contains embedded credentials.',
         'Duplicate query parameters: q.',

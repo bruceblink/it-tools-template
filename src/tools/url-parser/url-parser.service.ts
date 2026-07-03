@@ -3,6 +3,13 @@ export interface ParsedUrlParameter {
   value: string
 }
 
+export interface ParsedUrlSummary {
+  pathSegments: number
+  queryParameters: number
+  uniqueParameterNames: number
+  duplicateParameterNames: number
+}
+
 export interface ParsedUrlDetails {
   href: string
   protocol: string
@@ -16,6 +23,7 @@ export interface ParsedUrlDetails {
   origin: string
   parameters: ParsedUrlParameter[]
   duplicateParameterNames: string[]
+  summary: ParsedUrlSummary
   warnings: string[]
 }
 
@@ -43,6 +51,10 @@ export function parseUrlDetails(input: string): ParsedUrlDetails {
   const duplicateParameterNames = Object.entries(parameterCounts)
     .filter(([, count]) => count > 1)
     .map(([key]) => key);
+  const pathSegments = url.pathname
+    .split('/')
+    .filter(Boolean)
+    .length;
   const warnings: string[] = [];
 
   if (url.username || url.password) {
@@ -70,6 +82,12 @@ export function parseUrlDetails(input: string): ParsedUrlDetails {
     origin: url.origin,
     parameters,
     duplicateParameterNames,
+    summary: {
+      pathSegments,
+      queryParameters: parameters.length,
+      uniqueParameterNames: Object.keys(parameterCounts).length,
+      duplicateParameterNames: duplicateParameterNames.length,
+    },
     warnings,
   };
 }

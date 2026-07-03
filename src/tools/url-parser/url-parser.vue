@@ -43,6 +43,13 @@ const properties = [
       {{ urlParsed.warnings.join(' ') }}
     </c-alert>
 
+    <div mb-4 grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Path segments" :value="urlParsed?.summary.pathSegments ?? 0" />
+      <n-statistic label="Query parameters" :value="urlParsed?.summary.queryParameters ?? 0" />
+      <n-statistic label="Unique parameter names" :value="urlParsed?.summary.uniqueParameterNames ?? 0" />
+      <n-statistic label="Duplicate names" :value="urlParsed?.summary.duplicateParameterNames ?? 0" />
+    </div>
+
     <InputCopyable
       v-for="{ title, key } in properties"
       :key="key"
