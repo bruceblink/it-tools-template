@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchRegex } from './regex-tester.service';
+import { matchRegex, summarizeRegexMatches } from './regex-tester.service';
 
 const regexesData = [
   {
@@ -103,4 +103,28 @@ describe('regex-tester', () => {
       expect(result).to.deep.equal(expected_result);
     });
   }
+});
+
+describe('summarizeRegexMatches', () => {
+  it('summarizes match, capture, group, and coverage counts', () => {
+    const matches = matchRegex('(.)(?<g>r)', 'azertyr', 'gd');
+
+    expect(summarizeRegexMatches(matches, 'azertyr')).toEqual({
+      matchCount: 2,
+      captureCount: 4,
+      groupCount: 2,
+      coveredCharacters: 4,
+      coveragePercent: 57,
+    });
+  });
+
+  it('summarizes empty text without dividing by zero', () => {
+    expect(summarizeRegexMatches([], '')).toEqual({
+      matchCount: 0,
+      captureCount: 0,
+      groupCount: 0,
+      coveredCharacters: 0,
+      coveragePercent: 0,
+    });
+  });
 });

@@ -2,7 +2,7 @@
 import RandExp from 'randexp';
 import { render } from '@regexper/render';
 import type { ShadowRootExpose } from 'vue-shadow-dom';
-import { matchRegex } from './regex-tester.service';
+import { matchRegex, summarizeRegexMatches } from './regex-tester.service';
 import { useValidation } from '@/composable/validation';
 import { useQueryParamOrStorage } from '@/composable/queryParams';
 
@@ -57,6 +57,7 @@ const results = computed(() => {
     return [];
   }
 });
+const matchSummary = computed(() => summarizeRegexMatches(results.value, text.value));
 
 const sample = computed(() => {
   try {
@@ -137,6 +138,13 @@ watchEffect(
     </c-card>
 
     <c-card title="Matches" mb-1 mt-3>
+      <div mb-4 grid grid-cols-1 gap-3 md:grid-cols-4>
+        <n-statistic label="Matches" :value="matchSummary.matchCount" />
+        <n-statistic label="Captures" :value="matchSummary.captureCount" />
+        <n-statistic label="Named groups" :value="matchSummary.groupCount" />
+        <n-statistic label="Coverage" :value="`${matchSummary.coveragePercent}%`" />
+      </div>
+
       <n-table v-if="results?.length > 0">
         <thead>
           <tr>
