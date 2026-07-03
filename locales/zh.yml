@@ -413,6 +413,10 @@ tools:
     title: IPv4范围扩展器
     description: 给定起始和结束IPv4地址，此工具使用其CIDR表示法计算有效的IPv4网络。
 
+  ipv4-cidr-merge:
+    title: IPv4 CIDR 合并器
+    description: 将 IPv4 地址、范围和 CIDR 块合并为最小 CIDR 列表。
+
   text-diff:
     title: 文本比较
     description: 比较两个文本并查看它们之间的差异。

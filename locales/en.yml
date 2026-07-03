@@ -417,6 +417,10 @@ tools:
     title: IPv4 range expander
     description: Given a start and an end IPv4 address, this tool calculates a valid IPv4 subnet along with its CIDR notation.
 
+  ipv4-cidr-merge:
+    title: IPv4 CIDR merge
+    description: Merge IPv4 addresses, ranges, and CIDR blocks into the smallest CIDR list.
+
   text-diff:
     title: Text diff
     description: Compare two texts and see the differences between them.
