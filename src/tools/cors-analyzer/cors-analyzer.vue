@@ -39,6 +39,16 @@ function statusTagType(status: CorsCheckStatus) {
   }
   return 'error';
 }
+
+function riskTagType(risk: 'low' | 'medium' | 'high') {
+  if (risk === 'low') {
+    return 'success';
+  }
+  if (risk === 'medium') {
+    return 'warning';
+  }
+  return 'error';
+}
 </script>
 
 <template>
@@ -65,6 +75,9 @@ function statusTagType(status: CorsCheckStatus) {
     </div>
 
     <div flex flex-wrap gap-2>
+      <n-tag :type="riskTagType(analysis.summary.risk)">
+        {{ analysis.summary.risk }} risk
+      </n-tag>
       <n-tag type="success">
         {{ analysis.passed }} pass
       </n-tag>
@@ -74,6 +87,15 @@ function statusTagType(status: CorsCheckStatus) {
       <n-tag type="error">
         {{ analysis.failed }} fail
       </n-tag>
+    </div>
+
+    <div grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6>
+      <n-statistic label="Origin mode" :value="analysis.summary.originMode" />
+      <n-statistic label="Credential mode" :value="analysis.summary.credentialMode" />
+      <n-statistic label="Methods" :value="analysis.summary.methodCount" />
+      <n-statistic label="Request headers" :value="analysis.summary.requestHeaderCount" />
+      <n-statistic label="Exposed headers" :value="analysis.summary.exposedHeaderCount" />
+      <n-statistic label="Preflight cache" :value="analysis.summary.preflightCacheConfigured ? 'configured' : 'missing'" />
     </div>
 
     <c-table

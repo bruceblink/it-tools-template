@@ -21,6 +21,15 @@ vary: Origin`);
       failed: 0,
       score: 100,
       grade: 'A',
+      summary: {
+        originMode: 'specific',
+        credentialMode: 'disabled',
+        methodCount: 2,
+        requestHeaderCount: 1,
+        exposedHeaderCount: 1,
+        preflightCacheConfigured: true,
+        risk: 'low',
+      },
     });
   });
 
@@ -41,6 +50,11 @@ access-control-allow-credentials: true`);
       warnings: 4,
       failed: 1,
       score: 57,
+      summary: {
+        originMode: 'wildcard',
+        credentialMode: 'enabled',
+        risk: 'high',
+      },
     });
     expect(analysis.grade).toBe('D');
   });

@@ -10,6 +10,16 @@ export interface CorsCheck {
   recommendation: string
 }
 
+export interface CorsPolicySummary {
+  originMode: 'missing' | 'wildcard' | 'reflected' | 'specific'
+  credentialMode: 'enabled' | 'disabled'
+  methodCount: number
+  requestHeaderCount: number
+  exposedHeaderCount: number
+  preflightCacheConfigured: boolean
+  risk: 'low' | 'medium' | 'high'
+}
+
 export interface CorsAnalysis {
   allowOrigin: string
   allowCredentials: boolean
@@ -24,6 +34,7 @@ export interface CorsAnalysis {
   failed: number
   score: number
   grade: 'A' | 'B' | 'C' | 'D' | 'F'
+  summary: CorsPolicySummary
 }
 
 type HeaderMap = Record<string, string[] | undefined>;
@@ -192,6 +203,34 @@ function getGrade(score: number): CorsAnalysis['grade'] {
   return 'F';
 }
 
+function getOriginMode(allowOrigin: string): CorsPolicySummary['originMode'] {
+  if (!allowOrigin) {
+    return 'missing';
+  }
+
+  if (allowOrigin === '*') {
+    return 'wildcard';
+  }
+
+  if (allowOrigin.toLowerCase() === 'null' || allowOrigin.toLowerCase() === 'origin') {
+    return 'reflected';
+  }
+
+  return 'specific';
+}
+
+function getRisk(failed: number, warnings: number, allowCredentials: boolean, originMode: CorsPolicySummary['originMode']): CorsPolicySummary['risk'] {
+  if (failed > 0 || (allowCredentials && originMode !== 'specific')) {
+    return 'high';
+  }
+
+  if (warnings > 0 || originMode === 'wildcard' || originMode === 'reflected') {
+    return 'medium';
+  }
+
+  return 'low';
+}
+
 export function analyzeCors(input: string): CorsAnalysis {
   const headers = createHeaderMap(input);
   const allowMethods = parseMethods(getHeaderValue(headers, 'access-control-allow-methods'));
@@ -211,10 +250,13 @@ export function analyzeCors(input: string): CorsAnalysis {
     }
     return total;
   }, 0) / checks.length);
+  const allowOrigin = getHeaderValue(headers, 'access-control-allow-origin');
+  const allowCredentials = getHeaderValue(headers, 'access-control-allow-credentials').toLowerCase() === 'true';
+  const originMode = getOriginMode(allowOrigin);
 
   return {
-    allowOrigin: getHeaderValue(headers, 'access-control-allow-origin'),
-    allowCredentials: getHeaderValue(headers, 'access-control-allow-credentials').toLowerCase() === 'true',
+    allowOrigin,
+    allowCredentials,
     allowMethods,
     allowHeaders,
     exposeHeaders,
@@ -226,5 +268,14 @@ export function analyzeCors(input: string): CorsAnalysis {
     failed,
     score,
     grade: getGrade(score),
+    summary: {
+      originMode,
+      credentialMode: allowCredentials ? 'enabled' : 'disabled',
+      methodCount: allowMethods.length,
+      requestHeaderCount: allowHeaders.length,
+      exposedHeaderCount: exposeHeaders.length,
+      preflightCacheConfigured: Boolean(maxAgeValue),
+      risk: getRisk(failed, warnings, allowCredentials, originMode),
+    },
   };
 }
