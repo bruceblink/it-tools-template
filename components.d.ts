@@ -65,6 +65,7 @@ declare module 'vue' {
     CrontabGenerator: typeof import('./src/tools/crontab-generator/crontab-generator.vue')['default']
     CSelect: typeof import('./src/ui/c-select/c-select.vue')['default']
     'CSelect.demo': typeof import('./src/ui/c-select/c-select.demo.vue')['default']
+    CspAnalyzer: typeof import('./src/tools/csp-analyzer/csp-analyzer.vue')['default']
     CsvToJson: typeof import('./src/tools/csv-to-json/csv-to-json.vue')['default']
     CsvToMarkdownTable: typeof import('./src/tools/csv-to-markdown-table/csv-to-markdown-table.vue')['default']
     CTable: typeof import('./src/ui/c-table/c-table.vue')['default']

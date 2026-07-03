@@ -15,6 +15,7 @@ import { tool as jsonToXml } from './json-to-xml';
 import { tool as regexTester } from './regex-tester';
 import { tool as regexMemo } from './regex-memo';
 import { tool as securityHeadersAnalyzer } from './security-headers-analyzer';
+import { tool as cspAnalyzer } from './csp-analyzer';
 import { tool as sriHashGenerator } from './sri-hash-generator';
 import { tool as markdownToHtml } from './markdown-to-html';
 import { tool as pdfSignatureChecker } from './pdf-signature-checker';
@@ -169,6 +170,7 @@ export const toolsByCategory: ToolCategory[] = [
       cookieParser,
       corsAnalyzer,
       securityHeadersAnalyzer,
+      cspAnalyzer,
       sriHashGenerator,
       robotsTxtTester,
       jsonDiff,

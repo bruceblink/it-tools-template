@@ -148,6 +148,10 @@ tools:
     title: 安全响应头分析器
     description: 分析 HTTP 响应安全头，并标记缺失或较弱的防护配置。
 
+  csp-analyzer:
+    title: CSP 分析器
+    description: 解析 Content-Security-Policy 指令，并标记不安全脚本、嵌入、通配符和上报配置问题。
+
   sri-hash-generator:
     title: SRI Hash 生成器
     description: 为脚本和样式表生成 Subresource Integrity Hash 与 HTML 片段。

@@ -149,6 +149,10 @@ tools:
     title: Security headers analyzer
     description: Analyze HTTP response security headers and highlight missing or weak protections.
 
+  csp-analyzer:
+    title: CSP analyzer
+    description: Parse Content-Security-Policy directives and highlight unsafe scripts, framing, wildcards, and reporting gaps.
+
   sri-hash-generator:
     title: SRI hash generator
     description: Generate Subresource Integrity hashes and HTML snippets for scripts and stylesheets.
