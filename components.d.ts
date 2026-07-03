@@ -17,6 +17,7 @@ declare module 'vue' {
     AsciiTextDrawer: typeof import('./src/tools/ascii-text-drawer/ascii-text-drawer.vue')['default']
     'Base.layout': typeof import('./src/layouts/base.layout.vue')['default']
     Base32StringConverter: typeof import('./src/tools/base32-string-converter/base32-string-converter.vue')['default']
+    Base58StringConverter: typeof import('./src/tools/base58-string-converter/base58-string-converter.vue')['default']
     Base64FileConverter: typeof import('./src/tools/base64-file-converter/base64-file-converter.vue')['default']
     Base64StringConverter: typeof import('./src/tools/base64-string-converter/base64-string-converter.vue')['default']
     BasicAuthGenerator: typeof import('./src/tools/basic-auth-generator/basic-auth-generator.vue')['default']

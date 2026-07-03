@@ -237,6 +237,10 @@ tools:
     title: Base32 string encoder/decoder
     description: Encode and decode UTF-8 strings with RFC 4648 Base32, optional padding, and separator-tolerant decoding.
 
+  base58-string-converter:
+    title: Base58 string encoder/decoder
+    description: Encode and decode UTF-8 strings with Bitcoin or Flickr Base58 alphabets.
+
   hex-string-converter:
     title: Hex string encoder/decoder
     description: Encode and decode UTF-8 strings as hexadecimal bytes with optional grouping and separator-tolerant decoding.
