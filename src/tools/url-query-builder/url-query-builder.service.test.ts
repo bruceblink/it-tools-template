@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildQueryString, buildUrlWithQuery, parseQueryParameters } from './url-query-builder.service';
+import { buildQueryString, buildUrlWithQuery, parseQueryParameters, summarizeQueryParameters } from './url-query-builder.service';
 
 describe('url-query-builder service', () => {
   it('parses key-value lines', () => {
@@ -49,6 +49,14 @@ describe('url-query-builder service', () => {
   it('builds encoded query strings from flattened nested JSON objects', () => {
     expect(buildQueryString('{"filter":{"status":"open"},"page":1}', { flattenNestedObjects: true, sortKeys: true }))
       .toBe('filter%5Bstatus%5D=open&page=1');
+  });
+
+  it('summarizes parsed query parameters', () => {
+    expect(summarizeQueryParameters('tag=vue\ntag=vite\nempty=', { includeEmptyValues: false })).toEqual({
+      totalParameters: 2,
+      uniqueKeys: 1,
+      duplicateKeys: ['tag'],
+    });
   });
 
   it('appends query parameters before URL hashes', () => {

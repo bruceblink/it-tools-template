@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
-import { buildQueryString, buildUrlWithQuery, parseQueryParameters } from './url-query-builder.service';
+import { buildQueryString, buildUrlWithQuery, parseQueryParameters, summarizeQueryParameters } from './url-query-builder.service';
 import { useValidation } from '@/composable/validation';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
 import { withDefaultOnError } from '@/utils/defaults';
@@ -19,6 +19,19 @@ const options = computed(() => ({
 }));
 const queryString = computed(() => withDefaultOnError(() => buildQueryString(parameterInput.value, options.value), ''));
 const fullUrl = computed(() => withDefaultOnError(() => buildUrlWithQuery(baseUrl.value, parameterInput.value, options.value), ''));
+const parsedParameters = computed(() => withDefaultOnError(() => parseQueryParameters(parameterInput.value, options.value), []));
+const parameterRows = computed(() => parsedParameters.value
+  .filter(({ key, value }) => key !== '' && (includeEmptyValues.value || value !== ''))
+  .map(({ key, value }, index) => ({
+    index: index + 1,
+    key,
+    value,
+  })));
+const parameterSummary = computed(() => withDefaultOnError(() => summarizeQueryParameters(parameterInput.value, options.value), {
+  totalParameters: 0,
+  uniqueKeys: 0,
+  duplicateKeys: [],
+}));
 
 const parameterValidation = useValidation({
   source: parameterInput,
@@ -76,4 +89,29 @@ const parameterValidation = useValidation({
   <n-form-item label="Full URL">
     <TextareaCopyable :value="fullUrl" language="txt" :follow-height-of="inputElement" />
   </n-form-item>
+
+  <div grid grid-cols-1 gap-3 md:grid-cols-3>
+    <n-statistic label="Parameters" :value="parameterSummary.totalParameters" />
+    <n-statistic label="Unique keys" :value="parameterSummary.uniqueKeys" />
+    <n-statistic label="Duplicate keys" :value="parameterSummary.duplicateKeys.length ? parameterSummary.duplicateKeys.join(', ') : '-'" />
+  </div>
+
+  <c-table
+    v-if="parameterRows.length"
+    :data="parameterRows"
+    :headers="[
+      { key: 'index', label: '#' },
+      { key: 'key', label: 'Key' },
+      { key: 'value', label: 'Value' },
+    ]"
+    description="Parsed query parameters"
+  >
+    <template #key="{ value }">
+      <span-copyable :value="String(value)" />
+    </template>
+
+    <template #value="{ value }">
+      <span-copyable :value="String(value)" />
+    </template>
+  </c-table>
 </template>

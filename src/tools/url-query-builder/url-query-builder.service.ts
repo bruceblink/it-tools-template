@@ -9,6 +9,12 @@ export interface QueryBuilderOptions {
   flattenNestedObjects?: boolean
 }
 
+export interface QueryParameterSummary {
+  totalParameters: number
+  uniqueKeys: number
+  duplicateKeys: string[]
+}
+
 function isJsonObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -114,6 +120,24 @@ export function buildQueryString(input: string, options: QueryBuilderOptions = {
   params.forEach(({ key, value }) => searchParams.append(key, value));
 
   return searchParams.toString();
+}
+
+export function summarizeQueryParameters(input: string, options: QueryBuilderOptions = {}): QueryParameterSummary {
+  const includeEmptyValues = options.includeEmptyValues ?? true;
+  const params = parseQueryParameters(input, options)
+    .filter(({ key, value }) => key !== '' && (includeEmptyValues || value !== ''));
+  const keyCounts = params.reduce<Record<string, number>>((counts, { key }) => {
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  return {
+    totalParameters: params.length,
+    uniqueKeys: Object.keys(keyCounts).length,
+    duplicateKeys: Object.entries(keyCounts)
+      .filter(([, count]) => count > 1)
+      .map(([key]) => key),
+  };
 }
 
 export function buildUrlWithQuery(baseUrl: string, input: string, options: QueryBuilderOptions = {}): string {
