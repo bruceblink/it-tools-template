@@ -393,6 +393,10 @@ tools:
     title: Ipv4地址转换器
     description: 在ipv6中，将ip地址转换为十进制、二进制、十六进制或事件
 
+  ipv4-address-classifier:
+    title: IPv4 地址分类器
+    description: 判断 IPv4 地址是公网、私网、回环、链路本地、多播、保留地址还是其他特殊用途网段。
+
   text-statistics:
     title: 文本统计
     description: 获取有关文本、字符数、字数、大小等的信息

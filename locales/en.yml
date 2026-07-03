@@ -397,6 +397,10 @@ tools:
     title: IPv4 address converter
     description: Convert an IP address into decimal, binary, hexadecimal, or even an IPv6 representation of it.
 
+  ipv4-address-classifier:
+    title: IPv4 address classifier
+    description: Identify whether an IPv4 address is public, private, loopback, link-local, multicast, reserved, or another special-purpose range.
+
   text-statistics:
     title: Text statistics
     description: Get information about a text, the number of characters, the number of words, its size in bytes, ...

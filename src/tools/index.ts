@@ -39,6 +39,7 @@ import { tool as yamlToJson } from './yaml-to-json-converter';
 import { tool as jsonToYaml } from './json-to-yaml-converter';
 import { tool as ipv6UlaGenerator } from './ipv6-ula-generator';
 import { tool as ipv4AddressConverter } from './ipv4-address-converter';
+import { tool as ipv4AddressClassifier } from './ipv4-address-classifier';
 import { tool as benchmarkBuilder } from './benchmark-builder';
 import { tool as userAgentParser } from './user-agent-parser';
 import { tool as ipv4SubnetCalculator } from './ipv4-subnet-calculator';
@@ -182,7 +183,7 @@ export const toolsByCategory: ToolCategory[] = [
   },
   {
     name: 'Network',
-    components: [ipv4SubnetCalculator, ipv4AddressConverter, ipv4RangeExpander, ipv4CidrMerge, macAddressLookup, macAddressGenerator, ipv6UlaGenerator],
+    components: [ipv4SubnetCalculator, ipv4AddressConverter, ipv4AddressClassifier, ipv4RangeExpander, ipv4CidrMerge, macAddressLookup, macAddressGenerator, ipv6UlaGenerator],
   },
   {
     name: 'Math',
