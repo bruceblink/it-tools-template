@@ -51,6 +51,7 @@ import { tool as ipv4AddressClassifier } from './ipv4-address-classifier';
 import { tool as benchmarkBuilder } from './benchmark-builder';
 import { tool as userAgentParser } from './user-agent-parser';
 import { tool as ipv4SubnetCalculator } from './ipv4-subnet-calculator';
+import { tool as ipv4CidrContainmentChecker } from './ipv4-cidr-containment-checker';
 import { tool as ipv4CidrOverlapChecker } from './ipv4-cidr-overlap-checker';
 import { tool as ipv4CidrMerge } from './ipv4-cidr-merge';
 import { tool as ipv4WildcardMask } from './ipv4-wildcard-mask';
@@ -212,7 +213,7 @@ export const toolsByCategory: ToolCategory[] = [
   },
   {
     name: 'Network',
-    components: [ipv4SubnetCalculator, ipv4AddressConverter, ipv4AddressClassifier, ipv4RangeExpander, ipv4CidrOverlapChecker, ipv4CidrMerge, ipv4CidrSplitter, ipv4WildcardMask, macAddressLookup, macAddressGenerator, ipv6UlaGenerator],
+    components: [ipv4SubnetCalculator, ipv4AddressConverter, ipv4AddressClassifier, ipv4RangeExpander, ipv4CidrContainmentChecker, ipv4CidrOverlapChecker, ipv4CidrMerge, ipv4CidrSplitter, ipv4WildcardMask, macAddressLookup, macAddressGenerator, ipv6UlaGenerator],
   },
   {
     name: 'Math',

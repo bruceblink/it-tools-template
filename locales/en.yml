@@ -477,6 +477,10 @@ tools:
     title: IPv4 CIDR merge
     description: Merge IPv4 addresses, ranges, and CIDR blocks into the smallest CIDR list.
 
+  ipv4-cidr-containment-checker:
+    title: IPv4 CIDR containment checker
+    description: Check whether IPv4 addresses or CIDR blocks are covered by a set of containing CIDR rules.
+
   ipv4-cidr-overlap-checker:
     title: IPv4 CIDR overlap checker
     description: Find overlapping, duplicate, and contained IPv4 CIDR blocks in a list.

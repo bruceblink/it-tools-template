@@ -132,6 +132,7 @@ declare module 'vue' {
     IntegerBaseConverter: typeof import('./src/tools/integer-base-converter/integer-base-converter.vue')['default']
     Ipv4AddressClassifier: typeof import('./src/tools/ipv4-address-classifier/ipv4-address-classifier.vue')['default']
     Ipv4AddressConverter: typeof import('./src/tools/ipv4-address-converter/ipv4-address-converter.vue')['default']
+    Ipv4CidrContainmentChecker: typeof import('./src/tools/ipv4-cidr-containment-checker/ipv4-cidr-containment-checker.vue')['default']
     Ipv4CidrMerge: typeof import('./src/tools/ipv4-cidr-merge/ipv4-cidr-merge.vue')['default']
     Ipv4CidrOverlapChecker: typeof import('./src/tools/ipv4-cidr-overlap-checker/ipv4-cidr-overlap-checker.vue')['default']
     Ipv4CidrSplitter: typeof import('./src/tools/ipv4-cidr-splitter/ipv4-cidr-splitter.vue')['default']

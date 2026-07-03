@@ -474,6 +474,10 @@ tools:
     title: IPv4 CIDR 合并器
     description: 将 IPv4 地址、范围和 CIDR 块合并为最小 CIDR 列表。
 
+  ipv4-cidr-containment-checker:
+    title: IPv4 CIDR 包含检查器
+    description: 检查 IPv4 地址或 CIDR 网段是否被一组 CIDR 规则覆盖。
+
   ipv4-cidr-overlap-checker:
     title: IPv4 CIDR 重叠检查器
     description: 检查列表中重叠、重复或被包含的 IPv4 CIDR 网段。
