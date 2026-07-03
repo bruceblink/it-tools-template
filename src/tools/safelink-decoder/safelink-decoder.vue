@@ -16,6 +16,9 @@ const errorMessage = computed(() => {
 const detailRows = computed<Record<string, unknown>[]>(() => parsedSafeLink.value
   ? [
       { name: 'SafeLinks host', value: parsedSafeLink.value.host },
+      { name: 'Target protocol', value: parsedSafeLink.value.targetProtocol },
+      { name: 'Target host', value: parsedSafeLink.value.targetHost },
+      { name: 'Target path', value: parsedSafeLink.value.targetPath || '/' },
       { name: 'Reserved', value: parsedSafeLink.value.reserved || '-' },
       { name: 'Data', value: parsedSafeLink.value.data || '-' },
       { name: 'Signature data', value: parsedSafeLink.value.sdata || '-' },

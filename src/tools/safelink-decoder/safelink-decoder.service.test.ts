@@ -23,6 +23,9 @@ describe('safelink-decoder', () => {
         expect(parseSafeLinksURL(SAFE_LINK)).toMatchObject({
           decodedUrl: 'https://www.google.com/search?q=safelink&rlz=1',
           host: 'aus01.safelinks.protection.outlook.com',
+          targetProtocol: 'https:',
+          targetHost: 'www.google.com',
+          targetPath: '/search?q=safelink&rlz=1',
           reserved: '0',
           warnings: [],
         });
@@ -44,6 +47,13 @@ describe('safelink-decoder', () => {
             'Reserved parameter has an unexpected value.',
           ],
         });
+      });
+
+      it('warns when the decoded target is not HTTPS', () => {
+        expect(parseSafeLinksURL('https://aus01.safelinks.protection.outlook.com/?url=http%3A%2F%2Fexample.com%2Fdownload%3Fid%3D1').warnings)
+          .toContain('Decoded URL is not HTTPS.');
+        expect(parseSafeLinksURL('https://aus01.safelinks.protection.outlook.com/?url=mailto%3Asecurity%40example.com').warnings)
+          .toContain('Decoded URL uses a non-HTTP(S) protocol.');
       });
     });
   });
