@@ -8,8 +8,6 @@
     "module": "es2022",
     "moduleResolution": "bundler",
     "composite": true,
-    "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
