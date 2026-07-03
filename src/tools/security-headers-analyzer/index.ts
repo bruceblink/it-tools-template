@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.security-headers-analyzer.title'),
   path: '/security-headers-analyzer',
   description: translate('tools.security-headers-analyzer.description'),
-  keywords: ['http', 'headers', 'security', 'hsts', 'csp', 'x-frame-options', 'referrer-policy'],
+  keywords: ['http', 'headers', 'security', 'hsts', 'csp', 'x-frame-options', 'referrer-policy', 'coop', 'coep', 'corp'],
   component: () => import('./security-headers-analyzer.vue'),
   icon: ShieldCheck,
   createdAt: new Date('2026-07-04'),

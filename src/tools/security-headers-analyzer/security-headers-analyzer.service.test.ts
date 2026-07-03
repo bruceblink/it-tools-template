@@ -9,6 +9,7 @@ x-content-type-options: nosniff
 referrer-policy: strict-origin-when-cross-origin
 permissions-policy: camera=(), microphone=(), geolocation=()
 cross-origin-opener-policy: same-origin
+cross-origin-embedder-policy: require-corp
 cross-origin-resource-policy: same-origin`;
 
 describe('security-headers-analyzer service', () => {
@@ -16,7 +17,7 @@ describe('security-headers-analyzer service', () => {
     const analysis = analyzeSecurityHeaders(secureHeaders);
 
     expect(analysis).toMatchObject({
-      passed: 10,
+      passed: 11,
       warnings: 0,
       failed: 0,
       score: 100,
@@ -32,8 +33,8 @@ server: nginx/1.25
 x-powered-by: Express`);
 
     expect(analysis.failed).toBe(3);
-    expect(analysis.warnings).toBe(7);
-    expect(analysis.score).toBe(35);
+    expect(analysis.warnings).toBe(8);
+    expect(analysis.score).toBe(36);
     expect(analysis.grade).toBe('F');
     expect(analysis.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Strict-Transport-Security', status: 'fail' }),
@@ -60,6 +61,18 @@ strict-transport-security: max-age=3600`);
 
     expect(analysis.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Strict-Transport-Security', status: 'warning' }),
+    ]));
+  });
+
+  it('checks cross-origin embedder policy values', () => {
+    expect(analyzeSecurityHeaders(`HTTP/2 200
+cross-origin-embedder-policy: require-corp`).checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Cross-Origin-Embedder-Policy', status: 'pass' }),
+    ]));
+
+    expect(analyzeSecurityHeaders(`HTTP/2 200
+cross-origin-embedder-policy: invalid`).checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'Cross-Origin-Embedder-Policy', status: 'fail' }),
     ]));
   });
 

@@ -338,6 +338,38 @@ function checkCrossOriginOpenerPolicy(headers: HeaderMap): SecurityHeaderCheck {
   );
 }
 
+function checkCrossOriginEmbedderPolicy(headers: HeaderMap): SecurityHeaderCheck {
+  const value = getHeaderValue(headers, 'cross-origin-embedder-policy');
+  if (!value) {
+    return check(
+      'Cross-Origin-Embedder-Policy',
+      'warning',
+      '',
+      'Missing cross-origin embedder isolation policy.',
+      'Use require-corp when the app needs cross-origin isolation or SharedArrayBuffer.',
+    );
+  }
+
+  const normalizedValue = value.trim().toLowerCase();
+  if (normalizedValue === 'require-corp' || normalizedValue === 'credentialless') {
+    return check(
+      'Cross-Origin-Embedder-Policy',
+      'pass',
+      value,
+      'Cross-origin embedding requirements are configured.',
+      'Pair COEP with COOP and compatible CORP/CORS headers on embedded resources.',
+    );
+  }
+
+  return check(
+    'Cross-Origin-Embedder-Policy',
+    normalizedValue === 'unsafe-none' ? 'warning' : 'fail',
+    value,
+    'COEP is permissive or invalid.',
+    'Use require-corp for cross-origin isolation, or omit COEP when isolation is not needed.',
+  );
+}
+
 function checkCrossOriginResourcePolicy(headers: HeaderMap): SecurityHeaderCheck {
   const value = getHeaderValue(headers, 'cross-origin-resource-policy');
   if (!value) {
@@ -417,6 +449,7 @@ export function analyzeSecurityHeaders(input: string): SecurityHeadersAnalysis {
     checkReferrerPolicy(headers),
     checkPermissionsPolicy(headers),
     checkCrossOriginOpenerPolicy(headers),
+    checkCrossOriginEmbedderPolicy(headers),
     checkCrossOriginResourcePolicy(headers),
     checkInformationDisclosureHeader(headers, 'Server'),
     checkInformationDisclosureHeader(headers, 'X-Powered-By'),

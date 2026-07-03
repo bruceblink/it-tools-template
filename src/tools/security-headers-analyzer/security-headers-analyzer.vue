@@ -15,6 +15,7 @@ x-frame-options: DENY
 referrer-policy: strict-origin-when-cross-origin
 permissions-policy: camera=(), microphone=(), geolocation=()
 cross-origin-opener-policy: same-origin
+cross-origin-embedder-policy: require-corp
 cross-origin-resource-policy: same-origin`;
 
 const rawHeaders = useStorage('security-headers-analyzer:headers', sampleHeaders);
