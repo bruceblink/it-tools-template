@@ -80,6 +80,7 @@ import { tool as dateTimeConverter } from './date-time-converter';
 import { tool as dataSizeConverter } from './data-size-converter';
 import { tool as deviceInformation } from './device-information';
 import { tool as cypher } from './encryption';
+import { tool as envVarsParser } from './env-vars-parser';
 import { tool as etaCalculator } from './eta-calculator';
 import { tool as percentageCalculator } from './percentage-calculator';
 import { tool as gitMemo } from './git-memo';
@@ -206,6 +207,7 @@ export const toolsByCategory: ToolCategory[] = [
       dockerRunToDockerComposeConverter,
       xmlFormatter,
       yamlViewer,
+      envVarsParser,
       emailNormalizer,
       regexTester,
       regexMemo,

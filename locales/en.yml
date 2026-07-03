@@ -465,6 +465,10 @@ tools:
     title: Bearer token parser
     description: Extract Bearer tokens, inspect JWT claims, and flag opaque, expired, unsigned, or not-yet-active tokens.
 
+  env-vars-parser:
+    title: Environment variables parser
+    description: Parse .env files, find duplicate or invalid variables, and convert them to JSON, shell exports, or Docker Compose syntax.
+
   text-to-unicode:
     title: Text to Unicode
     description: Parse and convert text to unicode and vice-versa

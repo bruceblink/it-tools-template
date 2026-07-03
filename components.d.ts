@@ -90,6 +90,7 @@ declare module 'vue' {
     EmojiGrid: typeof import('./src/tools/emoji-picker/emoji-grid.vue')['default']
     EmojiPicker: typeof import('./src/tools/emoji-picker/emoji-picker.vue')['default']
     Encryption: typeof import('./src/tools/encryption/encryption.vue')['default']
+    EnvVarsParser: typeof import('./src/tools/env-vars-parser/env-vars-parser.vue')['default']
     EtaCalculator: typeof import('./src/tools/eta-calculator/eta-calculator.vue')['default']
     FavoriteButton: typeof import('./src/components/FavoriteButton.vue')['default']
     FormatTransformer: typeof import('./src/components/FormatTransformer.vue')['default']

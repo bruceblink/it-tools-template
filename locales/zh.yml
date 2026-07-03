@@ -462,6 +462,10 @@ tools:
     title: Bearer Token 解析器
     description: 提取 Bearer Token，查看 JWT Claims，并标记不透明、过期、未签名或尚未生效的 Token。
 
+  env-vars-parser:
+    title: 环境变量解析器
+    description: 解析 .env 文件，检查重复或无效变量，并转换为 JSON、Shell export 或 Docker Compose 语法。
+
   text-to-unicode:
     title: 文本转 Unicode
     description: 解析文本并将其转换为 unicode，反之亦然
