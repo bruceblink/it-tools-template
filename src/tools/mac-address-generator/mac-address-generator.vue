@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import _ from 'lodash';
-import { generateRandomMacAddress } from './mac-adress-generator.models';
+import { generateRandomMacAddress, summarizeMacAddressOptions } from './mac-adress-generator.models';
 import { computedRefreshable } from '@/composable/computedRefreshable';
 import { useCopy } from '@/composable/copy';
 import { usePartialMacAddressValidation } from '@/utils/macAddress';
@@ -9,6 +9,10 @@ const amount = useStorage('mac-address-generator-amount', 1);
 const macAddressPrefix = useStorage('mac-address-generator-prefix', '64:16:7F');
 
 const prefixValidation = usePartialMacAddressValidation(macAddressPrefix);
+const macAddressSummary = computed(() => summarizeMacAddressOptions({
+  prefix: macAddressPrefix.value,
+  amount: amount.value,
+}));
 
 const casesTransformers = [
   { label: 'Uppercase', value: (value: string) => value.toUpperCase() },
@@ -86,6 +90,17 @@ const { copy } = useCopy({ source: macAddresses, text: 'MAC addresses copied to 
       label-width="150px"
       label-align="right"
     />
+
+    <div grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Addresses" :value="macAddressSummary.amount" />
+      <n-statistic label="Prefix bytes" :value="macAddressSummary.prefixBytes" />
+      <n-statistic label="Random bytes" :value="macAddressSummary.randomBytes" />
+      <n-statistic label="Output bytes" :value="macAddressSummary.totalBytes" />
+    </div>
+
+    <c-alert v-if="macAddressSummary.warnings.length" type="warning">
+      {{ macAddressSummary.warnings.join(' ') }}
+    </c-alert>
 
     <c-card mt-5 flex data-test-id="ulids">
       <pre m-0 m-x-auto>{{ macAddresses }}</pre>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateRandomMacAddress, splitPrefix } from './mac-adress-generator.models';
+import { generateRandomMacAddress, splitPrefix, summarizeMacAddressOptions } from './mac-adress-generator.models';
 
 describe('mac-adress-generator models', () => {
   describe('splitPrefix', () => {
@@ -38,6 +38,37 @@ describe('mac-adress-generator models', () => {
       expect(generateRandomMacAddress({ prefix: 'ff:ee:aa', separator: '-', getRandomByte: createRandomByteGenerator() })).toBe('ff-ee-aa-00-01-02');
       expect(generateRandomMacAddress({ prefix: 'ff-ee:aa', separator: '-', getRandomByte: createRandomByteGenerator() })).toBe('ff-ee-aa-00-01-02');
       expect(generateRandomMacAddress({ prefix: 'ff ee:aa', separator: '-', getRandomByte: createRandomByteGenerator() })).toBe('ff-ee-aa-00-01-02');
+    });
+  });
+
+  describe('summarizeMacAddressOptions', () => {
+    it('summarizes generated address size and random bytes', () => {
+      expect(summarizeMacAddressOptions({ prefix: '64:16', amount: 3 })).toEqual({
+        amount: 3,
+        prefixBytes: 2,
+        randomBytes: 4,
+        totalBytes: 18,
+        warnings: [],
+      });
+    });
+
+    it('warns when the prefix fixes the OUI portion', () => {
+      expect(summarizeMacAddressOptions({ prefix: '64:16:7f', amount: 1 })).toMatchObject({
+        prefixBytes: 3,
+        randomBytes: 3,
+        warnings: ['Prefix fixes the OUI/vendor portion of the MAC address.'],
+      });
+    });
+
+    it('warns when the prefix fills the full MAC address', () => {
+      expect(summarizeMacAddressOptions({ prefix: '64:16:7f:aa:bb:cc', amount: 2 })).toMatchObject({
+        prefixBytes: 6,
+        randomBytes: 0,
+        warnings: [
+          'Prefix fixes the OUI/vendor portion of the MAC address.',
+          'Prefix fills the full MAC address; generated values will be identical.',
+        ],
+      });
     });
   });
 });
