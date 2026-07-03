@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.07.03-c0293f6
+
+### Features
+-  add cors analyzer (aa76445)
+-  add http cache analyzer (27c5b03)
+-  add cookie parser tool (4604540)
+-  add security headers analyzer (4d80b4d)
+-  add base58 string converter (8ff4cac)
+-  add color contrast checker tool (d5be1ad)
+-  add hex string converter (fe64632)
+-  add base32 string converter (282e192)
+-  add ipv4 cidr splitter tool (2a96221)
+-  add ipv4 wildcard mask tool (5a184e9)
+-  add ipv4 address classifier tool (566a911)
+-  add ipv4 cidr merge tool (d76fb84)
+-  add json lines converter tool (0086403)
+
+### Bug fixes
+-  skip gpg signing in release script (c0293f6)
+-  correct footer repository links (007fe97)
+
+### Chores
+-  remove deprecated options from tsconfig (7e635e8)
+
 ## Version 2026.07.01-29bfaa9
 
 ### Features

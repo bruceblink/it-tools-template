@@ -92,7 +92,7 @@ try {
   consola.success('Release commit created');
 
   consola.info('Creating release tag');
-  await $`git tag v${version}`;
+  await $`git tag --no-sign -m ${`v${version}`} v${version}`;
   consola.success(`Release tag created: v${version}`);
 } catch (error) {
   consola.error(error);
