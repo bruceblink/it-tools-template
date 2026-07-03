@@ -16,6 +16,15 @@ export interface ParsedCookie {
   warnings: string[]
 }
 
+export interface CookieParseSummary {
+  totalCookies: number
+  requestCookies: number
+  responseCookies: number
+  expiredCookies: number
+  warningCount: number
+  duplicateNames: string[]
+}
+
 export interface CookieParseResult {
   cookies: ParsedCookie[]
   requestCookies: ParsedCookie[]
@@ -23,6 +32,7 @@ export interface CookieParseResult {
   requestHeader: string
   responseHeaders: string
   json: Record<string, string | string[]>
+  summary: CookieParseSummary
 }
 
 export interface CookieParseOptions {
@@ -231,6 +241,24 @@ function buildResponseHeaders(cookies: ParsedCookie[]): string {
   return cookies.map(serializeSetCookie).join('\n');
 }
 
+function summarizeCookies(cookies: ParsedCookie[], requestCookies: ParsedCookie[], responseCookies: ParsedCookie[]): CookieParseSummary {
+  const nameCounts = cookies.reduce<Record<string, number>>((counts, { name }) => {
+    counts[name] = (counts[name] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  return {
+    totalCookies: cookies.length,
+    requestCookies: requestCookies.length,
+    responseCookies: responseCookies.length,
+    expiredCookies: cookies.filter(({ expired }) => expired === true).length,
+    warningCount: cookies.reduce((total, { warnings }) => total + warnings.length, 0),
+    duplicateNames: Object.entries(nameCounts)
+      .filter(([, count]) => count > 1)
+      .map(([name]) => name),
+  };
+}
+
 function parseRequestCookieHeader(value: string): ParsedCookie[] {
   return splitCookieSegments(value).map(segment => parseCookiePair(segment, 'request'));
 }
@@ -308,5 +336,6 @@ export function parseCookies(input: string, { now = new Date() }: CookieParseOpt
     requestHeader: buildRequestHeader(requestCookies),
     responseHeaders: buildResponseHeaders(responseCookies),
     json,
+    summary: summarizeCookies(cookies, requestCookies, responseCookies),
   };
 }

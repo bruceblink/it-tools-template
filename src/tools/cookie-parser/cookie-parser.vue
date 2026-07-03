@@ -50,11 +50,13 @@ function sourceTagType(source: unknown) {
       :validation-rules="rules"
     />
 
-    <div grid grid-cols-1 gap-3 md:grid-cols-4>
-      <n-statistic label="Total cookies" :value="parsedCookies.cookies.length" />
-      <n-statistic label="Cookie headers" :value="parsedCookies.requestCookies.length" />
-      <n-statistic label="Set-Cookie headers" :value="parsedCookies.responseCookies.length" />
-      <n-statistic label="Warnings" :value="parsedCookies.cookies.reduce((total, cookie) => total + cookie.warnings.length, 0)" />
+    <div grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6>
+      <n-statistic label="Total cookies" :value="parsedCookies.summary.totalCookies" />
+      <n-statistic label="Cookie headers" :value="parsedCookies.summary.requestCookies" />
+      <n-statistic label="Set-Cookie headers" :value="parsedCookies.summary.responseCookies" />
+      <n-statistic label="Expired" :value="parsedCookies.summary.expiredCookies" />
+      <n-statistic label="Warnings" :value="parsedCookies.summary.warningCount" />
+      <n-statistic label="Duplicate names" :value="parsedCookies.summary.duplicateNames.length ? parsedCookies.summary.duplicateNames.join(', ') : '-'" />
     </div>
 
     <c-table

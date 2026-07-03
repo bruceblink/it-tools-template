@@ -15,6 +15,14 @@ describe('cookie-parser service', () => {
       encoded: 'hello world',
       empty: '',
     });
+    expect(parsed.summary).toEqual({
+      totalCookies: 4,
+      requestCookies: 4,
+      responseCookies: 0,
+      expiredCookies: 0,
+      warningCount: 0,
+      duplicateNames: [],
+    });
   });
 
   it('parses Set-Cookie headers with attributes and security warnings', () => {
@@ -39,6 +47,12 @@ Set-Cookie: tracking=1; Path=/; SameSite=None`);
       'Missing HttpOnly attribute.',
       'SameSite=None requires Secure.',
     ]);
+    expect(parsed.summary).toMatchObject({
+      totalCookies: 2,
+      requestCookies: 0,
+      responseCookies: 2,
+      warningCount: 3,
+    });
   });
 
   it('accepts bare request and response cookie values', () => {
@@ -62,6 +76,7 @@ Set-Cookie: id=response; Secure; HttpOnly; SameSite=Strict`);
     expect(parsed.json).toEqual({
       id: ['request', 'response'],
     });
+    expect(parsed.summary.duplicateNames).toEqual(['id']);
   });
 
   it('exports normalized request and response headers', () => {
@@ -118,6 +133,7 @@ Set-Cookie: date=1; Expires=Sat, 04 Jul 2026 01:00:00 GMT; Secure; HttpOnly; Sam
       expiresAt: '2026-07-04T01:00:00.000Z',
       expired: false,
     });
+    expect(parsed.summary.expiredCookies).toBe(1);
   });
 
   it('reports invalid names and malformed pairs', () => {
