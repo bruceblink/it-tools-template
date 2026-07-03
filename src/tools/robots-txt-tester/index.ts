@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.robots-txt-tester.title'),
   path: '/robots-txt-tester',
   description: translate('tools.robots-txt-tester.description'),
-  keywords: ['robots', 'robots.txt', 'crawler', 'seo', 'user-agent', 'sitemap'],
+  keywords: ['robots', 'robots.txt', 'crawler', 'seo', 'user-agent', 'sitemap', 'crawl-delay'],
   component: () => import('./robots-txt-tester.vue'),
   icon: Robot,
   createdAt: new Date('2026-07-04'),

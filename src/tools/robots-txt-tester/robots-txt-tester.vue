@@ -73,12 +73,17 @@ function accessTagType(allowed: boolean) {
       autofocus
     />
 
-    <div grid grid-cols-1 gap-3 md:grid-cols-4>
+    <div grid grid-cols-1 gap-3 md:grid-cols-5>
       <n-statistic label="Path" :value="analysis.path" />
       <n-statistic label="Matched agents" :value="analysis.matchedAgents.length ? analysis.matchedAgents.join(', ') : '-'" />
       <n-statistic label="Crawl delay" :value="analysis.crawlDelay ?? '-'" />
       <n-statistic label="Sitemaps" :value="analysis.sitemaps.length" />
+      <n-statistic label="Warnings" :value="analysis.warnings.length" />
     </div>
+
+    <c-alert v-if="analysis.warnings.length" type="warning">
+      {{ analysis.warnings.join(' ') }}
+    </c-alert>
 
     <c-card title="Result">
       <div flex flex-wrap items-center gap-3>

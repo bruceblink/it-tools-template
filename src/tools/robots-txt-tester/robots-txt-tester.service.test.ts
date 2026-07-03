@@ -71,6 +71,28 @@ describe('robots-txt-tester service', () => {
     });
   });
 
+  it('reports robots.txt quality warnings', () => {
+    expect(parseRobotsTxt(`User-agent: *
+Crawl-delay: soon
+Sitemap: /sitemap.xml
+Host: example.com`)).toMatchObject({
+      warnings: [
+        'Line 2 crawl-delay should be a non-negative number.',
+        'Line 3 sitemap should be an absolute HTTP(S) URL.',
+        'Line 4 has an unknown directive: host.',
+      ],
+    });
+  });
+
+  it('warns when no usable robots directives are found', () => {
+    expect(parseRobotsTxt('plain text')).toMatchObject({
+      warnings: [
+        'Line 1 has no directive separator.',
+        'No user-agent groups or sitemaps were found.',
+      ],
+    });
+  });
+
   it('rejects invalid relative URLs', () => {
     expect(() => testRobotsTxt('', 'docs', '*')).toThrow('URL must be absolute');
   });

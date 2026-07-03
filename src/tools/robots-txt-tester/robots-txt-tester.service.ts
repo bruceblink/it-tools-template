@@ -30,6 +30,13 @@ export interface RobotsTxtAnalysis {
 }
 
 const DEFAULT_USER_AGENT = '*';
+const KNOWN_DIRECTIVES = new Set([
+  'allow',
+  'crawl-delay',
+  'disallow',
+  'sitemap',
+  'user-agent',
+]);
 
 function stripComment(line: string): string {
   const commentIndex = line.indexOf('#');
@@ -59,6 +66,20 @@ function ensureGroup(groups: RobotsGroup[]): RobotsGroup {
   return group;
 }
 
+function isValidAbsoluteUrl(value: string): boolean {
+  try {
+    const parsedUrl = new URL(value);
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  }
+  catch {
+    return false;
+  }
+}
+
+function isValidCrawlDelay(value: string): boolean {
+  return /^\d+(?:\.\d+)?$/.test(value.trim());
+}
+
 export function parseRobotsTxt(input: string): { groups: RobotsGroup[], sitemaps: string[], warnings: string[] } {
   const groups: RobotsGroup[] = [];
   const sitemaps: string[] = [];
@@ -80,6 +101,9 @@ export function parseRobotsTxt(input: string): { groups: RobotsGroup[], sitemaps
     if (directive.name === 'sitemap') {
       if (directive.value) {
         sitemaps.push(directive.value);
+        if (!isValidAbsoluteUrl(directive.value)) {
+          warnings.push(`Line ${lineNumber} sitemap should be an absolute HTTP(S) URL.`);
+        }
       }
       continue;
     }
@@ -120,7 +144,19 @@ export function parseRobotsTxt(input: string): { groups: RobotsGroup[], sitemaps
         group.agents.push(DEFAULT_USER_AGENT);
       }
       group.crawlDelay = directive.value;
+      if (!isValidCrawlDelay(directive.value)) {
+        warnings.push(`Line ${lineNumber} crawl-delay should be a non-negative number.`);
+      }
+      continue;
     }
+
+    if (!KNOWN_DIRECTIVES.has(directive.name)) {
+      warnings.push(`Line ${lineNumber} has an unknown directive: ${directive.name}.`);
+    }
+  }
+
+  if (groups.length === 0 && sitemaps.length === 0 && input.trim()) {
+    warnings.push('No user-agent groups or sitemaps were found.');
   }
 
   return { groups, sitemaps, warnings };
