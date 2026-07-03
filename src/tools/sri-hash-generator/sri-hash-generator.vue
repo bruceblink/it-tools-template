@@ -4,6 +4,7 @@ import {
   generateSriHashes,
   generateSriHtmlSnippet,
   joinIntegrity,
+  summarizeSriOptions,
   type SriAlgorithm,
   type SriCrossorigin,
   type SriResourceType,
@@ -26,6 +27,12 @@ const algorithmOptions: { label: string, value: SriAlgorithm }[] = [
 
 const hashes = computed(() => generateSriHashes(content.value, selectedAlgorithms.value.length ? selectedAlgorithms.value : ['sha384']));
 const integrity = computed(() => joinIntegrity(hashes.value));
+const summary = computed(() => summarizeSriOptions({
+  content: content.value,
+  url: resourceUrl.value,
+  algorithms: selectedAlgorithms.value,
+  integrity: integrity.value,
+}));
 const htmlSnippet = computed(() =>
   generateSriHtmlSnippet({
     type: resourceType.value,
@@ -93,6 +100,17 @@ const hashRows = computed<Record<string, unknown>[]>(() => hashes.value.map(hash
       monospace
       autofocus
     />
+
+    <div grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Content bytes" :value="summary.contentBytes" />
+      <n-statistic label="Algorithms" :value="summary.algorithmCount" />
+      <n-statistic label="Integrity length" :value="summary.integrityLength" />
+      <n-statistic label="Warnings" :value="summary.warnings.length" />
+    </div>
+
+    <c-alert v-if="summary.warnings.length" type="warning">
+      {{ summary.warnings.join(' ') }}
+    </c-alert>
 
     <div grid grid-cols-1 gap-5 lg:grid-cols-2>
       <n-form-item label="Integrity attribute">

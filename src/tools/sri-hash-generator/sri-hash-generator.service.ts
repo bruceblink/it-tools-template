@@ -18,6 +18,20 @@ export interface SriHtmlSnippetOptions {
   crossorigin?: SriCrossorigin
 }
 
+export interface SriSummaryOptions {
+  content: string
+  url: string
+  algorithms: SriAlgorithm[]
+  integrity: string
+}
+
+export interface SriSummary {
+  contentBytes: number
+  algorithmCount: number
+  integrityLength: number
+  warnings: string[]
+}
+
 const hashers: Record<SriAlgorithm, (content: string) => lib.WordArray> = {
   sha256: SHA256,
   sha384: SHA384,
@@ -82,4 +96,36 @@ export function generateSriHtmlSnippet({
   }
 
   return `<script src="${escapedUrl}" integrity="${escapedIntegrity}"${crossoriginAttribute}></script>`;
+}
+
+export function summarizeSriOptions({
+  content,
+  url,
+  algorithms,
+  integrity,
+}: SriSummaryOptions): SriSummary {
+  const uniqueSelectedAlgorithms = uniqueAlgorithms(algorithms);
+  const warnings: string[] = [];
+
+  if (content.length === 0) {
+    warnings.push('Resource content is empty.');
+  }
+
+  if (url.trim() === '') {
+    warnings.push('Resource URL is empty; HTML snippet cannot be generated.');
+  }
+
+  if (uniqueSelectedAlgorithms.length === 0) {
+    warnings.push('No hash algorithm is selected.');
+  }
+  else if (!uniqueSelectedAlgorithms.some(algorithm => algorithm === 'sha384' || algorithm === 'sha512')) {
+    warnings.push('Prefer SHA-384 or SHA-512 for new SRI hashes.');
+  }
+
+  return {
+    contentBytes: new TextEncoder().encode(content).length,
+    algorithmCount: uniqueSelectedAlgorithms.length,
+    integrityLength: integrity.length,
+    warnings,
+  };
 }

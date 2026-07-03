@@ -3,6 +3,7 @@ import {
   generateSriHashes,
   generateSriHtmlSnippet,
   joinIntegrity,
+  summarizeSriOptions,
 } from './sri-hash-generator.service';
 
 describe('sri-hash-generator service', () => {
@@ -64,5 +65,37 @@ describe('sri-hash-generator service', () => {
   it('returns no snippet when url or integrity is missing', () => {
     expect(generateSriHtmlSnippet({ type: 'script', url: '', integrity: 'sha384-test' })).toBe('');
     expect(generateSriHtmlSnippet({ type: 'script', url: 'https://example.com/app.js', integrity: '' })).toBe('');
+  });
+
+  it('summarizes SRI options', () => {
+    expect(summarizeSriOptions({
+      content: 'hello',
+      url: 'https://cdn.example.com/app.js',
+      algorithms: ['sha384', 'sha384'],
+      integrity: 'sha384-test',
+    })).toEqual({
+      contentBytes: 5,
+      algorithmCount: 1,
+      integrityLength: 11,
+      warnings: [],
+    });
+  });
+
+  it('warns about incomplete or weaker SRI options', () => {
+    expect(summarizeSriOptions({
+      content: '',
+      url: '',
+      algorithms: ['sha256'],
+      integrity: '',
+    })).toEqual({
+      contentBytes: 0,
+      algorithmCount: 1,
+      integrityLength: 0,
+      warnings: [
+        'Resource content is empty.',
+        'Resource URL is empty; HTML snippet cannot be generated.',
+        'Prefer SHA-384 or SHA-512 for new SRI hashes.',
+      ],
+    });
   });
 });
