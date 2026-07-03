@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.07.03-f389a40
+
+### Features
+- **headers**: warn on sensitive headers (f389a40)
+- **hmac**: add service warnings (3f8bf46)
+- **csv**: expand dotted json headers (2fd7959)
+- **url**: preserve repeated parameters (991a84d)
+- **csp**: check form action (6b37cb1)
+- **robots**: report quality warnings (a8f1ad7)
+- **safelink**: inspect diagnostic parameters (9a57d60)
+- **security**: check coep header (77b33c0)
+- **basic-auth**: show security notes (a0b2a07)
+- **url**: flatten nested query json (35ff6b6)
+- **cookie**: warn about prefix constraints (fca1be5)
+- **bearer**: show jwt lifecycle status (6f256b1)
+- **cache**: show response freshness age (b75d975)
+- **jwt**: verify hmac signatures (fc269c2)
+
+### Bug fixes
+- **cache**: adapt analyzer table rows (d359e53)
+
 ## Version 2026.07.03-64f5626
 
 ### Features
