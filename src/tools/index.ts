@@ -1,4 +1,5 @@
 import { tool as base64FileConverter } from './base64-file-converter';
+import { tool as base32StringConverter } from './base32-string-converter';
 import { tool as base64StringConverter } from './base64-string-converter';
 import { tool as basicAuthGenerator } from './basic-auth-generator';
 import { tool as emailNormalizer } from './email-normalizer';
@@ -113,6 +114,7 @@ export const toolsByCategory: ToolCategory[] = [
       dateTimeConverter,
       baseConverter,
       romanNumeralConverter,
+      base32StringConverter,
       base64StringConverter,
       base64FileConverter,
       colorConverter,

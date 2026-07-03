@@ -229,6 +229,10 @@ tools:
     title: Base64 string encoder/decoder
     description: Simply encode and decode strings into their base64 representation.
 
+  base32-string-converter:
+    title: Base32 string encoder/decoder
+    description: Encode and decode UTF-8 strings with RFC 4648 Base32, optional padding, and separator-tolerant decoding.
+
   toml-to-yaml:
     title: TOML to YAML
     description: Parse and convert TOML to YAML.

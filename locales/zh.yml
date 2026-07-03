@@ -226,6 +226,10 @@ tools:
     title: Base64 字符串编码/解码
     description: 将字符串编码和解码为其 Base64 格式表示形式即可。
 
+  base32-string-converter:
+    title: Base32 字符串编码/解码
+    description: 使用 RFC 4648 Base32 编码和解码 UTF-8 字符串，支持可选填充和宽松分隔符解析。
+
   toml-to-yaml:
     title: TOML 到 YAML
     description: Parse and convert TOML to YAML.
