@@ -13,12 +13,24 @@ export interface ParsedHttpHeaders {
   startLine: string
   headers: ParsedHttpHeader[]
   duplicates: ParsedDuplicateHeader[]
+  warnings: string[]
   json: Record<string, string | string[]>
   normalizedText: string
   curlHeaders: string
 }
 
 const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+const SENSITIVE_HEADER_NAMES = new Set([
+  'Api-Key',
+  'Authorization',
+  'Cookie',
+  'Proxy-Authorization',
+  'Set-Cookie',
+  'X-Api-Key',
+  'X-Auth-Token',
+  'X-Csrf-Token',
+  'X-Xsrf-Token',
+]);
 
 function normalizeHeaderName(name: string): string {
   return name
@@ -63,6 +75,17 @@ function findDuplicateHeaders(headers: ParsedHttpHeader[]): ParsedDuplicateHeade
   return Object.entries(groupedHeaders)
     .filter(([, values]) => values.length > 1)
     .map(([name, values]) => ({ name, values }));
+}
+
+function findSensitiveHeaderWarnings(headers: ParsedHttpHeader[]): string[] {
+  const sensitiveHeaders = headers
+    .filter(({ normalizedName }) => SENSITIVE_HEADER_NAMES.has(normalizedName))
+    .map(({ normalizedName }) => normalizedName);
+  const uniqueSensitiveHeaders = [...new Set(sensitiveHeaders)];
+
+  return uniqueSensitiveHeaders.length > 0
+    ? [`Sensitive headers detected: ${uniqueSensitiveHeaders.join(', ')}.`]
+    : [];
 }
 
 export function parseHttpHeaders(input: string): ParsedHttpHeaders {
@@ -115,6 +138,7 @@ export function parseHttpHeaders(input: string): ParsedHttpHeaders {
     startLine,
     headers,
     duplicates: findDuplicateHeaders(headers),
+    warnings: findSensitiveHeaderWarnings(headers),
     json,
     normalizedText,
     curlHeaders: normalizedHeaderLines.map(header => `-H ${shellSingleQuote(header)}`).join(' \\\n  '),

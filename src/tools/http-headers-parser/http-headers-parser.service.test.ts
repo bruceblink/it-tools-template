@@ -26,6 +26,7 @@ cache-control: no-cache
     expect(parsed.duplicates).toEqual([
       { name: 'Set-Cookie', values: ['session=abc; HttpOnly', 'theme=dark'] },
     ]);
+    expect(parsed.warnings).toEqual(['Sensitive headers detected: Set-Cookie.']);
   });
 
   it('folds continuation lines into the previous header value', () => {
@@ -39,6 +40,17 @@ cache-control: no-cache
 
     expect(parsed.normalizedText).toBe('Accept: application/json\nX-Request-Id: abc123');
     expect(parsed.curlHeaders).toBe("-H 'Accept: application/json' \\\n  -H 'X-Request-Id: abc123'");
+  });
+
+  it('warns when sensitive headers are present', () => {
+    expect(parseHttpHeaders(`
+Authorization: Bearer secret
+cookie: session=abc
+x-api-key: key-123
+set-cookie: session=abc; HttpOnly
+`).warnings).toEqual([
+      'Sensitive headers detected: Authorization, Cookie, X-Api-Key, Set-Cookie.',
+    ]);
   });
 
   it('rejects malformed header lines after the optional start line', () => {

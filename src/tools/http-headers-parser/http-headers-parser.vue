@@ -54,6 +54,10 @@ const rules: UseValidationRule<string>[] = [
       <n-statistic label="Start line" :value="parsedHeaders.startLine || '-'" />
     </div>
 
+    <c-alert v-if="parsedHeaders.warnings.length" type="warning">
+      {{ parsedHeaders.warnings.join(' ') }}
+    </c-alert>
+
     <c-table
       :data="headerRows"
       :headers="[
