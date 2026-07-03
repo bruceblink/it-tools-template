@@ -6,12 +6,18 @@ describe('basic-auth-parser service', () => {
     expect(parseBasicAuth('Authorization: Basic YWxpY2U6czNjcmV0')).toMatchObject({
       scheme: 'Basic',
       token: 'YWxpY2U6czNjcmV0',
+      normalizedToken: 'YWxpY2U6czNjcmV0',
       username: 'alice',
       password: 's3cret',
+      passwordLength: 6,
       credential: 'alice:s3cret',
       header: 'Authorization: Basic YWxpY2U6czNjcmV0',
       warnings: [],
     });
+    expect(parseBasicAuth('Authorization: Basic YWxpY2U6czNjcmV0').securityNotes).toEqual([
+      'Basic authentication sends reusable credentials with every request; use HTTPS and prefer short-lived tokens when possible.',
+      'Password is shorter than 8 characters.',
+    ]);
   });
 
   it('parses a Basic scheme value', () => {
@@ -40,6 +46,21 @@ describe('basic-auth-parser service', () => {
     expect(parseBasicAuth('Og==').warnings).toEqual(['Username is empty.', 'Password is empty.']);
     expect(parseBasicAuth('OnBhc3M=').warnings).toEqual(['Username is empty.']);
     expect(parseBasicAuth('dXNlcjo=').warnings).toEqual(['Password is empty.']);
+  });
+
+  it('reports weak password security notes', () => {
+    const parsed = parseBasicAuth('Basic YWRtaW46cGFzc3dvcmQ=');
+
+    expect(parsed).toMatchObject({
+      username: 'admin',
+      password: 'password',
+      passwordLength: 8,
+      normalizedToken: 'YWRtaW46cGFzc3dvcmQ=',
+    });
+    expect(parsed.securityNotes).toEqual([
+      'Basic authentication sends reusable credentials with every request; use HTTPS and prefer short-lived tokens when possible.',
+      'Password matches a common weak password.',
+    ]);
   });
 
   it('rejects invalid base64 input', () => {

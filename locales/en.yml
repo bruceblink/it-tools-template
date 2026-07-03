@@ -459,7 +459,7 @@ tools:
 
   basic-auth-parser:
     title: Basic auth parser
-    description: Decode Basic Authorization headers into username, password, token, and normalized header output.
+    description: Decode Basic Authorization headers into credentials, normalized output, and practical security notes.
 
   bearer-token-parser:
     title: Bearer token parser

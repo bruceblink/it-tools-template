@@ -456,7 +456,7 @@ tools:
 
   basic-auth-parser:
     title: Basic Auth 解析器
-    description: 将 Basic Authorization 头解码为用户名、密码、Token 和规范化 Header。
+    description: 将 Basic Authorization 头解码为凭据、规范化输出和实用安全提示。
 
   bearer-token-parser:
     title: Bearer Token 解析器
