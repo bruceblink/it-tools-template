@@ -76,6 +76,7 @@ import { tool as colorConverter } from './color-converter';
 import { tool as cookieParser } from './cookie-parser';
 import { tool as corsAnalyzer } from './cors-analyzer';
 import { tool as crontabGenerator } from './crontab-generator';
+import { tool as curlCodeGenerator } from './curl-code-generator';
 import { tool as dateTimeConverter } from './date-time-converter';
 import { tool as dataSizeConverter } from './data-size-converter';
 import { tool as deviceInformation } from './device-information';
@@ -199,6 +200,7 @@ export const toolsByCategory: ToolCategory[] = [
       jsonPathExtractor,
       jsonKeySorter,
       jsonMinify,
+      curlCodeGenerator,
       jsonToCsv,
       csvToJson,
       csvToMarkdownTable,

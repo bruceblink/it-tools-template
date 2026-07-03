@@ -465,6 +465,10 @@ tools:
     title: Bearer token parser
     description: Extract Bearer tokens, inspect JWT claims, and flag opaque, expired, unsigned, or not-yet-active tokens.
 
+  curl-code-generator:
+    title: cURL code generator
+    description: Convert cURL commands into JavaScript fetch, axios, or HTTPie snippets.
+
   env-vars-parser:
     title: Environment variables parser
     description: Parse .env files, find duplicate or invalid variables, and convert them to JSON, shell exports, or Docker Compose syntax.
