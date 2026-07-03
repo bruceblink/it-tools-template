@@ -48,6 +48,8 @@ const output = computed(() => transformer.value(input.value));
     monospace
   />
 
+  <slot name="extra" :input="input" :output="output" />
+
   <div overflow-auto>
     <div mb-5px>
       {{ outputLabel }}

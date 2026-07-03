@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import type { JsonLinesDirection } from './json-lines-converter.service';
-import { convertJsonLines } from './json-lines-converter.service';
+import { convertJsonLines, summarizeJsonLines } from './json-lines-converter.service';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
 
@@ -50,6 +50,17 @@ function validateJsonLines(value: string) {
   return true;
 }
 
+function getSummary(value: string) {
+  return withDefaultOnError(() => summarizeJsonLines(value, direction.value, {
+    ignoreEmptyLines: ignoreEmptyLines.value,
+    indentSize: indentSize.value,
+  }), {
+    inputLines: 0,
+    outputValues: 0,
+    emptyLines: 0,
+  });
+}
+
 const rules: UseValidationRule<string>[] = [
   {
     validator: validateJsonLines,
@@ -93,5 +104,13 @@ const rules: UseValidationRule<string>[] = [
     :output-language="outputLanguage"
     :input-validation-rules="rules"
     :transformer="transformer"
-  />
+  >
+    <template #extra="{ input }">
+      <div my-4 grid grid-cols-1 gap-3 md:grid-cols-3>
+        <n-statistic label="Input lines" :value="getSummary(String(input)).inputLines" />
+        <n-statistic label="Output values" :value="getSummary(String(input)).outputValues" />
+        <n-statistic label="Empty lines" :value="getSummary(String(input)).emptyLines" />
+      </div>
+    </template>
+  </format-transformer>
 </template>
