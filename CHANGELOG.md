@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.07.03-433a3f7
+
+### Features
+- **safelink**: show decoded target details (433a3f7)
+
 ## Version 2026.07.03-f389a40
 
 ### Features
