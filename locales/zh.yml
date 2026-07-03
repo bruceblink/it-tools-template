@@ -132,6 +132,10 @@ tools:
     title: HTTP Headers 解析器
     description: 解析请求或响应头，检测重复项，并导出规范化 Headers、JSON 或 cURL 参数。
 
+  http-cache-analyzer:
+    title: HTTP 缓存分析器
+    description: 检查 Cache-Control、Expires、ETag 和 Vary 头，理解浏览器与代理缓存行为。
+
   cookie-parser:
     title: Cookie 解析器
     description: 解析 Cookie 与 Set-Cookie 头，解码值、查看属性，并标记常见安全问题。

@@ -97,6 +97,7 @@ declare module 'vue' {
     'Home.page': typeof import('./src/pages/Home.page.vue')['default']
     HtmlEntities: typeof import('./src/tools/html-entities/html-entities.vue')['default']
     HtmlWysiwygEditor: typeof import('./src/tools/html-wysiwyg-editor/html-wysiwyg-editor.vue')['default']
+    HttpCacheAnalyzer: typeof import('./src/tools/http-cache-analyzer/http-cache-analyzer.vue')['default']
     HttpHeadersParser: typeof import('./src/tools/http-headers-parser/http-headers-parser.vue')['default']
     HttpStatusCodes: typeof import('./src/tools/http-status-codes/http-status-codes.vue')['default']
     IbanValidatorAndParser: typeof import('./src/tools/iban-validator-and-parser/iban-validator-and-parser.vue')['default']

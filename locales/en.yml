@@ -133,6 +133,10 @@ tools:
     title: HTTP headers parser
     description: Parse request or response headers, detect duplicates, and export normalized headers as JSON or cURL arguments.
 
+  http-cache-analyzer:
+    title: HTTP cache analyzer
+    description: Inspect Cache-Control, Expires, ETag, and Vary headers to understand browser and proxy caching behavior.
+
   cookie-parser:
     title: Cookie parser
     description: Parse Cookie and Set-Cookie headers, decode values, inspect attributes, and flag common security issues.
