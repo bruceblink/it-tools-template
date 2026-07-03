@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.07.03-64f5626
+
+### Features
+-  add bearer token parser (64f5626)
+
 ## Version 2026.07.03-1a4aefa
 
 ### Features
