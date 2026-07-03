@@ -3,6 +3,7 @@ import {
   Base32StringConverterError,
   base32ToText,
   isValidBase32,
+  summarizeBase32Input,
   textToBase32,
 } from './base32-string-converter.service';
 
@@ -58,5 +59,24 @@ describe('base32-string-converter service', () => {
 
   it('rejects invalid trailing bits', () => {
     expect(() => base32ToText('MB')).toThrow('Invalid trailing Base32 bits.');
+  });
+
+  it('summarizes Base32 input size', () => {
+    expect(summarizeBase32Input('MZXW 6YTB-OI======', { allowSeparators: true })).toEqual({
+      valid: true,
+      normalizedLength: 16,
+      paddingLength: 6,
+      byteLength: 6,
+    });
+  });
+
+  it('summarizes invalid Base32 input without throwing', () => {
+    expect(summarizeBase32Input('MZXW6YTBO1======')).toEqual({
+      valid: false,
+      normalizedLength: 0,
+      paddingLength: 0,
+      byteLength: 0,
+      error: 'Input contains characters outside the Base32 alphabet.',
+    });
   });
 });

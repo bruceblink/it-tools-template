@@ -2,6 +2,14 @@ export interface Base32DecodeOptions {
   allowSeparators?: boolean
 }
 
+export interface Base32InputSummary {
+  valid: boolean
+  normalizedLength: number
+  paddingLength: number
+  byteLength: number
+  error?: string
+}
+
 export class Base32StringConverterError extends Error {
   constructor(message: string) {
     super(message);
@@ -127,5 +135,32 @@ export function isValidBase32(input: string, options: Base32DecodeOptions = {}) 
   }
   catch {
     return false;
+  }
+}
+
+export function summarizeBase32Input(input: string, options: Base32DecodeOptions = {}): Base32InputSummary {
+  try {
+    const cleanInput = options.allowSeparators
+      ? input.replace(/[\s-]/g, '')
+      : input.trim();
+    const normalizedLength = cleanInput.length;
+    const paddingLength = cleanInput.match(/=+$/)?.[0].length ?? 0;
+    const bytes = base32ToBytes(input, options);
+
+    return {
+      valid: true,
+      normalizedLength,
+      paddingLength,
+      byteLength: bytes.length,
+    };
+  }
+  catch (error) {
+    return {
+      valid: false,
+      normalizedLength: 0,
+      paddingLength: 0,
+      byteLength: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

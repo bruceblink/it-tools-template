@@ -2,16 +2,18 @@
 import { useCopy } from '@/composable/copy';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
-import { base32ToText, isValidBase32, textToBase32 } from './base32-string-converter.service';
+import { base32ToText, isValidBase32, summarizeBase32Input, textToBase32 } from './base32-string-converter.service';
 
 const includePadding = useStorage('base32-string-converter:include-padding', true);
 const allowSeparators = useStorage('base32-string-converter:allow-separators', true);
 
 const textInput = ref('');
+const textByteLength = computed(() => new TextEncoder().encode(textInput.value).length);
 const base32Output = computed(() => textToBase32(textInput.value, { padding: includePadding.value }));
 const { copy: copyBase32 } = useCopy({ source: base32Output, text: 'Base32 string copied to the clipboard' });
 
 const base32Input = ref('');
+const base32Summary = computed(() => summarizeBase32Input(base32Input.value, { allowSeparators: allowSeparators.value }));
 const textOutput = computed(() =>
   withDefaultOnError(() => base32ToText(base32Input.value, { allowSeparators: allowSeparators.value }), ''),
 );
@@ -40,6 +42,11 @@ const base32ValidationWatch = [allowSeparators];
       raw-text
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-2>
+      <n-statistic label="UTF-8 bytes" :value="textByteLength" />
+      <n-statistic label="Base32 characters" :value="base32Output.length" />
+    </div>
 
     <c-input-text
       label="Base32 of string"
@@ -72,6 +79,17 @@ const base32ValidationWatch = [allowSeparators];
       label="Base32 string to decode"
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Valid Base32" :value="base32Summary.valid ? 'yes' : 'no'" />
+      <n-statistic label="Normalized characters" :value="base32Summary.normalizedLength" />
+      <n-statistic label="Padding" :value="base32Summary.paddingLength" />
+      <n-statistic label="Decoded bytes" :value="base32Summary.byteLength" />
+    </div>
+
+    <c-alert v-if="base32Input && !base32Summary.valid" type="warning" mb-5>
+      {{ base32Summary.error }}
+    </c-alert>
 
     <c-input-text
       v-model:value="textOutput"
