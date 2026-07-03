@@ -149,6 +149,10 @@ tools:
     title: Security headers analyzer
     description: Analyze HTTP response security headers and highlight missing or weak protections.
 
+  sri-hash-generator:
+    title: SRI hash generator
+    description: Generate Subresource Integrity hashes and HTML snippets for scripts and stylesheets.
+
   robots-txt-tester:
     title: robots.txt tester
     description: Test whether a URL is allowed for a user-agent, inspect matching rules, crawl delay, and sitemaps.
