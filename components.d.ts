@@ -89,6 +89,7 @@ declare module 'vue' {
     GitMemo: typeof import('./src/tools/git-memo/git-memo.vue')['default']
     'GitMemo.content': typeof import('./src/tools/git-memo/git-memo.content.md')['default']
     HashText: typeof import('./src/tools/hash-text/hash-text.vue')['default']
+    HexStringConverter: typeof import('./src/tools/hex-string-converter/hex-string-converter.vue')['default']
     HmacGenerator: typeof import('./src/tools/hmac-generator/hmac-generator.vue')['default']
     'Home.page': typeof import('./src/pages/Home.page.vue')['default']
     HtmlEntities: typeof import('./src/tools/html-entities/html-entities.vue')['default']

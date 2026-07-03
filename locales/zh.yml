@@ -230,6 +230,10 @@ tools:
     title: Base32 字符串编码/解码
     description: 使用 RFC 4648 Base32 编码和解码 UTF-8 字符串，支持可选填充和宽松分隔符解析。
 
+  hex-string-converter:
+    title: Hex 字符串编码/解码
+    description: 将 UTF-8 字符串编码和解码为十六进制字节，支持分组输出和宽松分隔符解析。
+
   toml-to-yaml:
     title: TOML 到 YAML
     description: Parse and convert TOML to YAML.
