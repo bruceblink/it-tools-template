@@ -19,6 +19,11 @@ export interface HttpCacheAnalysis {
   directives: CacheDirective[]
   freshness: string
   sharedFreshness: string
+  responseAge: string
+  remainingFreshness: string
+  staleWhileRevalidate: string
+  staleIfError: string
+  freshnessState: 'fresh' | 'stale' | 'unknown'
   cacheability: 'cacheable' | 'conditional' | 'not-cacheable' | 'unknown'
   validators: string[]
   vary: string[]
@@ -83,6 +88,18 @@ function parseSeconds(value: string | undefined): number | undefined {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : undefined;
 }
 
+function parseIntegerSeconds(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === '') {
+    return undefined;
+  }
+
+  if (!/^\d+$/.test(value.trim())) {
+    return undefined;
+  }
+
+  return Number(value);
+}
+
 function formatDuration(seconds: number | undefined): string {
   if (seconds === undefined) {
     return 'Not specified';
@@ -131,6 +148,55 @@ function getValidators(headers: HeaderMap): string[] {
   ].filter(Boolean);
 }
 
+function getFreshnessState(age: number | undefined, lifetime: number | undefined): HttpCacheAnalysis['freshnessState'] {
+  if (age === undefined || lifetime === undefined) {
+    return 'unknown';
+  }
+
+  return age <= lifetime ? 'fresh' : 'stale';
+}
+
+function getRemainingFreshness(age: number | undefined, lifetime: number | undefined): string {
+  if (age === undefined || lifetime === undefined) {
+    return 'Not specified';
+  }
+
+  return formatDuration(Math.max(lifetime - age, 0));
+}
+
+function getStaleReuseCheck({
+  staleWhileRevalidate,
+  staleIfError,
+  hasInvalidStaleLifetime,
+  hasNoStore,
+  hasPrivate,
+}: {
+  staleWhileRevalidate: number | undefined
+  staleIfError: number | undefined
+  hasInvalidStaleLifetime: boolean
+  hasNoStore: boolean
+  hasPrivate: boolean
+}): CacheCheck {
+  if (hasInvalidStaleLifetime) {
+    return check('Stale reuse', 'fail', 'stale-while-revalidate or stale-if-error is not a valid non-negative number of seconds.', 'Use integer seconds for stale reuse directives.');
+  }
+
+  if (staleWhileRevalidate !== undefined || staleIfError !== undefined) {
+    return check(
+      'Stale reuse',
+      'pass',
+      `stale-while-revalidate: ${formatDuration(staleWhileRevalidate)}, stale-if-error: ${formatDuration(staleIfError)}.`,
+      'Keep stale reuse windows short enough for the resource risk profile.',
+    );
+  }
+
+  if (hasNoStore || hasPrivate) {
+    return check('Stale reuse', 'pass', 'Stale reuse is not enabled for this non-shared response.', 'Keep stale reuse disabled for sensitive or private responses.');
+  }
+
+  return check('Stale reuse', 'warning', 'No stale reuse directives were found.', 'Consider stale-while-revalidate or stale-if-error for resilient public cacheable resources.');
+}
+
 function inferCacheability(directives: CacheDirective[], validators: string[]): HttpCacheAnalysis['cacheability'] {
   if (hasDirective(directives, 'no-store') || hasDirective(directives, 'private')) {
     return 'not-cacheable';
@@ -152,15 +218,25 @@ function inferCacheability(directives: CacheDirective[], validators: string[]): 
 function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validators: string[], vary: string[]): CacheCheck[] {
   const cacheControl = getHeaderValue(headers, 'cache-control');
   const expires = getHeaderValue(headers, 'expires');
+  const rawAge = getHeaderValue(headers, 'age');
+  const age = rawAge ? parseIntegerSeconds(rawAge) : undefined;
   const rawMaxAge = getDirectiveValue(directives, 'max-age');
   const rawSharedMaxAge = getDirectiveValue(directives, 's-maxage');
+  const rawStaleWhileRevalidate = getDirectiveValue(directives, 'stale-while-revalidate');
+  const rawStaleIfError = getDirectiveValue(directives, 'stale-if-error');
   const maxAge = parseSeconds(rawMaxAge);
   const sharedMaxAge = parseSeconds(rawSharedMaxAge);
+  const staleWhileRevalidate = parseSeconds(rawStaleWhileRevalidate);
+  const staleIfError = parseSeconds(rawStaleIfError);
+  const freshnessLifetime = sharedMaxAge ?? maxAge;
   const hasNoStore = hasDirective(directives, 'no-store');
   const hasPrivate = hasDirective(directives, 'private');
   const hasPublic = hasDirective(directives, 'public');
   const hasInvalidLifetime = (rawMaxAge !== undefined && maxAge === undefined)
     || (rawSharedMaxAge !== undefined && sharedMaxAge === undefined);
+  const hasInvalidStaleLifetime = (rawStaleWhileRevalidate !== undefined && staleWhileRevalidate === undefined)
+    || (rawStaleIfError !== undefined && staleIfError === undefined);
+  const isStale = age !== undefined && freshnessLifetime !== undefined && age > freshnessLifetime;
 
   return [
     cacheControl
@@ -202,6 +278,27 @@ function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validat
       ? check('Long-lived cache', 'warning', 'max-age is longer than one year.', 'Use immutable fingerprinted URLs for very long cache lifetimes.')
       : check('Long-lived cache', 'pass', 'No excessive max-age detected.', 'For static assets, pair long max-age with content-hashed filenames.'),
 
+    rawAge
+      ? check(
+          'Current age',
+          age === undefined ? 'fail' : isStale ? 'warning' : 'pass',
+          age === undefined
+            ? 'Age is not a valid non-negative integer number of seconds.'
+            : isStale
+              ? `Response age is ${formatDuration(age)}, which is beyond its freshness lifetime.`
+              : `Response age is ${formatDuration(age)} with ${getRemainingFreshness(age, freshnessLifetime)} remaining.`,
+          'Use Age with max-age or s-maxage to understand whether an intermediary cache is serving fresh or stale content.',
+        )
+      : check('Current age', 'pass', 'No Age header was provided.', 'Age is usually added by shared caches; origin responses may omit it.'),
+
+    getStaleReuseCheck({
+      staleWhileRevalidate,
+      staleIfError,
+      hasInvalidStaleLifetime,
+      hasNoStore,
+      hasPrivate,
+    }),
+
     getHeaderValue(headers, 'authorization') && !hasPrivate && !hasNoStore
       ? check('Authorization response', 'warning', 'Input includes Authorization but response is not private or no-store.', 'Protect authenticated responses with private or no-store unless explicitly public.')
       : check('Authorization response', 'pass', 'No Authorization cache risk detected.', 'Keep authenticated response caching explicit.'),
@@ -214,8 +311,12 @@ export function analyzeHttpCache(input: string): HttpCacheAnalysis {
   const directives = parseDirectives(cacheControl);
   const validators = getValidators(headers);
   const vary = getVaryValues(headers);
+  const age = parseIntegerSeconds(getHeaderValue(headers, 'age'));
   const maxAge = parseSeconds(getDirectiveValue(directives, 'max-age'));
   const sharedMaxAge = parseSeconds(getDirectiveValue(directives, 's-maxage'));
+  const staleWhileRevalidate = parseSeconds(getDirectiveValue(directives, 'stale-while-revalidate'));
+  const staleIfError = parseSeconds(getDirectiveValue(directives, 'stale-if-error'));
+  const freshnessLifetime = sharedMaxAge ?? maxAge;
   const checks = analyzeChecks(headers, directives, validators, vary);
   const warnings = checks
     .filter(({ status }) => status !== 'pass')
@@ -226,6 +327,11 @@ export function analyzeHttpCache(input: string): HttpCacheAnalysis {
     directives,
     freshness: formatDuration(maxAge),
     sharedFreshness: formatDuration(sharedMaxAge),
+    responseAge: formatDuration(age),
+    remainingFreshness: getRemainingFreshness(age, freshnessLifetime),
+    staleWhileRevalidate: formatDuration(staleWhileRevalidate),
+    staleIfError: formatDuration(staleIfError),
+    freshnessState: getFreshnessState(age, freshnessLifetime),
     cacheability: inferCacheability(directives, validators),
     validators,
     vary,

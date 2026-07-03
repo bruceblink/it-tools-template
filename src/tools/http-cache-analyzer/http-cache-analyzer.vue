@@ -8,7 +8,8 @@ import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
 
 const sampleHeaders = `HTTP/2 200
-cache-control: public, max-age=31536000, immutable
+cache-control: public, max-age=31536000, stale-while-revalidate=86400, stale-if-error=604800, immutable
+age: 86400
 etag: "asset-v1"
 vary: Accept-Encoding`;
 
@@ -47,6 +48,16 @@ const cacheabilityTagType = computed(() => {
   }
   return 'info';
 });
+
+const freshnessStateTagType = computed(() => {
+  if (analysis.value.freshnessState === 'fresh') {
+    return 'success';
+  }
+  if (analysis.value.freshnessState === 'stale') {
+    return 'warning';
+  }
+  return 'info';
+});
 </script>
 
 <template>
@@ -66,14 +77,21 @@ const cacheabilityTagType = computed(() => {
     <div grid grid-cols-1 gap-3 md:grid-cols-4>
       <n-statistic label="Freshness" :value="analysis.freshness" />
       <n-statistic label="Shared freshness" :value="analysis.sharedFreshness" />
+      <n-statistic label="Response age" :value="analysis.responseAge" />
+      <n-statistic label="Remaining freshness" :value="analysis.remainingFreshness" />
       <n-statistic label="Validators" :value="analysis.validators.length ? analysis.validators.join(', ') : '-'" />
       <n-statistic label="Warnings" :value="analysis.warnings.length" />
+      <n-statistic label="Stale while revalidate" :value="analysis.staleWhileRevalidate" />
+      <n-statistic label="Stale if error" :value="analysis.staleIfError" />
     </div>
 
     <c-card title="Cacheability">
       <div flex flex-wrap items-center gap-3>
         <n-tag :type="cacheabilityTagType">
           {{ analysis.cacheability }}
+        </n-tag>
+        <n-tag :type="freshnessStateTagType">
+          {{ analysis.freshnessState }}
         </n-tag>
         <span op-70>
           {{ analysis.cacheControl || 'No Cache-Control header' }}

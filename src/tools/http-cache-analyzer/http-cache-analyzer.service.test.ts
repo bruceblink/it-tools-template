@@ -4,14 +4,20 @@ import { analyzeHttpCache } from './http-cache-analyzer.service';
 describe('http-cache-analyzer service', () => {
   it('analyzes a cacheable immutable asset response', () => {
     const analysis = analyzeHttpCache(`HTTP/2 200
-cache-control: public, max-age=31536000, immutable
+cache-control: public, max-age=31536000, stale-while-revalidate=86400, stale-if-error=604800, immutable
+age: 86400
 etag: "asset-v1"
 vary: Accept-Encoding`);
 
     expect(analysis).toMatchObject({
-      cacheControl: 'public, max-age=31536000, immutable',
+      cacheControl: 'public, max-age=31536000, stale-while-revalidate=86400, stale-if-error=604800, immutable',
       freshness: '365 days',
       sharedFreshness: 'Not specified',
+      responseAge: '1 day',
+      remainingFreshness: '364 days',
+      staleWhileRevalidate: '1 day',
+      staleIfError: '7 days',
+      freshnessState: 'fresh',
       cacheability: 'cacheable',
       validators: ['ETag'],
       vary: ['Accept-Encoding'],
@@ -20,8 +26,21 @@ vary: Accept-Encoding`);
     expect(analysis.directives).toEqual([
       { name: 'public', value: true },
       { name: 'max-age', value: '31536000' },
+      { name: 'stale-while-revalidate', value: '86400' },
+      { name: 'stale-if-error', value: '604800' },
       { name: 'immutable', value: true },
     ]);
+    expect(analysis.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Current age',
+        status: 'pass',
+        summary: 'Response age is 1 day with 364 days remaining.',
+      }),
+      expect.objectContaining({
+        name: 'Stale reuse',
+        status: 'pass',
+      }),
+    ]));
   });
 
   it('marks sensitive no-store responses as not cacheable', () => {
@@ -68,6 +87,38 @@ cache-control: public, max-age=soon`);
         name: 'Freshness lifetime',
         status: 'fail',
         summary: 'max-age or s-maxage is not a valid non-negative number of seconds.',
+      }),
+    ]));
+  });
+
+  it('detects stale cached responses from Age and freshness lifetime', () => {
+    const analysis = analyzeHttpCache(`HTTP/2 200
+cache-control: public, max-age=60
+age: 120`);
+
+    expect(analysis).toMatchObject({
+      responseAge: '2 minutes',
+      remainingFreshness: '0 seconds',
+      freshnessState: 'stale',
+    });
+    expect(analysis.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Current age',
+        status: 'warning',
+        summary: 'Response age is 2 minutes, which is beyond its freshness lifetime.',
+      }),
+    ]));
+  });
+
+  it('detects invalid stale reuse lifetimes', () => {
+    const analysis = analyzeHttpCache(`HTTP/2 200
+cache-control: public, max-age=60, stale-while-revalidate=later`);
+
+    expect(analysis.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Stale reuse',
+        status: 'fail',
+        summary: 'stale-while-revalidate or stale-if-error is not a valid non-negative number of seconds.',
       }),
     ]));
   });
