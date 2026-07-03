@@ -136,6 +136,10 @@ tools:
     title: HTTP 缓存分析器
     description: 检查 Cache-Control、Expires、ETag 和 Vary 头，理解浏览器与代理缓存行为。
 
+  cors-analyzer:
+    title: CORS 分析器
+    description: 分析 Access-Control 响应头，并标记 Origin、凭据、预检和缓存风险。
+
   cookie-parser:
     title: Cookie 解析器
     description: 解析 Cookie 与 Set-Cookie 头，解码值、查看属性，并标记常见安全问题。

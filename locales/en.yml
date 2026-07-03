@@ -137,6 +137,10 @@ tools:
     title: HTTP cache analyzer
     description: Inspect Cache-Control, Expires, ETag, and Vary headers to understand browser and proxy caching behavior.
 
+  cors-analyzer:
+    title: CORS analyzer
+    description: Analyze Access-Control response headers and flag origin, credential, preflight, and cache risks.
+
   cookie-parser:
     title: Cookie parser
     description: Parse Cookie and Set-Cookie headers, decode values, inspect attributes, and flag common security issues.
