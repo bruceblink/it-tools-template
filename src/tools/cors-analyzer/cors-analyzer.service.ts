@@ -22,6 +22,8 @@ export interface CorsAnalysis {
   passed: number
   warnings: number
   failed: number
+  score: number
+  grade: 'A' | 'B' | 'C' | 'D' | 'F'
 }
 
 type HeaderMap = Record<string, string[] | undefined>;
@@ -174,6 +176,22 @@ function analyzeChecks(headers: HeaderMap): CorsCheck[] {
   ];
 }
 
+function getGrade(score: number): CorsAnalysis['grade'] {
+  if (score >= 90) {
+    return 'A';
+  }
+  if (score >= 75) {
+    return 'B';
+  }
+  if (score >= 60) {
+    return 'C';
+  }
+  if (score >= 40) {
+    return 'D';
+  }
+  return 'F';
+}
+
 export function analyzeCors(input: string): CorsAnalysis {
   const headers = createHeaderMap(input);
   const allowMethods = parseMethods(getHeaderValue(headers, 'access-control-allow-methods'));
@@ -181,6 +199,18 @@ export function analyzeCors(input: string): CorsAnalysis {
   const exposeHeaders = splitCsv(getHeaderValue(headers, 'access-control-expose-headers'));
   const maxAgeValue = getHeaderValue(headers, 'access-control-max-age');
   const checks = analyzeChecks(headers);
+  const passed = checks.filter(({ status }) => status === 'pass').length;
+  const warnings = checks.filter(({ status }) => status === 'warning').length;
+  const failed = checks.filter(({ status }) => status === 'fail').length;
+  const score = Math.round(checks.reduce((total, { status }) => {
+    if (status === 'pass') {
+      return total + 100;
+    }
+    if (status === 'warning') {
+      return total + 50;
+    }
+    return total;
+  }, 0) / checks.length);
 
   return {
     allowOrigin: getHeaderValue(headers, 'access-control-allow-origin'),
@@ -191,8 +221,10 @@ export function analyzeCors(input: string): CorsAnalysis {
     maxAge: maxAgeValue ? formatDuration(parseMaxAge(maxAgeValue)) : 'Not specified',
     vary: splitCsv(getHeaderValue(headers, 'vary')),
     checks,
-    passed: checks.filter(({ status }) => status === 'pass').length,
-    warnings: checks.filter(({ status }) => status === 'warning').length,
-    failed: checks.filter(({ status }) => status === 'fail').length,
+    passed,
+    warnings,
+    failed,
+    score,
+    grade: getGrade(score),
   };
 }

@@ -19,6 +19,8 @@ vary: Origin`);
       exposeHeaders: ['x-request-id'],
       maxAge: '1 hour',
       failed: 0,
+      score: 100,
+      grade: 'A',
     });
   });
 
@@ -34,6 +36,13 @@ access-control-allow-credentials: true`);
         summary: 'Wildcard origins cannot be used with credentials.',
       }),
     ]));
+    expect(analysis).toMatchObject({
+      passed: 2,
+      warnings: 4,
+      failed: 1,
+      score: 57,
+    });
+    expect(analysis.grade).toBe('D');
   });
 
   it('warns when specific origins do not vary on Origin', () => {
