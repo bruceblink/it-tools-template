@@ -21,6 +21,8 @@ export interface JwtSignatureVerificationResult {
   valid: boolean
   algorithm?: JwtHmacAlgorithm
   message: string
+  header?: Record<string, unknown>
+  payload?: Record<string, unknown>
 }
 
 const hmacSigners: Record<JwtHmacAlgorithm, (message: string, secret: string) => lib.WordArray> = {
@@ -73,14 +75,14 @@ function isJwtHmacAlgorithm(value: unknown): value is JwtHmacAlgorithm {
   return typeof value === 'string' && (jwtHmacAlgorithms as readonly string[]).includes(value);
 }
 
-function parseJwtHeaderSegment(headerSegment: string): Record<string, unknown> {
-  const header = JSON.parse(base64UrlDecodeString(headerSegment));
+function parseJwtJsonSegment(segment: string, label: string): Record<string, unknown> {
+  const value = JSON.parse(base64UrlDecodeString(segment));
 
-  if (!isPlainObject(header)) {
-    throw new Error('JWT header must be a JSON object.');
+  if (!isPlainObject(value)) {
+    throw new Error(`JWT ${label} must be a JSON object.`);
   }
 
-  return header;
+  return value;
 }
 
 export function parseJwtJson(input: string, label: string): Record<string, unknown> {
@@ -143,12 +145,15 @@ export function verifyJwtSignature({ token, secret }: VerifyJwtSignatureOptions)
 
   try {
     const [headerSegment, payloadSegment, signature] = segments as [string, string, string];
-    const header = parseJwtHeaderSegment(headerSegment);
+    const header = parseJwtJsonSegment(headerSegment, 'header');
+    const payload = parseJwtJsonSegment(payloadSegment, 'payload');
     const algorithm = header.alg;
 
     if (!isJwtHmacAlgorithm(algorithm)) {
       return {
         valid: false,
+        header,
+        payload,
         message: `Unsupported or missing HMAC algorithm: ${String(algorithm ?? 'none')}.`,
       };
     }
@@ -159,6 +164,8 @@ export function verifyJwtSignature({ token, secret }: VerifyJwtSignatureOptions)
     return {
       valid,
       algorithm,
+      header,
+      payload,
       message: valid ? 'Signature is valid.' : 'Signature does not match this secret.',
     };
   }

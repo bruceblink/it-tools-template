@@ -53,6 +53,13 @@ describe('jwt-signer service', () => {
     expect(verifyJwtSignature({ token, secret: 'secret' })).toEqual({
       valid: true,
       algorithm: 'HS384',
+      header: {
+        alg: 'HS384',
+        typ: 'JWT',
+      },
+      payload: {
+        scope: 'read',
+      },
       message: 'Signature is valid.',
     });
   });
@@ -68,6 +75,13 @@ describe('jwt-signer service', () => {
     expect(verifyJwtSignature({ token, secret: 'wrong-secret' })).toEqual({
       valid: false,
       algorithm: 'HS256',
+      header: {
+        alg: 'HS256',
+        typ: 'JWT',
+      },
+      payload: {
+        scope: 'read',
+      },
       message: 'Signature does not match this secret.',
     });
   });
@@ -81,6 +95,13 @@ describe('jwt-signer service', () => {
 
     expect(verifyJwtSignature({ token, secret: 'secret' })).toEqual({
       valid: false,
+      header: {
+        alg: 'none',
+        typ: 'JWT',
+      },
+      payload: {
+        sub: 'user-1',
+      },
       message: 'Unsupported or missing HMAC algorithm: none.',
     });
   });

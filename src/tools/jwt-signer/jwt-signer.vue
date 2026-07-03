@@ -51,6 +51,8 @@ const verificationRows = computed(() => [
     value: verificationResult.value.message,
   },
 ]);
+const verificationHeaderJson = computed(() => verificationResult.value.header ? JSON.stringify(verificationResult.value.header, null, 2) : '');
+const verificationPayloadJson = computed(() => verificationResult.value.payload ? JSON.stringify(verificationResult.value.payload, null, 2) : '');
 
 const jsonObjectRules = (label: string): UseValidationRule<string>[] => [
   {
@@ -159,6 +161,16 @@ watch(algorithm, (selectedAlgorithm) => {
         ]"
         description="JWT signature verification details"
       />
+
+      <div v-if="verificationHeaderJson || verificationPayloadJson" grid grid-cols-1 gap-5 lg:grid-cols-2>
+        <n-form-item label="Decoded header">
+          <textarea-copyable :value="verificationHeaderJson" language="json" copy-placement="outside" />
+        </n-form-item>
+
+        <n-form-item label="Decoded payload">
+          <textarea-copyable :value="verificationPayloadJson" language="json" copy-placement="outside" />
+        </n-form-item>
+      </div>
     </div>
   </div>
 </template>
