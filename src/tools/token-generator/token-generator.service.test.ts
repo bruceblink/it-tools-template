@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createToken } from './token-generator.service';
+import { createToken, summarizeTokenOptions } from './token-generator.service';
 
 describe('token-generator', () => {
   describe('createToken', () => {
@@ -93,6 +93,49 @@ describe('token-generator', () => {
 
       expect(token).toHaveLength(256);
       expect(token).toMatch(/^[a-zA-Z]+$/);
+    });
+  });
+
+  describe('summarizeTokenOptions', () => {
+    it('estimates alphabet size and entropy for default-like options', () => {
+      expect(summarizeTokenOptions({
+        withLowercase: true,
+        withUppercase: true,
+        withNumbers: true,
+        withSymbols: false,
+        length: 32,
+      })).toMatchObject({
+        alphabetSize: 60,
+        length: 32,
+        entropyBits: 189,
+        combinationsExponent: 57,
+        warnings: [],
+      });
+    });
+
+    it('warns about low entropy tokens', () => {
+      expect(summarizeTokenOptions({
+        withLowercase: false,
+        withUppercase: false,
+        withNumbers: true,
+        withSymbols: false,
+        length: 6,
+      }).warnings).toEqual(['Entropy is below 64 bits.']);
+    });
+
+    it('warns when no characters are enabled', () => {
+      expect(summarizeTokenOptions({
+        withLowercase: false,
+        withUppercase: false,
+        withNumbers: false,
+        withSymbols: false,
+        length: 10,
+      })).toMatchObject({
+        alphabetSize: 0,
+        entropyBits: 0,
+        combinationsExponent: 0,
+        warnings: ['No characters are enabled.'],
+      });
     });
   });
 });

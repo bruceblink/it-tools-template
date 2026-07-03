@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createToken } from './token-generator.service';
+import { createToken, summarizeTokenOptions } from './token-generator.service';
 import { useCopy } from '@/composable/copy';
 import { useQueryParam } from '@/composable/queryParams';
 import { computedRefreshable } from '@/composable/computedRefreshable';
@@ -20,6 +20,13 @@ const [token, refreshToken] = computedRefreshable(() =>
     withSymbols: withSymbols.value,
   }),
 );
+const tokenSummary = computed(() => summarizeTokenOptions({
+  length: length.value,
+  withUppercase: withUppercase.value,
+  withLowercase: withLowercase.value,
+  withNumbers: withNumbers.value,
+  withSymbols: withSymbols.value,
+}));
 
 const { copy } = useCopy({ source: token, text: t('tools.token-generator.copied') });
 </script>
@@ -54,6 +61,16 @@ const { copy } = useCopy({ source: token, text: t('tools.token-generator.copied'
       <n-form-item :label="`${t('tools.token-generator.length')} (${length})`" label-placement="left">
         <n-slider v-model:value="length" :step="1" :min="1" :max="512" />
       </n-form-item>
+
+      <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-3>
+        <n-statistic label="Alphabet size" :value="tokenSummary.alphabetSize" />
+        <n-statistic label="Entropy" :value="`${tokenSummary.entropyBits} bits`" />
+        <n-statistic label="Search space" :value="`10^${tokenSummary.combinationsExponent}`" />
+      </div>
+
+      <c-alert v-if="tokenSummary.warnings.length" type="warning" mb-5>
+        {{ tokenSummary.warnings.join(' ') }}
+      </c-alert>
 
       <c-input-text
         v-model:value="token"
