@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.bearer-token-parser.title'),
   path: '/bearer-token-parser',
   description: translate('tools.bearer-token-parser.description'),
-  keywords: ['bearer', 'token', 'authorization', 'jwt', 'oauth', 'api', 'auth', 'exp', 'nbf', 'expiry'],
+  keywords: ['bearer', 'token', 'authorization', 'jwt', 'oauth', 'api', 'auth', 'exp', 'nbf', 'expiry', 'scope', 'audience', 'roles', 'issuer', 'subject'],
   component: () => import('./bearer-token-parser.vue'),
   icon: Key,
   createdAt: new Date('2026-07-04'),

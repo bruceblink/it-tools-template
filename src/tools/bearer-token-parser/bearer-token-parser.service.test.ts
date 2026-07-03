@@ -6,6 +6,7 @@ const EXPIRED_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIj
 const NONE_ALG_JWT = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxIiwiZXhwIjo0MTAyNDQ0ODAwfQ.';
 const FUTURE_EXP_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzI4MDg2NDAwLCJuYmYiOjE3MjgwMDAwMDB9.signature';
 const FUTURE_NBF_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiZXhwIjoxNzI4MDg2NDAwLCJuYmYiOjE3MjgwNDMyMDB9.signature';
+const CLAIMS_SUMMARY_JWT = 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJodHRwczovL2lzc3Vlci5leGFtcGxlLmNvbSIsInN1YiI6InVzZXItMTIzIiwiYXVkIjpbImFwaTovL2RlZmF1bHQiLCJodHRwczovL2FwaS5leGFtcGxlLmNvbSJdLCJzY29wZSI6Im9wZW5pZCBwcm9maWxlIGVtYWlsIiwic2NwIjpbInJlYWQ6dXNlcnMiLCJ3cml0ZTp1c2VycyJdLCJyb2xlcyI6WyJhZG1pbiIsImVkaXRvciJdLCJyb2xlIjoiYXVkaXRvciIsImV4cCI6NDEwMjQ0NDgwMH0.signature';
 
 describe('bearer-token-parser service', () => {
   it('parses a complete Bearer Authorization header containing a JWT', () => {
@@ -43,9 +44,25 @@ describe('bearer-token-parser service', () => {
       kind: 'opaque',
       tokenLength: 29,
       tokenPreview: 'opaque-token...34567890',
+      subject: '',
+      issuer: '',
+      audiences: [],
+      scopes: [],
+      roles: [],
       jwtHeader: [],
       jwtPayload: [],
       warnings: ['Token is not a JWT; only opaque token metadata is available.'],
+    });
+  });
+
+  it('summarizes common JWT identity, audience, scope, and role claims', () => {
+    expect(parseBearerToken(CLAIMS_SUMMARY_JWT)).toMatchObject({
+      kind: 'jwt',
+      subject: 'user-123',
+      issuer: 'https://issuer.example.com',
+      audiences: ['api://default', 'https://api.example.com'],
+      scopes: ['openid', 'profile', 'email', 'read:users', 'write:users'],
+      roles: ['admin', 'editor', 'auditor'],
     });
   });
 

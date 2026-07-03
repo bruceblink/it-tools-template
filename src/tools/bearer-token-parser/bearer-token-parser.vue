@@ -28,6 +28,13 @@ const jwtPayloadRows = computed<Record<string, unknown>[]>(() => parsed.value.jw
   ...row,
   friendlyValue: row.friendlyValue ?? '-',
 })));
+const claimSummaryRows = computed<Record<string, unknown>[]>(() => [
+  { name: 'Subject', value: parsed.value.subject || '-' },
+  { name: 'Issuer', value: parsed.value.issuer || '-' },
+  { name: 'Audiences', value: parsed.value.audiences.join('\n') || '-' },
+  { name: 'Scopes', value: parsed.value.scopes.join('\n') || '-' },
+  { name: 'Roles', value: parsed.value.roles.join('\n') || '-' },
+]);
 
 const rules: UseValidationRule<string>[] = [
   {
@@ -64,6 +71,23 @@ const rules: UseValidationRule<string>[] = [
     <c-alert v-if="parsed.warnings.length" type="warning">
       {{ parsed.warnings.join(' ') }}
     </c-alert>
+
+    <c-table
+      v-if="parsed.kind === 'jwt'"
+      :data="claimSummaryRows"
+      :headers="[
+        { key: 'name', label: 'Claim summary' },
+        { key: 'value', label: 'Value' },
+      ]"
+      description="JWT identity and authorization summary"
+    >
+      <template #value="{ value }">
+        <span v-if="value === '-'" op-60>
+          -
+        </span>
+        <span-copyable v-else :value="String(value)" />
+      </template>
+    </c-table>
 
     <c-table
       :data="metadataRows"

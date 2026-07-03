@@ -15,6 +15,11 @@ export interface ParsedBearerToken {
   header: string
   tokenPreview: string
   tokenLength: number
+  subject: string
+  issuer: string
+  audiences: string[]
+  scopes: string[]
+  roles: string[]
   jwtHeader: BearerTokenClaim[]
   jwtPayload: BearerTokenClaim[]
   expiresAt?: string
@@ -76,6 +81,33 @@ function getUnixTimestamp(value: unknown): number | undefined {
   return Number.isFinite(timestamp) ? timestamp : undefined;
 }
 
+function stringifyClaimValue(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  return undefined;
+}
+
+function claimToList(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map(stringifyClaimValue)
+      .filter((item): item is string => Boolean(item));
+  }
+
+  const stringValue = stringifyClaimValue(value);
+  if (!stringValue) {
+    return [];
+  }
+
+  return stringValue.split(/\s+/).map(item => item.trim()).filter(Boolean);
+}
+
 function formatDurationFromSeconds(seconds: number): string {
   const absSeconds = Math.max(Math.floor(Math.abs(seconds)), 0);
 
@@ -127,6 +159,11 @@ export function parseBearerToken(input: string, { now = new Date() }: ParseBeare
     header: `Authorization: Bearer ${token}`,
     tokenPreview: tokenPreview(token),
     tokenLength: token.length,
+    subject: '',
+    issuer: '',
+    audiences: [],
+    scopes: [],
+    roles: [],
   };
 
   if (!isJwtLike(token)) {
@@ -141,6 +178,7 @@ export function parseBearerToken(input: string, { now = new Date() }: ParseBeare
 
   const rawHeader = jwtDecode<JwtHeader>(token, { header: true });
   const rawPayload = jwtDecode<JwtPayload>(token);
+  const payloadClaims = rawPayload as Record<string, unknown>;
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const exp = getUnixTimestamp(rawPayload.exp);
   const nbf = getUnixTimestamp(rawPayload.nbf);
@@ -172,7 +210,12 @@ export function parseBearerToken(input: string, { now = new Date() }: ParseBeare
     ...baseResult,
     kind: 'jwt',
     jwtHeader: claimsToRows(rawHeader as Record<string, unknown>),
-    jwtPayload: claimsToRows(rawPayload as Record<string, unknown>),
+    jwtPayload: claimsToRows(payloadClaims),
+    subject: stringifyClaimValue(payloadClaims.sub) ?? '',
+    issuer: stringifyClaimValue(payloadClaims.iss) ?? '',
+    audiences: claimToList(payloadClaims.aud),
+    scopes: [...new Set([...claimToList(payloadClaims.scope), ...claimToList(payloadClaims.scp)])],
+    roles: [...new Set([...claimToList(payloadClaims.roles), ...claimToList(payloadClaims.role)])],
     expiresAt,
     issuedAt,
     notBefore,
