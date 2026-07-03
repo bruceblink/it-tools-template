@@ -243,6 +243,37 @@ function checkBaseUri(directives: CspDirective[]): CspCheck {
     : check('base-uri', 'warning', values.join(' '), 'base-uri allows external locations.', 'Use base-uri self or none unless external base URLs are required.');
 }
 
+function checkFormAction(directives: CspDirective[]): CspCheck {
+  const values = getDirectiveValues(directives, ['form-action']);
+  if (values.length === 0) {
+    return check(
+      'form-action',
+      'warning',
+      '',
+      'Form submission destinations are not restricted.',
+      'Add form-action \'self\' or an explicit list of trusted submission endpoints.',
+    );
+  }
+
+  if (hasValue(values, "'none'") || hasValue(values, "'self'")) {
+    return check(
+      'form-action',
+      'pass',
+      values.join(' '),
+      'Form submission destinations are restricted.',
+      'Keep form-action aligned with legitimate login, checkout, and contact form targets.',
+    );
+  }
+
+  return check(
+    'form-action',
+    hasWildcard(values) ? 'fail' : 'warning',
+    values.join(' '),
+    'form-action allows broad or external submission targets.',
+    'Restrict form-action to self or known HTTPS endpoints.',
+  );
+}
+
 function checkMixedContent(directives: CspDirective[]): CspCheck[] {
   const allFetchValues = directives
     .filter(({ name }) => FETCH_DIRECTIVES.includes(name))
@@ -354,6 +385,7 @@ export function analyzeCsp(input: string): CspAnalysis {
         checkObjectSrc(directives),
         checkFrameAncestors(directives),
         checkBaseUri(directives),
+        checkFormAction(directives),
         ...checkMixedContent(directives),
         checkWildcards(directives),
         checkReporting(directives),

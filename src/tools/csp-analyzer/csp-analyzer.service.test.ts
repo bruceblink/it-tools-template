@@ -7,6 +7,7 @@ const strongPolicy = [
   "object-src 'none'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
+  "form-action 'self'",
   'upgrade-insecure-requests',
   'report-to csp-endpoint',
 ].join('; ');
@@ -19,6 +20,7 @@ describe('csp-analyzer service', () => {
       { name: 'object-src', values: ["'none'"] },
       { name: 'frame-ancestors', values: ["'none'"] },
       { name: 'base-uri', values: ["'self'"] },
+      { name: 'form-action', values: ["'self'"] },
       { name: 'upgrade-insecure-requests', values: [] },
       { name: 'report-to', values: ['csp-endpoint'] },
     ]);
@@ -34,6 +36,7 @@ describe('csp-analyzer service', () => {
       expect.objectContaining({ name: 'strict-dynamic', status: 'pass' }),
       expect.objectContaining({ name: 'object-src', status: 'pass' }),
       expect.objectContaining({ name: 'frame-ancestors', status: 'pass' }),
+      expect.objectContaining({ name: 'form-action', status: 'pass' }),
     ]));
   });
 
@@ -58,6 +61,16 @@ describe('csp-analyzer service', () => {
     expect(analysis.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'script inline execution', status: 'pass' }),
       expect.objectContaining({ name: 'strict-dynamic', status: 'warning' }),
+    ]));
+  });
+
+  it('checks form-action submission targets', () => {
+    expect(analyzeCsp("default-src 'self'; form-action *").checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'form-action', status: 'fail' }),
+    ]));
+
+    expect(analyzeCsp("default-src 'self'; form-action https://forms.example.com").checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'form-action', status: 'warning' }),
     ]));
   });
 

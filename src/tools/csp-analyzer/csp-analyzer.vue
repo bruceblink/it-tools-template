@@ -7,7 +7,7 @@ import {
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
 
-const samplePolicy = `Content-Security-Policy: default-src 'self'; script-src 'nonce-abc123' 'strict-dynamic'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests; report-to csp-endpoint`;
+const samplePolicy = `Content-Security-Policy: default-src 'self'; script-src 'nonce-abc123' 'strict-dynamic'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; report-to csp-endpoint`;
 
 const rawPolicy = useStorage('csp-analyzer:policy', samplePolicy);
 const emptyAnalysis = analyzeCsp('');

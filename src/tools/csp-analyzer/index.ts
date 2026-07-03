@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.csp-analyzer.title'),
   path: '/csp-analyzer',
   description: translate('tools.csp-analyzer.description'),
-  keywords: ['csp', 'content-security-policy', 'security', 'headers', 'script-src', 'frame-ancestors'],
+  keywords: ['csp', 'content-security-policy', 'security', 'headers', 'script-src', 'frame-ancestors', 'form-action'],
   component: () => import('./csp-analyzer.vue'),
   icon: ShieldChevron,
   createdAt: new Date('2026-07-04'),
