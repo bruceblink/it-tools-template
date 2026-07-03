@@ -152,6 +152,30 @@ function addResponseWarnings(cookie: ParsedCookie): void {
   if (expires !== undefined && Number.isNaN(Date.parse(expires))) {
     cookie.warnings.push('Expires is not a valid HTTP date.');
   }
+
+  if (cookie.name.startsWith('__Secure-') && !hasAttribute(cookie, 'secure')) {
+    cookie.warnings.push('__Secure- cookies require Secure.');
+  }
+
+  if (cookie.name.startsWith('__Host-')) {
+    const path = getAttributeValue(cookie, 'path');
+
+    if (!hasAttribute(cookie, 'secure')) {
+      cookie.warnings.push('__Host- cookies require Secure.');
+    }
+
+    if (hasAttribute(cookie, 'domain')) {
+      cookie.warnings.push('__Host- cookies must not include Domain.');
+    }
+
+    if (path !== '/') {
+      cookie.warnings.push('__Host- cookies require Path=/.');
+    }
+  }
+
+  if (hasAttribute(cookie, 'partitioned') && !hasAttribute(cookie, 'secure')) {
+    cookie.warnings.push('Partitioned cookies require Secure.');
+  }
 }
 
 function parseRequestCookieHeader(value: string): ParsedCookie[] {

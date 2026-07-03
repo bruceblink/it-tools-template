@@ -62,6 +62,28 @@ Set-Cookie: id=response; Secure; HttpOnly; SameSite=Strict`);
     });
   });
 
+  it('warns about invalid cookie prefix and partitioned attribute combinations', () => {
+    const parsed = parseCookies(`Set-Cookie: __Secure-id=1; HttpOnly; SameSite=Lax
+Set-Cookie: __Host-session=abc; Domain=example.com; Path=/app; HttpOnly; SameSite=Strict
+Set-Cookie: partitioned=1; Partitioned; HttpOnly; SameSite=None`);
+
+    expect(parsed.responseCookies[0]?.warnings).toEqual([
+      'Missing Secure attribute.',
+      '__Secure- cookies require Secure.',
+    ]);
+    expect(parsed.responseCookies[1]?.warnings).toEqual([
+      'Missing Secure attribute.',
+      '__Host- cookies require Secure.',
+      '__Host- cookies must not include Domain.',
+      '__Host- cookies require Path=/.',
+    ]);
+    expect(parsed.responseCookies[2]?.warnings).toEqual([
+      'Missing Secure attribute.',
+      'SameSite=None requires Secure.',
+      'Partitioned cookies require Secure.',
+    ]);
+  });
+
   it('reports invalid names and malformed pairs', () => {
     expect(() => parseCookies('bad name=value')).toThrow('Invalid cookie name');
     expect(() => parseCookies('missing-value')).toThrow('missing a value');
