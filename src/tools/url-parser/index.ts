@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.url-parser.title'),
   path: '/url-parser',
   description: translate('tools.url-parser.description'),
-  keywords: ['url', 'parser', 'protocol', 'origin', 'params', 'port', 'username', 'password', 'href'],
+  keywords: ['url', 'parser', 'protocol', 'origin', 'params', 'query', 'duplicate', 'port', 'username', 'password', 'credentials', 'href'],
   component: () => import('./url-parser.vue'),
   icon: Unlink,
 });

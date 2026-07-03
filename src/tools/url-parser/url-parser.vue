@@ -1,27 +1,30 @@
 <script setup lang="ts">
 import InputCopyable from '../../components/InputCopyable.vue';
+import { parseUrlDetails } from './url-parser.service';
 import { isNotThrowing } from '@/utils/boolean';
 import { withDefaultOnError } from '@/utils/defaults';
 
 const urlToParse = ref('https://me:pwd@it-tools.tech:3000/url-parser?key1=value&key2=value2#the-hash');
 
-const urlParsed = computed(() => withDefaultOnError(() => new URL(urlToParse.value), undefined));
+const urlParsed = computed(() => withDefaultOnError(() => parseUrlDetails(urlToParse.value), undefined));
 const urlValidationRules = [
   {
-    validator: (value: string) => isNotThrowing(() => new URL(value)),
+    validator: (value: string) => isNotThrowing(() => parseUrlDetails(value)),
     message: 'Invalid url',
   },
 ];
 
-const properties: { title: string; key: keyof URL }[] = [
+const properties = [
+  { title: 'Href', key: 'href' },
   { title: 'Protocol', key: 'protocol' },
   { title: 'Username', key: 'username' },
   { title: 'Password', key: 'password' },
+  { title: 'Origin', key: 'origin' },
   { title: 'Hostname', key: 'hostname' },
   { title: 'Port', key: 'port' },
   { title: 'Path', key: 'pathname' },
   { title: 'Params', key: 'search' },
-];
+] as const;
 </script>
 
 <template>
@@ -36,6 +39,10 @@ const properties: { title: string; key: keyof URL }[] = [
 
     <n-divider />
 
+    <c-alert v-if="urlParsed?.warnings.length" type="warning" mb-4>
+      {{ urlParsed.warnings.join(' ') }}
+    </c-alert>
+
     <InputCopyable
       v-for="{ title, key } in properties"
       :key="key"
@@ -49,8 +56,8 @@ const properties: { title: string; key: keyof URL }[] = [
     />
 
     <div
-      v-for="[k, v] in Object.entries(Object.fromEntries(urlParsed?.searchParams.entries() ?? []))"
-      :key="k"
+      v-for="({ key, value }, index) in urlParsed?.parameters ?? []"
+      :key="`${key}-${index}`"
       mb-2
       w-full
       flex
@@ -59,8 +66,8 @@ const properties: { title: string; key: keyof URL }[] = [
         <icon-mdi-arrow-right-bottom />
       </div>
 
-      <InputCopyable :value="k" readonly />
-      <InputCopyable :value="v" readonly />
+      <InputCopyable :value="key" readonly />
+      <InputCopyable :value="value" readonly />
     </div>
   </c-card>
 </template>
