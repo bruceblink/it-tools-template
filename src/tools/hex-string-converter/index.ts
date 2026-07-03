@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.hex-string-converter.title'),
   path: '/hex-string-converter',
   description: translate('tools.hex-string-converter.description'),
-  keywords: ['hex', 'hexadecimal', 'string', 'converter', 'encode', 'decode', 'utf8', 'bytes'],
+  keywords: ['hex', 'hexadecimal', 'string', 'converter', 'encode', 'decode', 'utf8', 'bytes', 'summary', 'length'],
   component: () => import('./hex-string-converter.vue'),
   icon: Binary,
   createdAt: new Date('2026-07-04'),

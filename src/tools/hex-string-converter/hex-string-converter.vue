@@ -2,13 +2,14 @@
 import { useCopy } from '@/composable/copy';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
-import { hexToText, isValidHex, textToHex } from './hex-string-converter.service';
+import { hexToText, isValidHex, summarizeHexInput, textToHex } from './hex-string-converter.service';
 
 const uppercaseOutput = useStorage('hex-string-converter:uppercase-output', false);
 const groupOutput = useStorage('hex-string-converter:group-output', true);
 const allowSeparators = useStorage('hex-string-converter:allow-separators', true);
 
 const textInput = ref('');
+const textByteLength = computed(() => new TextEncoder().encode(textInput.value).length);
 const hexOutput = computed(() =>
   textToHex(textInput.value, {
     uppercase: uppercaseOutput.value,
@@ -18,6 +19,7 @@ const hexOutput = computed(() =>
 const { copy: copyHex } = useCopy({ source: hexOutput, text: 'Hex string copied to the clipboard' });
 
 const hexInput = ref('');
+const hexSummary = computed(() => summarizeHexInput(hexInput.value, { allowSeparators: allowSeparators.value }));
 const textOutput = computed(() =>
   withDefaultOnError(() => hexToText(hexInput.value, { allowSeparators: allowSeparators.value }), ''),
 );
@@ -53,6 +55,11 @@ const hexValidationWatch = [allowSeparators];
       mb-5
     />
 
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-2>
+      <n-statistic label="UTF-8 bytes" :value="textByteLength" />
+      <n-statistic label="Hex digits" :value="hexOutput.length" />
+    </div>
+
     <c-input-text
       label="Hex of string"
       :value="hexOutput"
@@ -84,6 +91,16 @@ const hexValidationWatch = [allowSeparators];
       label="Hex string to decode"
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-3>
+      <n-statistic label="Valid hex" :value="hexSummary.valid ? 'yes' : 'no'" />
+      <n-statistic label="Normalized digits" :value="hexSummary.normalizedLength" />
+      <n-statistic label="Decoded bytes" :value="hexSummary.byteLength" />
+    </div>
+
+    <c-alert v-if="hexInput && !hexSummary.valid" type="warning" mb-5>
+      {{ hexSummary.error }}
+    </c-alert>
 
     <c-input-text
       v-model:value="textOutput"

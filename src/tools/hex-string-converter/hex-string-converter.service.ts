@@ -7,6 +7,13 @@ export interface HexToTextOptions {
   allowSeparators?: boolean
 }
 
+export interface HexInputSummary {
+  valid: boolean
+  normalizedLength: number
+  byteLength: number
+  error?: string
+}
+
 export class HexStringConverterError extends Error {
   constructor(message: string) {
     super(message);
@@ -66,5 +73,25 @@ export function isValidHex(input: string, options: HexToTextOptions = {}) {
   }
   catch {
     return false;
+  }
+}
+
+export function summarizeHexInput(input: string, options: HexToTextOptions = {}): HexInputSummary {
+  try {
+    const normalized = normalizeHexInput(input, options);
+
+    return {
+      valid: true,
+      normalizedLength: normalized.length,
+      byteLength: normalized.length / 2,
+    };
+  }
+  catch (error) {
+    return {
+      valid: false,
+      normalizedLength: 0,
+      byteLength: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

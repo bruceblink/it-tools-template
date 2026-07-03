@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HexStringConverterError, hexToText, isValidHex, textToHex } from './hex-string-converter.service';
+import { HexStringConverterError, hexToText, isValidHex, summarizeHexInput, textToHex } from './hex-string-converter.service';
 
 describe('hex-string-converter service', () => {
   it('encodes UTF-8 text to lowercase hex by default', () => {
@@ -39,5 +39,22 @@ describe('hex-string-converter service', () => {
 
   it('rejects invalid UTF-8 bytes', () => {
     expect(() => hexToText('ff')).toThrow('Decoded bytes are not valid UTF-8 text.');
+  });
+
+  it('summarizes normalized hex input size', () => {
+    expect(summarizeHexInput('0x48 0x65:6c-6c_6f')).toEqual({
+      valid: true,
+      normalizedLength: 10,
+      byteLength: 5,
+    });
+  });
+
+  it('summarizes invalid hex input without throwing', () => {
+    expect(summarizeHexInput('zz', { allowSeparators: false })).toEqual({
+      valid: false,
+      normalizedLength: 0,
+      byteLength: 0,
+      error: 'Input contains non-hexadecimal characters.',
+    });
   });
 });
