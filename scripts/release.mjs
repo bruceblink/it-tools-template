@@ -88,7 +88,7 @@ try {
 
   consola.info('Creating release commit');
   await $`git add CHANGELOG.md package.json`;
-  await $`git commit -m "chore(release): v${version}"`;
+  await $`git commit --no-gpg-sign -m "chore(release): v${version}"`;
   consola.success('Release commit created');
 
   consola.info('Creating release tag');
