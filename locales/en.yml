@@ -425,6 +425,10 @@ tools:
     title: IPv4 CIDR merge
     description: Merge IPv4 addresses, ranges, and CIDR blocks into the smallest CIDR list.
 
+  ipv4-cidr-splitter:
+    title: IPv4 CIDR splitter
+    description: Split an IPv4 CIDR block into smaller equal-size subnets.
+
   ipv4-wildcard-mask:
     title: IPv4 wildcard mask calculator
     description: Convert CIDR, subnet masks, and wildcard masks into normalized network details and Cisco ACL snippets.

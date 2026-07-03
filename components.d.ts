@@ -123,6 +123,7 @@ declare module 'vue' {
     Ipv4AddressClassifier: typeof import('./src/tools/ipv4-address-classifier/ipv4-address-classifier.vue')['default']
     Ipv4AddressConverter: typeof import('./src/tools/ipv4-address-converter/ipv4-address-converter.vue')['default']
     Ipv4CidrMerge: typeof import('./src/tools/ipv4-cidr-merge/ipv4-cidr-merge.vue')['default']
+    Ipv4CidrSplitter: typeof import('./src/tools/ipv4-cidr-splitter/ipv4-cidr-splitter.vue')['default']
     Ipv4RangeExpander: typeof import('./src/tools/ipv4-range-expander/ipv4-range-expander.vue')['default']
     Ipv4SubnetCalculator: typeof import('./src/tools/ipv4-subnet-calculator/ipv4-subnet-calculator.vue')['default']
     Ipv4WildcardMask: typeof import('./src/tools/ipv4-wildcard-mask/ipv4-wildcard-mask.vue')['default']
