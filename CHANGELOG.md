@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## Version 2026.07.03-1a29319
+
+### Features
+-  add csp analyzer (1a29319)
+-  add sri hash generator (3573ee3)
+-  add robots txt tester (d5b96f9)
+
 ## Version 2026.07.03-c0293f6
 
 ### Features
