@@ -3,7 +3,7 @@ import type { lib } from 'crypto-js';
 import { MD5, RIPEMD160, SHA1, SHA224, SHA256, SHA3, SHA384, SHA512, enc } from 'crypto-js';
 
 import InputCopyable from '../../components/InputCopyable.vue';
-import { convertHexToBin } from './hash-text.service';
+import { convertHexToBin, getHashDigestSize, type HashAlgorithmName } from './hash-text.service';
 import { useQueryParam } from '@/composable/queryParams';
 
 const algos = {
@@ -29,6 +29,12 @@ function formatWithEncoding(words: lib.WordArray, encoding: Encoding) {
   }
 
   return words.toString(enc[encoding]);
+}
+
+function formatAlgorithmLabel(algo: AlgoNames) {
+  const { bits, bytes } = getHashDigestSize(algo as HashAlgorithmName);
+
+  return `${algo} (${bits} bits / ${bytes} bytes)`;
 }
 
 const hashText = (algo: AlgoNames, value: string) => formatWithEncoding(algos[algo](value), encoding.value);
@@ -67,8 +73,8 @@ const hashText = (algo: AlgoNames, value: string) => formatWithEncoding(algos[al
 
       <div v-for="algo in algoNames" :key="algo" style="margin: 5px 0">
         <n-input-group>
-          <n-input-group-label style="flex: 0 0 120px">
-            {{ algo }}
+          <n-input-group-label style="flex: 0 0 220px">
+            {{ formatAlgorithmLabel(algo) }}
           </n-input-group-label>
           <InputCopyable :value="hashText(algo, clearText)" readonly />
         </n-input-group>

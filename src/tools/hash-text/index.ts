@@ -9,6 +9,8 @@ export const tool = defineTool({
   keywords: [
     'hash',
     'digest',
+    'digest size',
+    'bit length',
     'crypto',
     'security',
     'text',
