@@ -457,6 +457,10 @@ tools:
     title: Basic auth generator
     description: Generate a base64 basic auth header from a username and password.
 
+  basic-auth-parser:
+    title: Basic auth parser
+    description: Decode Basic Authorization headers into username, password, token, and normalized header output.
+
   text-to-unicode:
     title: Text to Unicode
     description: Parse and convert text to unicode and vice-versa

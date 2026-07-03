@@ -4,6 +4,7 @@ import { tool as base58StringConverter } from './base58-string-converter';
 import { tool as base64StringConverter } from './base64-string-converter';
 import { tool as hexStringConverter } from './hex-string-converter';
 import { tool as basicAuthGenerator } from './basic-auth-generator';
+import { tool as basicAuthParser } from './basic-auth-parser';
 import { tool as emailNormalizer } from './email-normalizer';
 
 import { tool as asciiTextDrawer } from './ascii-text-drawer';
@@ -156,6 +157,7 @@ export const toolsByCategory: ToolCategory[] = [
       urlQueryBuilder,
       deviceInformation,
       basicAuthGenerator,
+      basicAuthParser,
       metaTagGenerator,
       otpCodeGeneratorAndValidator,
       mimeTypes,

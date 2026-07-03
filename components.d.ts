@@ -21,6 +21,7 @@ declare module 'vue' {
     Base64FileConverter: typeof import('./src/tools/base64-file-converter/base64-file-converter.vue')['default']
     Base64StringConverter: typeof import('./src/tools/base64-string-converter/base64-string-converter.vue')['default']
     BasicAuthGenerator: typeof import('./src/tools/basic-auth-generator/basic-auth-generator.vue')['default']
+    BasicAuthParser: typeof import('./src/tools/basic-auth-parser/basic-auth-parser.vue')['default']
     Bcrypt: typeof import('./src/tools/bcrypt/bcrypt.vue')['default']
     BenchmarkBuilder: typeof import('./src/tools/benchmark-builder/benchmark-builder.vue')['default']
     Bip39Generator: typeof import('./src/tools/bip39-generator/bip39-generator.vue')['default']
