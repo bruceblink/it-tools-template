@@ -56,6 +56,8 @@ function statusTagType(status: CorsCheckStatus) {
     />
 
     <div grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Score" :value="`${analysis.score}/100`" />
+      <n-statistic label="Grade" :value="analysis.grade" />
       <n-statistic label="Allowed origin" :value="analysis.allowOrigin || '-'" />
       <n-statistic label="Credentials" :value="analysis.allowCredentials ? 'enabled' : 'disabled'" />
       <n-statistic label="Preflight cache" :value="analysis.maxAge" />
