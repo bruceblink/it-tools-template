@@ -25,6 +25,13 @@ vary: Accept-Encoding`);
       validators: ['ETag'],
       vary: ['Accept-Encoding'],
       warnings: [],
+      summary: {
+        passed: 10,
+        warnings: 0,
+        failed: 0,
+        score: 100,
+        grade: 'A',
+      },
     });
     expect(analysis.directives).toEqual([
       { name: 'public', value: true },
@@ -63,6 +70,11 @@ authorization: Bearer token`);
 content-type: application/json`);
 
     expect(analysis.cacheability).toBe('unknown');
+    expect(analysis.summary).toMatchObject({
+      failed: 2,
+      score: 60,
+      grade: 'C',
+    });
     expect(analysis.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Cache-Control', status: 'fail' }),
       expect.objectContaining({ name: 'Freshness lifetime', status: 'fail' }),

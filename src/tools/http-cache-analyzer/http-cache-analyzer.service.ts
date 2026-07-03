@@ -14,6 +14,14 @@ export interface CacheCheck {
   recommendation: string
 }
 
+export interface HttpCacheSummary {
+  passed: number
+  warnings: number
+  failed: number
+  score: number
+  grade: 'A' | 'B' | 'C' | 'D' | 'F'
+}
+
 export interface HttpCacheAnalysis {
   cacheControl: string
   directives: CacheDirective[]
@@ -30,6 +38,7 @@ export interface HttpCacheAnalysis {
   vary: string[]
   checks: CacheCheck[]
   warnings: string[]
+  summary: HttpCacheSummary
 }
 
 export interface HttpCacheAnalysisOptions {
@@ -265,6 +274,45 @@ function inferCacheability(directives: CacheDirective[], validators: string[], h
   return 'unknown';
 }
 
+function getGrade(score: number): HttpCacheSummary['grade'] {
+  if (score >= 90) {
+    return 'A';
+  }
+  if (score >= 75) {
+    return 'B';
+  }
+  if (score >= 60) {
+    return 'C';
+  }
+  if (score >= 40) {
+    return 'D';
+  }
+  return 'F';
+}
+
+function summarizeChecks(checks: CacheCheck[]): HttpCacheSummary {
+  const passed = checks.filter(({ status }) => status === 'pass').length;
+  const warnings = checks.filter(({ status }) => status === 'warning').length;
+  const failed = checks.filter(({ status }) => status === 'fail').length;
+  const score = Math.round(checks.reduce((total, { status }) => {
+    if (status === 'pass') {
+      return total + 100;
+    }
+    if (status === 'warning') {
+      return total + 50;
+    }
+    return total;
+  }, 0) / checks.length);
+
+  return {
+    passed,
+    warnings,
+    failed,
+    score,
+    grade: getGrade(score),
+  };
+}
+
 function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validators: string[], vary: string[], now: Date): CacheCheck[] {
   const cacheControl = getHeaderValue(headers, 'cache-control');
   const expires = getHeaderValue(headers, 'expires');
@@ -382,6 +430,7 @@ export function analyzeHttpCache(input: string, { now = new Date() }: HttpCacheA
   const warnings = checks
     .filter(({ status }) => status !== 'pass')
     .map(({ summary }) => summary);
+  const summary = summarizeChecks(checks);
 
   return {
     cacheControl,
@@ -399,5 +448,6 @@ export function analyzeHttpCache(input: string, { now = new Date() }: HttpCacheA
     vary,
     checks,
     warnings,
+    summary,
   };
 }

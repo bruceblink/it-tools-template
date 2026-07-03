@@ -77,6 +77,8 @@ const freshnessStateTagType = computed(() => {
     />
 
     <div grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Score" :value="`${analysis.summary.score}/100`" />
+      <n-statistic label="Grade" :value="analysis.summary.grade" />
       <n-statistic label="Freshness" :value="analysis.freshness" />
       <n-statistic label="Shared freshness" :value="analysis.sharedFreshness" />
       <n-statistic label="Response age" :value="analysis.responseAge" />
@@ -86,6 +88,18 @@ const freshnessStateTagType = computed(() => {
       <n-statistic label="Warnings" :value="analysis.warnings.length" />
       <n-statistic label="Stale while revalidate" :value="analysis.staleWhileRevalidate" />
       <n-statistic label="Stale if error" :value="analysis.staleIfError" />
+    </div>
+
+    <div flex flex-wrap gap-2>
+      <n-tag type="success">
+        {{ analysis.summary.passed }} pass
+      </n-tag>
+      <n-tag type="warning">
+        {{ analysis.summary.warnings }} warning
+      </n-tag>
+      <n-tag type="error">
+        {{ analysis.summary.failed }} fail
+      </n-tag>
     </div>
 
     <c-card title="Cacheability">
