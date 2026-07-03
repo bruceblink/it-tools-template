@@ -11,6 +11,8 @@ export interface ParsedCookie {
   value: string
   decodedValue: string
   attributes: ParsedCookieAttribute[]
+  expiresAt?: string
+  expired?: boolean
   warnings: string[]
 }
 
@@ -19,6 +21,10 @@ export interface CookieParseResult {
   requestCookies: ParsedCookie[]
   responseCookies: ParsedCookie[]
   json: Record<string, string | string[]>
+}
+
+export interface CookieParseOptions {
+  now?: Date
 }
 
 const COOKIE_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -123,7 +129,30 @@ function getAttributeValue(cookie: ParsedCookie, name: string): string | undefin
   return typeof attribute?.value === 'string' ? attribute.value : undefined;
 }
 
-function addResponseWarnings(cookie: ParsedCookie): void {
+function addExpirationDetails(cookie: ParsedCookie, now: Date): void {
+  const maxAge = getAttributeValue(cookie, 'max-age');
+  if (maxAge !== undefined) {
+    const maxAgeSeconds = Number(maxAge);
+    if (Number.isFinite(maxAgeSeconds)) {
+      const expiresAt = new Date(now.getTime() + (maxAgeSeconds * 1000));
+      cookie.expiresAt = expiresAt.toISOString();
+      cookie.expired = maxAgeSeconds <= 0;
+    }
+  }
+
+  const expires = getAttributeValue(cookie, 'expires');
+  if (cookie.expiresAt === undefined && expires !== undefined) {
+    const expiresTime = Date.parse(expires);
+    if (!Number.isNaN(expiresTime)) {
+      cookie.expiresAt = new Date(expiresTime).toISOString();
+      cookie.expired = expiresTime <= now.getTime();
+    }
+  }
+}
+
+function addResponseWarnings(cookie: ParsedCookie, now: Date): void {
+  addExpirationDetails(cookie, now);
+
   if (!hasAttribute(cookie, 'secure')) {
     cookie.warnings.push('Missing Secure attribute.');
   }
@@ -182,7 +211,7 @@ function parseRequestCookieHeader(value: string): ParsedCookie[] {
   return splitCookieSegments(value).map(segment => parseCookiePair(segment, 'request'));
 }
 
-function parseSetCookieHeader(value: string): ParsedCookie {
+function parseSetCookieHeader(value: string, now: Date): ParsedCookie {
   const [cookieSegment, ...attributeSegments] = splitCookieSegments(value);
   if (!cookieSegment) {
     throw new Error('Set-Cookie header is empty.');
@@ -190,7 +219,7 @@ function parseSetCookieHeader(value: string): ParsedCookie {
 
   const cookie = parseCookiePair(cookieSegment, 'response');
   cookie.attributes = attributeSegments.map(parseAttribute);
-  addResponseWarnings(cookie);
+  addResponseWarnings(cookie, now);
 
   return cookie;
 }
@@ -204,7 +233,7 @@ function looksLikeSetCookie(value: string): boolean {
   });
 }
 
-function parseLine(line: string): ParsedCookie[] {
+function parseLine(line: string, now: Date): ParsedCookie[] {
   const trimmedLine = line.trim();
   const [rawHeaderName, rawHeaderValue] = splitFirst(trimmedLine, ':');
   const headerName = rawHeaderName.trim().toLowerCase();
@@ -215,7 +244,7 @@ function parseLine(line: string): ParsedCookie[] {
   }
 
   if (rawHeaderValue !== '' && headerName === 'set-cookie') {
-    return [parseSetCookieHeader(headerValue)];
+    return [parseSetCookieHeader(headerValue, now)];
   }
 
   if (HTTP_STATUS_LINE_PATTERN.test(trimmedLine)) {
@@ -227,19 +256,19 @@ function parseLine(line: string): ParsedCookie[] {
   }
 
   if (looksLikeSetCookie(trimmedLine)) {
-    return [parseSetCookieHeader(trimmedLine)];
+    return [parseSetCookieHeader(trimmedLine, now)];
   }
 
   return parseRequestCookieHeader(trimmedLine);
 }
 
-export function parseCookies(input: string): CookieParseResult {
+export function parseCookies(input: string, { now = new Date() }: CookieParseOptions = {}): CookieParseResult {
   const cookies = input
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map(line => line.trim())
     .filter(Boolean)
-    .flatMap(parseLine);
+    .flatMap(line => parseLine(line, now));
   const requestCookies = cookies.filter(({ source }) => source === 'request');
   const responseCookies = cookies.filter(({ source }) => source === 'response');
   const json: Record<string, string | string[]> = {};

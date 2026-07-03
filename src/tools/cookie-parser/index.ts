@@ -6,7 +6,7 @@ export const tool = defineTool({
   name: translate('tools.cookie-parser.title'),
   path: '/cookie-parser',
   description: translate('tools.cookie-parser.description'),
-  keywords: ['cookie', 'cookies', 'set-cookie', 'http', 'headers', 'secure', 'httponly', 'samesite'],
+  keywords: ['cookie', 'cookies', 'set-cookie', 'http', 'headers', 'secure', 'httponly', 'samesite', 'expires', 'max-age'],
   component: () => import('./cookie-parser.vue'),
   icon: Cookie,
   createdAt: new Date('2026-07-04'),

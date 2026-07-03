@@ -17,6 +17,7 @@ const rows = computed(() => parsedCookies.value.cookies.map(cookie => ({
   value: cookie.decodedValue,
   rawValue: cookie.value,
   attributes: cookie.attributes.map(({ name, value }) => value === true ? name : `${name}=${value}`).join('; ') || '-',
+  expires: cookie.expiresAt ? `${cookie.expired ? 'Expired' : 'Active'}\n${cookie.expiresAt}` : '-',
   warnings: cookie.warnings.join('\n') || '-',
 })));
 const cookiesJson = computed(() => JSON.stringify(parsedCookies.value.json, null, 2));
@@ -61,6 +62,7 @@ function sourceTagType(source: unknown) {
         { key: 'name', label: 'Name' },
         { key: 'value', label: 'Decoded value' },
         { key: 'attributes', label: 'Attributes' },
+        { key: 'expires', label: 'Expires' },
         { key: 'warnings', label: 'Warnings' },
       ]"
       description="Parsed cookies"
@@ -81,6 +83,18 @@ function sourceTagType(source: unknown) {
           <span v-if="row.rawValue !== value" text-xs op-60>
             Raw: {{ row.rawValue }}
           </span>
+        </div>
+      </template>
+
+      <template #expires="{ value }">
+        <span v-if="value === '-'" op-60>
+          -
+        </span>
+        <div v-else flex flex-col gap-1>
+          <n-tag :type="String(value).startsWith('Expired') ? 'warning' : 'success'">
+            {{ String(value).split('\n')[0] }}
+          </n-tag>
+          <span-copyable :value="String(value).split('\n')[1] ?? ''" />
         </div>
       </template>
 
