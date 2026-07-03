@@ -132,6 +132,10 @@ tools:
     title: HTTP Headers 解析器
     description: 解析请求或响应头，检测重复项，并导出规范化 Headers、JSON 或 cURL 参数。
 
+  security-headers-analyzer:
+    title: 安全响应头分析器
+    description: 分析 HTTP 响应安全头，并标记缺失或较弱的防护配置。
+
   jwt-signer:
     title: JWT 签名器
     description: 在客户端使用可编辑的 Header、Payload、密钥和算法创建 HMAC 签名的 JSON Web Token。

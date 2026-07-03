@@ -133,6 +133,10 @@ tools:
     title: HTTP headers parser
     description: Parse request or response headers, detect duplicates, and export normalized headers as JSON or cURL arguments.
 
+  security-headers-analyzer:
+    title: Security headers analyzer
+    description: Analyze HTTP response security headers and highlight missing or weak protections.
+
   jwt-signer:
     title: JWT signer
     description: Create client-side HMAC-signed JSON Web Tokens with editable header, payload, secret, and algorithm.
