@@ -159,6 +159,11 @@ tools:
   color-converter:
     title: Color 选择器
     description: 在不同格式（十六进制、rgb、hsl和css名称）之间转换颜色
+
+  color-contrast-checker:
+    title: 颜色对比度检查器
+    description: 根据 WCAG AA 和 AAA 无障碍阈值检查前景色与背景色的对比度。
+
   bcrypt:
     title: 加密
     description: 使用bcrypt对文本字符串进行哈希和比较。Bcrypt是一个基于Blowfish密码的密码哈希函数。
