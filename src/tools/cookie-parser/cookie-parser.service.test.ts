@@ -64,6 +64,18 @@ Set-Cookie: id=response; Secure; HttpOnly; SameSite=Strict`);
     });
   });
 
+  it('exports normalized request and response headers', () => {
+    const parsed = parseCookies(`Cookie: session=abc123; encoded=hello%20world
+Set-Cookie: theme=dark; Path=/; Secure; HttpOnly; SameSite=Lax
+Set-Cookie: tracking=1; Path=/; SameSite=None`);
+
+    expect(parsed.requestHeader).toBe('Cookie: session=abc123; encoded=hello%20world');
+    expect(parsed.responseHeaders).toBe([
+      'Set-Cookie: theme=dark; Path=/; Secure; HttpOnly; SameSite=Lax',
+      'Set-Cookie: tracking=1; Path=/; SameSite=None',
+    ].join('\n'));
+  });
+
   it('warns about invalid cookie prefix and partitioned attribute combinations', () => {
     const parsed = parseCookies(`Set-Cookie: __Secure-id=1; HttpOnly; SameSite=Lax
 Set-Cookie: __Host-session=abc; Domain=example.com; Path=/app; HttpOnly; SameSite=Strict

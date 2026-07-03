@@ -20,6 +20,8 @@ export interface CookieParseResult {
   cookies: ParsedCookie[]
   requestCookies: ParsedCookie[]
   responseCookies: ParsedCookie[]
+  requestHeader: string
+  responseHeaders: string
   json: Record<string, string | string[]>
 }
 
@@ -207,6 +209,28 @@ function addResponseWarnings(cookie: ParsedCookie, now: Date): void {
   }
 }
 
+function serializeCookiePair(cookie: ParsedCookie): string {
+  return `${cookie.name}=${cookie.value}`;
+}
+
+function serializeSetCookie(cookie: ParsedCookie): string {
+  const attributes = cookie.attributes.map(({ name, value }) => value === true ? name : `${name}=${value}`);
+
+  return [`Set-Cookie: ${serializeCookiePair(cookie)}`, ...attributes].join('; ');
+}
+
+function buildRequestHeader(cookies: ParsedCookie[]): string {
+  if (cookies.length === 0) {
+    return '';
+  }
+
+  return `Cookie: ${cookies.map(serializeCookiePair).join('; ')}`;
+}
+
+function buildResponseHeaders(cookies: ParsedCookie[]): string {
+  return cookies.map(serializeSetCookie).join('\n');
+}
+
 function parseRequestCookieHeader(value: string): ParsedCookie[] {
   return splitCookieSegments(value).map(segment => parseCookiePair(segment, 'request'));
 }
@@ -281,6 +305,8 @@ export function parseCookies(input: string, { now = new Date() }: CookieParseOpt
     cookies,
     requestCookies,
     responseCookies,
+    requestHeader: buildRequestHeader(requestCookies),
+    responseHeaders: buildResponseHeaders(responseCookies),
     json,
   };
 }

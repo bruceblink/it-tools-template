@@ -21,6 +21,8 @@ const rows = computed(() => parsedCookies.value.cookies.map(cookie => ({
   warnings: cookie.warnings.join('\n') || '-',
 })));
 const cookiesJson = computed(() => JSON.stringify(parsedCookies.value.json, null, 2));
+const requestHeader = computed(() => parsedCookies.value.requestHeader || 'No request cookies found.');
+const responseHeaders = computed(() => parsedCookies.value.responseHeaders || 'No Set-Cookie headers found.');
 
 const rules: UseValidationRule<string>[] = [
   {
@@ -109,6 +111,16 @@ function sourceTagType(source: unknown) {
         </div>
       </template>
     </c-table>
+
+    <div grid grid-cols-1 gap-4 md:grid-cols-2>
+      <n-form-item label="Request Cookie header">
+        <textarea-copyable :value="requestHeader" />
+      </n-form-item>
+
+      <n-form-item label="Response Set-Cookie headers">
+        <textarea-copyable :value="responseHeaders" />
+      </n-form-item>
+    </div>
 
     <n-form-item label="JSON">
       <textarea-copyable :value="cookiesJson" language="json" />
