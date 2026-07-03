@@ -126,6 +126,7 @@ declare module 'vue' {
     Ipv6UlaGenerator: typeof import('./src/tools/ipv6-ula-generator/ipv6-ula-generator.vue')['default']
     JsonDiff: typeof import('./src/tools/json-diff/json-diff.vue')['default']
     JsonKeySorter: typeof import('./src/tools/json-key-sorter/json-key-sorter.vue')['default']
+    JsonLinesConverter: typeof import('./src/tools/json-lines-converter/json-lines-converter.vue')['default']
     JsonMinify: typeof import('./src/tools/json-minify/json-minify.vue')['default']
     JsonPathExtractor: typeof import('./src/tools/json-path-extractor/json-path-extractor.vue')['default']
     JsonToCsv: typeof import('./src/tools/json-to-csv/json-to-csv.vue')['default']

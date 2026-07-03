@@ -121,6 +121,10 @@ tools:
     title: JSON key sorter
     description: Sort JSON object keys recursively for stable diffs and deterministic output.
 
+  json-lines-converter:
+    title: JSON Lines converter
+    description: Convert between JSON arrays or objects and newline-delimited JSON Lines / NDJSON.
+
   url-query-builder:
     title: URL query builder
     description: Build encoded query strings and full URLs from parameter lines, query strings, or JSON objects.

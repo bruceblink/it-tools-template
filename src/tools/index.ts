@@ -72,6 +72,7 @@ import { tool as httpHeadersParser } from './http-headers-parser';
 import { tool as htmlEntities } from './html-entities';
 import { tool as baseConverter } from './integer-base-converter';
 import { tool as jsonViewer } from './json-viewer';
+import { tool as jsonLinesConverter } from './json-lines-converter';
 import { tool as jwtParser } from './jwt-parser';
 import { tool as jwtSigner } from './jwt-signer';
 import { tool as loremIpsumGenerator } from './lorem-ipsum-generator';
@@ -161,6 +162,7 @@ export const toolsByCategory: ToolCategory[] = [
       randomPortGenerator,
       crontabGenerator,
       jsonViewer,
+      jsonLinesConverter,
       jsonPathExtractor,
       jsonKeySorter,
       jsonMinify,
