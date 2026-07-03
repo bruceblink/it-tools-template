@@ -3,6 +3,7 @@ import {
   Base58StringConverterError,
   base58ToText,
   isValidBase58,
+  summarizeBase58Input,
   textToBase58,
 } from './base58-string-converter.service';
 
@@ -38,5 +39,24 @@ describe('base58-string-converter service', () => {
 
   it('rejects decoded bytes that are not valid UTF-8 text', () => {
     expect(() => base58ToText('5Q')).toThrow('Decoded bytes are not valid UTF-8 text.');
+  });
+
+  it('summarizes Base58 input size', () => {
+    expect(summarizeBase58Input(' 112g ')).toEqual({
+      valid: true,
+      normalizedLength: 4,
+      leadingZeroBytes: 2,
+      byteLength: 3,
+    });
+  });
+
+  it('summarizes invalid Base58 input without throwing', () => {
+    expect(summarizeBase58Input('0OIl')).toEqual({
+      valid: false,
+      normalizedLength: 0,
+      leadingZeroBytes: 0,
+      byteLength: 0,
+      error: 'Invalid Base58 character "0".',
+    });
   });
 });

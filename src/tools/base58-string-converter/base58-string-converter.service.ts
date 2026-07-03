@@ -4,6 +4,14 @@ export interface Base58Options {
   alphabet?: Base58AlphabetKey
 }
 
+export interface Base58InputSummary {
+  valid: boolean
+  normalizedLength: number
+  leadingZeroBytes: number
+  byteLength: number
+  error?: string
+}
+
 export class Base58StringConverterError extends Error {
   constructor(message: string) {
     super(message);
@@ -101,5 +109,30 @@ export function isValidBase58(input: string, options: Base58Options = {}) {
   }
   catch {
     return false;
+  }
+}
+
+export function summarizeBase58Input(input: string, options: Base58Options = {}): Base58InputSummary {
+  try {
+    const alphabet = getAlphabet(options.alphabet);
+    const normalized = input.trim();
+    const bytes = base58ToBytes(input, alphabet);
+    const leadingZeroBytes = [...normalized].findIndex(character => character !== alphabet[0]);
+
+    return {
+      valid: true,
+      normalizedLength: normalized.length,
+      leadingZeroBytes: leadingZeroBytes === -1 ? normalized.length : leadingZeroBytes,
+      byteLength: bytes.length,
+    };
+  }
+  catch (error) {
+    return {
+      valid: false,
+      normalizedLength: 0,
+      leadingZeroBytes: 0,
+      byteLength: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

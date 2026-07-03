@@ -2,7 +2,13 @@
 import { useCopy } from '@/composable/copy';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
-import { base58ToText, isValidBase58, textToBase58, type Base58AlphabetKey } from './base58-string-converter.service';
+import {
+  base58ToText,
+  isValidBase58,
+  summarizeBase58Input,
+  textToBase58,
+  type Base58AlphabetKey,
+} from './base58-string-converter.service';
 
 const alphabet = useStorage<Base58AlphabetKey>('base58-string-converter:alphabet', 'bitcoin');
 
@@ -28,6 +34,9 @@ const base58ValidationRules: UseValidationRule<string>[] = [
   },
 ];
 const base58ValidationWatch = [alphabet];
+
+const textByteLength = computed(() => new TextEncoder().encode(textInput.value).length);
+const base58Summary = computed(() => summarizeBase58Input(base58Input.value, { alphabet: alphabet.value }));
 </script>
 
 <template>
@@ -53,6 +62,11 @@ const base58ValidationWatch = [alphabet];
       raw-text
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-2>
+      <n-statistic label="UTF-8 bytes" :value="textByteLength" />
+      <n-statistic label="Base58 characters" :value="base58Output.length" />
+    </div>
 
     <c-input-text
       label="Base58 of string"
@@ -82,6 +96,17 @@ const base58ValidationWatch = [alphabet];
       label="Base58 string to decode"
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-4>
+      <n-statistic label="Valid Base58" :value="base58Summary.valid ? 'yes' : 'no'" />
+      <n-statistic label="Normalized characters" :value="base58Summary.normalizedLength" />
+      <n-statistic label="Leading zero bytes" :value="base58Summary.leadingZeroBytes" />
+      <n-statistic label="Decoded bytes" :value="base58Summary.byteLength" />
+    </div>
+
+    <c-alert v-if="base58Input && !base58Summary.valid" type="warning" mb-5>
+      {{ base58Summary.error }}
+    </c-alert>
 
     <c-input-text
       v-model:value="textOutput"
