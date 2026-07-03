@@ -458,6 +458,10 @@ tools:
     title: Basic Auth 解析器
     description: 将 Basic Authorization 头解码为用户名、密码、Token 和规范化 Header。
 
+  bearer-token-parser:
+    title: Bearer Token 解析器
+    description: 提取 Bearer Token，查看 JWT Header 和 Payload Claims，并标记不透明、过期或未签名 Token。
+
   text-to-unicode:
     title: 文本转 Unicode
     description: 解析文本并将其转换为 unicode，反之亦然

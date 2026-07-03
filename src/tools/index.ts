@@ -5,6 +5,7 @@ import { tool as base64StringConverter } from './base64-string-converter';
 import { tool as hexStringConverter } from './hex-string-converter';
 import { tool as basicAuthGenerator } from './basic-auth-generator';
 import { tool as basicAuthParser } from './basic-auth-parser';
+import { tool as bearerTokenParser } from './bearer-token-parser';
 import { tool as emailNormalizer } from './email-normalizer';
 
 import { tool as asciiTextDrawer } from './ascii-text-drawer';
@@ -158,6 +159,7 @@ export const toolsByCategory: ToolCategory[] = [
       deviceInformation,
       basicAuthGenerator,
       basicAuthParser,
+      bearerTokenParser,
       metaTagGenerator,
       otpCodeGeneratorAndValidator,
       mimeTypes,

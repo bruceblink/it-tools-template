@@ -23,6 +23,7 @@ declare module 'vue' {
     BasicAuthGenerator: typeof import('./src/tools/basic-auth-generator/basic-auth-generator.vue')['default']
     BasicAuthParser: typeof import('./src/tools/basic-auth-parser/basic-auth-parser.vue')['default']
     Bcrypt: typeof import('./src/tools/bcrypt/bcrypt.vue')['default']
+    BearerTokenParser: typeof import('./src/tools/bearer-token-parser/bearer-token-parser.vue')['default']
     BenchmarkBuilder: typeof import('./src/tools/benchmark-builder/benchmark-builder.vue')['default']
     Bip39Generator: typeof import('./src/tools/bip39-generator/bip39-generator.vue')['default']
     CAlert: typeof import('./src/ui/c-alert/c-alert.vue')['default']
