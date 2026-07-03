@@ -20,7 +20,9 @@ const directiveRows = computed(() => analysis.value.directives.map(({ name, valu
   name,
   value: value === true ? 'enabled' : value,
 })));
-const checkRows = computed(() => analysis.value.checks);
+const checkRows = computed<Record<string, unknown>[]>(() => analysis.value.checks.map(check => ({
+  ...check,
+})));
 
 const rules: UseValidationRule<string>[] = [
   {
