@@ -17,6 +17,7 @@ export interface CacheCheck {
 export interface HttpCacheAnalysis {
   cacheControl: string
   directives: CacheDirective[]
+  expiresAt: string
   freshness: string
   sharedFreshness: string
   responseAge: string
@@ -29,6 +30,10 @@ export interface HttpCacheAnalysis {
   vary: string[]
   checks: CacheCheck[]
   warnings: string[]
+}
+
+export interface HttpCacheAnalysisOptions {
+  now?: Date
 }
 
 type HeaderMap = Record<string, string[] | undefined>;
@@ -98,6 +103,51 @@ function parseIntegerSeconds(value: string | undefined): number | undefined {
   }
 
   return Number(value);
+}
+
+function parseHttpDate(value: string): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const time = Date.parse(value);
+
+  return Number.isNaN(time) ? undefined : time;
+}
+
+function getHeaderDate(headers: HeaderMap, name: string): number | undefined {
+  return parseHttpDate(getHeaderValue(headers, name));
+}
+
+function getExpiresFreshnessLifetime(headers: HeaderMap, now: Date): number | undefined {
+  const expiresTime = getHeaderDate(headers, 'expires');
+  if (expiresTime === undefined) {
+    return undefined;
+  }
+
+  const dateTime = getHeaderDate(headers, 'date') ?? now.getTime();
+
+  return Math.max(Math.floor((expiresTime - dateTime) / 1000), 0);
+}
+
+function getResponseAge(headers: HeaderMap, now: Date): number | undefined {
+  const rawAge = getHeaderValue(headers, 'age');
+  if (rawAge) {
+    return parseIntegerSeconds(rawAge);
+  }
+
+  const dateTime = getHeaderDate(headers, 'date');
+  if (dateTime === undefined) {
+    return undefined;
+  }
+
+  return Math.max(Math.floor((now.getTime() - dateTime) / 1000), 0);
+}
+
+function formatHttpDate(headers: HeaderMap, name: string): string {
+  const dateTime = getHeaderDate(headers, name);
+
+  return dateTime === undefined ? '' : new Date(dateTime).toISOString();
 }
 
 function formatDuration(seconds: number | undefined): string {
@@ -197,14 +247,14 @@ function getStaleReuseCheck({
   return check('Stale reuse', 'warning', 'No stale reuse directives were found.', 'Consider stale-while-revalidate or stale-if-error for resilient public cacheable resources.');
 }
 
-function inferCacheability(directives: CacheDirective[], validators: string[]): HttpCacheAnalysis['cacheability'] {
+function inferCacheability(directives: CacheDirective[], validators: string[], hasExpiresFreshness: boolean): HttpCacheAnalysis['cacheability'] {
   if (hasDirective(directives, 'no-store') || hasDirective(directives, 'private')) {
     return 'not-cacheable';
   }
 
   const maxAge = parseSeconds(getDirectiveValue(directives, 'max-age'));
   const sharedMaxAge = parseSeconds(getDirectiveValue(directives, 's-maxage'));
-  if (maxAge !== undefined || sharedMaxAge !== undefined || hasDirective(directives, 'public') || hasDirective(directives, 'immutable')) {
+  if (maxAge !== undefined || sharedMaxAge !== undefined || hasExpiresFreshness || hasDirective(directives, 'public') || hasDirective(directives, 'immutable')) {
     return 'cacheable';
   }
 
@@ -215,11 +265,11 @@ function inferCacheability(directives: CacheDirective[], validators: string[]): 
   return 'unknown';
 }
 
-function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validators: string[], vary: string[]): CacheCheck[] {
+function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validators: string[], vary: string[], now: Date): CacheCheck[] {
   const cacheControl = getHeaderValue(headers, 'cache-control');
   const expires = getHeaderValue(headers, 'expires');
   const rawAge = getHeaderValue(headers, 'age');
-  const age = rawAge ? parseIntegerSeconds(rawAge) : undefined;
+  const age = getResponseAge(headers, now);
   const rawMaxAge = getDirectiveValue(directives, 'max-age');
   const rawSharedMaxAge = getDirectiveValue(directives, 's-maxage');
   const rawStaleWhileRevalidate = getDirectiveValue(directives, 'stale-while-revalidate');
@@ -228,7 +278,9 @@ function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validat
   const sharedMaxAge = parseSeconds(rawSharedMaxAge);
   const staleWhileRevalidate = parseSeconds(rawStaleWhileRevalidate);
   const staleIfError = parseSeconds(rawStaleIfError);
-  const freshnessLifetime = sharedMaxAge ?? maxAge;
+  const expiresTime = getHeaderDate(headers, 'expires');
+  const expiresFreshnessLifetime = getExpiresFreshnessLifetime(headers, now);
+  const freshnessLifetime = sharedMaxAge ?? maxAge ?? expiresFreshnessLifetime;
   const hasNoStore = hasDirective(directives, 'no-store');
   const hasPrivate = hasDirective(directives, 'private');
   const hasPublic = hasDirective(directives, 'public');
@@ -236,6 +288,7 @@ function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validat
     || (rawSharedMaxAge !== undefined && sharedMaxAge === undefined);
   const hasInvalidStaleLifetime = (rawStaleWhileRevalidate !== undefined && staleWhileRevalidate === undefined)
     || (rawStaleIfError !== undefined && staleIfError === undefined);
+  const hasInvalidExpires = Boolean(expires) && expiresTime === undefined;
   const isStale = age !== undefined && freshnessLifetime !== undefined && age > freshnessLifetime;
 
   return [
@@ -258,9 +311,11 @@ function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validat
 
     hasInvalidLifetime
       ? check('Freshness lifetime', 'fail', 'max-age or s-maxage is not a valid non-negative number of seconds.', 'Use integer seconds for max-age and s-maxage.')
+      : hasInvalidExpires
+        ? check('Freshness lifetime', 'fail', 'Expires is not a valid HTTP date.', 'Use a valid HTTP-date or prefer Cache-Control max-age.')
       : maxAge !== undefined || sharedMaxAge !== undefined
         ? check('Freshness lifetime', maxAge === 0 && sharedMaxAge === undefined ? 'warning' : 'pass', `Freshness is ${formatDuration(sharedMaxAge ?? maxAge)}.`, 'Tune max-age and s-maxage to match how often this resource changes.')
-        : check('Freshness lifetime', expires ? 'warning' : 'fail', expires ? 'Freshness relies on Expires only.' : 'No explicit freshness lifetime was found.', 'Prefer Cache-Control max-age or s-maxage over Expires.'),
+        : check('Freshness lifetime', expires ? 'warning' : 'fail', expires ? `Freshness relies on Expires only: ${formatDuration(expiresFreshnessLifetime)}.` : 'No explicit freshness lifetime was found.', 'Prefer Cache-Control max-age or s-maxage over Expires.'),
 
     validators.length > 0
       ? check('Validators', 'pass', `Validator headers present: ${validators.join(', ')}.`, 'Keep validators stable so clients can revalidate efficiently.')
@@ -278,18 +333,23 @@ function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validat
       ? check('Long-lived cache', 'warning', 'max-age is longer than one year.', 'Use immutable fingerprinted URLs for very long cache lifetimes.')
       : check('Long-lived cache', 'pass', 'No excessive max-age detected.', 'For static assets, pair long max-age with content-hashed filenames.'),
 
-    rawAge
+    rawAge && age === undefined
       ? check(
           'Current age',
-          age === undefined ? 'fail' : isStale ? 'warning' : 'pass',
-          age === undefined
-            ? 'Age is not a valid non-negative integer number of seconds.'
-            : isStale
-              ? `Response age is ${formatDuration(age)}, which is beyond its freshness lifetime.`
-              : `Response age is ${formatDuration(age)} with ${getRemainingFreshness(age, freshnessLifetime)} remaining.`,
-          'Use Age with max-age or s-maxage to understand whether an intermediary cache is serving fresh or stale content.',
+          'fail',
+          'Age is not a valid non-negative integer number of seconds.',
+          'Use Age with max-age, s-maxage, or Expires to understand whether an intermediary cache is serving fresh or stale content.',
         )
-      : check('Current age', 'pass', 'No Age header was provided.', 'Age is usually added by shared caches; origin responses may omit it.'),
+      : age !== undefined
+        ? check(
+          'Current age',
+          isStale ? 'warning' : 'pass',
+          isStale
+            ? `Response age is ${formatDuration(age)}, which is beyond its freshness lifetime.`
+            : `Response age is ${formatDuration(age)} with ${getRemainingFreshness(age, freshnessLifetime)} remaining.`,
+          'Use Age or Date with max-age, s-maxage, or Expires to understand whether a cached response is fresh or stale.',
+        )
+        : check('Current age', 'pass', 'No Age header was provided.', 'Age is usually added by shared caches; origin responses may omit it.'),
 
     getStaleReuseCheck({
       staleWhileRevalidate,
@@ -305,19 +365,20 @@ function analyzeChecks(headers: HeaderMap, directives: CacheDirective[], validat
   ];
 }
 
-export function analyzeHttpCache(input: string): HttpCacheAnalysis {
+export function analyzeHttpCache(input: string, { now = new Date() }: HttpCacheAnalysisOptions = {}): HttpCacheAnalysis {
   const headers = createHeaderMap(input);
   const cacheControl = getHeaderValue(headers, 'cache-control');
   const directives = parseDirectives(cacheControl);
   const validators = getValidators(headers);
   const vary = getVaryValues(headers);
-  const age = parseIntegerSeconds(getHeaderValue(headers, 'age'));
+  const age = getResponseAge(headers, now);
   const maxAge = parseSeconds(getDirectiveValue(directives, 'max-age'));
   const sharedMaxAge = parseSeconds(getDirectiveValue(directives, 's-maxage'));
+  const expiresFreshnessLifetime = getExpiresFreshnessLifetime(headers, now);
   const staleWhileRevalidate = parseSeconds(getDirectiveValue(directives, 'stale-while-revalidate'));
   const staleIfError = parseSeconds(getDirectiveValue(directives, 'stale-if-error'));
-  const freshnessLifetime = sharedMaxAge ?? maxAge;
-  const checks = analyzeChecks(headers, directives, validators, vary);
+  const freshnessLifetime = sharedMaxAge ?? maxAge ?? expiresFreshnessLifetime;
+  const checks = analyzeChecks(headers, directives, validators, vary, now);
   const warnings = checks
     .filter(({ status }) => status !== 'pass')
     .map(({ summary }) => summary);
@@ -325,14 +386,15 @@ export function analyzeHttpCache(input: string): HttpCacheAnalysis {
   return {
     cacheControl,
     directives,
-    freshness: formatDuration(maxAge),
+    expiresAt: formatHttpDate(headers, 'expires'),
+    freshness: formatDuration(sharedMaxAge ?? maxAge ?? expiresFreshnessLifetime),
     sharedFreshness: formatDuration(sharedMaxAge),
     responseAge: formatDuration(age),
     remainingFreshness: getRemainingFreshness(age, freshnessLifetime),
     staleWhileRevalidate: formatDuration(staleWhileRevalidate),
     staleIfError: formatDuration(staleIfError),
     freshnessState: getFreshnessState(age, freshnessLifetime),
-    cacheability: inferCacheability(directives, validators),
+    cacheability: inferCacheability(directives, validators, expiresFreshnessLifetime !== undefined),
     validators,
     vary,
     checks,

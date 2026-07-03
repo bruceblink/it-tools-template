@@ -81,6 +81,7 @@ const freshnessStateTagType = computed(() => {
       <n-statistic label="Shared freshness" :value="analysis.sharedFreshness" />
       <n-statistic label="Response age" :value="analysis.responseAge" />
       <n-statistic label="Remaining freshness" :value="analysis.remainingFreshness" />
+      <n-statistic label="Expires" :value="analysis.expiresAt || '-'" />
       <n-statistic label="Validators" :value="analysis.validators.length ? analysis.validators.join(', ') : '-'" />
       <n-statistic label="Warnings" :value="analysis.warnings.length" />
       <n-statistic label="Stale while revalidate" :value="analysis.staleWhileRevalidate" />

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { analyzeHttpCache } from './http-cache-analyzer.service';
 
 describe('http-cache-analyzer service', () => {
+  const now = new Date('2026-07-04T00:00:00.000Z');
+
   it('analyzes a cacheable immutable asset response', () => {
     const analysis = analyzeHttpCache(`HTTP/2 200
 cache-control: public, max-age=31536000, stale-while-revalidate=86400, stale-if-error=604800, immutable
@@ -12,6 +14,7 @@ vary: Accept-Encoding`);
     expect(analysis).toMatchObject({
       cacheControl: 'public, max-age=31536000, stale-while-revalidate=86400, stale-if-error=604800, immutable',
       freshness: '365 days',
+      expiresAt: '',
       sharedFreshness: 'Not specified',
       responseAge: '1 day',
       remainingFreshness: '364 days',
@@ -64,6 +67,51 @@ content-type: application/json`);
       expect.objectContaining({ name: 'Cache-Control', status: 'fail' }),
       expect.objectContaining({ name: 'Freshness lifetime', status: 'fail' }),
       expect.objectContaining({ name: 'Validators', status: 'warning' }),
+    ]));
+  });
+
+  it('uses Date and Expires to estimate freshness without Cache-Control', () => {
+    const analysis = analyzeHttpCache(`HTTP/2 200
+date: Sat, 04 Jul 2026 00:00:00 GMT
+expires: Sat, 04 Jul 2026 00:05:00 GMT
+last-modified: Sat, 04 Jul 2026 00:00:00 GMT`, {
+      now: new Date('2026-07-04T00:02:00.000Z'),
+    });
+
+    expect(analysis).toMatchObject({
+      expiresAt: '2026-07-04T00:05:00.000Z',
+      freshness: '5 minutes',
+      responseAge: '2 minutes',
+      remainingFreshness: '3 minutes',
+      freshnessState: 'fresh',
+      cacheability: 'cacheable',
+      validators: ['Last-Modified'],
+    });
+    expect(analysis.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Freshness lifetime',
+        status: 'warning',
+        summary: 'Freshness relies on Expires only: 5 minutes.',
+      }),
+      expect.objectContaining({
+        name: 'Current age',
+        status: 'pass',
+        summary: 'Response age is 2 minutes with 3 minutes remaining.',
+      }),
+    ]));
+  });
+
+  it('fails invalid Expires freshness values', () => {
+    const analysis = analyzeHttpCache(`HTTP/2 200
+expires: invalid-date`, { now });
+
+    expect(analysis.expiresAt).toBe('');
+    expect(analysis.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'Freshness lifetime',
+        status: 'fail',
+        summary: 'Expires is not a valid HTTP date.',
+      }),
     ]));
   });
 
