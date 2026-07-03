@@ -2,6 +2,7 @@ import { normalizeCsvRows, parseCsv } from '@/utils/csv';
 
 export interface CsvToJsonOptions {
   delimiter?: string
+  expandDotNotation?: boolean
   hasHeader?: boolean
   inferTypes?: boolean
 }
@@ -47,6 +48,34 @@ function makeUniqueHeaders(headers: string[], width: number): string[] {
   });
 }
 
+function assignRecordValue(record: Record<string, unknown>, header: string, value: unknown, expandDotNotation: boolean) {
+  if (!expandDotNotation || !header.includes('.')) {
+    record[header] = value;
+    return;
+  }
+
+  const segments = header
+    .split('.')
+    .map(segment => segment.trim())
+    .filter(Boolean);
+  if (segments.length <= 1) {
+    record[header] = value;
+    return;
+  }
+
+  let target = record;
+  for (const segment of segments.slice(0, -1)) {
+    const existingValue = target[segment];
+    if (existingValue === null || typeof existingValue !== 'object' || Array.isArray(existingValue)) {
+      target[segment] = {};
+    }
+
+    target = target[segment] as Record<string, unknown>;
+  }
+
+  target[segments[segments.length - 1] ?? header] = value;
+}
+
 export function convertCsvToJson(input: string, options: CsvToJsonOptions = {}): string {
   if (input === '') {
     return '';
@@ -60,17 +89,26 @@ export function convertCsvToJson(input: string, options: CsvToJsonOptions = {}):
   const firstRow = rows[0] ?? [];
   const hasHeader = options.hasHeader ?? true;
   const inferTypes = options.inferTypes ?? false;
+  const expandDotNotation = options.expandDotNotation ?? false;
   const headers = hasHeader
     ? makeUniqueHeaders(firstRow, firstRow.length)
     : makeUniqueHeaders([], firstRow.length);
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
-  const records = dataRows.map(row =>
-    Object.fromEntries(headers.map((header, index) => [
-      header,
-      inferTypes ? inferCellValue(row[index] ?? '') : row[index] ?? '',
-    ])),
-  );
+  const records = dataRows.map((row) => {
+    const record: Record<string, unknown> = {};
+
+    headers.forEach((header, index) => {
+      assignRecordValue(
+        record,
+        header,
+        inferTypes ? inferCellValue(row[index] ?? '') : row[index] ?? '',
+        expandDotNotation,
+      );
+    });
+
+    return record;
+  });
 
   return JSON.stringify(records, null, 2);
 }

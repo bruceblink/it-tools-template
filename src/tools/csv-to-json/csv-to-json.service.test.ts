@@ -65,4 +65,32 @@ describe('csv-to-json service', () => {
         ]"
       `);
   });
+
+  it('keeps dotted headers flat by default', () => {
+    expect(convertCsvToJson('user.name,user.age\nAlice,30')).toMatchInlineSnapshot(`
+      "[
+        {
+          "user.name": "Alice",
+          "user.age": "30"
+        }
+      ]"
+    `);
+  });
+
+  it('can expand dotted headers into nested JSON objects', () => {
+    expect(convertCsvToJson('user.name,user.age,active\nAlice,30,true', {
+      expandDotNotation: true,
+      inferTypes: true,
+    })).toMatchInlineSnapshot(`
+      "[
+        {
+          "user": {
+            "name": "Alice",
+            "age": 30
+          },
+          "active": true
+        }
+      ]"
+    `);
+  });
 });

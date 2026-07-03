@@ -8,6 +8,7 @@ import { withDefaultOnError } from '@/utils/defaults';
 const delimiter = useStorage('csv-to-json:delimiter', ',');
 const hasHeader = useStorage('csv-to-json:has-header', true);
 const inferTypes = useStorage('csv-to-json:infer-types', false);
+const expandDotNotation = useStorage('csv-to-json:expand-dot-notation', false);
 
 const delimiterOptions = [
   { label: 'Comma (,)', value: ',' },
@@ -21,6 +22,7 @@ const sampleCsv = 'name,age,active\nAlice,30,true\nBob,25,false';
 function transformer(value: string) {
   return withDefaultOnError(() => convertCsvToJson(value, {
     delimiter: delimiter.value,
+    expandDotNotation: expandDotNotation.value,
     hasHeader: hasHeader.value,
     inferTypes: inferTypes.value,
   }), '');
@@ -35,7 +37,7 @@ const rules: UseValidationRule<string>[] = [
 </script>
 
 <template>
-  <div mb-4 grid grid-cols-1 gap-3 md:grid-cols-3>
+  <div mb-4 grid grid-cols-1 gap-3 md:grid-cols-4>
     <c-select
       v-model:value="delimiter"
       label="Delimiter"
@@ -48,6 +50,10 @@ const rules: UseValidationRule<string>[] = [
 
     <n-form-item label="Infer JSON values" label-placement="left" :show-feedback="false">
       <n-switch v-model:value="inferTypes" />
+    </n-form-item>
+
+    <n-form-item label="Expand dotted headers" label-placement="left" :show-feedback="false">
+      <n-switch v-model:value="expandDotNotation" />
     </n-form-item>
   </div>
 
