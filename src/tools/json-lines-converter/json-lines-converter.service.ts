@@ -7,6 +7,12 @@ export interface JsonLinesConverterOptions {
   indentSize?: number
 }
 
+export interface JsonLinesSummary {
+  inputLines: number
+  outputValues: number
+  emptyLines: number
+}
+
 export class JsonLinesConversionError extends Error {
   constructor(message: string) {
     super(message);
@@ -75,4 +81,43 @@ export function convertJsonLines(
   return direction === 'json-to-jsonl'
     ? convertJsonToJsonLines(input)
     : convertJsonLinesToJson(input, options);
+}
+
+export function summarizeJsonLines(
+  input: string,
+  direction: JsonLinesDirection,
+  options: JsonLinesConverterOptions = {},
+): JsonLinesSummary {
+  if (input.trim() === '') {
+    return {
+      inputLines: 0,
+      outputValues: 0,
+      emptyLines: 0,
+    };
+  }
+
+  if (direction === 'json-to-jsonl') {
+    const values = normalizeJsonLineValue(JSON5.parse(input));
+
+    return {
+      inputLines: input.split(/\r?\n/).length,
+      outputValues: values.length,
+      emptyLines: input.split(/\r?\n/).filter(line => line.trim() === '').length,
+    };
+  }
+
+  const ignoreEmptyLines = options.ignoreEmptyLines ?? true;
+  const lines = input.split(/\r?\n/);
+  const emptyLines = lines.filter(line => line.trim() === '').length;
+  const outputValues = lines.filter(line => line.trim() !== '').length;
+
+  if (!ignoreEmptyLines && emptyLines > 0) {
+    convertJsonLinesToJson(input, options);
+  }
+
+  return {
+    inputLines: lines.length,
+    outputValues,
+    emptyLines,
+  };
 }

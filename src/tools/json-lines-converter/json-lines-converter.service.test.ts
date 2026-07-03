@@ -4,6 +4,7 @@ import {
   convertJsonLines,
   convertJsonLinesToJson,
   convertJsonToJsonLines,
+  summarizeJsonLines,
 } from './json-lines-converter.service';
 
 describe('json-lines-converter service', () => {
@@ -68,5 +69,21 @@ describe('json-lines-converter service', () => {
   it('dispatches by conversion direction', () => {
     expect(convertJsonLines('[{a:1}]', 'json-to-jsonl')).toBe('{"a":1}');
     expect(convertJsonLines('{"a":1}', 'jsonl-to-json', { indentSize: 0 })).toBe('[{"a":1}]');
+  });
+
+  it('summarizes JSON Lines input', () => {
+    expect(summarizeJsonLines('{"id":1}\n\n{"id":2}', 'jsonl-to-json')).toEqual({
+      inputLines: 3,
+      outputValues: 2,
+      emptyLines: 1,
+    });
+  });
+
+  it('summarizes JSON input output line count', () => {
+    expect(summarizeJsonLines('[{id:1},{id:2}]', 'json-to-jsonl')).toEqual({
+      inputLines: 1,
+      outputValues: 2,
+      emptyLines: 0,
+    });
   });
 });
