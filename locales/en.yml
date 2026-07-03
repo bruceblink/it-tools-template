@@ -133,6 +133,10 @@ tools:
     title: HTTP headers parser
     description: Parse request or response headers, detect duplicates, and export normalized headers as JSON or cURL arguments.
 
+  cookie-parser:
+    title: Cookie parser
+    description: Parse Cookie and Set-Cookie headers, decode values, inspect attributes, and flag common security issues.
+
   security-headers-analyzer:
     title: Security headers analyzer
     description: Analyze HTTP response security headers and highlight missing or weak protections.

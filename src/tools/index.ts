@@ -67,6 +67,7 @@ import { tool as chmodCalculator } from './chmod-calculator';
 import { tool as chronometer } from './chronometer';
 import { tool as colorContrastChecker } from './color-contrast-checker';
 import { tool as colorConverter } from './color-converter';
+import { tool as cookieParser } from './cookie-parser';
 import { tool as crontabGenerator } from './crontab-generator';
 import { tool as dateTimeConverter } from './date-time-converter';
 import { tool as dataSizeConverter } from './data-size-converter';
@@ -160,6 +161,7 @@ export const toolsByCategory: ToolCategory[] = [
       userAgentParser,
       httpStatusCodes,
       httpHeadersParser,
+      cookieParser,
       securityHeadersAnalyzer,
       jsonDiff,
       safelinkDecoder,

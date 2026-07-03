@@ -132,6 +132,10 @@ tools:
     title: HTTP Headers 解析器
     description: 解析请求或响应头，检测重复项，并导出规范化 Headers、JSON 或 cURL 参数。
 
+  cookie-parser:
+    title: Cookie 解析器
+    description: 解析 Cookie 与 Set-Cookie 头，解码值、查看属性，并标记常见安全问题。
+
   security-headers-analyzer:
     title: 安全响应头分析器
     description: 分析 HTTP 响应安全头，并标记缺失或较弱的防护配置。
