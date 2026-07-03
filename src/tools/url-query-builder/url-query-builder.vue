@@ -10,10 +10,12 @@ const baseUrl = useStorage('url-query-builder:base-url', 'https://example.com/se
 const parameterInput = useStorage('url-query-builder:parameters', 'q=it tools\npage=1\nsort=created_at');
 const includeEmptyValues = useStorage('url-query-builder:include-empty-values', true);
 const sortKeys = useStorage('url-query-builder:sort-keys', false);
+const flattenNestedObjects = useStorage('url-query-builder:flatten-nested-objects', false);
 
 const options = computed(() => ({
   includeEmptyValues: includeEmptyValues.value,
   sortKeys: sortKeys.value,
+  flattenNestedObjects: flattenNestedObjects.value,
 }));
 const queryString = computed(() => withDefaultOnError(() => buildQueryString(parameterInput.value, options.value), ''));
 const fullUrl = computed(() => withDefaultOnError(() => buildUrlWithQuery(baseUrl.value, parameterInput.value, options.value), ''));
@@ -22,7 +24,7 @@ const parameterValidation = useValidation({
   source: parameterInput,
   rules: [
     {
-      validator: value => parseQueryParameters(value),
+      validator: value => parseQueryParameters(value, options.value),
       message: 'Provided parameters are not valid.',
     },
   ],
@@ -30,7 +32,7 @@ const parameterValidation = useValidation({
 </script>
 
 <template>
-  <div mb-4 grid grid-cols-1 gap-3 md:grid-cols-3>
+  <div mb-4 grid grid-cols-1 gap-3 md:grid-cols-4>
     <c-input-text
       v-model:value="baseUrl"
       label="Base URL"
@@ -44,6 +46,10 @@ const parameterValidation = useValidation({
 
     <n-form-item label="Sort keys" label-placement="left" :show-feedback="false">
       <n-switch v-model:value="sortKeys" />
+    </n-form-item>
+
+    <n-form-item label="Flatten nested JSON" label-placement="left" :show-feedback="false">
+      <n-switch v-model:value="flattenNestedObjects" />
     </n-form-item>
   </div>
 

@@ -6,11 +6,16 @@ export interface QueryParameter {
 export interface QueryBuilderOptions {
   includeEmptyValues?: boolean
   sortKeys?: boolean
+  flattenNestedObjects?: boolean
 }
 
-function appendJsonValue(params: QueryParameter[], key: string, value: unknown) {
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function appendJsonValue(params: QueryParameter[], key: string, value: unknown, options: QueryBuilderOptions) {
   if (Array.isArray(value)) {
-    value.forEach(item => appendJsonValue(params, key, item));
+    value.forEach(item => appendJsonValue(params, key, item, options));
     return;
   }
 
@@ -19,7 +24,14 @@ function appendJsonValue(params: QueryParameter[], key: string, value: unknown) 
     return;
   }
 
-  if (typeof value === 'object') {
+  if (isJsonObject(value)) {
+    if (options.flattenNestedObjects) {
+      Object.entries(value).forEach(([childKey, childValue]) => {
+        appendJsonValue(params, `${key}[${childKey}]`, childValue, options);
+      });
+      return;
+    }
+
     params.push({ key, value: JSON.stringify(value) });
     return;
   }
@@ -27,14 +39,14 @@ function appendJsonValue(params: QueryParameter[], key: string, value: unknown) 
   params.push({ key, value: String(value) });
 }
 
-function parseJsonParameters(input: string): QueryParameter[] {
+function parseJsonParameters(input: string, options: QueryBuilderOptions): QueryParameter[] {
   const parsed = JSON.parse(input) as unknown;
   if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('JSON parameter input must be an object.');
   }
 
   const params: QueryParameter[] = [];
-  Object.entries(parsed as Record<string, unknown>).forEach(([key, value]) => appendJsonValue(params, key, value));
+  Object.entries(parsed as Record<string, unknown>).forEach(([key, value]) => appendJsonValue(params, key, value, options));
 
   return params;
 }
@@ -70,7 +82,7 @@ function parseLineParameters(input: string): QueryParameter[] {
     });
 }
 
-export function parseQueryParameters(input: string): QueryParameter[] {
+export function parseQueryParameters(input: string, options: QueryBuilderOptions = {}): QueryParameter[] {
   const trimmedInput = input.trim();
 
   if (trimmedInput === '') {
@@ -78,7 +90,7 @@ export function parseQueryParameters(input: string): QueryParameter[] {
   }
 
   if (trimmedInput.startsWith('{')) {
-    return parseJsonParameters(trimmedInput);
+    return parseJsonParameters(trimmedInput, options);
   }
 
   if (!trimmedInput.includes('\n') && (trimmedInput.includes('&') || trimmedInput.startsWith('?') || trimmedInput.includes('?'))) {
@@ -91,7 +103,7 @@ export function parseQueryParameters(input: string): QueryParameter[] {
 export function buildQueryString(input: string, options: QueryBuilderOptions = {}): string {
   const includeEmptyValues = options.includeEmptyValues ?? true;
   const sortKeys = options.sortKeys ?? false;
-  const params = parseQueryParameters(input)
+  const params = parseQueryParameters(input, options)
     .filter(({ key, value }) => key !== '' && (includeEmptyValues || value !== ''));
 
   if (sortKeys) {

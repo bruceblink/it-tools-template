@@ -23,17 +23,32 @@ describe('url-query-builder service', () => {
   });
 
   it('parses JSON object parameters and repeats array values', () => {
-    expect(parseQueryParameters('{"tag":["vue","vite"],"page":1,"empty":null}')).toEqual([
+    expect(parseQueryParameters('{"tag":["vue","vite"],"page":1,"empty":null,"filter":{"status":"open"}}')).toEqual([
       { key: 'tag', value: 'vue' },
       { key: 'tag', value: 'vite' },
       { key: 'page', value: '1' },
       { key: 'empty', value: '' },
+      { key: 'filter', value: '{"status":"open"}' },
+    ]);
+  });
+
+  it('flattens nested JSON object parameters when requested', () => {
+    expect(parseQueryParameters('{"filter":{"status":"open","labels":["bug","ui"]},"page":1}', { flattenNestedObjects: true })).toEqual([
+      { key: 'filter[status]', value: 'open' },
+      { key: 'filter[labels]', value: 'bug' },
+      { key: 'filter[labels]', value: 'ui' },
+      { key: 'page', value: '1' },
     ]);
   });
 
   it('builds sorted encoded query strings', () => {
     expect(buildQueryString('b=two words\na=1\nempty=', { sortKeys: true, includeEmptyValues: false }))
       .toBe('a=1&b=two+words');
+  });
+
+  it('builds encoded query strings from flattened nested JSON objects', () => {
+    expect(buildQueryString('{"filter":{"status":"open"},"page":1}', { flattenNestedObjects: true, sortKeys: true }))
+      .toBe('filter%5Bstatus%5D=open&page=1');
   });
 
   it('appends query parameters before URL hashes', () => {
