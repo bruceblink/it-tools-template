@@ -163,7 +163,7 @@ tools:
 
   jwt-signer:
     title: JWT signer
-    description: Create client-side HMAC-signed JSON Web Tokens with editable header, payload, secret, and algorithm.
+    description: Create and verify client-side HMAC-signed JSON Web Tokens with editable header, payload, secret, and algorithm.
 
   data-size-converter:
     title: Data size converter

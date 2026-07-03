@@ -162,7 +162,7 @@ tools:
 
   jwt-signer:
     title: JWT 签名器
-    description: 在客户端使用可编辑的 Header、Payload、密钥和算法创建 HMAC 签名的 JSON Web Token。
+    description: 在客户端使用可编辑的 Header、Payload、密钥和算法创建并验证 HMAC 签名的 JSON Web Token。
 
   data-size-converter:
     title: 数据大小转换器

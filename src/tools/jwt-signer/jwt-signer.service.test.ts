@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseJwtJson, signJwt, signJwtText } from './jwt-signer.service';
+import { parseJwtJson, signJwt, signJwtText, verifyJwtSignature } from './jwt-signer.service';
 
 describe('jwt-signer service', () => {
   it('signs the canonical HS256 JWT example', () => {
@@ -40,5 +40,55 @@ describe('jwt-signer service', () => {
 
   it('rejects non-object JWT parts', () => {
     expect(() => parseJwtJson('[]', 'Payload')).toThrow('Payload must be a JSON object');
+  });
+
+  it('verifies a valid HMAC JWT signature', () => {
+    const token = signJwt({
+      header: { alg: 'HS384', typ: 'JWT' },
+      payload: { scope: 'read' },
+      secret: 'secret',
+      algorithm: 'HS384',
+    });
+
+    expect(verifyJwtSignature({ token, secret: 'secret' })).toEqual({
+      valid: true,
+      algorithm: 'HS384',
+      message: 'Signature is valid.',
+    });
+  });
+
+  it('detects JWT signatures that do not match the secret', () => {
+    const token = signJwt({
+      header: { alg: 'HS256', typ: 'JWT' },
+      payload: { scope: 'read' },
+      secret: 'secret',
+      algorithm: 'HS256',
+    });
+
+    expect(verifyJwtSignature({ token, secret: 'wrong-secret' })).toEqual({
+      valid: false,
+      algorithm: 'HS256',
+      message: 'Signature does not match this secret.',
+    });
+  });
+
+  it('rejects unsupported signing algorithms when verifying', () => {
+    const token = [
+      Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url'),
+      Buffer.from(JSON.stringify({ sub: 'user-1' })).toString('base64url'),
+      'signature',
+    ].join('.');
+
+    expect(verifyJwtSignature({ token, secret: 'secret' })).toEqual({
+      valid: false,
+      message: 'Unsupported or missing HMAC algorithm: none.',
+    });
+  });
+
+  it('rejects malformed tokens when verifying signatures', () => {
+    expect(verifyJwtSignature({ token: 'not-a-jwt', secret: 'secret' })).toEqual({
+      valid: false,
+      message: 'JWT must contain header, payload, and signature segments.',
+    });
   });
 });
