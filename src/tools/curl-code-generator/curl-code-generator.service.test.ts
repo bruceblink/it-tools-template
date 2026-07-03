@@ -31,6 +31,24 @@ describe('curl-code-generator service', () => {
     ]);
   });
 
+  it('accepts long option assignments and --url commands', () => {
+    expect(parseCurlCommand('curl --url=https://example.com --request=PUT --header=Accept:application/json --data-raw=\'{"ok":true}\'')).toMatchObject({
+      url: 'https://example.com',
+      method: 'PUT',
+      headers: [
+        { name: 'Accept', value: 'application/json' },
+      ],
+      data: '{"ok":true}',
+    });
+    expect(parseCurlCommand('curl --url https://example.com')).toMatchObject({
+      url: 'https://example.com',
+      method: 'GET',
+    });
+    expect(parseCurlCommand('curl --user=user:pass --url=https://example.com').headers).toEqual([
+      { name: 'Authorization', value: 'Basic dXNlcjpwYXNz' },
+    ]);
+  });
+
   it('generates fetch, axios, and HTTPie commands', () => {
     const generation = generateCurlCode(`curl https://api.example.com/items -H 'Accept: application/json' -d 'page=1'`);
 
@@ -69,10 +87,15 @@ describe('curl-code-generator service', () => {
 
   it('reports unsupported options as warnings', () => {
     const request = parseCurlCommand('curl --location --retry 3 https://example.com');
+    const assignmentRequest = parseCurlCommand('curl --retry=3 https://example.com');
 
     expect(request.url).toBe('https://example.com');
     expect(request.warnings).toEqual([
       'Option --location was ignored.',
+      'Unsupported option --retry was ignored.',
+    ]);
+    expect(assignmentRequest.url).toBe('https://example.com');
+    expect(assignmentRequest.warnings).toEqual([
       'Unsupported option --retry was ignored.',
     ]);
   });

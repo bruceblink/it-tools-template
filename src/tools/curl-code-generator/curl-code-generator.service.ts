@@ -54,10 +54,25 @@ const UNSUPPORTED_VALUE_FLAGS = new Set([
   '--referer',
   '-e',
   '--retry',
-  '--url',
   '--user-agent',
   '-A',
 ]);
+
+function splitLongOptionAssignment(token: string): { flag: string, value: string } | undefined {
+  if (!token.startsWith('--')) {
+    return undefined;
+  }
+
+  const delimiterIndex = token.indexOf('=');
+  if (delimiterIndex === -1) {
+    return undefined;
+  }
+
+  return {
+    flag: token.slice(0, delimiterIndex),
+    value: token.slice(delimiterIndex + 1),
+  };
+}
 
 function tokenizeShell(input: string): string[] {
   const tokens: string[] = [];
@@ -263,43 +278,72 @@ export function parseCurlCommand(input: string): CurlRequest {
   let index = 1;
 
   while (index < tokens.length) {
-    const token = tokens[index];
+    let token = tokens[index];
     if (!token) {
       index += 1;
       continue;
     }
 
+    const assignment = splitLongOptionAssignment(token);
+    if (assignment) {
+      token = assignment.flag;
+    }
+
     if (METHOD_FLAGS.has(token)) {
-      const consumed = consumeValue(tokens, index, token);
-      method = consumed.value;
-      index = consumed.nextIndex;
+      if (assignment) {
+        method = assignment.value;
+        index += 1;
+      }
+      else {
+        const consumed = consumeValue(tokens, index, token);
+        method = consumed.value;
+        index = consumed.nextIndex;
+      }
       continue;
     }
 
     if (HEADER_FLAGS.has(token)) {
-      const consumed = consumeValue(tokens, index, token);
-      headers.push(parseHeader(consumed.value));
-      index = consumed.nextIndex;
+      if (assignment) {
+        headers.push(parseHeader(assignment.value));
+        index += 1;
+      }
+      else {
+        const consumed = consumeValue(tokens, index, token);
+        headers.push(parseHeader(consumed.value));
+        index = consumed.nextIndex;
+      }
       continue;
     }
 
     if (DATA_FLAGS.has(token)) {
-      const consumed = consumeValue(tokens, index, token);
-      data = data === '' ? consumed.value : `${data}&${consumed.value}`;
-      index = consumed.nextIndex;
+      const value = assignment?.value ?? consumeValue(tokens, index, token).value;
+      data = data === '' ? value : `${data}&${value}`;
+      index = assignment ? index + 1 : index + 2;
       continue;
     }
 
     if (USER_FLAGS.has(token)) {
-      const consumed = consumeValue(tokens, index, token);
-      addBasicAuthHeader(headers, consumed.value);
-      index = consumed.nextIndex;
+      const value = assignment?.value ?? consumeValue(tokens, index, token).value;
+      addBasicAuthHeader(headers, value);
+      index = assignment ? index + 1 : index + 2;
       continue;
     }
 
     if (token === '--compressed') {
       compressed = true;
       index += 1;
+      continue;
+    }
+
+    if (token === '--url') {
+      const value = assignment?.value ?? consumeValue(tokens, index, token).value;
+      if (url === '') {
+        url = value;
+      }
+      else {
+        warnings.push(`Extra URL "${value}" was ignored.`);
+      }
+      index = assignment ? index + 1 : index + 2;
       continue;
     }
 
@@ -316,9 +360,11 @@ export function parseCurlCommand(input: string): CurlRequest {
     }
 
     if (UNSUPPORTED_VALUE_FLAGS.has(token)) {
-      const consumed = consumeValue(tokens, index, token);
+      if (!assignment) {
+        consumeValue(tokens, index, token);
+      }
       warnings.push(`Unsupported option ${token} was ignored.`);
-      index = consumed.nextIndex;
+      index = assignment ? index + 1 : index + 2;
       continue;
     }
 
