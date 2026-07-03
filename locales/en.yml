@@ -149,6 +149,10 @@ tools:
     title: Security headers analyzer
     description: Analyze HTTP response security headers and highlight missing or weak protections.
 
+  robots-txt-tester:
+    title: robots.txt tester
+    description: Test whether a URL is allowed for a user-agent, inspect matching rules, crawl delay, and sitemaps.
+
   jwt-signer:
     title: JWT signer
     description: Create client-side HMAC-signed JSON Web Tokens with editable header, payload, secret, and algorithm.

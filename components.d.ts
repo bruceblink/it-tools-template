@@ -213,6 +213,7 @@ declare module 'vue' {
     'RegexMemo.content': typeof import('./src/tools/regex-memo/regex-memo.content.md')['default']
     RegexTester: typeof import('./src/tools/regex-tester/regex-tester.vue')['default']
     ResultRow: typeof import('./src/tools/ipv4-range-expander/result-row.vue')['default']
+    RobotsTxtTester: typeof import('./src/tools/robots-txt-tester/robots-txt-tester.vue')['default']
     RomanNumeralConverter: typeof import('./src/tools/roman-numeral-converter/roman-numeral-converter.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
