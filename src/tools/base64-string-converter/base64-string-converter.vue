@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { useCopy } from '@/composable/copy';
-import { base64ToText, isValidBase64, textToBase64 } from '@/utils/base64';
+import { base64ToText, isValidBase64, summarizeBase64Input, textToBase64 } from '@/utils/base64';
 import { withDefaultOnError } from '@/utils/defaults';
 
 const encodeUrlSafe = useStorage('base64-string-converter--encode-url-safe', false);
 const decodeUrlSafe = useStorage('base64-string-converter--decode-url-safe', false);
 
 const textInput = ref('');
+const textByteLength = computed(() => new TextEncoder().encode(textInput.value).length);
 const base64Output = computed(() => textToBase64(textInput.value, { makeUrlSafe: encodeUrlSafe.value }));
 const { copy: copyTextBase64 } = useCopy({ source: base64Output, text: 'Base64 string copied to the clipboard' });
 
 const base64Input = ref('');
+const base64Summary = computed(() => summarizeBase64Input(base64Input.value.trim(), { makeUrlSafe: decodeUrlSafe.value }));
 const textOutput = computed(() =>
   withDefaultOnError(() => base64ToText(base64Input.value.trim(), { makeUrlSafe: decodeUrlSafe.value }), ''),
 );
@@ -38,6 +40,11 @@ const b64ValidationWatch = [decodeUrlSafe];
       raw-text
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-2>
+      <n-statistic label="UTF-8 bytes" :value="textByteLength" />
+      <n-statistic label="Base64 characters" :value="base64Output.length" />
+    </div>
 
     <c-input-text
       label="Base64 of string"
@@ -70,6 +77,18 @@ const b64ValidationWatch = [decodeUrlSafe];
       label="Base64 string to decode"
       mb-5
     />
+
+    <div mb-5 grid grid-cols-1 gap-3 md:grid-cols-5>
+      <n-statistic label="Valid Base64" :value="base64Summary.valid ? 'yes' : 'no'" />
+      <n-statistic label="Normalized characters" :value="base64Summary.normalizedLength" />
+      <n-statistic label="Padding" :value="base64Summary.paddingLength" />
+      <n-statistic label="Decoded bytes" :value="base64Summary.byteLength" />
+      <n-statistic label="Data URI" :value="base64Summary.hasDataUriPrefix ? 'yes' : 'no'" />
+    </div>
+
+    <c-alert v-if="base64Input && !base64Summary.valid" type="warning" mb-5>
+      {{ base64Summary.error }}
+    </c-alert>
 
     <c-input-text
       v-model:value="textOutput"

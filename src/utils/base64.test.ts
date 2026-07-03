@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { base64ToText, isValidBase64, removePotentialDataAndMimePrefix, textToBase64 } from './base64';
+import {
+  base64ToText,
+  isValidBase64,
+  removePotentialDataAndMimePrefix,
+  summarizeBase64Input,
+  textToBase64,
+} from './base64';
 
 describe('base64 utils', () => {
   describe('textToBase64', () => {
@@ -81,6 +87,39 @@ describe('base64 utils', () => {
         'data:image/jpeg;notbase64,lorem',
       );
       expect(removePotentialDataAndMimePrefix('data:unknownmime;base64,lorem')).to.eql('lorem');
+    });
+  });
+
+  describe('summarizeBase64Input', () => {
+    it('should summarize standard base64 input', () => {
+      expect(summarizeBase64Input('data:text/plain;base64,YQ==')).to.eql({
+        valid: true,
+        normalizedLength: 4,
+        paddingLength: 2,
+        byteLength: 1,
+        hasDataUriPrefix: true,
+      });
+    });
+
+    it('should summarize url safe base64 input', () => {
+      expect(summarizeBase64Input('PDw8Pz8_Pz8_Pz8-Pj4', { makeUrlSafe: true })).to.eql({
+        valid: true,
+        normalizedLength: 19,
+        paddingLength: 0,
+        byteLength: 14,
+        hasDataUriPrefix: false,
+      });
+    });
+
+    it('should summarize invalid base64 input without throwing', () => {
+      expect(summarizeBase64Input('é')).to.eql({
+        valid: false,
+        normalizedLength: 0,
+        paddingLength: 0,
+        byteLength: 0,
+        hasDataUriPrefix: false,
+        error: 'Incorrect base64 string',
+      });
     });
   });
 });
