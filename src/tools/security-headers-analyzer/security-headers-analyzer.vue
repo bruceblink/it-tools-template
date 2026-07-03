@@ -27,6 +27,8 @@ const rows = computed(() => analysis.value.checks.map(check => ({
   ...check,
   value: check.value || 'Missing',
 })));
+const recommendedHeaders = computed(() => analysis.value.recommendedHeaders || 'No replacement headers recommended.');
+const headersToRemove = computed(() => analysis.value.headersToRemove.join('\n') || 'No disclosure headers detected.');
 
 const rules: UseValidationRule<string>[] = [
   {
@@ -97,6 +99,16 @@ const progressStatus = computed(() => {
         </n-tag>
       </div>
     </c-card>
+
+    <div grid grid-cols-1 gap-4 md:grid-cols-2>
+      <n-form-item label="Recommended response headers">
+        <textarea-copyable :value="recommendedHeaders" language="txt" />
+      </n-form-item>
+
+      <n-form-item label="Headers to remove or hide">
+        <textarea-copyable :value="headersToRemove" language="txt" />
+      </n-form-item>
+    </div>
 
     <c-table
       :data="rows"

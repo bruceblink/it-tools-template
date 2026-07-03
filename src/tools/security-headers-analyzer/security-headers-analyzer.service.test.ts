@@ -22,6 +22,8 @@ describe('security-headers-analyzer service', () => {
       failed: 0,
       score: 100,
       grade: 'A',
+      recommendedHeaders: '',
+      headersToRemove: [],
     });
     expect(analysis.checks.every(({ status }) => status === 'pass')).toBe(true);
   });
@@ -36,6 +38,10 @@ x-powered-by: Express`);
     expect(analysis.warnings).toBe(8);
     expect(analysis.score).toBe(36);
     expect(analysis.grade).toBe('F');
+    expect(analysis.headersToRemove).toEqual(['Server', 'X-Powered-By']);
+    expect(analysis.recommendedHeaders).toContain('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+    expect(analysis.recommendedHeaders).toContain("Content-Security-Policy: default-src 'self'; object-src 'none'; frame-ancestors 'none'");
+    expect(analysis.recommendedHeaders).toContain('X-Content-Type-Options: nosniff');
     expect(analysis.checks).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: 'Strict-Transport-Security', status: 'fail' }),
       expect.objectContaining({ name: 'Content-Security-Policy', status: 'fail' }),

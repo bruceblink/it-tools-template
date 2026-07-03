@@ -17,12 +17,26 @@ export interface SecurityHeadersAnalysis {
   failed: number
   score: number
   grade: 'A' | 'B' | 'C' | 'D' | 'F'
+  recommendedHeaders: string
+  headersToRemove: string[]
 }
 
 type HeaderMap = Record<string, string[] | undefined>;
 
 const HSTS_MIN_AGE_SECONDS = 15_552_000;
 const HSTS_RECOMMENDED_AGE_SECONDS = 31_536_000;
+const RECOMMENDED_HEADER_VALUES: Partial<Record<string, string>> = {
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': "default-src 'self'; object-src 'none'; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+};
+const DISCLOSURE_HEADERS = new Set(['Server', 'X-Powered-By']);
 
 function createHeaderMap(input: string): HeaderMap {
   const parsedHeaders = parseHttpHeaders(input);
@@ -439,6 +453,19 @@ function getGrade(score: number): SecurityHeadersAnalysis['grade'] {
   return 'F';
 }
 
+function buildRecommendedHeaders(checks: SecurityHeaderCheck[]): string {
+  return checks
+    .filter(({ name, status }) => status !== 'pass' && RECOMMENDED_HEADER_VALUES[name])
+    .map(({ name }) => `${name}: ${RECOMMENDED_HEADER_VALUES[name]}`)
+    .join('\n');
+}
+
+function getHeadersToRemove(checks: SecurityHeaderCheck[]): string[] {
+  return checks
+    .filter(({ name, status }) => status !== 'pass' && DISCLOSURE_HEADERS.has(name))
+    .map(({ name }) => name);
+}
+
 export function analyzeSecurityHeaders(input: string): SecurityHeadersAnalysis {
   const headers = createHeaderMap(input);
   const checks = [
@@ -475,5 +502,7 @@ export function analyzeSecurityHeaders(input: string): SecurityHeadersAnalysis {
     failed,
     score,
     grade: getGrade(score),
+    recommendedHeaders: buildRecommendedHeaders(checks),
+    headersToRemove: getHeadersToRemove(checks),
   };
 }
