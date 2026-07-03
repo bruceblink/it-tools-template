@@ -463,7 +463,7 @@ tools:
 
   bearer-token-parser:
     title: Bearer token parser
-    description: Extract Bearer tokens, inspect JWT header and payload claims, and flag opaque, expired, or unsigned tokens.
+    description: Extract Bearer tokens, inspect JWT claims, and flag opaque, expired, unsigned, or not-yet-active tokens.
 
   text-to-unicode:
     title: Text to Unicode

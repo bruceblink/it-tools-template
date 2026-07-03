@@ -460,7 +460,7 @@ tools:
 
   bearer-token-parser:
     title: Bearer Token 解析器
-    description: 提取 Bearer Token，查看 JWT Header 和 Payload Claims，并标记不透明、过期或未签名 Token。
+    description: 提取 Bearer Token，查看 JWT Claims，并标记不透明、过期、未签名或尚未生效的 Token。
 
   text-to-unicode:
     title: 文本转 Unicode

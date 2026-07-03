@@ -15,8 +15,10 @@ const metadataRows = computed<Record<string, unknown>[]>(() => [
   { name: 'Token length', value: parsed.value.tokenLength },
   { name: 'Authorization header', value: parsed.value.header },
   { name: 'Expires at', value: parsed.value.expiresAt ?? '-' },
+  { name: 'Time to expiry', value: parsed.value.timeToExpiry ?? '-' },
   { name: 'Issued at', value: parsed.value.issuedAt ?? '-' },
   { name: 'Not before', value: parsed.value.notBefore ?? '-' },
+  { name: 'Time until active', value: parsed.value.timeUntilActive ?? '-' },
 ]);
 const jwtHeaderRows = computed<Record<string, unknown>[]>(() => parsed.value.jwtHeader.map(row => ({
   ...row,
@@ -49,10 +51,13 @@ const rules: UseValidationRule<string>[] = [
       :validation-rules="rules"
     />
 
-    <div grid grid-cols-1 gap-3 md:grid-cols-4>
+    <div grid grid-cols-1 gap-3 md:grid-cols-4 xl:grid-cols-7>
       <n-statistic label="Kind" :value="parsed.kind.toUpperCase()" />
       <n-statistic label="Token length" :value="parsed.tokenLength" />
       <n-statistic label="Expired" :value="parsed.expired === undefined ? '-' : parsed.expired ? 'yes' : 'no'" />
+      <n-statistic label="Active" :value="parsed.active === undefined ? '-' : parsed.active ? 'yes' : 'no'" />
+      <n-statistic label="Time to expiry" :value="parsed.timeToExpiry ?? '-'" />
+      <n-statistic label="Time until active" :value="parsed.timeUntilActive ?? '-'" />
       <n-statistic label="Warnings" :value="parsed.warnings.length" />
     </div>
 

@@ -21,7 +21,14 @@ export interface ParsedBearerToken {
   issuedAt?: string
   notBefore?: string
   expired?: boolean
+  active?: boolean
+  timeToExpiry?: string
+  timeUntilActive?: string
   warnings: string[]
+}
+
+export interface ParseBearerTokenOptions {
+  now?: Date
 }
 
 function extractToken(input: string) {
@@ -64,6 +71,34 @@ function formatUnixTimestamp(value: unknown) {
   return new Date(timestamp * 1000).toISOString();
 }
 
+function getUnixTimestamp(value: unknown): number | undefined {
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
+function formatDurationFromSeconds(seconds: number): string {
+  const absSeconds = Math.max(Math.floor(Math.abs(seconds)), 0);
+
+  if (absSeconds === 0) {
+    return 'now';
+  }
+
+  const units = [
+    { label: 'day', value: 86_400 },
+    { label: 'hour', value: 3_600 },
+    { label: 'minute', value: 60 },
+  ];
+
+  for (const unit of units) {
+    if (absSeconds >= unit.value && absSeconds % unit.value === 0) {
+      const amount = absSeconds / unit.value;
+      return `${amount} ${unit.label}${amount === 1 ? '' : 's'}`;
+    }
+  }
+
+  return `${absSeconds} second${absSeconds === 1 ? '' : 's'}`;
+}
+
 function claimsToRows(claims: Record<string, unknown>): BearerTokenClaim[] {
   return Object.entries(claims).map(([claim, value]) => ({
     claim,
@@ -80,7 +115,7 @@ function tokenPreview(token: string) {
   return `${token.slice(0, 12)}...${token.slice(-8)}`;
 }
 
-export function parseBearerToken(input: string): ParsedBearerToken {
+export function parseBearerToken(input: string, { now = new Date() }: ParseBearerTokenOptions = {}): ParsedBearerToken {
   const token = extractToken(input);
   if (!token) {
     throw new Error('Bearer token value is empty.');
@@ -106,17 +141,27 @@ export function parseBearerToken(input: string): ParsedBearerToken {
 
   const rawHeader = jwtDecode<JwtHeader>(token, { header: true });
   const rawPayload = jwtDecode<JwtPayload>(token);
+  const nowSeconds = Math.floor(now.getTime() / 1000);
+  const exp = getUnixTimestamp(rawPayload.exp);
+  const nbf = getUnixTimestamp(rawPayload.nbf);
   const expiresAt = formatUnixTimestamp(rawPayload.exp);
   const issuedAt = formatUnixTimestamp(rawPayload.iat);
   const notBefore = formatUnixTimestamp(rawPayload.nbf);
-  const expired = typeof rawPayload.exp === 'number' ? rawPayload.exp * 1000 <= Date.now() : undefined;
+  const expired = exp === undefined ? undefined : exp <= nowSeconds;
+  const active = nbf === undefined ? expired === undefined ? undefined : !expired : nbf <= nowSeconds && !expired;
+  const timeToExpiry = exp === undefined ? undefined : formatDurationFromSeconds(exp - nowSeconds);
+  const timeUntilActive = nbf === undefined || nbf <= nowSeconds ? undefined : formatDurationFromSeconds(nbf - nowSeconds);
   const warnings: string[] = [];
 
-  if (!rawPayload.exp) {
+  if (exp === undefined) {
     warnings.push('JWT has no exp claim.');
   }
   else if (expired) {
     warnings.push('JWT is expired.');
+  }
+
+  if (nbf !== undefined && nbf > nowSeconds) {
+    warnings.push('JWT is not active yet.');
   }
 
   if (!rawHeader.alg || rawHeader.alg === 'none') {
@@ -132,6 +177,9 @@ export function parseBearerToken(input: string): ParsedBearerToken {
     issuedAt,
     notBefore,
     expired,
+    active,
+    timeToExpiry,
+    timeUntilActive,
     warnings,
   };
 }
