@@ -49,6 +49,19 @@ describe('curl-code-generator service', () => {
     ]);
   });
 
+  it('moves data flags into the URL when -G or --get is used', () => {
+    expect(parseCurlCommand('curl -G https://api.example.com/search -d q=hello -d page=1')).toMatchObject({
+      url: 'https://api.example.com/search?q=hello&page=1',
+      method: 'GET',
+      data: '',
+    });
+    expect(parseCurlCommand('curl --get "https://api.example.com/search?lang=en#results" --data-urlencode "q=hello world"')).toMatchObject({
+      url: 'https://api.example.com/search?lang=en&q=hello%20world#results',
+      method: 'GET',
+      data: '',
+    });
+  });
+
   it('generates fetch, axios, and HTTPie commands', () => {
     const generation = generateCurlCode(`curl https://api.example.com/items -H 'Accept: application/json' -d 'page=1'`);
 
@@ -83,6 +96,20 @@ describe('curl-code-generator service', () => {
       '  \'Accept:application/json\' \\',
       '  <<< \'page=1\'',
     ].join('\n'));
+  });
+
+  it('generates code with query parameters for -G commands', () => {
+    const generation = generateCurlCode('curl -G https://api.example.com/search -H "Accept: application/json" --data-urlencode "q=hello world" -d page=1');
+
+    expect(generation.fetch).toContain('fetch("https://api.example.com/search?q=hello%20world&page=1"');
+    expect(generation.axios).toContain('url: "https://api.example.com/search?q=hello%20world&page=1"');
+    expect(generation.httpie).toContain("'https://api.example.com/search?q=hello%20world&page=1'");
+    expect(generation.summary).toEqual({
+      method: 'GET',
+      headerCount: 1,
+      hasBody: false,
+      warningCount: 0,
+    });
   });
 
   it('reports unsupported options as warnings', () => {

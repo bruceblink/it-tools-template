@@ -37,6 +37,8 @@ export class CurlCodeGeneratorError extends Error {
 }
 
 const DATA_FLAGS = new Set(['-d', '--data', '--data-raw', '--data-binary', '--data-ascii']);
+const DATA_URLENCODE_FLAGS = new Set(['--data-urlencode']);
+const GET_QUERY_FLAGS = new Set(['-G', '--get']);
 const HEADER_FLAGS = new Set(['-H', '--header']);
 const METHOD_FLAGS = new Set(['-X', '--request']);
 const USER_FLAGS = new Set(['-u', '--user']);
@@ -178,6 +180,35 @@ function normalizeMethod(method: string, data: string, isHead: boolean) {
   return data === '' ? 'GET' : 'POST';
 }
 
+function appendDataSegment(data: string, segment: string) {
+  return data === '' ? segment : `${data}&${segment}`;
+}
+
+function appendQueryString(url: string, queryString: string) {
+  if (queryString === '') {
+    return url;
+  }
+
+  const fragmentIndex = url.indexOf('#');
+  const baseUrl = fragmentIndex === -1 ? url : url.slice(0, fragmentIndex);
+  const fragment = fragmentIndex === -1 ? '' : url.slice(fragmentIndex);
+  const separator = baseUrl.includes('?')
+    ? baseUrl.endsWith('?') || baseUrl.endsWith('&') ? '' : '&'
+    : '?';
+
+  return `${baseUrl}${separator}${queryString}${fragment}`;
+}
+
+function encodeCurlDataUrlencode(value: string) {
+  const equalIndex = value.indexOf('=');
+
+  if (equalIndex > 0) {
+    return `${encodeURIComponent(value.slice(0, equalIndex))}=${encodeURIComponent(value.slice(equalIndex + 1))}`;
+  }
+
+  return encodeURIComponent(value);
+}
+
 function createHeaderObject(headers: CurlHeader[]) {
   if (headers.length === 0) {
     return '';
@@ -273,6 +304,7 @@ export function parseCurlCommand(input: string): CurlRequest {
   let data = '';
   let compressed = false;
   let isHead = false;
+  let useGetQuery = false;
   const headers: CurlHeader[] = [];
   const warnings: string[] = [];
   let index = 1;
@@ -315,9 +347,10 @@ export function parseCurlCommand(input: string): CurlRequest {
       continue;
     }
 
-    if (DATA_FLAGS.has(token)) {
+    if (DATA_FLAGS.has(token) || DATA_URLENCODE_FLAGS.has(token)) {
       const value = assignment?.value ?? consumeValue(tokens, index, token).value;
-      data = data === '' ? value : `${data}&${value}`;
+      const segment = DATA_URLENCODE_FLAGS.has(token) ? encodeCurlDataUrlencode(value) : value;
+      data = appendDataSegment(data, segment);
       index = assignment ? index + 1 : index + 2;
       continue;
     }
@@ -349,6 +382,12 @@ export function parseCurlCommand(input: string): CurlRequest {
 
     if (token === '-I' || token === '--head') {
       isHead = true;
+      index += 1;
+      continue;
+    }
+
+    if (GET_QUERY_FLAGS.has(token)) {
+      useGetQuery = true;
       index += 1;
       continue;
     }
@@ -387,11 +426,13 @@ export function parseCurlCommand(input: string): CurlRequest {
     throw new CurlCodeGeneratorError('cURL command is missing a URL.');
   }
 
+  const requestData = useGetQuery ? '' : data;
+
   return {
-    url,
-    method: normalizeMethod(method, data, isHead),
+    url: useGetQuery ? appendQueryString(url, data) : url,
+    method: normalizeMethod(method, requestData, isHead),
     headers,
-    data,
+    data: requestData,
     compressed,
     warnings,
   };
