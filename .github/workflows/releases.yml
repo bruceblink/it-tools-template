@@ -71,6 +71,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+        with:
+          fetch-depth: 0
 
       - run: corepack enable
 
@@ -88,32 +90,41 @@ jobs:
       - name: Zip the app
         run: zip -r it-tools-${{ needs.prepare.outputs.release_version }}.zip dist/*
 
-      - name: Get changelog
-        id: changelog
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Generate release notes
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
         run: |
-          EOF=$(openssl rand -hex 8)
-          echo "changelog<<$EOF" >> $GITHUB_OUTPUT
-          node ./scripts/getLatestChangelog.mjs >> $GITHUB_OUTPUT
-          echo "$EOF" >> $GITHUB_OUTPUT
+          python3 .github/scripts/generate_release_notes.py \
+            --tag "$RELEASE_TAG" \
+            --output release-notes.md
+
+      - name: Compose release body
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.release_version }}
+        run: |
+          {
+            cat release-notes.md
+            echo
+            echo "## 📦 Docker 镜像 / Docker Images"
+            echo
+            echo "- \`bruceblink/it-tools:latest\`"
+            echo "- \`bruceblink/it-tools:${RELEASE_VERSION}\`"
+            echo "- \`ghcr.io/bruceblink/it-tools:latest\`"
+            echo "- \`ghcr.io/bruceblink/it-tools:${RELEASE_VERSION}\`"
+          } > release-body.md
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: it-tools-${{ needs.prepare.outputs.release_version }}.zip
           tag_name: ${{ needs.prepare.outputs.release_tag }}
           draft: true
           prerelease: false
-          body: |
-            ## Docker images
-
-            - Docker Hub
-              - `bruceblink/it-tools:latest`
-              - `bruceblink/it-tools:${{ needs.prepare.outputs.release_version }}`
-            - GitHub Container Registry
-              - `ghcr.io/bruceblink/it-tools:latest`
-              - `ghcr.io/bruceblink/it-tools:${{ needs.prepare.outputs.release_version }}`
-
-            ## Changelog
-
-            ${{ steps.changelog.outputs.changelog }}
+          body_path: release-body.md
+          generate_release_notes: false
