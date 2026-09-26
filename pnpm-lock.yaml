@@ -276,9 +276,6 @@ importers:
       '@vue/compiler-sfc':
         specifier: ^3.5.31
         version: 3.5.31
-      '@vue/runtime-dom':
-        specifier: ^3.5.31
-        version: 3.5.31
       '@vue/test-utils':
         specifier: ^2.4.6
         version: 2.4.6
