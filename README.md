@@ -18,7 +18,7 @@ Useful tools for developer and people working in IT. <a href="https://tools.lika
 
 This project is a customized fork of [CorentinTh/it-tools](https://github.com/CorentinTh/it-tools), extended with additional tools, improved i18n coverage, enhanced UI interactions, and a more automated release workflow.
 
-**86 tools** across 11 categories: Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, Data, and Favorites.
+**117 tools** across 11 categories: Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, Data, and Favorites.
 
 **9 languages**: English, Chinese (zh), German (de), French (fr), Spanish (es), Portuguese (pt), Ukrainian (uk), Vietnamese (vi), Norwegian (no).
 
@@ -150,4 +150,4 @@ Big thanks to all the people who have already contributed!
 
 ## License
 
-This project is under the [GNU GPLv3](LICENSE).
+This project is under the [GNU Affero General Public License v3.0 (AGPLv3)](LICENSE).

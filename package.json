@@ -11,7 +11,7 @@
   "author": "[likanug <likanug.g@qq.com>](https://likanug.top)",
   "authorUrl": "https://likanug.top",
   "sponsoringUrl": "https://buymeacoffee.com/bruceblink",
-  "license": "GNU GPLv3",
+  "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "https://github.com/bruceblink/it-tools-template"
