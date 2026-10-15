@@ -104,13 +104,19 @@ pnpm test
 pnpm validate
 ```
 
-`pnpm validate` runs `pnpm check`: build configuration types, application and test types, lint with zero warnings, unit tests, and the production build. Run browser acceptance separately with `pnpm test:e2e` after building the app.
+`pnpm validate` runs `pnpm check`: deployment header consistency and script tests, build configuration types, application and test types, lint with zero warnings, unit tests, and the production build. Run browser acceptance separately with `pnpm test:e2e` after building the app.
 
 `auto-imports.d.ts` is generated locally and ignored by Git. `pnpm typecheck:app` prepares it automatically, so typechecking also works from a clean checkout.
 
 The development roadmap is in [Development Plan](docs/01-development-plan.md). The current scope and acceptance checks are in [Quality Baseline](docs/02-quality-baseline.md).
 
 The two security tasks and their acceptance results are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
+
+Content privacy, sanitized rendering, and deployment headers are described in [Content, HTML, and Deployment Boundaries](docs/04-security-boundaries.md). The credential, request, configuration, and document inputs covered there stay in page memory; existing display and processing preferences may still be saved.
+
+Deployment headers are generated from `security-headers.json`. Run `pnpm headers:sync` after editing that source and `pnpm headers:check` to detect drift. A custom Plausible API requires the same exact HTTPS origin in `plausibleApiOrigin` and `VITE_PLAUSIBLE_API_HOST`; run the sync/check commands with that build variable set.
+
+After the final production build, `pnpm headers:docker` checks real Nginx responses using local Docker on `127.0.0.1:18080` and removes its container. Start Docker and pull `nginx:stable-alpine` before running this check.
 
 ### Create a New Tool
 

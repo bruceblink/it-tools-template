@@ -117,7 +117,8 @@ export default defineConfig({
     'import.meta.env.REPOSITORY_URL': JSON.stringify(pkg.repository.url),
   },
   test: {
-    exclude: [...configDefaults.exclude, '**/*.e2e.spec.ts'],
+    // Node script tests run through headers:check; Vitest owns the application tests.
+    exclude: [...configDefaults.exclude, '**/*.e2e.spec.ts', 'scripts/**/*.test.mjs'],
   },
   build: {
     target: 'esnext',

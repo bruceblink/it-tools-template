@@ -7,6 +7,14 @@ settings:
 overrides:
   '@types/node': 25.5.0
 
+patchedDependencies:
+  iarna-toml-esm@3.0.5:
+    hash: f6f63d091f407f5e9e7255554a561c5fbd1e8d5c35b1da3bb02b3ff740307f41
+    path: patches/iarna-toml-esm@3.0.5.patch
+  vuedraggable@4.1.0:
+    hash: 2e346481b4afb5e53494b83355e6c7eb6e21612430d97b196aef817ebcff9e8d
+    path: patches/vuedraggable@4.1.0.patch
+
 importers:
 
   .:
@@ -106,7 +114,7 @@ importers:
         version: 11.11.1
       iarna-toml-esm:
         specifier: ^3.0.5
-        version: 3.0.5
+        version: 3.0.5(patch_hash=f6f63d091f407f5e9e7255554a561c5fbd1e8d5c35b1da3bb02b3ff740307f41)
       ibantools:
         specifier: ^4.5.1
         version: 4.5.1
@@ -208,7 +216,7 @@ importers:
         version: 3.2.6(typescript@5.9.3)
       vuedraggable:
         specifier: ^4.1.0
-        version: 4.1.0(vue@3.5.31(typescript@5.9.3))
+        version: 4.1.0(patch_hash=2e346481b4afb5e53494b83355e6c7eb6e21612430d97b196aef817ebcff9e8d)(vue@3.5.31(typescript@5.9.3))
       xml-formatter:
         specifier: ^3.7.0
         version: 3.7.0
@@ -8568,7 +8576,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  iarna-toml-esm@3.0.5:
+  iarna-toml-esm@3.0.5(patch_hash=f6f63d091f407f5e9e7255554a561c5fbd1e8d5c35b1da3bb02b3ff740307f41):
     dependencies:
       stream: 0.0.2
 
@@ -10350,7 +10358,7 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  vuedraggable@4.1.0(vue@3.5.31(typescript@5.9.3)):
+  vuedraggable@4.1.0(patch_hash=2e346481b4afb5e53494b83355e6c7eb6e21612430d97b196aef817ebcff9e8d)(vue@3.5.31(typescript@5.9.3)):
     dependencies:
       sortablejs: 1.14.0
       vue: 3.5.31(typescript@5.9.3)

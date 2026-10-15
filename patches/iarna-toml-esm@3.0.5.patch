@@ -1,0 +1,24 @@
+diff --git a/lib/toml-parser.js b/lib/toml-parser.js
+index 818454fbda7d39ffe102ce964475a66eaae2c2c1..c0ead2968378fbc737e4a09581d679dbc23126a6 100644
+--- a/lib/toml-parser.js
++++ b/lib/toml-parser.js
+@@ -177,16 +177,9 @@ function isList (obj) {
+   return obj[_type] === LIST
+ }
+ 
+-// in an eval, to let bundlers not slurp in a util proxy
+-let _custom
+-try {
+-  const utilInspect = eval("require('util').inspect")
+-  _custom = utilInspect.custom
+-} catch (_) {
+-  /* eval require not available in transpiled bundle */
+-}
+-/* istanbul ignore next */
+-const _inspect = _custom || 'inspect'
++// Node registers this symbol globally; no util proxy or evaluated code is needed.
++// Browsers ignore the symbol while strict CSP can keep unsafe-eval disabled.
++const _inspect = Symbol.for('nodejs.util.inspect.custom')
+ 
+ class BoxedBigInt {
+   constructor (value) {

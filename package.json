@@ -40,7 +40,10 @@
     "types:prepare": "node scripts/prepare-auto-imports.mjs",
     "typecheck:app": "pnpm types:prepare && vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
     "lint": "eslint \"src/**/*.{ts,tsx,vue}\" \"vite.config.ts\"",
-    "check": "pnpm typecheck && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build",
+    "headers:sync": "node scripts/sync-security-headers.mjs",
+    "headers:check": "node scripts/sync-security-headers.mjs --check && node --test scripts/sync-security-headers.test.mjs scripts/check-nginx-security-headers.test.mjs",
+    "headers:docker": "node scripts/check-nginx-security-headers.mjs --dist-ready",
+    "check": "pnpm headers:check && pnpm typecheck && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build",
     "validate": "pnpm check",
     "script:create:tool": "node scripts/create-tool.mjs",
     "script:create:ui": "hygen generator ui-component",
@@ -50,6 +53,10 @@
   "pnpm": {
     "overrides": {
       "@types/node": "25.5.0"
+    },
+    "patchedDependencies": {
+      "iarna-toml-esm@3.0.5": "patches/iarna-toml-esm@3.0.5.patch",
+      "vuedraggable@4.1.0": "patches/vuedraggable@4.1.0.patch"
     }
   },
   "dependencies": {

@@ -1,0 +1,11 @@
+diff --git a/package.json b/package.json
+index 8700bae1e34704b0e247608db86fa269d5b3f01e..6f488fb5b7ea57cb2c38a9876e212da2ea4fa478 100644
+--- a/package.json
++++ b/package.json
+@@ -93,5 +93,5 @@
+     "dist/*.js",
+     "src/*"
+   ],
+-  "module": "dist/vuedraggable.umd.js"
++  "module": "src/vuedraggable.js"
+ }
