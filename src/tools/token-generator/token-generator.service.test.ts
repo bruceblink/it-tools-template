@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createToken, summarizeTokenOptions } from './token-generator.service';
 
 describe('token-generator', () => {
@@ -28,6 +28,24 @@ describe('token-generator', () => {
       expect(createTokenWithLength(5)).toHaveLength(5);
       expect(createTokenWithLength(10)).toHaveLength(10);
       expect(createTokenWithLength(100)).toHaveLength(100);
+    });
+
+    it('selects each character from the alphabet with the injected byte source', () => {
+      const zeroSource = (bytes: Uint8Array) => bytes.fill(0);
+      const oneSource = (bytes: Uint8Array) => bytes.fill(0x55);
+
+      expect(createToken({ alphabet: 'ab', length: 4 }, zeroSource)).toBe('aaaa');
+      expect(createToken({ alphabet: 'ab', length: 4 }, oneSource)).toBe('bbbb');
+    });
+
+    it('keeps empty alphabet and length behavior and bounds non-empty output', () => {
+      const source = vi.fn((bytes: Uint8Array) => bytes.fill(0));
+
+      expect(createToken({ alphabet: '', length: 4 }, source)).toBe('');
+      expect(createToken({ alphabet: 'ab', length: 1.9 }, source)).toHaveLength(1);
+      expect(createToken({ alphabet: 'ab', length: Number.NaN }, source)).toBe('');
+      expect(() => createToken({ alphabet: 'ab', length: -1 }, source)).toThrow(RangeError);
+      expect(() => createToken({ alphabet: 'ab', length: 65_537 }, source)).toThrow(RangeError);
     });
 
     it('should generate a random string with just uppercase if only withUppercase is set', () => {

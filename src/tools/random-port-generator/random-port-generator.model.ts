@@ -1,4 +1,4 @@
-import { randIntFromInterval } from '@/utils/random';
+import { randIntFromInterval, webCryptoRandomSource, type RandomSource } from '@/utils/random';
 
 export interface PortRange {
   min: number
@@ -34,11 +34,16 @@ export function getPortRangeSummary({ min, max }: PortRange): PortRangeSummary {
   };
 }
 
-export function generatePort(range: PortRange = DEFAULT_PORT_RANGE) {
+/** Generates an inclusive port number after validating its range. */
+export function generatePort(range: PortRange = DEFAULT_PORT_RANGE, source: RandomSource = webCryptoRandomSource) {
   const summary = getPortRangeSummary(range);
   if (!summary.valid) {
     throw new Error(summary.warning);
   }
 
-  return randIntFromInterval(summary.min, summary.max);
+  if (summary.min === summary.max) {
+    return summary.min;
+  }
+
+  return randIntFromInterval(summary.min, summary.max + 1, source);
 }

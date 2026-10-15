@@ -3,6 +3,7 @@ import {
   base32toHex,
   buildKeyUri,
   generateHOTP,
+  generateSecret,
   generateTOTP,
   hexToBytes,
   verifyHOTP,
@@ -10,6 +11,26 @@ import {
 } from './otp.service';
 
 describe('otp functions', () => {
+  describe('generateSecret', () => {
+    it('generates a deterministic 16-character Base32 secret from a test source', () => {
+      const source = (bytes: Uint8Array) => bytes.fill(0);
+
+      const secret = generateSecret(source);
+
+      expect(secret).toHaveLength(16);
+      expect(secret).toMatch(/^[A-Z2-7]+$/);
+      expect(secret).toBe('A'.repeat(16));
+    });
+
+    it('propagates random-source failures', () => {
+      const source = () => {
+        throw new Error('test random source failed');
+      };
+
+      expect(() => generateSecret(source)).toThrow('test random source failed');
+    });
+  });
+
   describe('hexToBytes', () => {
     it('convert an hexstring to a byte array', () => {
       expect(hexToBytes('1')).to.eql([1]);

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { v1 as generateUuidV1, v3 as generateUuidV3, v4 as generateUuidV4, v5 as generateUuidV5, NIL as nilUuid } from 'uuid';
+import { v3 as generateUuidV3, v5 as generateUuidV5, NIL as nilUuid } from 'uuid';
 import { useCopy } from '@/composable/copy';
 import { computedRefreshable } from '@/composable/computedRefreshable';
 import { withDefaultOnError } from '@/utils/defaults';
+import { generateUuidV1, generateUuidV4 } from './uuid-generator.service';
 
 const versions = ['NIL', 'v1', 'v3', 'v4', 'v5'] as const;
 
@@ -25,12 +26,7 @@ const validUuidRules = [
 
 const generators = {
   NIL: () => nilUuid,
-  v1: (index: number) => generateUuidV1({
-    clockseq: index,
-    msecs: Date.now(),
-    nsecs: Math.floor(Math.random() * 10000),
-    node: Uint8Array.from({ length: 6 }, () => Math.floor(Math.random() * 256)),
-  }),
+  v1: (index: number) => generateUuidV1({ sequence: index }),
   v3: () => generateUuidV3(v35Args.value.name, v35Args.value.namespace),
   v4: () => generateUuidV4(),
   v5: () => generateUuidV5(v35Args.value.name, v35Args.value.namespace),

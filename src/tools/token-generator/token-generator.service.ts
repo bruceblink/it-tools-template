@@ -1,4 +1,4 @@
-import { shuffleString } from '@/utils/random';
+import { randIntFromInterval, webCryptoRandomSource, type RandomSource } from '@/utils/random';
 
 export interface TokenOptions {
   withUppercase?: boolean
@@ -17,6 +17,9 @@ export interface TokenSummary {
   warnings: string[]
 }
 
+// The UI uses at most 512 characters; this service cap bounds direct callers and output allocation.
+const MAX_TOKEN_LENGTH = 65_536;
+
 function getAlphabet({
   withUppercase = true,
   withLowercase = true,
@@ -32,11 +35,37 @@ function getAlphabet({
   ].join('');
 }
 
-export function createToken(options: TokenOptions) {
-  const length = options.length ?? 64;
-  const allAlphabet = getAlphabet(options);
+/** Generates tokens with unbiased alphabet indexes; non-empty output is capped at 65,536 characters. */
+export function createToken(options: TokenOptions, source: RandomSource = webCryptoRandomSource) {
+  const requestedLength = options.length ?? 64;
+  if (Number.isNaN(requestedLength)) {
+    return '';
+  }
 
-  return shuffleString(allAlphabet.repeat(length)).substring(0, length);
+  if (!Number.isFinite(requestedLength)) {
+    throw new RangeError('Token length must be finite.');
+  }
+
+  const length = Math.trunc(requestedLength);
+  if (length < 0) {
+    throw new RangeError('Token length must not be negative.');
+  }
+
+  const alphabet = getAlphabet(options);
+  if (alphabet.length === 0 || length === 0) {
+    return '';
+  }
+
+  if (length > MAX_TOKEN_LENGTH) {
+    throw new RangeError(`Token length must not exceed ${MAX_TOKEN_LENGTH}.`);
+  }
+
+  const characters = new Array<string>(length);
+  for (let index = 0; index < length; index++) {
+    characters[index] = alphabet[randIntFromInterval(0, alphabet.length, source)]!;
+  }
+
+  return characters.join('');
 }
 
 export function summarizeTokenOptions(options: TokenOptions): TokenSummary {
