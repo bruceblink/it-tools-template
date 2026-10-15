@@ -1,21 +1,37 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { jwtHmacAlgorithms, type JwtHmacAlgorithm, parseJwtJson, signJwtText, verifyJwtSignature } from './jwt-signer.service';
+import {
+  clearLegacyJwtSignerInputs,
+  getJwtSignerStorage,
+  readJwtSignerAlgorithm,
+  writeJwtSignerAlgorithm,
+} from './jwt-signer.storage';
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
 
-const algorithm = useStorage<JwtHmacAlgorithm>('jwt-signer:algorithm', 'HS256');
-const secret = useStorage('jwt-signer:secret', 'your-256-bit-secret');
-const headerJson = useStorage('jwt-signer:header', JSON.stringify({ alg: 'HS256', typ: 'JWT' }, null, 2));
-const payloadJson = useStorage('jwt-signer:payload', JSON.stringify({
+const storage = getJwtSignerStorage();
+const storageWarning = ref(!storage);
+const reportStorageFailure = () => {
+  storageWarning.value = true;
+};
+
+if (!clearLegacyJwtSignerInputs(storage)) {
+  storageWarning.value = true;
+}
+
+const algorithm = ref<JwtHmacAlgorithm>(readJwtSignerAlgorithm(storage, reportStorageFailure));
+const secret = ref('your-256-bit-secret');
+const headerJson = ref(JSON.stringify({ alg: algorithm.value, typ: 'JWT' }, null, 2));
+const payloadJson = ref(JSON.stringify({
   sub: '1234567890',
   name: 'John Doe',
   iat: 1516239022,
 }, null, 2));
-const tokenToVerify = useStorage('jwt-signer:token-to-verify', '');
-const verificationSecret = useStorage('jwt-signer:verification-secret', 'your-256-bit-secret');
+const tokenToVerify = ref('');
+const verificationSecret = ref('your-256-bit-secret');
 
 const algorithmOptions = jwtHmacAlgorithms.map(value => ({ label: value, value }));
+const { t } = useI18n();
 const signedJwt = computed(() => withDefaultOnError(() => signJwtText({
   headerJson: headerJson.value,
   payloadJson: payloadJson.value,
@@ -62,6 +78,8 @@ const jsonObjectRules = (label: string): UseValidationRule<string>[] => [
 ];
 
 watch(algorithm, (selectedAlgorithm) => {
+  writeJwtSignerAlgorithm(storage, selectedAlgorithm, reportStorageFailure);
+
   try {
     headerJson.value = JSON.stringify({
       ...parseJwtJson(headerJson.value, 'Header'),
@@ -76,6 +94,19 @@ watch(algorithm, (selectedAlgorithm) => {
 
 <template>
   <div flex flex-col gap-5>
+    <p role="note" data-test-id="jwt-signer-memory-note" text-sm op-70>
+      {{ t('tools.jwt-signer.memoryNotice') }}
+    </p>
+
+    <c-alert
+      v-if="storageWarning"
+      role="alert"
+      data-test-id="jwt-signer-storage-warning"
+      :title="t('tools.jwt-signer.storageWarningTitle')"
+    >
+      {{ t('tools.jwt-signer.storageWarning') }}
+    </c-alert>
+
     <div grid grid-cols-1 gap-3 md:grid-cols-2>
       <c-select
         v-model:value="algorithm"

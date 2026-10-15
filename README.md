@@ -110,7 +110,7 @@ pnpm validate
 
 The development roadmap is in [Development Plan](docs/01-development-plan.md). The current scope and acceptance checks are in [Quality Baseline](docs/02-quality-baseline.md).
 
-The next two tasks and their acceptance checks are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
+The two security tasks and their acceptance results are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
 
 ### Create a New Tool
 

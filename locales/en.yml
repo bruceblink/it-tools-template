@@ -164,6 +164,11 @@ tools:
   jwt-signer:
     title: JWT signer
     description: Create and verify client-side HMAC-signed JSON Web Tokens with editable header, payload, secret, and algorithm.
+    memoryNotice: >-
+      Edits to secrets, header, payload, and the token to verify stay in this page's memory. Leaving or reloading restores the defaults. Only the algorithm preference is saved when browser storage is available.
+    storageWarningTitle: Browser storage is unavailable or cleanup was incomplete
+    storageWarning: >-
+      Current sensitive inputs stay in memory. Data saved by an earlier version may remain in this site's storage. Clear this site's browser data if needed.
 
   data-size-converter:
     title: Data size converter

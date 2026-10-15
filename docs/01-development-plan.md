@@ -13,14 +13,14 @@
 
 ## 当前基线
 
-项目注册了 117 个工具，提供 9 个语言包。2026-10-14 的本地 `pnpm check` 已通过：75 个测试文件、470 个单元测试、应用和构建配置类型检查、零警告 lint、生产构建。工具注册检查验证了全部工具的英文和中文基础键。真实窗口和各浏览器验收结果见 [实施记录](02-quality-baseline.md#实施记录)。按用户的后续要求，`auto-imports.d.ts` 从版本库移除并加入 `.gitignore`；应用类型检查前自动生成该声明。
+项目注册了 117 个工具，提供 9 个语言包。2026-10-15 的本地统一检查已通过：78 个测试文件、499 个单元测试、应用和构建配置类型检查、零警告 lint、生产构建。工具注册检查验证了全部工具的英文和中文基础键。质量基线见 [实施记录](02-quality-baseline.md#实施记录)，随机源和 JWT 的最终验收见 [安全任务记录](03-security-inputs-plan.md#实施记录)。按用户的后续要求，`auto-imports.d.ts` 从版本库移除并加入 `.gitignore`；应用类型检查前自动生成该声明。
 
 开发前的主要工程问题与处理状态：
 
 - 应用级 `vue-tsc` 曾有 125 条错误。本轮恢复了标准库配置，修正 `MaybeRef`、第三方类型声明、组件属性和空值处理，已通过检查。
 - `pnpm validate` 原来只执行测试和构建。本轮增加 `pnpm check`，并让 `validate` 转发到该入口。
-- token、OTP secret 以及部分 UUID 参数仍依赖 `Math.random()`。
-- JWT secret、payload 等敏感内容默认写入浏览器 `localStorage`。
+- token、OTP secret、UUID、随机端口和 MAC 已接入默认 Web Crypto 随机源，边界和失败行为有确定性测试。
+- JWT 的五个敏感字段已改为页面内存状态，并清理固定的旧存储键。其他工具的敏感输入保存策略仍需逐项检查。
 - PWA 构建产物约 24 MB，Monaco、OUI 数据和语言资源产生多个超大 chunk。
 - README 已更新为 117 个工具；需要用注册完整性检查防止工具列表与路由不一致。
 - E2E workflow 原来读取了不存在的 Playwright 依赖字段。本轮改为读取实际安装版本、固定浏览器缓存版本，并使用 frozen lockfile。
