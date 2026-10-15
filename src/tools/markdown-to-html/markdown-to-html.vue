@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import markdownit from 'markdown-it';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
+import { sanitizeHtmlForRender } from '@/utils/sanitizeHtml';
 
 const inputMarkdown = ref('');
 const outputHtml = computed(() => {
@@ -8,12 +9,14 @@ const outputHtml = computed(() => {
   return md.render(inputMarkdown.value);
 });
 
+// Isolate the printable document and sanitize only its DOM; copied HTML stays unchanged.
 function printHtml() {
-  const w = window.open();
+  const w = window.open('', '_blank');
   if (w === null) {
     return;
   }
-  w.document.body.innerHTML = outputHtml.value;
+  w.opener = null;
+  w.document.body.innerHTML = sanitizeHtmlForRender(outputHtml.value);
   w.print();
 }
 </script>
@@ -22,7 +25,8 @@ function printHtml() {
   <div>
     <c-input-text
       v-model:value="inputMarkdown"
-      multiline raw-text
+      multiline
+      raw-text
       placeholder="Your Markdown content..."
       rows="8"
       autofocus
@@ -36,9 +40,7 @@ function printHtml() {
     </n-form-item>
 
     <div flex justify-center>
-      <n-button @click="printHtml">
-        Print as PDF
-      </n-button>
+      <n-button @click="printHtml"> Print as PDF </n-button>
     </div>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, toRefs } from 'vue';
 import { marked, type Tokens } from 'marked';
-import DomPurify from 'dompurify';
+import { sanitizeHtmlForRender } from '@/utils/sanitizeHtml';
 
 const props = withDefaults(defineProps<{ markdown?: string }>(), { markdown: '' });
 const { markdown } = toRefs(props);
@@ -15,7 +15,7 @@ marked.use({
   },
 });
 
-const html = computed(() => DomPurify.sanitize(marked.parse(markdown.value) as string, { ADD_ATTR: ['target'] }));
+const html = computed(() => sanitizeHtmlForRender(marked.parse(markdown.value) as string));
 </script>
 
 <template>
