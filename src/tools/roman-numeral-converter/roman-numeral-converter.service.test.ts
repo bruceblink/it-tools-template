@@ -1,7 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { arabicToRoman } from './roman-numeral-converter.service';
+import { arabicToRoman, romanToArabic } from './roman-numeral-converter.service';
 
 describe('roman-numeral-converter', () => {
+  describe('romanToArabic', () => {
+    it('converts terminal symbols and subtractive pairs', () => {
+      expect(romanToArabic('I')).toBe(1);
+      expect(romanToArabic('IV')).toBe(4);
+      expect(romanToArabic('IX')).toBe(9);
+      expect(romanToArabic('MCMXCIV')).toBe(1994);
+      expect(romanToArabic('MMMCMXCIX')).toBe(3999);
+    });
+
+    it('preserves empty input and rejects invalid symbols or order', () => {
+      expect(romanToArabic('')).toBe(0);
+      expect(romanToArabic('invalid')).toBeNull();
+      expect(romanToArabic('IIII')).toBeNull();
+      expect(romanToArabic('IC')).toBeNull();
+    });
+  });
+
   describe('arabicToRoman', () => {
     it('should convert numbers lower than 1 to empty string', () => {
       expect(arabicToRoman(-100)).toEqual('');

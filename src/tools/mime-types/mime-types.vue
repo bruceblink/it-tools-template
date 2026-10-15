@@ -6,7 +6,7 @@ const mimeInfos = Object.entries(mimeTypeToExtension).map(([mimeType, extensions
 const mimeToExtensionsOptions = Object.keys(mimeTypeToExtension).map(label => ({ label, value: label }));
 const selectedMimeType = ref(undefined);
 
-const extensionsFound = computed(() => (selectedMimeType.value ? mimeTypeToExtension[selectedMimeType.value] : []));
+const extensionsFound = computed(() => (selectedMimeType.value ? mimeTypeToExtension[selectedMimeType.value] ?? [] : []));
 
 const extensionToMimeTypeOptions = Object.keys(extensionToMimeType).map((label) => {
   const extension = `.${label}`;

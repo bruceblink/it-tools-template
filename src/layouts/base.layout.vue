@@ -24,7 +24,7 @@ const repositoryUrl = config.app.repositoryUrl;
 const fullCommitSha = config.app.lastCommitSha;
 const commitSha = fullCommitSha.slice(0, 7);
 const versionTag = computed(() => {
-  const [calver, ...suffixParts] = version.split('-');
+  const [calver = '', ...suffixParts] = version.split('-');
   const [year, month, day] = calver.split('.');
 
   if (!year || !month || !day) {

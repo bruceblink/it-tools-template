@@ -516,3 +516,35 @@ tools:
   text-to-binary:
     title: Text to ASCII binary
     description: Convert text to its ASCII binary representation and vice-versa.
+
+  email-normalizer:
+    title: Email normalizer
+    description: Normalize email addresses to a standard format for easier comparison. Useful for deduplication and data cleaning.
+
+  ascii-text-drawer:
+    title: ASCII Art Text Generator
+    description: Create ASCII art text with many fonts and styles.
+
+  safelink-decoder:
+    title: Outlook Safelink decoder
+    description: Decode Outlook SafeLink links and inspect their tracking parameters
+
+  xml-to-json:
+    title: XML to JSON
+    description: Convert XML to JSON
+
+  json-to-xml:
+    title: JSON to XML
+    description: Convert JSON to XML
+
+  regex-tester:
+    title: Regex Tester
+    description: Test your regular expressions with sample text.
+
+  regex-memo:
+    title: Regex cheatsheet
+    description: Javascript Regex/Regular Expression cheatsheet
+
+  markdown-to-html:
+    title: Markdown to HTML
+    description: Convert Markdown to Html and allow to print (as PDF)

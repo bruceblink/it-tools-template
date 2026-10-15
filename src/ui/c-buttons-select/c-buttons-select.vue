@@ -5,7 +5,7 @@ import type { CButtonSelectOption } from './c-buttons-select.types';
 
 const props = withDefaults(
   defineProps<{
-    options?: CButtonSelectOption<T>[] | string[] | Record<string, T>
+    options?: readonly CButtonSelectOption<T>[] | readonly string[] | Record<string, T>
     value?: T
     size?: 'small' | 'medium' | 'large'
   } & CLabelProps >(),
@@ -41,17 +41,22 @@ function selectOption(option: CButtonSelectOption<T>) {
   // @ts-expect-error vue template generic is a bit flacky thanks to withDefaults
   value.value = option.value;
 }
+
+function getOptionTestId(option: CButtonSelectOption<T>) {
+  const { value: optionValue, label } = option;
+  return typeof optionValue === 'string' || typeof optionValue === 'number' ? String(optionValue) : label;
+}
 </script>
 
 <template>
   <c-label v-bind="props">
     <div class="flex gap-2">
       <c-tooltip
-        v-for="option in options" :key="option.value"
+        v-for="(option, index) in options" :key="index"
         :tooltip="option.tooltip"
       >
         <c-button
-          :test-id="option.value"
+          :test-id="getOptionTestId(option)"
           :size="size"
           :type="option.value === value ? 'primary' : 'default'"
           @click="selectOption(option)"

@@ -1,6 +1,7 @@
-import { type MaybeRef, get } from '@vueuse/core';
+import { get } from '@vueuse/core';
 import QRCode, { type QRCodeErrorCorrectionLevel, type QRCodeToDataURLOptions } from 'qrcode';
 import { isRef, ref, watch } from 'vue';
+import type { MaybeRef } from 'vue';
 
 export function useQRCode({
   text,

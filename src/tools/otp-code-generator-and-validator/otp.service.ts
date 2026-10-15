@@ -45,12 +45,31 @@ function generateHOTP({ key, counter = 0 }: { key: string; counter?: number }) {
   const bytes = hexToBytes(digest);
 
   // Truncate
-  const offset = bytes[19] & 0xF;
+  // SHA-1 produces 20 bytes, and the dynamic offset must leave four bytes for truncation.
+  const offsetByte = bytes[19];
+  if (offsetByte === undefined) {
+    throw new Error('The HMAC-SHA1 digest is too short to generate an HOTP token.');
+  }
+
+  const offset = offsetByte & 0xF;
+  const firstByte = bytes[offset];
+  const secondByte = bytes[offset + 1];
+  const thirdByte = bytes[offset + 2];
+  const fourthByte = bytes[offset + 3];
+  if (
+    firstByte === undefined
+    || secondByte === undefined
+    || thirdByte === undefined
+    || fourthByte === undefined
+  ) {
+    throw new Error('The HMAC-SHA1 digest is missing the dynamic truncation bytes.');
+  }
+
   const v
-    = ((bytes[offset] & 0x7F) << 24)
-    | ((bytes[offset + 1] & 0xFF) << 16)
-    | ((bytes[offset + 2] & 0xFF) << 8)
-    | (bytes[offset + 3] & 0xFF);
+    = ((firstByte & 0x7F) << 24)
+    | ((secondByte & 0xFF) << 16)
+    | ((thirdByte & 0xFF) << 8)
+    | (fourthByte & 0xFF);
 
   const code = String(v % 1000000).padStart(6, '0');
 

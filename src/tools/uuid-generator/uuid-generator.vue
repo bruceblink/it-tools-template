@@ -29,7 +29,7 @@ const generators = {
     clockseq: index,
     msecs: Date.now(),
     nsecs: Math.floor(Math.random() * 10000),
-    node: Array.from({ length: 6 }, () => Math.floor(Math.random() * 256)),
+    node: Uint8Array.from({ length: 6 }, () => Math.floor(Math.random() * 256)),
   }),
   v3: () => generateUuidV3(v35Args.value.name, v35Args.value.namespace),
   v4: () => generateUuidV4(),

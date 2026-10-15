@@ -5,7 +5,7 @@ function isNotThrowing(cb: () => unknown): boolean {
     cb();
     return true;
   }
-  catch (_) {
+  catch {
     return false;
   }
 }

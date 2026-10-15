@@ -49,7 +49,12 @@ function handleUpload(files: FileList | null | undefined) {
     return;
   }
 
-  emit('fileUpload', files[0]);
+  const file = files.item(0);
+  if (!file) {
+    return;
+  }
+
+  emit('fileUpload', file);
 }
 </script>
 

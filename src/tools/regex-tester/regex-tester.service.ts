@@ -1,12 +1,3 @@
-interface RegExpGroupIndices {
-  [name: string]: [number, number]
-}
-interface RegExpIndices extends Array<[number, number]> {
-  groups: RegExpGroupIndices
-}
-interface RegExpExecArrayWithIndices extends RegExpExecArray {
-  indices: RegExpIndices
-}
 export interface GroupCapture {
   name: string
   value: string
@@ -35,32 +26,46 @@ export function matchRegex(regex: string, text: string, flags: string): RegexMat
   // }
 
   let lastIndex = -1;
-  const re = new RegExp(regex, flags);
+  // Match indices are required to report capture offsets, so enable the d flag when the caller omits it.
+  const re = new RegExp(regex, flags.includes('d') ? flags : `${flags}d`);
   const results: RegexMatch[] = [];
-  let match = re.exec(text) as RegExpExecArrayWithIndices;
+  let match = re.exec(text);
   while (match !== null) {
     if (re.lastIndex === lastIndex || match[0] === '') {
       break;
     }
     const indices = match.indices;
+    if (!indices) {
+      break;
+    }
     const captures: Array<GroupCapture> = [];
     Object.entries(match).forEach(([captureName, captureValue]) => {
       if (captureName !== '0' && captureName.match(/\d+/)) {
+        const captureIndices = indices[Number(captureName)];
+        if (!captureIndices || typeof captureValue !== 'string') {
+          return;
+        }
+
         captures.push({
           name: captureName,
           value: captureValue,
-          start: indices[Number(captureName)][0],
-          end: indices[Number(captureName)][1],
+          start: captureIndices[0],
+          end: captureIndices[1],
         });
       }
     });
     const groups: Array<GroupCapture> = [];
     Object.entries(match.groups || {}).forEach(([groupName, groupValue]) => {
+      const groupIndices = indices.groups?.[groupName];
+      if (!groupIndices || typeof groupValue !== 'string') {
+        return;
+      }
+
       groups.push({
         name: groupName,
         value: groupValue,
-        start: indices.groups[groupName][0],
-        end: indices.groups[groupName][1],
+        start: groupIndices[0],
+        end: groupIndices[1],
       });
     });
     results.push({
@@ -70,7 +75,7 @@ export function matchRegex(regex: string, text: string, flags: string): RegexMat
       groups,
     });
     lastIndex = re.lastIndex;
-    match = re.exec(text) as RegExpExecArrayWithIndices;
+    match = re.exec(text);
   }
   return results;
 }

@@ -37,7 +37,7 @@ const parameterValidation = useValidation({
   source: parameterInput,
   rules: [
     {
-      validator: value => parseQueryParameters(value, options.value),
+      validator: value => typeof value === 'string' && parseQueryParameters(value, options.value),
       message: 'Provided parameters are not valid.',
     },
   ],

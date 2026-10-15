@@ -98,11 +98,19 @@ pnpm build
 pnpm test
 ```
 
-### Validate Before Release (tests + build)
+### Validate Before Release
 
 ```sh
 pnpm validate
 ```
+
+`pnpm validate` runs `pnpm check`: build configuration types, application and test types, lint with zero warnings, unit tests, and the production build. Run browser acceptance separately with `pnpm test:e2e` after building the app.
+
+`auto-imports.d.ts` is generated locally and ignored by Git. `pnpm typecheck:app` prepares it automatically, so typechecking also works from a clean checkout.
+
+The development roadmap is in [Development Plan](docs/01-development-plan.md). The current scope and acceptance checks are in [Quality Baseline](docs/02-quality-baseline.md).
+
+The next two tasks and their acceptance checks are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
 
 ### Create a New Tool
 
@@ -131,7 +139,7 @@ pnpm release
 The release script:
 
 1. Requires a clean git working tree
-2. Runs `pnpm validate` (tests + build)
+2. Runs `pnpm validate` (types, lint, tests, and build)
 3. Generates a CalVer version: `YYYY.MM.DD-<short-sha>`
 4. Updates `CHANGELOG.md` and `package.json`
 5. Creates a single release commit and a matching git tag

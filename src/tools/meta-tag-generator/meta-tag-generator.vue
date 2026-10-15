@@ -3,6 +3,7 @@ import { generateMeta } from '@it-tools/oggen';
 import _ from 'lodash';
 import { image, ogSchemas, twitter, website } from './og-schemas';
 import type { OGSchemaType, OGSchemaTypeElementSelect } from './OGSchemaType.type';
+import type { CSelectOption } from '@/ui/c-select/c-select.types';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
 
 // Since type guards do not work in template
@@ -37,6 +38,30 @@ const sections = computed(() => {
 
   return secs;
 });
+
+// The shared select accepts flat string options; group labels must never become metadata values.
+function normalizeSelectOptions(options: OGSchemaTypeElementSelect['options']): CSelectOption<string>[] {
+  return options.flatMap((option) => {
+    if (isRecord(option) && option.type === 'group') {
+      const children = Array.isArray(option.children) ? option.children : [];
+      return children.flatMap((child: unknown) => normalizeSelectOption(child));
+    }
+
+    return normalizeSelectOption(option);
+  });
+}
+
+function normalizeSelectOption(option: unknown): CSelectOption<string>[] {
+  if (!isRecord(option) || typeof option.label !== 'string' || typeof option.value !== 'string') {
+    return [];
+  }
+
+  return [{ label: option.label, value: option.value }];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 const metaTags = computed(() => {
   const twitterMeta = _.chain(metadata.value)
@@ -77,7 +102,7 @@ const metaTags = computed(() => {
           v-model:value="metadata[key]"
           w-full
           :placeholder="placeholder"
-          :options="(element as OGSchemaTypeElementSelect).options"
+          :options="normalizeSelectOptions((element as OGSchemaTypeElementSelect).options)"
         />
       </n-input-group>
     </div>

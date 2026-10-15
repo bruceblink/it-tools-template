@@ -10,7 +10,6 @@ import {
   isDate,
   isValid,
   parseISO,
-  parseJSON,
 } from 'date-fns';
 import type { DateFormat, ToDateMapper } from './date-time-converter.types';
 import {
@@ -73,7 +72,7 @@ const formats: DateFormat[] = [
   {
     name: 'Timestamp',
     fromDate: date => String(getTime(date)),
-    toDate: ms => parseJSON(+ms),
+    toDate: ms => new Date(Number(ms)),
     formatMatcher: date => isTimestamp(date),
   },
   {
@@ -104,10 +103,13 @@ const normalizedDate = computed(() => {
     return now.value;
   }
 
-  const { toDate } = formats[formatIndex.value];
+  const format = formats[formatIndex.value];
+  if (!format) {
+    return undefined;
+  }
 
   try {
-    return toDate(inputDate.value);
+    return format.toDate(inputDate.value);
   }
   catch (_ignored) {
     return undefined;
@@ -133,7 +135,12 @@ const validation = useValidation({
             return true;
           }
 
-          const maybeDate = formats[formatIndex.value].toDate(value);
+          const format = formats[formatIndex.value];
+          if (!format) {
+            return false;
+          }
+
+          const maybeDate = format.toDate(value);
           return isDate(maybeDate) && isValid(maybeDate);
         }, false),
     },

@@ -12,11 +12,19 @@ const styleStore = useStyleStore();
 const theme = computed(() => (styleStore.isDarkTheme ? darkTheme : null));
 const themeOverrides = computed(() => (styleStore.isDarkTheme ? darkThemeOverrides : lightThemeOverrides));
 
-const { locale } = useI18n();
+const { availableLocales, locale } = useI18n();
+const storedLocale = useStorage('locale', locale.value);
 
+// Restore the saved language first; removed or unsupported settings fall back to English.
 syncRef(
+  storedLocale,
   locale,
-  useStorage('locale', locale),
+  {
+    transform: {
+      ltr: value => value && availableLocales.includes(value) ? value : 'en',
+      rtl: value => value,
+    },
+  },
 );
 </script>
 

@@ -10,7 +10,6 @@ const config = reactive<FormatOptionsWithLanguage>({
   useTabs: false,
   language: 'sql',
   indentStyle: 'standard',
-  tabulateAlias: true,
 });
 
 const rawSQL = ref('select field1,field2,field3 from my_table where my_condition;');

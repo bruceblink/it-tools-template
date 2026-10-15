@@ -128,3 +128,23 @@ describe('summarizeRegexMatches', () => {
     });
   });
 });
+
+describe('matchRegex with unmatched capture groups', () => {
+  it('omits optional captures that have no matched source span', () => {
+    expect(matchRegex('(?<optional>z)?(a)', 'a', '')).toEqual([
+      {
+        index: 0,
+        value: 'a',
+        captures: [
+          {
+            name: '2',
+            value: 'a',
+            start: 0,
+            end: 1,
+          },
+        ],
+        groups: [],
+      },
+    ]);
+  });
+});

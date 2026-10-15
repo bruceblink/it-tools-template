@@ -6,7 +6,6 @@ describe('error util', () => {
     it('get an error message if the callback throws, undefined instead', () => {
       expect(
         getErrorMessageIfThrows(() => {
-          // eslint-disable-next-line no-throw-literal
           throw 'message';
         }),
       ).to.equal('message');
@@ -19,7 +18,6 @@ describe('error util', () => {
 
       expect(
         getErrorMessageIfThrows(() => {
-          // eslint-disable-next-line no-throw-literal
           throw { message: 'message' };
         }),
       ).to.equal('message');

@@ -30,6 +30,9 @@ export default defineConfig({
       include: [resolve(__dirname, 'locales/**')],
     }),
     AutoImport({
+      // Declarations are regenerated locally before typechecking and stay out of Git.
+      dts: 'auto-imports.d.ts',
+      dtsMode: 'overwrite',
       imports: [
         'vue',
         'vue-router',

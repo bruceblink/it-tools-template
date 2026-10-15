@@ -39,11 +39,11 @@ const [certs, refreshCerts] = computedRefreshableAsync(
 
   <div>
     <h3>Public key</h3>
-    <TextareaCopyable :value="certs.publicKeyPem" />
+    <TextareaCopyable :value="certs?.publicKeyPem ?? ''" />
   </div>
 
   <div>
     <h3>Private key</h3>
-    <TextareaCopyable :value="certs.privateKeyPem" />
+    <TextareaCopyable :value="certs?.privateKeyPem ?? ''" />
   </div>
 </template>

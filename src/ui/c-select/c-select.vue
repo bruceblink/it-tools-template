@@ -72,7 +72,7 @@ whenever(
 );
 
 onClickOutside(elementRef, close);
-whenever(keys.escape, close);
+whenever(() => keys.escape?.value ?? false, close);
 
 watch(value, (newValue) => {
   const option = options.value.find((option: CSelectOption<T>) => option.value === newValue);
@@ -117,7 +117,10 @@ function handleKeydown(event: KeyboardEvent) {
     const valueCanBeSelected = isOpen.value && focusIndex.value !== -1;
 
     if (valueCanBeSelected) {
-      selectOption({ option: filteredOptions.value[focusIndex.value] });
+      const option = filteredOptions.value[focusIndex.value];
+      if (option) {
+        selectOption({ option });
+      }
     }
     else {
       toggleOpen();

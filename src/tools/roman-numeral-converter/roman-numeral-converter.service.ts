@@ -21,10 +21,10 @@ export function arabicToRoman(num: number) {
     I: 1,
   };
   let roman = '';
-  for (const i in lookup) {
-    while (num >= lookup[i]) {
-      roman += i;
-      num -= lookup[i];
+  for (const [symbol, value] of Object.entries(lookup)) {
+    while (num >= value) {
+      roman += symbol;
+      num -= value;
     }
   }
   return roman;
@@ -41,5 +41,8 @@ export function romanToArabic(s: string) {
     return null;
   }
   const map: { [key: string]: number } = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
-  return [...s].reduce((r, c, i, s) => (map[s[i + 1]] > map[c] ? r - map[c] : r + map[c]), 0);
+  // Validation limits symbols to the map; missing next symbols terminate subtraction.
+  const values = [...s].map(symbol => map[symbol] ?? 0);
+  return values.reduce((sum, value, index) =>
+    (values[index + 1] ?? 0) > value ? sum - value : sum + value, 0);
 }

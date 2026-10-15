@@ -3,6 +3,10 @@ export { getIPClass };
 function getIPClass({ ip }: { ip: string }) {
   const [firstOctet] = ip.split('.').map(Number);
 
+  if (firstOctet === undefined) {
+    return undefined;
+  }
+
   if (firstOctet < 128) {
     return 'A';
   }

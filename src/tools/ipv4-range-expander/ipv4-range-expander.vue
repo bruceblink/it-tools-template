@@ -40,11 +40,11 @@ const calculatedValues: {
 
 const startIpValidation = useValidation({
   source: rawStartAddress,
-  rules: [{ message: 'Invalid ipv4 address', validator: ip => isValidIpv4({ ip }) }],
+  rules: [{ message: 'Invalid ipv4 address', validator: ip => typeof ip === 'string' && isValidIpv4({ ip }) }],
 });
 const endIpValidation = useValidation({
   source: rawEndAddress,
-  rules: [{ message: 'Invalid ipv4 address', validator: ip => isValidIpv4({ ip }) }],
+  rules: [{ message: 'Invalid ipv4 address', validator: ip => typeof ip === 'string' && isValidIpv4({ ip }) }],
 });
 
 const showResult = computed(() => endIpValidation.isValid && startIpValidation.isValid && result.value !== undefined);

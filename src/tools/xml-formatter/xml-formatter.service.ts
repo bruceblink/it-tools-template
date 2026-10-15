@@ -22,7 +22,7 @@ function isValidXML(rawXml: string): boolean {
     xmlFormat(cleanedRawXml);
     return true;
   }
-  catch (e) {
+  catch {
     return false;
   }
 }

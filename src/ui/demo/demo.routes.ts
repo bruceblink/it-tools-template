@@ -3,15 +3,18 @@ import DemoHome from './demo-home.page.vue';
 
 const demoPages = import.meta.glob('../*/*.demo.vue', { eager: true });
 
-export const demoRoutes = Object.keys(demoPages).map((demoComponentPath) => {
-  const [, , fileName] = demoComponentPath.split('/');
-  const demoComponentName = fileName.split('.').shift();
+export const demoRoutes = Object.keys(demoPages).flatMap((demoComponentPath) => {
+  const fileName = demoComponentPath.split('/').at(-1);
+  const demoComponentName = fileName?.split('.').shift();
+  if (!demoComponentName) {
+    return [];
+  }
 
-  return {
+  return [{
     path: demoComponentName,
     name: demoComponentName,
     component: () => import(/* @vite-ignore */ demoComponentPath),
-  } as RouteRecordRaw;
+  } as RouteRecordRaw];
 });
 
 export const routes = [

@@ -1,10 +1,11 @@
 import { Mailbox } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
-  name: 'Outlook Safelink decoder',
+  name: translate('tools.safelink-decoder.title'),
   path: '/safelink-decoder',
-  description: 'Decode Outlook SafeLink links and inspect their tracking parameters',
+  description: translate('tools.safelink-decoder.description'),
   keywords: ['outlook', 'safelink', 'decoder', 'microsoft', 'url', 'sdata', 'tracking', 'target', 'host', 'https'],
   component: () => import('./safelink-decoder.vue'),
   icon: Mailbox,

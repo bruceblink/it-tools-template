@@ -1,6 +1,7 @@
-import { type MaybeRef, get } from '@vueuse/core';
+import { get } from '@vueuse/core';
 
 import yaml from 'yaml';
+import type { MaybeRef } from 'vue';
 
 export { formatYaml };
 

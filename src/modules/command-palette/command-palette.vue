@@ -27,9 +27,9 @@ const keys = useMagicKeys({
 
 whenever(isModalOpen, () => inputRef.value?.focus());
 
-whenever(keys.ctrl_k, open);
-whenever(keys.meta_k, open);
-whenever(keys.escape, close);
+whenever(() => keys.ctrl_k?.value ?? false, open);
+whenever(() => keys.meta_k?.value ?? false, open);
+whenever(() => keys.escape?.value ?? false, close);
 
 function open() {
   return (isModalOpen.value = true);
@@ -60,7 +60,10 @@ function handleKeydown(event: KeyboardEvent) {
   if (isEnterPressed) {
     const option = _.chain(filteredSearchResult.value).values().flatten().nth(selectedOptionIndex.value).value();
 
-    activateOption(option);
+    // An empty search result has no selected command to activate.
+    if (option) {
+      activateOption(option);
+    }
   }
 }
 

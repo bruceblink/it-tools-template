@@ -48,7 +48,7 @@ function isUTCDateString(date?: string) {
   try {
     return new Date(date).toUTCString() === date;
   }
-  catch (_ignored) {
+  catch {
     return false;
   }
 }

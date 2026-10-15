@@ -39,3 +39,29 @@ declare module 'pdf-signature-reader' {
 
   export default verifySignature;
 }
+
+/**
+ * `@it-tools/oggen@1.3.0` ships this declaration but omits the `types` condition
+ * from its package exports, so TypeScript cannot resolve the package-root type.
+ */
+declare module '@it-tools/oggen' {
+  export type MetadataValue = boolean | string | Date | number;
+
+  export interface MetadataConfig {
+    [key: string]: MetadataValue | MetadataValue[] | MetadataConfig
+  }
+
+  export interface MetadataFlat {
+    key: string
+    value: string
+  }
+
+  export function generateMeta(
+    metadata: MetadataConfig,
+    options?: {
+      indentation?: number
+      indentWith?: string
+      generateTwitterCompatibleMeta?: boolean
+    },
+  ): string;
+}

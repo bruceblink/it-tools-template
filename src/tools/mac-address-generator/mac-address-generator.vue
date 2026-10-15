@@ -14,16 +14,20 @@ const macAddressSummary = computed(() => summarizeMacAddressOptions({
   amount: amount.value,
 }));
 
+const toUppercase = (value: string) => value.toUpperCase();
+const toLowercase = (value: string) => value.toLowerCase();
 const casesTransformers = [
-  { label: 'Uppercase', value: (value: string) => value.toUpperCase() },
-  { label: 'Lowercase', value: (value: string) => value.toLowerCase() },
+  { label: 'Uppercase', value: toUppercase },
+  { label: 'Lowercase', value: toLowercase },
 ];
-const caseTransformer = ref(casesTransformers[0].value);
+const caseTransformer = ref(toUppercase);
+
+const defaultSeparator = ':';
 
 const separators = [
   {
     label: ':',
-    value: ':',
+    value: defaultSeparator,
   },
   {
     label: '-',
@@ -38,7 +42,7 @@ const separators = [
     value: '',
   },
 ];
-const separator = useStorage('mac-address-generator-separator', separators[0].value);
+const separator = useStorage('mac-address-generator-separator', defaultSeparator);
 
 const [macAddresses, refreshMacAddresses] = computedRefreshable(() => {
   if (!prefixValidation.isValid) {

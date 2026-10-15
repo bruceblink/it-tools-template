@@ -64,13 +64,12 @@ function parseCidr(value: string): Ipv4Range {
 
 function parseRange(value: string): Ipv4Range {
   const match = ipv4RangeSeparatorRegex.exec(value);
-  if (!match) {
+  if (!match || match[1] === undefined || match[2] === undefined) {
     throw new Ipv4CidrMergeError(`Invalid range "${value}".`);
   }
 
-  const [, startText, endText] = match;
-  const start = parseIpv4(startText);
-  const end = parseIpv4(endText);
+  const start = parseIpv4(match[1]);
+  const end = parseIpv4(match[2]);
 
   if (start > end) {
     throw new Ipv4CidrMergeError(`Range start must be lower than or equal to range end.`);

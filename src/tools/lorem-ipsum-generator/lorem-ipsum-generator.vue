@@ -5,8 +5,8 @@ import { randIntFromInterval } from '@/utils/random';
 import { computedRefreshable } from '@/composable/computedRefreshable';
 
 const paragraphs = ref(1);
-const sentences = ref([3, 8]);
-const words = ref([8, 15]);
+const sentences = ref<[number, number]>([3, 8]);
+const words = ref<[number, number]>([8, 15]);
 const startWithLoremIpsum = ref(true);
 const asHTML = ref(false);
 

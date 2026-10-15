@@ -34,7 +34,7 @@ const convertedSections = computed(() => {
 
 const { attrs: validationAttrs } = useValidation({
   source: rawIpAddress,
-  rules: [{ message: 'Invalid ipv4 address', validator: ip => isValidIpv4({ ip }) }],
+  rules: [{ message: 'Invalid ipv4 address', validator: ip => typeof ip === 'string' && isValidIpv4({ ip }) }],
 });
 </script>
 

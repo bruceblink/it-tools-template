@@ -31,7 +31,7 @@ const results = computed(() => {
     .sort((a, b) => a.mean - b.mean)
     .map(({ mean, variance, size, title }, index, suites) => {
       const cleanUnit = unit.value.trim();
-      const bestMean: number = suites[0].mean;
+      const bestMean = suites[0]?.mean ?? mean;
       const deltaWithBestMean = mean - bestMean;
       const ratioWithBestMean = bestMean === 0 ? '∞' : round(mean / bestMean);
 

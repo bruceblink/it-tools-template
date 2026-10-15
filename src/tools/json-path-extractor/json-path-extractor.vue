@@ -24,7 +24,7 @@ const jsonValidation = useValidation({
   source: rawJson,
   rules: [
     {
-      validator: value => value === '' || JSON5.parse(value),
+      validator: value => value === '' || (typeof value === 'string' && JSON5.parse(value)),
       message: 'Provided JSON is not valid.',
     },
   ],
@@ -34,7 +34,7 @@ const pathValidation = useValidation({
   source: jsonPath,
   rules: [
     {
-      validator: value => tokenizeJsonPath(value),
+      validator: value => typeof value === 'string' && tokenizeJsonPath(value),
       message: 'Provided JSON path is not valid.',
     },
   ],

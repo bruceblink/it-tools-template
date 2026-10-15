@@ -23,7 +23,12 @@ function arrayToMarkdownTable({ data, headerMap = {} }: { data: Record<string, u
     return '';
   }
 
-  const headers = Object.keys(data[0]);
+  const firstRow = data[0];
+  if (!firstRow) {
+    return '';
+  }
+
+  const headers = Object.keys(firstRow);
   const rows = data.map(obj => Object.values(obj));
 
   const headerRow = `| ${headers.map(header => headerMap[header] ?? header).join(' | ')} |`;

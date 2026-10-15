@@ -205,7 +205,10 @@ export function generateLoremIpsum({
   );
 
   if (startWithLoremIpsum) {
-    paragraphs[0][0] = firstSentence;
+    const firstParagraph = paragraphs[0];
+    if (firstParagraph) {
+      firstParagraph[0] = firstSentence;
+    }
   }
 
   if (asHTML) {
