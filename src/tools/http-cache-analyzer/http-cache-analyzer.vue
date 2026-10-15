@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import {
   analyzeHttpCache,
   type CacheCheckStatus,
@@ -13,7 +12,7 @@ age: 86400
 etag: "asset-v1"
 vary: Accept-Encoding`;
 
-const rawHeaders = useStorage('http-cache-analyzer:headers', sampleHeaders);
+const rawHeaders = ref(sampleHeaders);
 const emptyAnalysis = analyzeHttpCache('');
 const analysis = computed(() => withDefaultOnError(() => analyzeHttpCache(rawHeaders.value), emptyAnalysis));
 const directiveRows = computed(() => analysis.value.directives.map(({ name, value }) => ({

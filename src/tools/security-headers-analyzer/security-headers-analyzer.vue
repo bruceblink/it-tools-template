@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import {
   analyzeSecurityHeaders,
   type SecurityHeaderStatus,
@@ -18,7 +17,7 @@ cross-origin-opener-policy: same-origin
 cross-origin-embedder-policy: require-corp
 cross-origin-resource-policy: same-origin`;
 
-const rawHeaders = useStorage('security-headers-analyzer:headers', sampleHeaders);
+const rawHeaders = ref(sampleHeaders);
 const emptyAnalysis = analyzeSecurityHeaders('');
 const analysis = computed(() =>
   withDefaultOnError(() => analyzeSecurityHeaders(rawHeaders.value), emptyAnalysis),

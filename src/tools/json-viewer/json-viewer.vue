@@ -8,7 +8,7 @@ import TextareaCopyable from '@/components/TextareaCopyable.vue';
 
 const inputElement = ref<HTMLElement>();
 
-const rawJson = useStorage('json-prettify:raw-json', '{"hello": "world", "foo": "bar"}');
+const rawJson = ref('{"hello": "world", "foo": "bar"}');
 const indentSize = useStorage('json-prettify:indent-size', 3);
 const sortKeys = useStorage('json-prettify:sort-keys', true);
 const cleanJson = computed(() => withDefaultOnError(() => formatJson({ rawJson, indentSize, sortKeys }), ''));

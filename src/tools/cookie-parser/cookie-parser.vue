@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { parseCookies } from './cookie-parser.service';
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
@@ -8,7 +7,7 @@ const sampleCookies = `Cookie: session=abc123; theme=dark; encoded=hello%20world
 Set-Cookie: session=abc123; Path=/; HttpOnly; Secure; SameSite=Lax
 Set-Cookie: tracking=1; Path=/; SameSite=None`;
 
-const rawCookies = useStorage('cookie-parser:cookies', sampleCookies);
+const rawCookies = ref(sampleCookies);
 const emptyResult = parseCookies('');
 const parsedCookies = computed(() => withDefaultOnError(() => parseCookies(rawCookies.value), emptyResult));
 const rows = computed(() => parsedCookies.value.cookies.map(cookie => ({

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import JSON5 from 'json5';
-import { useStorage } from '@vueuse/core';
 import { extractJsonPath, tokenizeJsonPath } from './json-path-extractor.service';
 import { useValidation } from '@/composable/validation';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
 import { withDefaultOnError } from '@/utils/defaults';
 
 const inputElement = ref<HTMLElement>();
-const rawJson = useStorage('json-path-extractor:raw-json', JSON.stringify({
+const rawJson = ref(JSON.stringify({
   users: [
     { name: 'Alice', active: true },
     { name: 'Bob', active: false },
@@ -16,7 +15,7 @@ const rawJson = useStorage('json-path-extractor:raw-json', JSON.stringify({
     requestId: 'abc-123',
   },
 }, null, 2));
-const jsonPath = useStorage('json-path-extractor:path', '$.users[*].name');
+const jsonPath = ref('$.users[*].name');
 
 const output = computed(() => withDefaultOnError(() => extractJsonPath(rawJson.value, jsonPath.value), ''));
 

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { classifyIpv4Address } from './ipv4-address-classifier.service';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
 
-const ip = useStorage('ipv4-address-classifier:ip', '192.168.1.1');
+const ip = ref('192.168.1.1');
 
 const classification = computed(() => withDefaultOnError(() => classifyIpv4Address(ip.value), undefined));
 

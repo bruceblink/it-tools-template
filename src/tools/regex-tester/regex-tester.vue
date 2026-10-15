@@ -2,11 +2,14 @@
 import RandExp from 'randexp';
 import { render } from '@regexper/render';
 import type { ShadowRootExpose } from 'vue-shadow-dom';
+import { useRoute } from 'vue-router';
 import { matchRegex, summarizeRegexMatches } from './regex-tester.service';
 import { useValidation } from '@/composable/validation';
-import { useQueryParamOrStorage } from '@/composable/queryParams';
 
-const regex = useQueryParamOrStorage({ name: 'regex', storageName: 'regex-tester:regex', defaultValue: '' });
+const route = useRoute();
+// A route may supply one initial pattern; later edits remain in component memory.
+const initialRegex = route.query.regex;
+const regex = ref(typeof initialRegex === 'string' ? initialRegex : '');
 const text = ref('');
 const global = ref(true);
 const ignoreCase = ref(false);

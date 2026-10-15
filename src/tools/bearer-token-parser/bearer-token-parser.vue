@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { parseBearerToken } from './bearer-token-parser.service';
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
 
 const sampleToken = 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
-const input = useStorage('bearer-token-parser:input', sampleToken);
+const input = ref(sampleToken);
 const emptyParsed = parseBearerToken(sampleToken);
 const parsed = computed(() => withDefaultOnError(() => parseBearerToken(input.value), emptyParsed));
 const metadataRows = computed<Record<string, unknown>[]>(() => [

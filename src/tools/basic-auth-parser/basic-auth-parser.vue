@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { parseBasicAuth } from './basic-auth-parser.service';
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
 
 const sampleHeader = 'Authorization: Basic YWxpY2U6czNjcmV0';
 
-const input = useStorage('basic-auth-parser:input', sampleHeader);
+const input = ref(sampleHeader);
 const emptyParsed = parseBasicAuth(sampleHeader);
 const parsed = computed(() => withDefaultOnError(() => parseBasicAuth(input.value), emptyParsed));
 const rows = computed<Record<string, unknown>[]>(() => [

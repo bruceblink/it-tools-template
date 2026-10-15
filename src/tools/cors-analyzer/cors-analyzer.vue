@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import {
   analyzeCors,
   type CorsCheckStatus,
@@ -15,7 +14,7 @@ access-control-expose-headers: x-request-id
 access-control-max-age: 3600
 vary: Origin`;
 
-const rawHeaders = useStorage('cors-analyzer:headers', sampleHeaders);
+const rawHeaders = ref(sampleHeaders);
 const emptyAnalysis = analyzeCors('');
 const analysis = computed(() => withDefaultOnError(() => analyzeCors(rawHeaders.value), emptyAnalysis));
 const rows = computed(() => analysis.value.checks.map(check => ({

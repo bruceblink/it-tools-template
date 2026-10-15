@@ -6,8 +6,8 @@ import TextareaCopyable from '@/components/TextareaCopyable.vue';
 import { withDefaultOnError } from '@/utils/defaults';
 
 const inputElement = ref<HTMLElement>();
-const baseUrl = useStorage('url-query-builder:base-url', 'https://example.com/search');
-const parameterInput = useStorage('url-query-builder:parameters', 'q=it tools\npage=1\nsort=created_at');
+const baseUrl = ref('https://example.com/search');
+const parameterInput = ref('q=it tools\npage=1\nsort=created_at');
 const includeEmptyValues = useStorage('url-query-builder:include-empty-values', true);
 const sortKeys = useStorage('url-query-builder:sort-keys', false);
 const flattenNestedObjects = useStorage('url-query-builder:flatten-nested-objects', false);

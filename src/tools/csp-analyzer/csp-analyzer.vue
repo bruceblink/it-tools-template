@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import {
   analyzeCsp,
   type CspCheckStatus,
@@ -9,7 +8,7 @@ import { withDefaultOnError } from '../../utils/defaults';
 
 const samplePolicy = `Content-Security-Policy: default-src 'self'; script-src 'nonce-abc123' 'strict-dynamic'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; report-to csp-endpoint`;
 
-const rawPolicy = useStorage('csp-analyzer:policy', samplePolicy);
+const rawPolicy = ref(samplePolicy);
 const emptyAnalysis = analyzeCsp('');
 const analysis = computed(() => withDefaultOnError(() => analyzeCsp(rawPolicy.value), emptyAnalysis));
 const directiveRows = computed<Record<string, unknown>[]>(() => analysis.value.directives.map(({ name, values }) => ({

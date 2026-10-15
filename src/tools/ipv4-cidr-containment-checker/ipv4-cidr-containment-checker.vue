@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import {
   analyzeIpv4CidrContainment,
   type Ipv4CidrContainmentStatus,
@@ -20,8 +19,8 @@ const sampleTargets = [
   '192.168.10.0/24',
 ].join('\n');
 
-const rulesInput = useStorage('ipv4-cidr-containment-checker:rules', sampleRules);
-const targetsInput = useStorage('ipv4-cidr-containment-checker:targets', sampleTargets);
+const rulesInput = ref(sampleRules);
+const targetsInput = ref(sampleTargets);
 const emptyAnalysis = analyzeIpv4CidrContainment('', '');
 const analysis = computed(() => withDefaultOnError(() => analyzeIpv4CidrContainment(rulesInput.value, targetsInput.value), emptyAnalysis));
 

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { analyzeIpv4CidrOverlaps } from './ipv4-cidr-overlap-checker.service';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
@@ -12,7 +11,7 @@ const sampleInput = [
   '192.168.1.128/25',
 ].join('\n');
 
-const cidrs = useStorage('ipv4-cidr-overlap-checker:cidrs', sampleInput);
+const cidrs = ref(sampleInput);
 const emptyAnalysis = analyzeIpv4CidrOverlaps('');
 const analysis = computed(() => withDefaultOnError(() => analyzeIpv4CidrOverlaps(cidrs.value), emptyAnalysis));
 

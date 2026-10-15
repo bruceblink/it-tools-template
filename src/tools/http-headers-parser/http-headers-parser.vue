@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { parseHttpHeaders } from './http-headers-parser.service';
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
@@ -11,7 +10,7 @@ set-cookie: session=abc; HttpOnly; Secure
 set-cookie: theme=dark
 x-request-id: req-123`;
 
-const rawHeaders = useStorage('http-headers-parser:headers', sampleHeaders);
+const rawHeaders = ref(sampleHeaders);
 
 const emptyParsedHeaders = parseHttpHeaders('');
 const parsedHeaders = computed(() => withDefaultOnError(() => parseHttpHeaders(rawHeaders.value), emptyParsedHeaders));

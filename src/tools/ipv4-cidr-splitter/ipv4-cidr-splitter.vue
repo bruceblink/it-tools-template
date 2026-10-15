@@ -4,7 +4,7 @@ import { formatIpv4CidrSplit, splitIpv4Cidr } from './ipv4-cidr-splitter.service
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
 
-const sourceCidr = useStorage('ipv4-cidr-splitter:source-cidr', '192.168.0.0/24');
+const sourceCidr = ref('192.168.0.0/24');
 const targetPrefix = useStorage('ipv4-cidr-splitter:target-prefix', 26);
 
 const result = computed(() =>

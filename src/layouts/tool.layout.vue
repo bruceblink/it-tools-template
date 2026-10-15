@@ -6,6 +6,7 @@ import type { HeadObject } from '@vueuse/head';
 import BaseLayout from './base.layout.vue';
 import FavoriteButton from '@/components/FavoriteButton.vue';
 import type { Tool } from '@/tools/tools.types';
+import { clearLegacyToolContent, hasMemoryOnlyContent } from '@/tools/input-privacy';
 
 const route = useRoute();
 
@@ -28,6 +29,14 @@ const { t } = useI18n();
 const i18nKey = computed<string>(() => route.path.trim().replace('/', ''));
 const toolTitle = computed<string>(() => t(`tools.${i18nKey.value}.title`, String(route.meta.name)));
 const toolDescription = computed<string>(() => t(`tools.${i18nKey.value}.description`, String(route.meta.description)));
+const hasPrivateContent = computed(() => hasMemoryOnlyContent(route.path));
+const contentCleanupFailed = ref(false);
+
+// The layout is reused between tools. Clear only the destination's old content
+// before its inputs are shown, and never read or restore the removed values.
+watch(() => route.path, (toolPath) => {
+  contentCleanupFailed.value = !clearLegacyToolContent(toolPath);
+}, { immediate: true, flush: 'sync' });
 </script>
 
 <template>
@@ -49,6 +58,19 @@ const toolDescription = computed<string>(() => t(`tools.${i18nKey.value}.descrip
         <div class="description">
           {{ toolDescription }}
         </div>
+
+        <p v-if="hasPrivateContent" role="note" data-test-id="tool-input-memory-note" text-sm op-70>
+          {{ t('inputPrivacy.memoryNotice') }}
+        </p>
+        <c-alert
+          v-if="hasPrivateContent && contentCleanupFailed"
+          role="alert"
+          data-test-id="tool-input-storage-warning"
+          :title="t('inputPrivacy.storageWarningTitle')"
+          mt-3
+        >
+          {{ t('inputPrivacy.storageWarning') }}
+        </c-alert>
       </div>
     </div>
 

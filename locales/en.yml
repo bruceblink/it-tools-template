@@ -57,6 +57,10 @@ toolCard:
   new: New
 search:
   label: Search
+inputPrivacy:
+  memoryNotice: Content edits stay in this page's memory. Leaving or reloading restores default content. Tool preferences may be saved separately.
+  storageWarningTitle: Saved content could not be fully removed
+  storageWarning: Some content saved by an earlier version could not be removed. Current edits stay in memory. Clear this site's browser data if needed.
 tools:
   categories:
     favorite-tools: 'Your favorite tools'

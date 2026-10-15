@@ -57,6 +57,10 @@ toolCard:
   new: '新'
 search:
   label: '搜索'
+inputPrivacy:
+  memoryNotice: 内容修改仅保存在当前页面内存中。离开或刷新后恢复默认内容。工具偏好可以单独保存。
+  storageWarningTitle: 旧内容未能完全清除
+  storageWarning: 旧版本保存的部分内容未能清除。当前修改仍只保存在内存中。如有需要，请清除此站点的浏览器数据。
 tools:
   categories:
     favorite-tools: '我的收藏'

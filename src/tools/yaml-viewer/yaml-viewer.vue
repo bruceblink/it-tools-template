@@ -8,7 +8,7 @@ import TextareaCopyable from '@/components/TextareaCopyable.vue';
 
 const inputElement = ref<HTMLElement>();
 
-const rawYaml = useStorage('yaml-prettify:raw-yaml', '');
+const rawYaml = ref('');
 const indentSize = useStorage('yaml-prettify:indent-size', 2);
 const sortKeys = useStorage('yaml-prettify:sort-keys', false);
 

@@ -13,8 +13,8 @@ import TextareaCopyable from '@/components/TextareaCopyable.vue';
 
 const sampleContent = `console.log("hello");`;
 
-const content = useStorage('sri-hash-generator:content', sampleContent);
-const resourceUrl = useStorage('sri-hash-generator:url', 'https://cdn.example.com/app.js');
+const content = ref(sampleContent);
+const resourceUrl = ref('https://cdn.example.com/app.js');
 const resourceType = useStorage<SriResourceType>('sri-hash-generator:type', 'script');
 const crossorigin = useStorage<SriCrossorigin>('sri-hash-generator:crossorigin', 'anonymous');
 const selectedAlgorithms = useStorage<SriAlgorithm[]>('sri-hash-generator:algorithms', ['sha384']);

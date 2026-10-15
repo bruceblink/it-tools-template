@@ -28,7 +28,7 @@ const outputFormatOptions: { label: string, value: EnvOutputFormat }[] = [
   { label: 'Compose', value: 'docker-compose' },
 ];
 
-const rawEnv = useStorage('env-vars-parser:env', sampleEnv);
+const rawEnv = ref(sampleEnv);
 const outputFormat = useStorage<EnvOutputFormat>('env-vars-parser:output-format', 'json');
 const emptyResult = parseEnvVars('');
 const result = computed(() => withDefaultOnError(() => parseEnvVars(rawEnv.value), emptyResult));

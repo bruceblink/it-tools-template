@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
 import { testRobotsTxt } from './robots-txt-tester.service';
 import type { UseValidationRule } from '../../composable/validation';
 import { withDefaultOnError } from '../../utils/defaults';
@@ -14,9 +13,9 @@ Disallow: /private/
 Allow: /private/public/
 Crawl-delay: 5`;
 
-const robotsTxt = useStorage('robots-txt-tester:robots', sampleRobotsTxt);
-const url = useStorage('robots-txt-tester:url', 'https://example.com/admin/settings');
-const userAgent = useStorage('robots-txt-tester:user-agent', '*');
+const robotsTxt = ref(sampleRobotsTxt);
+const url = ref('https://example.com/admin/settings');
+const userAgent = ref('*');
 
 const emptyAnalysis = testRobotsTxt('', '/', '*');
 const analysis = computed(() =>

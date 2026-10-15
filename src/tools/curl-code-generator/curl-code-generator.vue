@@ -20,7 +20,7 @@ const outputOptions: { label: string, value: CurlCodeOutput }[] = [
   { label: 'HTTPie', value: 'httpie' },
 ];
 
-const rawCurl = useStorage('curl-code-generator:curl', sampleCurl);
+const rawCurl = ref(sampleCurl);
 const outputFormat = useStorage<CurlCodeOutput>('curl-code-generator:output', 'fetch');
 const emptyGeneration = generateCurlCode('curl https://example.com');
 const generation = computed(() => withDefaultOnError(() => generateCurlCode(rawCurl.value), emptyGeneration));

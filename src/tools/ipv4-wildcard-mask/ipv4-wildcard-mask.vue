@@ -5,7 +5,7 @@ import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
 
 const mode = useStorage<Ipv4WildcardInputMode>('ipv4-wildcard-mask:mode', 'cidr');
-const input = useStorage('ipv4-wildcard-mask:input', '192.168.1.42/24');
+const input = ref('192.168.1.42/24');
 
 const modeOptions: Array<{ label: string; value: Ipv4WildcardInputMode }> = [
   { label: 'CIDR', value: 'cidr' },
