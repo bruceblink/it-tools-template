@@ -114,6 +114,8 @@ The two security tasks and their acceptance results are in [Random Sources and S
 
 Content privacy, sanitized rendering, and deployment headers are described in [Content, HTML, and Deployment Boundaries](docs/04-security-boundaries.md). The credential, request, configuration, and document inputs covered there stay in page memory; existing display and processing preferences may still be saved.
 
+The feasibility and value of sharing the current web interface with an Electron desktop app are assessed in [Web and Electron Assessment](docs/06-web-electron-assessment.md).
+
 Deployment headers are generated from `security-headers.json`. Run `pnpm headers:sync` after editing that source and `pnpm headers:check` to detect drift. A custom Plausible API requires the same exact HTTPS origin in `plausibleApiOrigin` and `VITE_PLAUSIBLE_API_HOST`; run the sync/check commands with that build variable set.
 
 After the final production build, `pnpm headers:docker` checks real Nginx responses using local Docker on `127.0.0.1:18080` and removes its container. Start Docker and pull `nginx:stable-alpine` before running this check.
