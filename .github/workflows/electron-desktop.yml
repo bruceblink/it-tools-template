@@ -3,7 +3,7 @@ name: Electron desktop builds
 on:
   push:
     branches:
-      - '**'
+      - main
     paths-ignore:
       - '**/*.md'
       - 'README*'
