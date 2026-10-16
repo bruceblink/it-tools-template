@@ -89,10 +89,12 @@ Electron 会增加运行时安全升级、安装包、签名、发布和更新�
 当前实现：
 
 - 同一套 Vue 界面与 117 个工具路由用于 Web 和 Electron。桌面端独立 HTML 入口直接挂载共享应用，不导入 PWA 注册模块。
-- `electron-vite` 分别构建主进程、预加载脚本与共享渲染器；`electron-builder` 配置 Windows NSIS 安装包。
+- `electron-vite` 分别构建主进程、预加载脚本与共享渲染器；`electron-builder` 配置 Windows NSIS、Linux AppImage/deb、macOS dmg/zip 安装包。
 - 安装包使用安全的 `app://bundle/` scheme，启用 secure、standard 与 Fetch API 权限。资源处理器仅返回构建目录内真实文件；不存在的无扩展名路径回退到应用入口，缺失资源返回 404。
 - 窗口启用 sandbox、context isolation、webSecurity，关闭 Node integration 与 webview。所有权限请求默认拒绝。只允许主框架从受信任应用页读取只读运行信息；HTTP(S) 和有效 mailto 外链交给系统浏览器，Markdown 打印使用隔离的空白窗口。
 - `pnpm check` 全部通过：响应头与 PWA 构建检查、类型检查、零警告 lint、83 个测试文件共 523 项测试，以及 Web/Electron 两种生产构建。Electron 另有 3 项 Linux/Xvfb smoke 通过，覆盖安全应用来源、深层路由刷新和无 Node 能力的隔离打印窗口。
+- `.github/workflows/electron-desktop.yml` 为 Windows、Linux、macOS 原生 runner 添加打包和 Electron smoke 矩阵，并上传平台安装包；macOS 构建使用 runner 原生架构，签名/公证尚未配置。
+- Linux/x64 的 `pnpm electron:package:linux` 已产出 AppImage（约 185 MiB）与 deb（约 140 MiB）；跨平台 GitHub Actions 尚待首次运行验证。
 - 安全单元测试覆盖协议路径遍历和符号链接边界、可信来源、外链 scheme 与 CSP 完整性。打印 smoke 替换了阻塞式原生打印对话框，但实际 PDF 打印输出仍待桌面验收。
 
-试点尚未完成：摄像头/麦克风当前默认拒绝，需实现明确的本地授权流程；文件覆盖保存、媒体录制、Monaco Worker、第三方 Node 分支和相机设备切换仍需逐项验证。Linux 上的 NSIS 打包已生成 Windows x64 应用目录和压缩 payload，但因环境未安装 Wine，在最终 Windows 资源编辑步骤失败，未生成 `.exe` 安装器。仍需在 Windows 上构建和验收安装、签名、更新与卸载流程。
+试点尚未完成：摄像头/麦克风当前默认拒绝，需实现明确的本地授权流程；文件覆盖保存、媒体录制、Monaco Worker、第三方 Node 分支和相机设备切换仍需逐项验证。Linux 上的 NSIS 打包曾生成 Windows x64 应用目录和压缩 payload，但因环境未安装 Wine，在最终 Windows 资源编辑步骤失败，未生成 `.exe` 安装器；新增 CI 改为在 Windows 原生 runner 上构建。CI 首次执行结果及平台安装、签名、公证、更新与卸载验收仍待记录。

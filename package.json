@@ -2,6 +2,7 @@
   "name": "it-tools",
   "type": "module",
   "version": "2026.7.3-433a3f7",
+  "desktopName": "it-tools",
   "main": "out/main/main.cjs",
   "engines": {
     "node": ">=22",
@@ -41,6 +42,8 @@
     "electron:build": "cross-env NODE_OPTIONS=--max_old_space_size=4096 electron-vite build",
     "electron:preview": "electron-vite preview",
     "electron:package:win": "pnpm electron:build && electron-builder --win nsis",
+    "electron:package:linux": "pnpm electron:build && electron-builder --linux AppImage deb",
+    "electron:package:mac": "pnpm electron:build && electron-builder --mac dmg zip",
     "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.vite-config.json --composite false",
     "types:prepare": "node scripts/prepare-auto-imports.mjs",
@@ -72,6 +75,17 @@
     "win": {
       "target": "nsis",
       "icon": "public/it-tools.ico"
+    },
+    "linux": {
+      "target": ["AppImage", "deb"],
+      "category": "Utility",
+      "icon": "public/android-chrome-512x512.png",
+      "syncDesktopName": true
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.developer-tools",
+      "icon": "public/android-chrome-512x512.png"
     },
     "nsis": {
       "oneClick": false,
