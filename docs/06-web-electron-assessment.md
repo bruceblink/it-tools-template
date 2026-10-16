@@ -91,10 +91,11 @@ Electron 会增加运行时安全升级、安装包、签名、发布和更新�
 - 同一套 Vue 界面与 117 个工具路由用于 Web 和 Electron。桌面端独立 HTML 入口直接挂载共享应用，不导入 PWA 注册模块。
 - `electron-vite` 分别构建主进程、预加载脚本与共享渲染器；`electron-builder` 配置 Windows NSIS、Linux AppImage/deb、macOS dmg/zip 安装包。
 - 安装包使用安全的 `app://bundle/` scheme，启用 secure、standard 与 Fetch API 权限。资源处理器仅返回构建目录内真实文件；不存在的无扩展名路径回退到应用入口，缺失资源返回 404。
-- 窗口启用 sandbox、context isolation、webSecurity，关闭 Node integration 与 webview。所有权限请求默认拒绝。只允许主框架从受信任应用页读取只读运行信息；HTTP(S) 和有效 mailto 外链交给系统浏览器，Markdown 打印使用隔离的空白窗口。
-- `pnpm check` 全部通过：响应头与 PWA 构建检查、类型检查、零警告 lint、83 个测试文件共 523 项测试，以及 Web/Electron 两种生产构建。Electron 另有 3 项 Linux/Xvfb smoke 通过，覆盖安全应用来源、深层路由刷新和无 Node 能力的隔离打印窗口。
-- `.github/workflows/electron-desktop.yml` 为 Windows、Linux、macOS 原生 runner 添加打包和 Electron smoke 矩阵，并上传平台安装包；macOS 构建使用 runner 原生架构，签名/公证尚未配置。
+- 窗口启用 sandbox、context isolation、webSecurity，关闭 Node integration 与 webview。除摄像头录制工具触发的相机/麦克风请求外，其他权限默认拒绝。媒体请求只接受受信任应用来源下 `/camera-recorder` 主框架的请求；用户点击授权按钮后才发起请求。原生对话框默认拒绝，用户同意后仅在当前窗口内记住授权。只允许主框架从受信任应用页读取只读运行信息；HTTP(S) 和有效 mailto 外链交给系统浏览器，Markdown 打印使用隔离的空白窗口。
+- `pnpm check` 全部通过：响应头与 PWA 构建检查、类型检查、零警告 lint、84 个测试文件共 527 项测试，以及 Web/Electron 两种生产构建。Electron 另有 3 项 Linux/Xvfb smoke 通过，覆盖安全应用来源、深层路由刷新和无 Node 能力的隔离打印窗口。
+- `.github/workflows/electron-desktop.yml` 为 Windows、Linux、macOS 原生 runner 添加打包和 Electron smoke 矩阵，并上传平台安装包；推送构建和 PR 检查都以 `main` 为目标。macOS 构建使用 runner 原生架构，签名/公证尚未配置。
 - GitHub Actions [run #38859016796](https://github.com/bruceblink/it-tools-template/actions/runs/38859016796) 已通过全部平台：Windows x64 NSIS、Linux x64 AppImage/deb（本地包约 185/140 MiB）、macOS ARM64 dmg/zip 均成功构建，Electron smoke tests 通过，三个平台的安装包 artifact 均已上传。CI 明确关闭 electron-builder 的隐式发布行为。
-- 安全单元测试覆盖协议路径遍历和符号链接边界、可信来源、外链 scheme 与 CSP 完整性。打印 smoke 替换了阻塞式原生打印对话框，但实际 PDF 打印输出仍待桌面验收。
+- 安全单元测试覆盖协议路径遍历和符号链接边界、可信来源、外链 scheme、CSP 完整性，以及相机录制工具的媒体权限边界。打印 smoke 替换了阻塞式原生打印对话框，但实际 PDF 打印输出仍待桌面验收。
+- 本机 Electron smoke 本轮未能启动。`pnpm test:e2e:electron` 停在 Electron 44.8.0 运行时下载，没有生成运行时文件；本机窗口清单为空。Web 预览已显示相机页的授权按钮，但这不构成 Electron 原生授权对话框验收。
 
-试点尚未完成：摄像头/麦克风当前默认拒绝，需实现明确的本地授权流程；文件覆盖保存、媒体录制、Monaco Worker、第三方 Node 分支和相机设备切换仍需逐项验证。Linux 上的 NSIS 打包曾生成 Windows x64 应用目录和压缩 payload，但因环境未安装 Wine，在最终 Windows 资源编辑步骤失败，未生成 `.exe` 安装器；CI 已改为在 Windows 原生 runner 上构建。平台安装、macOS 签名与公证、更新和卸载验收仍待记录。
+试点尚未完成：应用现已提供受限的相机/麦克风原生授权流程，但实际设备访问、操作系统隐私设置拒绝后的恢复和相机设备切换仍需逐平台验证。文件覆盖保存、媒体录制、Monaco Worker 和第三方 Node 分支也仍需逐项验证。Linux 上的 NSIS 打包曾生成 Windows x64 应用目录和压缩 payload，但因环境未安装 Wine，在最终 Windows 资源编辑步骤失败，未生成 `.exe` 安装器；CI 已改为在 Windows 原生 runner 上构建。平台安装、macOS 签名与公证、更新和卸载验收仍待记录。

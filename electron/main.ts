@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   net,
   protocol,
@@ -18,6 +19,11 @@ import {
   resolveRendererFile,
   type SecurityHeaderConfig,
 } from './security';
+import {
+  getCheckedMediaType,
+  getRequestedMediaTypes,
+  type MediaDeviceType,
+} from './media-permissions';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -41,6 +47,9 @@ protocol.registerSchemesAsPrivileged([{
 
 let mainWindow: BrowserWindow | null = null;
 let trustedRendererUrl = APP_BASE_URL;
+// These window-scoped grants stay in memory and are discarded when their WebContents closes.
+const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
+const pendingMediaPrompts = new WeakMap<WebContents, Map<string, Promise<boolean>>>();
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
@@ -142,11 +151,95 @@ async function installAppProtocol() {
   });
 }
 
+// Keep the default-deny policy and grant only media access explicitly approved for Camera Recorder.
 function installPermissionPolicy() {
-  session.defaultSession.setPermissionCheckHandler(() => false);
-  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
-    callback(false);
+  session.defaultSession.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
+    if (!contents || contents !== mainWindow?.webContents) {
+      return false;
+    }
+
+    const mediaType = getCheckedMediaType(permission, requestingOrigin, details, trustedRendererUrl, contents.getURL());
+    return mediaType !== null && (grantedMediaTypes.get(contents)?.has(mediaType) ?? false);
   });
+
+  session.defaultSession.setPermissionRequestHandler((contents, permission, callback, details) => {
+    if (contents !== mainWindow?.webContents) {
+      callback(false);
+      return;
+    }
+
+    const mediaRequest = details as {
+      isMainFrame: boolean;
+      mediaTypes?: unknown;
+      requestingUrl?: string;
+      securityOrigin?: string;
+    };
+    const requestedTypes = getRequestedMediaTypes(permission, mediaRequest, trustedRendererUrl, contents.getURL());
+    if (requestedTypes.length === 0) {
+      callback(false);
+      return;
+    }
+
+    void confirmMediaAccess(contents, requestedTypes).then((allowed) => {
+      if (allowed && getRequestedMediaTypes(permission, mediaRequest, trustedRendererUrl, contents.getURL()).length > 0) {
+        const grants = grantedMediaTypes.get(contents) ?? new Set<MediaDeviceType>();
+        for (const mediaType of requestedTypes) {
+          grants.add(mediaType);
+        }
+        grantedMediaTypes.set(contents, grants);
+        callback(true);
+        return;
+      }
+
+      callback(false);
+    }).catch(() => callback(false));
+  });
+}
+
+// Ask once for each unapproved device set; missing windows and dialog failures deny access.
+async function confirmMediaAccess(contents: WebContents, requestedTypes: MediaDeviceType[]) {
+  const grants = grantedMediaTypes.get(contents) ?? new Set<MediaDeviceType>();
+  const typesNeedingConsent = requestedTypes.filter(mediaType => !grants.has(mediaType));
+  if (typesNeedingConsent.length === 0) {
+    return true;
+  }
+
+  const window = BrowserWindow.fromWebContents(contents);
+  if (!window || window.isDestroyed()) {
+    return false;
+  }
+
+  const key = [...typesNeedingConsent].sort().join(',');
+  const prompts = pendingMediaPrompts.get(contents) ?? new Map<string, Promise<boolean>>();
+  const existingPrompt = prompts.get(key);
+  if (existingPrompt) {
+    return existingPrompt;
+  }
+
+  const mediaLabel = typesNeedingConsent.map(type => type === 'video' ? 'the camera' : 'the microphone').join(' and ');
+  const prompt = dialog.showMessageBox(window, {
+    type: 'question',
+    title: 'Media access request',
+    message: `Allow Camera Recorder to access ${mediaLabel}?`,
+    detail: 'IT Tools can use these devices only in Camera Recorder in this window. This permission ends when the window closes.',
+    buttons: ['Allow', 'Deny'],
+    defaultId: 1,
+    cancelId: 1,
+  }).then(({ response }) => response === 0).catch(() => false);
+
+  prompts.set(key, prompt);
+  pendingMediaPrompts.set(contents, prompts);
+  try {
+    return await prompt;
+  }
+  finally {
+    if (prompts.get(key) === prompt) {
+      prompts.delete(key);
+    }
+    if (prompts.size === 0) {
+      pendingMediaPrompts.delete(contents);
+    }
+  }
 }
 
 function installRuntimeInfoIpc() {

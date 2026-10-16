@@ -12,7 +12,7 @@ const {
   isSupported,
   ensurePermissions,
 } = useDevicesList({
-  requestPermissions: true,
+  requestPermissions: false,
   constraints: { video: true, audio: true },
   onUpdated() {
     refreshCurrentDevices();
@@ -23,7 +23,8 @@ const video = ref<HTMLVideoElement>();
 const medias = ref<Media[]>([]);
 const currentCamera = ref(cameras.value[0]?.deviceId);
 const currentMicrophone = ref(microphones.value[0]?.deviceId);
-const permissionCannotBePrompted = ref(false);
+const permissionRequestFailed = ref(false);
+const isDesktop = Boolean(window.itToolsDesktop);
 
 const {
   stream,
@@ -87,11 +88,12 @@ watchEffect(() => {
 onBeforeUnmount(() => stop());
 
 async function requestPermissions() {
+  permissionRequestFailed.value = false;
   try {
-    await ensurePermissions();
+    permissionRequestFailed.value = !(await ensurePermissions());
   }
-  catch (e) {
-    permissionCannotBePrompted.value = true;
+  catch {
+    permissionRequestFailed.value = true;
   }
 }
 
@@ -112,12 +114,17 @@ function downloadMedia({ type, value, createdAt }: Media) {
     <c-card v-else-if="!permissionGranted" text-center>
       You need to grant permission to use your camera and microphone
 
-      <c-alert v-if="permissionCannotBePrompted" mt-4 text-left>
-        Your browser has blocked permission request or does not support it. You need to grant permission manually in
-        your browser settings (usually the lock icon in the address bar).
+      <c-alert v-if="permissionRequestFailed" mt-4 text-left>
+        <template v-if="isDesktop">
+          Permission was denied or blocked. Check your operating system's camera and microphone privacy settings, then try again.
+        </template>
+        <template v-else>
+          Your browser has blocked permission request or does not support it. You need to grant permission manually in
+          your browser settings (usually the lock icon in the address bar).
+        </template>
       </c-alert>
 
-      <div v-else mt-4 flex justify-center>
+      <div mt-4 flex justify-center>
         <c-button @click="requestPermissions">
           Grant permission
         </c-button>
