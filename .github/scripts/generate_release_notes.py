@@ -102,7 +102,7 @@ def previous_tag(tag: str) -> str | None:
 
 def release_date(tag: str) -> str:
     """Use the tagged commit date so rerunning a release stays deterministic."""
-    return git("show", "-s", "--format=%cs", tag).strip() or dt.date.today().isoformat()
+    return git("log", "-1", "--format=%cs", tag).strip() or dt.date.today().isoformat()
 
 
 def classify(commit_type: str) -> str:
