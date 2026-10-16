@@ -118,6 +118,8 @@ The PWA precaches the application shell and caches tool assets after use. It sto
 
 Every production build writes `dist/bundle-report.json` with raw and gzip sizes for the shell, optional entry dependency closures, and emitted runtime assets, including workers. Builds fail when the initial precache exceeds 8 MiB. The 300 KiB initial JavaScript and 500 KiB optional entry targets remain visible in the report; they are not yet enforced. CI uploads the report as an artifact. After building, run the focused offline acceptance with `pnpm test:e2e src/pwa-cache.e2e.spec.ts`.
 
+The Electron Windows pilot shares the Vue interface and tool routes. Install the local Electron runtime once with `pnpm exec install-electron`, then use `pnpm electron:dev` for development, `pnpm electron:build` for the desktop build, and `pnpm electron:package:win` on Windows (or Linux with Wine) to create an NSIS installer. After building, run the Electron smoke checks with `pnpm test:e2e:electron`. The desktop renderer uses a secure local `app://` origin, does not register the Web Service Worker, and keeps Node access in a sandboxed preload bridge. Camera permission handling and Windows installation/upgrade testing remain in progress.
+
 The feasibility and value of sharing the current web interface with an Electron desktop app are assessed in [Web and Electron Assessment](docs/06-web-electron-assessment.md).
 
 Deployment headers are generated from `security-headers.json`. Run `pnpm headers:sync` after editing that source and `pnpm headers:check` to detect drift. A custom Plausible API requires the same exact HTTPS origin in `plausibleApiOrigin` and `VITE_PLAUSIBLE_API_HOST`; run the sync/check commands with that build variable set.

@@ -2,6 +2,7 @@
   "name": "it-tools",
   "type": "module",
   "version": "2026.7.3-433a3f7",
+  "main": "out/main/main.cjs",
   "engines": {
     "node": ">=22",
     "npm": "please-use-pnpm"
@@ -35,21 +36,47 @@
     "test:unit": "vitest --environment jsdom",
     "test:e2e": "playwright test",
     "test:e2e:dev": "cross-env BASE_URL=http://localhost:5173 NO_WEB_SERVER=true playwright test",
+    "test:e2e:electron": "playwright test --config=playwright.electron.config.ts",
+    "electron:dev": "electron-vite dev",
+    "electron:build": "cross-env NODE_OPTIONS=--max_old_space_size=4096 electron-vite build",
+    "electron:preview": "electron-vite preview",
+    "electron:package:win": "pnpm electron:build && electron-builder --win nsis",
     "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.vite-config.json --composite false",
     "types:prepare": "node scripts/prepare-auto-imports.mjs",
     "typecheck:app": "pnpm types:prepare && vue-tsc --noEmit -p tsconfig.vitest.json --composite false",
-    "lint": "eslint \"src/**/*.{ts,tsx,vue}\" \"vite.config.ts\"",
+    "typecheck:electron": "tsc --noEmit -p tsconfig.electron.json --composite false",
+    "lint": "eslint \"src/**/*.{ts,tsx,vue}\" \"electron/**/*.{ts,tsx}\" \"electron-renderer/**/*.{ts,tsx}\" \"vite.config.ts\" \"electron.vite.config.ts\" \"vite.plugins.ts\" --max-warnings 0",
     "headers:sync": "node scripts/sync-security-headers.mjs",
     "headers:check": "node scripts/sync-security-headers.mjs --check && node --test scripts/sync-security-headers.test.mjs scripts/check-nginx-security-headers.test.mjs",
     "headers:docker": "node scripts/check-nginx-security-headers.mjs --dist-ready",
     "test:pwa:build": "node --test scripts/pwa-cache.test.mjs",
-    "check": "pnpm headers:check && pnpm test:pwa:build && pnpm typecheck && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build",
+    "check": "pnpm headers:check && pnpm test:pwa:build && pnpm typecheck && pnpm typecheck:electron && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build && pnpm electron:build",
     "validate": "pnpm check",
     "script:create:tool": "node scripts/create-tool.mjs",
     "script:create:ui": "hygen generator ui-component",
     "release": "node ./scripts/release.mjs",
     "release:dry-run": "node ./scripts/release.mjs --dry-run"
+  },
+  "build": {
+    "appId": "org.it-tools.desktop",
+    "productName": "IT Tools",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/it-tools.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "pnpm": {
     "overrides": {
@@ -58,7 +85,12 @@
     "patchedDependencies": {
       "iarna-toml-esm@3.0.5": "patches/iarna-toml-esm@3.0.5.patch",
       "vuedraggable@4.1.0": "patches/vuedraggable@4.1.0.patch"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "electron",
+      "esbuild"
+    ]
   },
   "dependencies": {
     "@it-tools/bip39": "^0.0.4",
@@ -136,6 +168,7 @@
     "@iconify-json/mdi": "^1.2.3",
     "@intlify/unplugin-vue-i18n": "^11.0.7",
     "@playwright/test": "^1.58.2",
+    "@swc/core": "^1.16.18",
     "@tsconfig/node18": "^18.2.6",
     "@types/crypto-js": "^4.2.2",
     "@types/jsdom": "^27.0.0",
@@ -155,6 +188,9 @@
     "@vue/tsconfig": "^0.8.1",
     "consola": "^3.4.2",
     "cross-env": "^10.1.0",
+    "electron": "44.8.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "6.0.0",
     "eslint": "^10.1.0",
     "eslint-plugin-vue": "^10.8.0",
     "hygen": "^6.2.11",

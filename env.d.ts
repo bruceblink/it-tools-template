@@ -15,6 +15,7 @@ interface ImportMetaEnv {
   REPOSITORY_URL: string;
   GIT_SHORT_SHA: string;
   PROD: boolean;
+  ELECTRON: boolean;
 }
 
 interface ImportMeta {

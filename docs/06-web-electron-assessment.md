@@ -1,12 +1,12 @@
 # Web 与 Electron 共用界面的评估
 
-日期：2026-10-15。评估基于本仓库当前 Vue 应用和本轮安全批次。本文是技术评估与后续建议，不表示已实现或验收桌面应用。
+评估日期：2026-10-15。实施开始：2026-10-16。评估基于本仓库当前 Vue 应用和本轮安全批次；下文保留原始技术评估，并在末尾记录当前 Electron 试点实现与验收状态。
 
 ## 结论
 
 同时开发 Web 和 Electron、复用当前 Web 界面具有较高可行性。建议同一仓库维护同一套 Vue 界面和工具逻辑，只增加桌面启动入口、平台适配层与桌面发布流程。无需复制一套桌面组件、工具注册表或翻译。
 
-当前缺少明确的桌面专属需求，因此暂不建议立即建立完整的 Electron 发布线。先按 [PWA 计划](05-pwa-cache-plan.md) 完成应用壳与访问后离线缓存。若确认需要全局快捷键、系统文件操作、受管安装或应用商店之外的离线安装包，再做 Windows 小范围试点。
+用户已明确要求在 PWA 首片完成后将主开发切换到 Electron。按本文建议先做 Windows 小范围试点，不启动多平台签名发布线。该排期决定不等于所有桌面专属需求已经确认；原型仍需通过代表工具兼容、系统权限、安装升级和体积测量来判断后续投入。
 
 “可行性较高”是源码评估结论。仓库没有 Electron 原型和逐工具兼容记录，不能据此承诺全部工具直接兼容，也不能给出可信的代码复用百分比。
 
@@ -18,11 +18,11 @@
 - 进程间通信（Inter-Process Communication / IPC）：调用有明确参数与返回值的原生操作；不提供任意 Shell、文件路径或网络代理。
 - 渐进式 Web 应用（Progressive Web App / PWA）：当前 Web 的安装与离线能力。桌面安装包的更新流程与 PWA Service Worker 更新分别管理。
 
-当前项目注册 117 个工具，使用 Vue、Naive UI、Pinia、UnoCSS 和 vue-i18n。[工具注册表](../src/tools/index.ts) 由 [路由](../src/router.ts) 直接复用，具体工具组件继续懒加载。[应用入口](../src/main.ts) 统一挂载界面并注册 Service Worker。[依赖与脚本](../package.json) 尚未包含 Electron 主进程、打包或桌面更新流程。
+当前项目注册 117 个工具，使用 Vue、Naive UI、Pinia、UnoCSS 和 vue-i18n。[工具注册表](../src/tools/index.ts) 由 [路由](../src/router.ts) 直接复用，具体工具组件继续懒加载。共享界面初始化位于 [src/app.ts](../src/app.ts)；Web 入口注册 Service Worker，独立桌面渲染入口跳过该步骤。[依赖与脚本](../package.json) 现已包含 Electron 主进程、预加载层和 Windows NSIS 打包配置。
 
 第一方界面代码以浏览器为运行目标。第三方依赖仍存在 Node 分支：生产构建保留 `mime-types` 的 `path`、`pdf-signature-reader` 的 `tls` 外部化提示，以及 `js-sha256` Node 分支的 `eval` 提示。这些提示不证明对应分支已执行或造成故障，但相关功能必须在双端实际验证。不能通过启用渲染器 Node 集成来替代兼容修复。
 
-当前 PWA 构建预缓存约 22.8 MiB。该数字是 Web 构建资源大小，不是 Electron 安装包大小。桌面包还包含运行时；安装体积、启动时间和内存必须在原型中测量。
+原始 PWA 构建曾预缓存约 22.8 MiB；应用壳首片已降至约 1.17 MiB，当前预算与剩余优化见 [PWA 实施记录](05-pwa-cache-plan.md)。这些数字都不是 Electron 安装包大小。桌面包还包含运行时；安装体积、启动时间和内存必须在试点中测量。
 
 ## 共用范围与平台边界
 
@@ -35,7 +35,7 @@
 | 权限与外链 | 共享功能提示、拒绝后的界面和错误处理 | Electron 主进程限制导航、新窗口、外链与设备权限 |
 | 验证与发布 | 同一提交、锁文件、共享测试和功能验收条件 | Web 部署与各目标操作系统的安装、签名、升级分别验证 |
 
-建议新增 `src/platform/` 定义少量能力接口，Web 与 Electron 分别实现。接口应描述用户动作，例如“保存这份文件”，而不是暴露任意路径写入。新增 `electron/main.ts`、`electron/preload.ts` 与独立桌面构建配置；现有 `src/` 继续作为共享界面源码。以上路径是建议，当前尚未创建。
+共享初始化已抽到 `src/app.ts`。桌面原型新增 `electron/main.ts`、`electron/preload.ts`、`electron/security.ts` 和 `electron.vite.config.ts`；安全本地协议提供 SPA 路由回退并阻止越界路径，预加载只暴露只读运行信息 IPC。后续需要文件保存对话框等原生能力时，再新增窄化的平台接口，不暴露任意路径写入。
 
 平台判断和 IPC 调用集中在适配层。共享组件不得散布 Electron 判断，也不应各维护一套工具列表、翻译或业务状态。每次共享变更从同一提交生成 Web 与桌面构建，避免界面和行为分叉。
 
@@ -82,4 +82,17 @@ Electron 会增加运行时安全升级、安装包、签名、发布和更新�
 
 本次子代理只读评估，没有添加 Electron 依赖、创建桌面入口、打包、签名或运行原生桌面窗口。README 中的 `https://tools.likanug.app` 取样返回 200，页面含本仓库标识；canonical 仍指向上游，无法证明线上样本对应本地 HEAD。上游 `it-tools.tech` 没有作为本仓库部署证据。
 
-本轮先完成安全批次的检查、提交与推送，并记录本评估。后续开发仍按 [主开发计划](01-development-plan.md) 推进；本评估不自动启动 Electron 开发。
+本轮已按用户指示切换到 Windows Electron 试点；桌面构建、无头 smoke、跨平台和真实 Windows 验收结果追加在下方执行记录。Electron 不会通过启用 Renderer Node 集成或放宽 CSP 来绕过兼容问题。
+
+## Electron 实施记录
+
+当前实现：
+
+- 同一套 Vue 界面与 117 个工具路由用于 Web 和 Electron。桌面端独立 HTML 入口直接挂载共享应用，不导入 PWA 注册模块。
+- `electron-vite` 分别构建主进程、预加载脚本与共享渲染器；`electron-builder` 配置 Windows NSIS 安装包。
+- 安装包使用安全的 `app://bundle/` scheme，启用 secure、standard 与 Fetch API 权限。资源处理器仅返回构建目录内真实文件；不存在的无扩展名路径回退到应用入口，缺失资源返回 404。
+- 窗口启用 sandbox、context isolation、webSecurity，关闭 Node integration 与 webview。所有权限请求默认拒绝。只允许主框架从受信任应用页读取只读运行信息；HTTP(S) 和有效 mailto 外链交给系统浏览器，Markdown 打印使用隔离的空白窗口。
+- `pnpm check` 全部通过：响应头与 PWA 构建检查、类型检查、零警告 lint、83 个测试文件共 523 项测试，以及 Web/Electron 两种生产构建。Electron 另有 3 项 Linux/Xvfb smoke 通过，覆盖安全应用来源、深层路由刷新和无 Node 能力的隔离打印窗口。
+- 安全单元测试覆盖协议路径遍历和符号链接边界、可信来源、外链 scheme 与 CSP 完整性。打印 smoke 替换了阻塞式原生打印对话框，但实际 PDF 打印输出仍待桌面验收。
+
+试点尚未完成：摄像头/麦克风当前默认拒绝，需实现明确的本地授权流程；文件覆盖保存、媒体录制、Monaco Worker、第三方 Node 分支和相机设备切换仍需逐项验证。Linux 上的 NSIS 打包已生成 Windows x64 应用目录和压缩 payload，但因环境未安装 Wine，在最终 Windows 资源编辑步骤失败，未生成 `.exe` 安装器。仍需在 Windows 上构建和验收安装、签名、更新与卸载流程。

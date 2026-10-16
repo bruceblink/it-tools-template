@@ -1,6 +1,6 @@
 {
   "extends": "@tsconfig/node18/tsconfig.json",
-  "include": ["vite.config.*"],
+  "include": ["vite.config.*", "electron.vite.config.ts", "vite.plugins.ts"],
   "compilerOptions": {
     "composite": true,
     "lib": ["ES2022"],
