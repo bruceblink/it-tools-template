@@ -84,21 +84,20 @@ def github_repository(explicit: str | None) -> str:
 
 
 def previous_tag(tag: str) -> str | None:
-    """Find the newest version tag before the current tag on its reachable history."""
-    tags = git(
-        "tag",
-        "--merged",
-        tag,
-        "--list",
-        "*",
-        "--sort=-version:refname",
-    ).splitlines()
-    candidates = [candidate.strip() for candidate in tags if candidate.strip() != tag]
-    if tag.startswith("v"):
-        candidates = [candidate for candidate in candidates if candidate.startswith("v")]
-    elif tag[0].isdigit():
-        candidates = [candidate for candidate in candidates if candidate[0].isdigit()]
-    return next((candidate for candidate in candidates if TAG_RE.fullmatch(candidate)), None)
+    """Find the closest version tag in the current tag's commit ancestry."""
+    tag_pattern = "v*" if tag.startswith("v") else "[0-9]*"
+    try:
+        candidate = git(
+            "describe",
+            "--tags",
+            "--abbrev=0",
+            "--match",
+            tag_pattern,
+            f"{tag}^",
+        ).strip()
+    except subprocess.CalledProcessError:
+        return None
+    return candidate if candidate != tag and TAG_RE.fullmatch(candidate) else None
 
 
 def release_date(tag: str) -> str:

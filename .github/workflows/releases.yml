@@ -56,6 +56,75 @@ jobs:
           path: it-tools-${{ needs.prepare.outputs.release_version }}.zip
           if-no-files-found: error
 
+  electron-release:
+    name: ${{ matrix.platform }} desktop release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    needs:
+      - prepare
+      - quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            package-script: electron:package:linux
+          - os: macos-latest
+            platform: macos
+            package-script: electron:package:mac
+          - os: windows-latest
+            platform: windows
+            package-script: electron:package:win
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Electron runtime
+        run: pnpm exec install-electron
+
+      - name: Build desktop packages
+        run: pnpm ${{ matrix.package-script }}
+
+      - name: Install Linux display dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes xvfb xauth x11-utils
+
+      - name: Run Electron smoke tests on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e:electron
+
+      - name: Run Electron smoke tests
+        if: matrix.platform != 'linux'
+        run: pnpm test:e2e:electron
+
+      - name: Upload desktop packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+          if-no-files-found: error
+          retention-days: 7
+
   docker-release:
     runs-on: ubuntu-latest
     needs:
@@ -105,6 +174,7 @@ jobs:
       - prepare
       - quality
       - docker-release
+      - electron-release
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
@@ -115,6 +185,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: it-tools-${{ needs.prepare.outputs.release_version }}
+
+      - name: Download desktop packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: desktop
+          merge-multiple: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -136,6 +213,16 @@ jobs:
           {
             cat release-notes.md
             echo
+            echo "## 🌐 Web 应用 / Web App"
+            echo
+            echo "- \`it-tools-${RELEASE_VERSION}.zip\`"
+            echo
+            echo "## 🖥️ 桌面版 / Desktop Apps"
+            echo
+            echo "- Windows x64: NSIS installer"
+            echo "- Linux x64: AppImage and Debian package"
+            echo "- macOS ARM64: DMG and ZIP"
+            echo
             echo "## 📦 Docker 镜像 / Docker Images"
             echo
             echo "- \`bruceblink/it-tools:latest\`"
@@ -148,9 +235,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: it-tools-${{ needs.prepare.outputs.release_version }}.zip
+          files: |
+            it-tools-${{ needs.prepare.outputs.release_version }}.zip
+            desktop/**/*
           tag_name: ${{ needs.prepare.outputs.release_tag }}
-          draft: true
+          draft: false
           prerelease: false
           body_path: release-body.md
           generate_release_notes: false
