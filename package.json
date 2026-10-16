@@ -43,7 +43,8 @@
     "headers:sync": "node scripts/sync-security-headers.mjs",
     "headers:check": "node scripts/sync-security-headers.mjs --check && node --test scripts/sync-security-headers.test.mjs scripts/check-nginx-security-headers.test.mjs",
     "headers:docker": "node scripts/check-nginx-security-headers.mjs --dist-ready",
-    "check": "pnpm headers:check && pnpm typecheck && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build",
+    "test:pwa:build": "node --test scripts/pwa-cache.test.mjs",
+    "check": "pnpm headers:check && pnpm test:pwa:build && pnpm typecheck && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build",
     "validate": "pnpm check",
     "script:create:tool": "node scripts/create-tool.mjs",
     "script:create:ui": "hygen generator ui-component",
@@ -171,6 +172,11 @@
     "vitest": "^4.1.2",
     "vue-eslint-parser": "^10.4.0",
     "workbox-build": "^7.4.0",
+    "workbox-core": "7.4.0",
+    "workbox-expiration": "7.4.0",
+    "workbox-precaching": "7.4.0",
+    "workbox-routing": "7.4.0",
+    "workbox-strategies": "7.4.0",
     "workbox-window": "^7.4.0",
     "zx": "^8.8.5"
   }

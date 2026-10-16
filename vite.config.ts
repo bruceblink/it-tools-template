@@ -16,6 +16,7 @@ import markdown from 'unplugin-vue-markdown/vite';
 import svgLoader from 'vite-svg-loader';
 import { configDefaults } from 'vitest/config';
 import pkg from './package.json';
+import { filterAppShell, runtimeAssetsPlugin } from './scripts/pwa-cache.mjs';
 
 const baseUrl = process.env.BASE_URL ?? '/';
 
@@ -56,10 +57,25 @@ export default defineConfig({
     svgLoader(),
     VitePWA({
       registerType: 'autoUpdate',
-      strategies: 'generateSW',
-      workbox: {
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      includeManifestIcons: false,
+      injectManifest: {
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2,ttf,otf,wasm,webmanifest}'],
+      },
+      integration: {
+        configureOptions(viteConfig, options) {
+          const directory = resolve(viteConfig.root, viteConfig.build.outDir);
+          const additionalEntries: import('workbox-build').ManifestEntry[] = [];
+          options.injectManifest = {
+            ...options.injectManifest,
+            additionalManifestEntries: additionalEntries,
+            manifestTransforms: [entries => filterAppShell(directory, entries, additionalEntries)],
+            plugins: [runtimeAssetsPlugin(directory)],
+          };
+        },
       },
       manifest: {
         name: 'IT Tools',
@@ -122,5 +138,6 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    manifest: true,
   },
 });

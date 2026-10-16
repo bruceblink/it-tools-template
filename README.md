@@ -104,7 +104,7 @@ pnpm test
 pnpm validate
 ```
 
-`pnpm validate` runs `pnpm check`: deployment header consistency and script tests, build configuration types, application and test types, lint with zero warnings, unit tests, and the production build. Run browser acceptance separately with `pnpm test:e2e` after building the app.
+`pnpm validate` runs `pnpm check`: deployment header consistency and script tests, PWA build-boundary tests, build configuration types, application and test types, lint with zero warnings, unit tests, and the production build. Run browser acceptance separately with `pnpm test:e2e` after building the app.
 
 `auto-imports.d.ts` is generated locally and ignored by Git. `pnpm typecheck:app` prepares it automatically, so typechecking also works from a clean checkout.
 
@@ -113,6 +113,10 @@ The development roadmap is in [Development Plan](docs/01-development-plan.md). T
 The two security tasks and their acceptance results are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
 
 Content privacy, sanitized rendering, and deployment headers are described in [Content, HTML, and Deployment Boundaries](docs/04-security-boundaries.md). The credential, request, configuration, and document inputs covered there stay in page memory; existing display and processing preferences may still be saved.
+
+The PWA precaches the application shell and caches tool assets after use. It stores only same-origin build resources, with a 160-entry, 30-day limit for each build and service-worker scope. Offline availability depends on those resources remaining in browser storage. Build budgets, cache boundaries, and remaining performance work are documented in [Application Shell and Offline Cache](docs/05-pwa-cache-plan.md).
+
+Every production build writes `dist/bundle-report.json` with raw and gzip sizes for the shell, optional entry dependency closures, and emitted runtime assets, including workers. Builds fail when the initial precache exceeds 8 MiB. The 300 KiB initial JavaScript and 500 KiB optional entry targets remain visible in the report; they are not yet enforced. CI uploads the report as an artifact. After building, run the focused offline acceptance with `pnpm test:e2e src/pwa-cache.e2e.spec.ts`.
 
 The feasibility and value of sharing the current web interface with an Electron desktop app are assessed in [Web and Electron Assessment](docs/06-web-electron-assessment.md).
 
