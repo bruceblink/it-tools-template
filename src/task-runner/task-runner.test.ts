@@ -201,6 +201,18 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the environment parser input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('env-vars-parser', 1, {
+      kind: 'env-vars-parser',
+      value: 'x'.repeat(taskLimits.envVarsParser.maxInputBytes + 1),
+      outputFormat: 'json',
+    }, taskLimits.envVarsParser);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

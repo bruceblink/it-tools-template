@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { assertWorkerOutputSize, executeWorkerTask, TaskExecutionError } from './task-runner.dispatch';
+import { taskLimits } from './task-runner.types';
 
 function expectTaskFailure(run: () => void, code: TaskExecutionError['code']): void {
   let failure: unknown;
@@ -49,6 +50,28 @@ describe('task runner worker dispatch', () => {
       valid: false,
       output: '',
     });
+  });
+
+  it('parses environment variables once and formats the selected output in the worker', () => {
+    const result = executeWorkerTask({
+      kind: 'env-vars-parser',
+      value: 'GOOD=one\nBAD-NAME=value',
+      outputFormat: 'json',
+    });
+
+    expect(result).toMatchObject({
+      kind: 'env-vars-parser',
+      result: {
+        variables: [{ key: 'GOOD', value: 'one' }],
+        summary: { totalVariables: 1, errorCount: 1 },
+      },
+      output: '{\n  "GOOD": "one"\n}',
+    });
+  });
+
+  it('rejects environment inputs above the worker line limit', () => {
+    const value = Array.from({ length: taskLimits.envVarsParser.maxLines + 1 }, () => 'KEY=value').join('\n');
+    expectTaskFailure(() => executeWorkerTask({ kind: 'env-vars-parser', value, outputFormat: 'json' }), 'input-limit');
   });
 
   it('formats JSON5 in the worker with sorting and indentation options', () => {

@@ -323,7 +323,10 @@ export function parseEnvVars(input: string): EnvParseResult {
 }
 
 export function formatEnvVars(input: string, format: EnvOutputFormat): string {
-  const result = parseEnvVars(input);
+  return formatEnvVarsResult(parseEnvVars(input), format);
+}
+
+export function formatEnvVarsResult(result: EnvParseResult, format: EnvOutputFormat): string {
 
   if (format === 'json') {
     return JSON.stringify(result.json, null, 2);

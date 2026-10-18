@@ -9,6 +9,7 @@ import { convertJsonLines, JsonLinesConversionError } from '@/tools/json-lines-c
 import { sortJsonText } from '@/tools/json-key-sorter/json-key-sorter.service';
 import { formatJson } from '@/tools/json-viewer/json.models';
 import { formatYaml } from '@/tools/yaml-viewer/yaml-models';
+import { formatEnvVarsResult, parseEnvVars } from '@/tools/env-vars-parser/env-vars-parser.service';
 import { matchRegex, summarizeRegexMatches } from '@/tools/regex-tester/regex-tester.service';
 import { executeConversionTask } from './conversion-tasks';
 import { taskLimits } from './task-runner.types';
@@ -69,6 +70,18 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
     catch {
       return { kind: 'json-minify', valid: false, output: '' };
     }
+  }
+
+  if (task.kind === 'env-vars-parser') {
+    if (countLines(task.value) > (taskLimits.envVarsParser.maxLines ?? Number.MAX_SAFE_INTEGER)) {
+      throw new TaskExecutionError('input-limit');
+    }
+    const result = parseEnvVars(task.value);
+    return {
+      kind: 'env-vars-parser',
+      result,
+      output: formatEnvVarsResult(result, task.outputFormat),
+    };
   }
 
   if (task.kind === 'json-viewer') {

@@ -179,13 +179,14 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、JSON to CSV、JSON Lines、XML 和 YAML 的代表性转换已迁移到共享任务执行器。TOML 转换及其他大输入工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化和 Environment Variables Parser 已迁移到任务执行器。cURL Code Generator 等其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
 - XML 格式化、XML/JSON 互转和 YAML/JSON 互转的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒。XML 格式校验和转换都在 Worker 内运行，避免校验先在页面线程解析大输入。
 - Worker 和页面离开时取消的任务都会终止对应 Worker。后续仍需验证 Worker、监听器和媒体资源在连续切换 20 轮后的计数与回收。
 - TOML 的 JSON、YAML 双向转换已迁入共享 Worker。其余大输入工具仍需逐项设定字节、行数和输出上限。确需整体载入的算法要先检查大小；批量文件再评估流式处理。
+- SQL Formatter 使用独立 Worker，避免把 `sql-formatter` 加入共享 Worker；输入最多 256 KiB，输出最多 2 MiB，运行最多 10 秒。Environment Variables Parser 使用共享 Worker，一次解析后同时返回诊断与所选格式；输入最多 256 KiB、2,000 行，输出最多 2 MiB，运行最多 10 秒。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
@@ -483,3 +484,7 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 本轮 YAML Viewer Worker 迁移（2026-10-19）：YAML 解析、排序和格式化现在通过共享任务 Worker 执行。原有排序、缩进和本地设置键保持不变。输入上限为 256 KiB，输出上限为 2 MiB，执行超时为 10 秒。`pnpm check` 通过 102 个测试文件、648 项单元测试，并完成 Web 与 Electron 构建。Chromium 定向 E2E 的 1 项测试通过，覆盖排序、格式化和无效 YAML 提示。Worker 构建大小为 Web 237.33 KiB、Electron 495.86 KiB。此片没有运行时耗时对照或真实窗口交互证据。下一步评估 SQL Formatter 的同步格式化路径与代表性输入成本，再决定是否迁移。
 
 本轮 SQL Formatter 专用 Worker 迁移（2026-10-19）：SQL 格式化现在通过独立 Worker 执行，并由任务调度器限制并发、取消旧输入和处理超时。Worker 保留 13 种 SQL 方言、关键字大小写和缩进选项。输入上限为 256 KiB，输出上限为 2 MiB，执行超时为 10 秒。SQL Formatter 只进入 SQL 专用 Worker；共享 Worker 构建从 Web 237.33 KiB 增至 237.41 KiB、从 Electron 495.86 KiB 增至 495.96 KiB。SQL 专用 Worker 分别为 Web 293.55 KiB、Electron 488.18 KiB。`pnpm check` 通过 103 个测试文件、651 项单元测试，并完成类型检查、lint、Web 与 Electron 构建。Chromium 定向 E2E 的 1 项测试通过，覆盖格式化和清空旧结果。本片没有运行时耗时对照，也没有真实窗口交互证据，因此不能量化响应时间改善。下一步重新盘点仍在主线程执行的高成本工具，并用代表性输入先确认瓶颈，再选择迁移范围。
+
+本轮 Environment Variables Parser Worker 迁移（2026-10-19）：环境变量解析、诊断统计和所选格式的输出生成现在在一次共享 Worker 任务中完成。页面不再在输入校验、统计和输出计算中重复解析。原有 JSON、`.env`、Shell 与 Docker Compose 输出，以及变量表、诊断表和错误提示保持不变。输入上限为 256 KiB、2,000 行，结构化输出上限为 2 MiB，任务超时为 10 秒。为筛选同步路径，Windows 11 工作站版、AMD Ryzen 9 5900X、Node.js 24.15.0 上先预热一次，再对每个输入测量 5 次。合成输入 17,779 字节 / 1,000 行时，解析中位数 / 最大值为 1.82 / 2.47 毫秒；97,779 字节 / 5,000 行为 7.48 / 9.70 毫秒；197,779 字节 / 10,000 行为 14.59 / 23.56 毫秒；637,779 字节 / 30,000 行为 50.27 / 51.85 毫秒。此基准只测 Node.js 中单次解析，不包含浏览器输入、表格渲染或端到端 p95。最后一组输入超过本功能的 Worker 上限，只用于确认大输入会增加同步解析成本。
+
+`pnpm check` 通过 103 个测试文件、654 项单元测试，并完成类型检查、lint、Web 与 Electron 构建。Chromium 定向 E2E 的 1 项测试通过，覆盖 Worker 解析、语法诊断、结果表和清空旧输出。共享 Worker 构建为 Web 241.25 KiB、Electron 504.31 KiB。此片没有运行时浏览器耗时对照或真实窗口交互证据，不能量化用户操作的响应时间改善。下一步测量 cURL Code Generator 的同步解析路径；只有代表性大输入显示出页面阻塞风险时再迁移。
