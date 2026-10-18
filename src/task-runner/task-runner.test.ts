@@ -225,6 +225,17 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the math evaluator input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('math-evaluator', 1, {
+      kind: 'math-evaluate',
+      value: 'x'.repeat(taskLimits.mathEvaluator.maxInputBytes + 1),
+    }, taskLimits.mathEvaluator);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

@@ -28,6 +28,7 @@ export type WorkerTask =
   | { kind: 'env-vars-parser'; value: string; outputFormat: EnvOutputFormat }
   | { kind: 'bcrypt-hash'; value: string; saltRounds: number }
   | { kind: 'bcrypt-compare'; value: string; hash: string }
+  | { kind: 'math-evaluate'; value: string }
   | { kind: 'json-minify'; value: string }
   | { kind: 'csv-to-json'; value: string; options: CsvToJsonOptions }
   | { kind: 'json-to-csv'; value: string }
@@ -49,6 +50,7 @@ export type WorkerTaskResult =
   | { kind: 'env-vars-parser'; result: EnvParseResult; output: string }
   | { kind: 'bcrypt-hash'; hash: string }
   | { kind: 'bcrypt-compare'; matches: boolean }
+  | { kind: 'math-evaluate'; valid: boolean; output: string; errorCode?: 'limit' | 'invalid' }
   | { kind: 'json-diff'; leftValid: boolean; rightValid: boolean; result?: Difference }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
@@ -143,6 +145,11 @@ export const taskLimits = {
     maxInputBytes: 64 * 1024,
     maxOutputBytes: 4 * 1024,
   },
+  mathEvaluator: {
+    timeoutMs: 2_000,
+    maxInputBytes: 64 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+  },
   jsonMinify: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
@@ -173,4 +180,4 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;

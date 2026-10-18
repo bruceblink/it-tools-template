@@ -297,6 +297,8 @@ tools:
   math-evaluator:
     title: Math evaluator
     description: A calculator for evaluating mathematical expressions. You can use functions like sqrt, cos, sin, abs, etc.
+    calculationLimit: This expression exceeds the calculation limits. Use a smaller matrix or range.
+    invalidExpression: Expression could not be evaluated.
 
   json-to-yaml-converter:
     title: JSON to YAML converter
