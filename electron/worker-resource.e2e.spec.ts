@@ -4,17 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { cpus, tmpdir, totalmem } from 'node:os';
 import { dirname, join, relative, resolve, sep } from 'node:path';
-
-interface HeapGroup {
-  count: number;
-  selfSizeBytes: number;
-}
-
-interface HeapSnapshotSummary {
-  nodeCount: number;
-  selfSizeBytes: number;
-  groups: Record<string, HeapGroup>;
-}
+import { analyzeHeapSnapshot } from '../scripts/heap-snapshot-analysis.mjs';
+import type { HeapSnapshotAnalysis, HeapSnapshotInput } from '../scripts/heap-snapshot-analysis.mjs';
 
 interface ListenerCounts {
   window: number;
@@ -82,10 +73,12 @@ test('records worker, global listener, and heap state after 20 TOML route cycles
   await cdp.send('HeapProfiler.collectGarbage');
   const listenersBefore = await readGlobalListenerCounts(cdp);
   const heapBefore = await cdp.send('Runtime.getHeapUsage');
-  const snapshotBefore = await takeHeapSnapshotSummary(cdp);
+  const snapshotBefore = await takeHeapSnapshotSummary(cdp, undefined, 0);
 
   const listenerSamples: Array<{ cycle: number; counts: ListenerCounts }> = [];
   let maximumListeners = { ...listenersBefore };
+  let snapshotMidRun: HeapSnapshotAnalysis | undefined;
+  let heapMidRunAfterSnapshot: { usedSize: number } | undefined;
   for (let cycle = 0; cycle < 20; cycle += 1) {
     for (const conversion of conversions) {
       await openConversion(page, conversion);
@@ -100,19 +93,32 @@ test('records worker, global listener, and heap state after 20 TOML route cycles
       document: Math.max(maximumListeners.document, counts.document),
     };
     listenerSamples.push({ cycle: cycle + 1, counts });
+
+    if (cycle === 9) {
+      await openConversion(page, conversions[0]!);
+      await cdp.send('HeapProfiler.collectGarbage');
+      snapshotMidRun = await takeHeapSnapshotSummary(cdp, snapshotBefore.nodeIds, 0);
+      await cdp.send('HeapProfiler.collectGarbage');
+      heapMidRunAfterSnapshot = await cdp.send('Runtime.getHeapUsage');
+    }
   }
 
+  if (!snapshotMidRun || !heapMidRunAfterSnapshot) {
+    throw new Error('The worker resource run did not capture its midpoint heap snapshot.');
+  }
   await openConversion(page, conversions[0]!);
   const finalListeners = await readGlobalListenerCounts(cdp);
   await cdp.send('HeapProfiler.collectGarbage');
   const heapAfter = await cdp.send('Runtime.getHeapUsage');
-  const snapshotAfter = await takeHeapSnapshotSummary(cdp);
+  const snapshotAfter = await takeHeapSnapshotSummary(cdp, snapshotMidRun.nodeIds);
   await cdp.send('HeapProfiler.collectGarbage');
   const heapAfterSnapshot = await cdp.send('Runtime.getHeapUsage');
   const lifecycle = await page.evaluate(() => (window as InstrumentedWindow).__workerLifecycle);
   const activeTaskWorkers = page.workers().filter(worker => worker.url().includes('task-runner.worker')).length;
   const heapDeltaBytes = heapAfterSnapshot.usedSize - heapBefore.usedSize;
+  const heapDeltaSinceMidRunBytes = heapAfterSnapshot.usedSize - heapMidRunAfterSnapshot.usedSize;
   const retainedGrowth = compareHeapGroups(snapshotBefore.groups, snapshotAfter.groups);
+  const retainedGrowthSinceMidRun = compareHeapGroups(snapshotMidRun.groups, snapshotAfter.groups);
 
   expect(lifecycle).toEqual({ created: 80, terminated: 80, active: 0 });
   expect(activeTaskWorkers).toBe(0);
@@ -120,6 +126,7 @@ test('records worker, global listener, and heap state after 20 TOML route cycles
   expect(maximumListeners.window).toBeLessThanOrEqual(listenersBefore.window + 2);
   expect(maximumListeners.document).toBeLessThanOrEqual(listenersBefore.document + 2);
   expect(heapDeltaBytes).toBeLessThan(32 * 1024 * 1024);
+  expect(heapDeltaSinceMidRunBytes).toBeLessThan(32 * 1024 * 1024);
 
   const runtime = await electronApp.evaluate(({ app }) => ({
     appVersion: app.getVersion(),
@@ -163,15 +170,30 @@ test('records worker, global listener, and heap state after 20 TOML route cycles
     },
     memory: {
       heapBeforeBytes: heapBefore.usedSize,
+      heapAfterMidpointSnapshotBytes: heapMidRunAfterSnapshot.usedSize,
       heapAfterPreSnapshotBytes: heapAfter.usedSize,
       heapAfterSnapshotBytes: heapAfterSnapshot.usedSize,
       heapDeltaBytes,
+      heapDeltaSinceMidRunBytes,
       thresholdBytes: 32 * 1024 * 1024,
     },
     heapSnapshots: {
       before: { nodeCount: snapshotBefore.nodeCount, selfSizeBytes: snapshotBefore.selfSizeBytes },
+      midpoint: { nodeCount: snapshotMidRun.nodeCount, selfSizeBytes: snapshotMidRun.selfSizeBytes },
       after: { nodeCount: snapshotAfter.nodeCount, selfSizeBytes: snapshotAfter.selfSizeBytes },
+      retention: {
+        warmupNodeCount: snapshotBefore.nodeIds.size,
+        matchedWarmupNodeCountAtMidpoint: snapshotMidRun.matchedBaselineNodeCount,
+        newlyRetainedNodeCountAtMidpoint: snapshotMidRun.newlyRetainedNodeCount,
+        midpointNodeCount: snapshotMidRun.nodeIds.size,
+        matchedMidpointNodeCountAtFinal: snapshotAfter.matchedBaselineNodeCount,
+        newlyRetainedNodeCountAfterMidpoint: snapshotAfter.newlyRetainedNodeCount,
+      },
       largestPositiveRetainedGrowth: retainedGrowth.slice(0, 20),
+      largestPositiveRetainedGrowthAfterMidpoint: retainedGrowthSinceMidRun.slice(0, 20),
+      newlyRetainedGroupsAtMidpoint: snapshotMidRun.newRetainedGroups.slice(0, 20),
+      newlyRetainedGroups: snapshotAfter.newRetainedGroups.slice(0, 20),
+      strongRetainerPaths: snapshotAfter.retainerPaths,
     },
   };
   const reportPath = process.env.IT_TOOLS_WORKER_RESOURCE_REPORT
@@ -187,7 +209,11 @@ test('records worker, global listener, and heap state after 20 TOML route cycles
   console.info(`[worker-resource] workers=${JSON.stringify(report.workers)}`);
   console.info(`[worker-resource] listeners=${JSON.stringify({ before: listenersBefore, after: finalListeners, maximum: maximumListeners })}`);
   console.info(`[worker-resource] heapDelta=${heapDeltaBytes} bytes; snapshot nodes ${snapshotBefore.nodeCount} -> ${snapshotAfter.nodeCount}`);
+  console.info(`[worker-resource] heapDeltaSinceMidpoint=${heapDeltaSinceMidRunBytes} bytes; midpoint nodes ${snapshotMidRun.nodeCount} -> ${snapshotAfter.nodeCount}`);
   console.info(`[worker-resource] retained growth=${JSON.stringify(retainedGrowth.slice(0, 10))}`);
+  console.info(`[worker-resource] retained growth after midpoint=${JSON.stringify(retainedGrowthSinceMidRun.slice(0, 10))}`);
+  console.info(`[worker-resource] retained objects=${JSON.stringify({ matchedMidpointNodeCount: snapshotAfter.matchedBaselineNodeCount, newlyRetainedAfterMidpoint: snapshotAfter.newlyRetainedNodeCount })}`);
+  console.info(`[worker-resource] strong retainer paths=${JSON.stringify(snapshotAfter.retainerPaths)}`);
   await cdp.detach();
 });
 
@@ -241,7 +267,9 @@ async function readGlobalListenerCounts(cdp: CdpSession): Promise<ListenerCounts
 
 async function takeHeapSnapshotSummary(
   cdp: CdpSession,
-): Promise<HeapSnapshotSummary> {
+  baselineNodeIds?: ReadonlySet<number>,
+  maximumRetainerPaths = 12,
+): Promise<HeapSnapshotAnalysis> {
   const chunks: string[] = [];
   const onChunk = (event: { chunk: string }) => chunks.push(event.chunk);
   cdp.on('HeapProfiler.addHeapSnapshotChunk', onChunk);
@@ -255,47 +283,13 @@ async function takeHeapSnapshotSummary(
     throw new Error('The V8 heap snapshot returned no data.');
   }
 
-  const snapshot = JSON.parse(chunks.join('')) as {
-    snapshot: { meta: { node_fields: string[]; node_types: string[][] } };
-    nodes: number[];
-    strings: string[];
-  };
-  const fields = snapshot.snapshot.meta.node_fields;
-  const typeIndex = fields.indexOf('type');
-  const nameIndex = fields.indexOf('name');
-  const selfSizeIndex = fields.indexOf('self_size');
-  const fieldCount = fields.length;
-  if (typeIndex < 0 || nameIndex < 0 || selfSizeIndex < 0 || fieldCount === 0) {
-    throw new Error('The V8 heap snapshot has an unsupported node layout.');
-  }
-
-  const typeNames = snapshot.snapshot.meta.node_types[typeIndex] ?? [];
-  const groups = new Map<string, HeapGroup>();
-  let selfSizeBytes = 0;
-  for (let offset = 0; offset < snapshot.nodes.length; offset += fieldCount) {
-    const type = typeNames[snapshot.nodes[offset + typeIndex]!] ?? 'unknown';
-    const name = snapshot.strings[snapshot.nodes[offset + nameIndex]!] ?? 'unknown';
-    const groupKey = ['string', 'number', 'symbol', 'bigint', 'code'].includes(type)
-      ? type
-      : `${type}:${name}`;
-    const size = snapshot.nodes[offset + selfSizeIndex]!;
-    const group = groups.get(groupKey) ?? { count: 0, selfSizeBytes: 0 };
-    group.count += 1;
-    group.selfSizeBytes += size;
-    selfSizeBytes += size;
-    groups.set(groupKey, group);
-  }
-
-  return {
-    nodeCount: snapshot.nodes.length / fieldCount,
-    selfSizeBytes,
-    groups: Object.fromEntries(groups),
-  };
+  const snapshot = JSON.parse(chunks.join('')) as HeapSnapshotInput;
+  return analyzeHeapSnapshot(snapshot, { baselineNodeIds, maximumRetainerPaths });
 }
 
 function compareHeapGroups(
-  before: Record<string, HeapGroup>,
-  after: Record<string, HeapGroup>,
+  before: Record<string, { count: number; selfSizeBytes: number }>,
+  after: Record<string, { count: number; selfSizeBytes: number }>,
 ): Array<{ name: string; beforeCount: number; afterCount: number; countDelta: number; beforeBytes: number; afterBytes: number; selfSizeDeltaBytes: number }> {
   const allNames = new Set([...Object.keys(before), ...Object.keys(after)]);
   return [...allNames]
