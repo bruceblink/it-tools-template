@@ -104,7 +104,7 @@ const tools = computed<ToolCategory[]>(() => [
     </template>
 
     <template #content>
-      <div flex items-center justify-center gap-2>
+      <div class="top-navigation" flex items-center justify-center gap-2>
         <c-button
           circle
           variant="text"
@@ -183,6 +183,13 @@ const tools = computed<ToolCategory[]>(() => [
     padding-left: 30px;
     padding-right: 30px;
   }
+}
+
+.top-navigation {
+  position: sticky;
+  top: calc(0px - var(--layout-scroll-padding, 26px));
+  z-index: 20;
+  background: v-bind('themeVars.bodyColor');
 }
 
 .footer {
