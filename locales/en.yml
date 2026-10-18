@@ -24,6 +24,7 @@ home:
     twitterXAccount: 'IT Tools X account'
     about: 'About  IT-Tools'
     aboutLabel: 'About'
+    backToTop: 'Back to top'
     darkMode: 'Dark mode'
     lightMode: 'Light mode'
     mode: 'Toggle dark/light mode'

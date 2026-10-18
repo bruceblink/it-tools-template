@@ -2,7 +2,7 @@
 import { NIcon, useThemeVars } from 'naive-ui';
 
 import { RouterLink } from 'vue-router';
-import { Heart, Home2, Menu2 } from '@vicons/tabler';
+import { ArrowUp, Heart, Home2, Menu2 } from '@vicons/tabler';
 
 import { storeToRefs } from 'pinia';
 import HeroGradient from '../assets/hero-gradient.svg?component';
@@ -103,7 +103,7 @@ const tools = computed<ToolCategory[]>(() => [
       </div>
     </template>
 
-    <template #content>
+    <template #header="{ scrollToTop }">
       <div class="top-navigation" :class="{ 'is-dark-theme': styleStore.isDarkTheme }" flex items-center gap-2>
         <c-button
           circle
@@ -117,6 +117,12 @@ const tools = computed<ToolCategory[]>(() => [
         <c-tooltip :tooltip="$t('home.home')" position="bottom">
           <c-button to="/" circle variant="text" :aria-label="$t('home.home')">
             <NIcon size="25" :component="Home2" />
+          </c-button>
+        </c-tooltip>
+
+        <c-tooltip :tooltip="$t('home.nav.backToTop')" position="bottom">
+          <c-button circle variant="text" :aria-label="$t('home.nav.backToTop')" @click="scrollToTop">
+            <NIcon size="25" :component="ArrowUp" />
           </c-button>
         </c-tooltip>
 
@@ -155,6 +161,9 @@ const tools = computed<ToolCategory[]>(() => [
           </c-button>
         </c-tooltip>
       </div>
+    </template>
+
+    <template #content>
       <slot />
     </template>
   </MenuLayout>
@@ -186,12 +195,9 @@ const tools = computed<ToolCategory[]>(() => [
 }
 
 .top-navigation {
-  position: sticky;
-  top: 0;
   z-index: 20;
   box-sizing: border-box;
   min-height: 64px;
-  margin-inline: calc(0px - var(--layout-scroll-padding, 26px));
   padding: 8px var(--layout-scroll-padding, 26px);
   background: v-bind('themeVars.bodyColor');
   border-bottom: 1px solid v-bind('themeVars.borderColor');

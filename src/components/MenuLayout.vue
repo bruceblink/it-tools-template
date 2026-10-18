@@ -4,6 +4,12 @@ import { useStyleStore } from '@/stores/style.store';
 const styleStore = useStyleStore();
 const { isMenuCollapsed, isSmallScreen } = toRefs(styleStore);
 const siderPosition = computed(() => (isSmallScreen.value ? 'absolute' : 'static'));
+const contentScrollElement = ref<HTMLElement | null>(null);
+
+// Scroll only the main pane so the navigation stays fixed.
+function scrollContentToTop() {
+  contentScrollElement.value?.scrollTo({ top: 0, behavior: 'auto' });
+}
 </script>
 
 <template>
@@ -20,8 +26,15 @@ const siderPosition = computed(() => (isSmallScreen.value ? 'absolute' : 'static
     >
       <slot name="sider" />
     </n-layout-sider>
-    <n-layout class="content">
-      <slot name="content" />
+    <n-layout class="content" :native-scrollbar="true">
+      <div class="content-shell">
+        <header class="content-header">
+          <slot name="header" :scroll-to-top="scrollContentToTop" />
+        </header>
+        <div ref="contentScrollElement" class="content-scroll">
+          <slot name="content" />
+        </div>
+      </div>
       <div v-show="isSmallScreen && !isMenuCollapsed" class="overlay" @click="isMenuCollapsed = true" />
     </n-layout>
   </n-layout>
@@ -41,13 +54,42 @@ const siderPosition = computed(() => (isSmallScreen.value ? 'absolute' : 'static
 .content {
   --layout-scroll-padding: 26px;
 
-  // background-color: #f1f5f9;
   ::v-deep(.n-layout-scroll-container) {
-    padding: 0 var(--layout-scroll-padding) var(--layout-scroll-padding);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
   }
 }
 
 .n-layout {
   height: 100vh;
+}
+
+.content-shell {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.content-header {
+  flex: 0 0 auto;
+}
+
+.content-scroll {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0 var(--layout-scroll-padding) var(--layout-scroll-padding);
+  scroll-behavior: smooth;
+
+  @media (prefers-reduced-motion: reduce) {
+    scroll-behavior: auto;
+  }
 }
 </style>

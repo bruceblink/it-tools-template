@@ -24,6 +24,7 @@ home:
     twitterXAccount: 'IT-Tools X 账号'
     about: '关于 IT-Tools'
     aboutLabel: '关于'
+    backToTop: '返回顶部'
     darkMode: '深色模式'
     lightMode: '浅色模式'
     mode: '颜色模式'
