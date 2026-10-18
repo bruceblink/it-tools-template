@@ -269,7 +269,11 @@ Electron E2E 在 20 轮路由循环中执行 80 个 TOML Worker 任务，并在�
 
 摄像头工具现在会在录制停止事件完成后才允许开始下一段录制。工具作用域关闭时会解除 `MediaRecorder` 事件处理器、停止活动录制并丢弃未完成的数据。移除录像时，以及摄像头工具离开页面时，媒体集合会撤销所属的 Blob URL；截图使用的 data URL 不做撤销。单测覆盖停止事件期间拒绝重启、页面关闭时停止并丢弃未完成录制，以及录像删除和页面关闭时的 URL 回收。
 
-本片新增的 3 项生命周期单测和完整 `pnpm check` 通过；完整检查共 102 个单测文件、636 项测试，并通过类型检查、lint、Web 与 Electron 构建。另有 1 项 Electron E2E 使用合成摄像头和麦克风设备，确认离开摄像头页面后媒体轨道结束、录像 Blob URL 被撤销。E2E 使用 Electron 44.8.0 / Chromium 152.0.7977.167，替换了测试中的系统权限对话框结果。Computer Use 的应用清单仍返回空列表，且 `listWindows` 接口不可用，因此没有人工真实窗口或摄像头硬件验收。本片不代表已测量真实硬件、自然发生的媒体错误或多平台资源回收。Electron 媒体权限和 Linux/macOS 行为仍待验收。
+本片新增的 3 项生命周期单测和完整 `pnpm check` 通过；完整检查共 102 个单测文件、636 项测试，并通过类型检查、lint、Web 与 Electron 构建。另有 1 项 Electron E2E 使用合成摄像头和麦克风设备，确认离开摄像头页面后媒体轨道结束、录像 Blob URL 被撤销。E2E 使用 Electron 44.8.0 / Chromium 152.0.7977.167，替换了测试中的系统权限对话框结果。推送 `07e31b9` 后，[Electron 桌面矩阵](https://github.com/bruceblink/it-tools-template/actions/runs/39141421434)的 Linux、macOS、Windows 构建、smoke 测试和制品上传均通过。Computer Use 的应用清单仍返回空列表，且 `listWindows` 接口不可用，因此没有人工真实窗口或摄像头硬件验收。合成设备测试不代表真实硬件或自然发生的媒体错误。真实摄像头权限和实际设备行为仍待验收。
+
+### P2 第六片：验证路由组件释放 document 键盘监听器
+
+Electron E2E 对 Keycode Info 页面执行 20 次进入和离开，并通过 CDP 统计 `document` 上的 `keydown` 监听器。每轮进入页面时计数从 0 增至 1，返回主页后回到 0；最大计数保持为 1。该结果证明此页面的 VueUse 监听器在路由离开时释放，未逐轮累积。测试在 Electron 44.8.0 上通过。它没有覆盖其他 `EventTarget` 类别或 Linux/macOS。
 
 ### P3：让新增工具通过同一条接入路径
 
@@ -440,7 +444,7 @@ ZIP 使用 `yauzl` 3.4.0 按条目顺序读取。安装器拒绝超过 64 MiB �
 
 ## 下一轮直接执行的范围
 
-P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、JSON Lines、XML、YAML 和 TOML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。真实窗口耗时、Linux/macOS 基线、其他事件目标和媒体资源生命周期仍待补。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
+P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、JSON Lines、XML、YAML 和 TOML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。摄像头工具资源回收和 Keycode Info 的 `document` 键盘监听器现在分别有单测与 Electron 自动化证据；后续仍需真实媒体硬件、更多 `EventTarget` 类别、真实窗口耗时和 Linux/macOS 基线。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
 
 本轮状态更新（2026-10-18）：全局设置入口、语言与主题区、工具设置区和插件管理区已通过系统 Chrome E2E 与 Electron 真实窗口检查；导航顺序调整为语言、主题、设置、About、GitHub。滚动条宽度调整为 8px，轨道透明，滑块默认透明度为 36%。PDF 合成签名与篡改样例的 3 项 E2E 通过。P5 第五片已把签名密钥信任、生命周期服务和桌面管理界面接入主进程 IPC。能力授权按插件运行会话生效，撤销签名密钥会停止对应插件。下一步执行真实窗口安装、启用、拒绝授权、撤销、升级失败回退和卸载验收，再补 Linux/macOS 与资源计数证据。真实窗口耗时、PDF 外部样本和多平台隔离验收仍未完成。
 
