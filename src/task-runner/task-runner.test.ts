@@ -139,6 +139,18 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the JSON key sorter input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('json-key-sorter', 1, {
+      kind: 'json-key-sorter',
+      value: ' '.repeat(taskLimits.jsonKeySorter.maxInputBytes + 1),
+      options: { recursive: true, descending: false, indentSize: 2 },
+    }, taskLimits.jsonKeySorter);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

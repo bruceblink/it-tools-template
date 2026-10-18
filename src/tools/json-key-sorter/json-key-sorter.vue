@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import JSON5 from 'json5';
 import { useStorage } from '@vueuse/core';
-import { sortJsonText } from './json-key-sorter.service';
-import type { UseValidationRule } from '@/composable/validation';
-import { withDefaultOnError } from '@/utils/defaults';
 
 const recursive = useStorage('json-key-sorter:recursive', true);
 const descending = useStorage('json-key-sorter:descending', false);
 const indentSize = useStorage('json-key-sorter:indent-size', 2);
+const workerTaskOptions = computed(() => ({
+  recursive: recursive.value,
+  descending: descending.value,
+  indentSize: indentSize.value,
+}));
 
 const sampleJson = JSON.stringify({
   z: 1,
@@ -21,20 +22,6 @@ const sampleJson = JSON.stringify({
   ],
 }, null, 2);
 
-function transformer(value: string) {
-  return withDefaultOnError(() => sortJsonText(value, {
-    recursive: recursive.value,
-    descending: descending.value,
-    indentSize: indentSize.value,
-  }), '');
-}
-
-const rules: UseValidationRule<string>[] = [
-  {
-    validator: value => value === '' || JSON5.parse(value),
-    message: 'Provided JSON is not valid.',
-  },
-];
 </script>
 
 <template>
@@ -58,7 +45,8 @@ const rules: UseValidationRule<string>[] = [
     input-placeholder="Paste your JSON here..."
     output-label="Sorted JSON"
     output-language="json"
-    :input-validation-rules="rules"
-    :transformer="transformer"
+    worker-task-kind="json-key-sorter"
+    :worker-task-options="workerTaskOptions"
+    worker-invalid-message="Provided JSON is not valid."
   />
 </template>

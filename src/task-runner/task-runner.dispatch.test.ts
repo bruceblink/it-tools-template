@@ -70,6 +70,23 @@ describe('task runner worker dispatch', () => {
     })).toEqual({ kind: 'json-viewer', valid: false, output: '' });
   });
 
+  it('sorts JSON5 keys in the worker and preserves sorter options', () => {
+    expect(executeWorkerTask({
+      kind: 'json-key-sorter',
+      value: '{ z: 2, a: { y: 4, b: 3 } }',
+      options: { recursive: true, descending: true, indentSize: 1 },
+    })).toEqual({
+      kind: 'json-key-sorter',
+      valid: true,
+      output: '{\n "z": 2,\n "a": {\n  "y": 4,\n  "b": 3\n }\n}',
+    });
+    expect(executeWorkerTask({
+      kind: 'json-key-sorter',
+      value: '{ invalid',
+      options: { recursive: true, descending: false, indentSize: 2 },
+    })).toEqual({ kind: 'json-key-sorter', valid: false, output: '' });
+  });
+
   it('converts CSV and JSON to CSV in the worker', () => {
     expect(executeWorkerTask({
       kind: 'csv-to-json',
