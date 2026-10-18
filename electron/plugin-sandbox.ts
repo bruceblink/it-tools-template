@@ -6,19 +6,37 @@ import {
   type Session,
   type WebContents,
 } from 'electron';
+import {
+  createPluginCapabilityBroker,
+  PLUGIN_CAPABILITY_API_PATH,
+} from './plugin-capability-broker';
+import type {
+  PluginCapabilityBroker,
+  PluginCapabilityExecutor,
+} from './plugin-capability-broker';
 import { resolveRendererFile } from './security';
 
 export const PLUGIN_SCHEME = 'it-plugin';
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const maximumPluginAssetBytes = 16 * 1024 * 1024;
-const blockedNetworkPatterns = ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*', 'ftp://*/*'];
-const configuredSessionRoots = new WeakMap<Session, string>();
+const blockedNetworkProtocols = new Set(['http:', 'https:', 'ws:', 'wss:', 'ftp:']);
+
+interface PluginSessionPolicy {
+  packageRoot: string;
+  capabilityBroker: PluginCapabilityBroker | null;
+  activeContentsId: number | null;
+}
+
+const configuredSessions = new WeakMap<Session, PluginSessionPolicy>();
 
 export interface PluginSandboxRegistration {
   pluginId: string;
   packageRoot: string;
   entrypoint: string;
+  requestedCapabilities?: readonly string[];
+  grantedCapabilities?: readonly string[];
+  executeCapability?: PluginCapabilityExecutor;
 }
 
 const contentTypes: Record<string, string> = {
@@ -85,7 +103,7 @@ export function getPluginContentSecurityPolicy(): string {
     "style-src 'self'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'none'",
+    "connect-src 'self'",
     "worker-src 'self'",
     "frame-src 'none'",
     "object-src 'none'",
@@ -110,7 +128,28 @@ export async function createPluginSandboxWindow(
 
   const partition = getPluginSessionPartition(registration.pluginId);
   const pluginSession = electronSession.fromPartition(partition, { cache: false });
-  await installPluginSessionPolicy(pluginSession, { ...registration, packageRoot });
+  const requestedCapabilities = registration.requestedCapabilities ?? [];
+  const grantedCapabilities = registration.grantedCapabilities ?? [];
+  if (!registration.executeCapability && (requestedCapabilities.length > 0 || grantedCapabilities.length > 0)) {
+    throw new Error('Plugin capabilities require a host executor.');
+  }
+  const capabilityBroker = registration.executeCapability
+    ? createPluginCapabilityBroker({
+        pluginId: registration.pluginId,
+        requestedCapabilities,
+        grantedCapabilities,
+        execute: registration.executeCapability,
+      })
+    : null;
+  const sessionPolicy = await installPluginSessionPolicy(
+    pluginSession,
+    { ...registration, packageRoot },
+    capabilityBroker,
+  );
+  if (sessionPolicy.activeContentsId !== null) {
+    capabilityBroker?.revoke();
+    throw new Error(`Plugin ${registration.pluginId} already has an active window.`);
+  }
 
   const window = new BrowserWindow({
     width: 1100,
@@ -129,6 +168,17 @@ export async function createPluginSandboxWindow(
     },
   });
 
+  const webContentsId = window.webContents.id;
+  sessionPolicy.activeContentsId = webContentsId;
+  window.once('closed', () => {
+    if (sessionPolicy.activeContentsId === webContentsId) {
+      sessionPolicy.activeContentsId = null;
+      if (sessionPolicy.capabilityBroker === capabilityBroker) {
+        capabilityBroker?.revoke();
+        sessionPolicy.capabilityBroker = null;
+      }
+    }
+  });
   onWebContentsCreated(window.webContents, registration.pluginId);
   window.once('ready-to-show', () => window.show());
   try {
@@ -143,18 +193,29 @@ export async function createPluginSandboxWindow(
   }
 }
 
-async function installPluginSessionPolicy(pluginSession: Session, registration: PluginSandboxRegistration): Promise<void> {
-  const configuredRoot = configuredSessionRoots.get(pluginSession);
-  assertPluginSessionRoot(configuredRoot, registration.packageRoot);
-  if (configuredRoot !== undefined) {
-    return;
+async function installPluginSessionPolicy(
+  pluginSession: Session,
+  registration: PluginSandboxRegistration,
+  capabilityBroker: PluginCapabilityBroker | null,
+): Promise<PluginSessionPolicy> {
+  const configuredPolicy = configuredSessions.get(pluginSession);
+  assertPluginSessionRoot(configuredPolicy?.packageRoot, registration.packageRoot);
+  if (configuredPolicy) {
+    if (configuredPolicy.activeContentsId !== null) {
+      capabilityBroker?.revoke();
+      throw new Error(`Plugin ${registration.pluginId} already has an active window.`);
+    }
+    configuredPolicy.capabilityBroker?.revoke();
+    configuredPolicy.capabilityBroker = capabilityBroker;
+    return configuredPolicy;
   }
 
+  const policy: PluginSessionPolicy = {
+    packageRoot: registration.packageRoot,
+    capabilityBroker,
+    activeContentsId: null,
+  };
   await pluginSession.protocol.handle(PLUGIN_SCHEME, async (request) => {
-    if (request.method !== 'GET' && request.method !== 'HEAD') {
-      return pluginResponse('Method not allowed', 405, { Allow: 'GET, HEAD' });
-    }
-
     let requestUrl: URL;
     try {
       requestUrl = new URL(request.url);
@@ -164,6 +225,15 @@ async function installPluginSessionPolicy(pluginSession: Session, registration: 
     }
     if (!isPluginRendererUrl(requestUrl.href, registration.pluginId)) {
       return pluginResponse('Not found', 404);
+    }
+    if (requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH) {
+      if (policy.activeContentsId === null || !policy.capabilityBroker) {
+        return pluginJsonResponse(410, { ok: false, error: 'plugin-inactive' });
+      }
+      return policy.capabilityBroker.handle(request);
+    }
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+      return pluginResponse('Method not allowed', 405, { Allow: 'GET, HEAD' });
     }
 
     const filePath = await resolveRendererFile(registration.packageRoot, requestUrl.pathname);
@@ -191,11 +261,44 @@ async function installPluginSessionPolicy(pluginSession: Session, registration: 
 
   pluginSession.setPermissionCheckHandler(() => false);
   pluginSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  pluginSession.webRequest.onBeforeRequest({ urls: blockedNetworkPatterns }, (_details, callback) => {
-    callback({ cancel: true });
+  pluginSession.webRequest.onBeforeRequest({ urls: ['<all_urls>'] }, (details, callback) => {
+    let requestUrl: URL;
+    try {
+      requestUrl = new URL(details.url);
+    }
+    catch {
+      callback({ cancel: true });
+      return;
+    }
+
+    if (blockedNetworkProtocols.has(requestUrl.protocol)) {
+      callback({ cancel: true });
+      return;
+    }
+
+    if (requestUrl.protocol === `${PLUGIN_SCHEME}:` && requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH) {
+      const sourceFrame = details.frame;
+      const trustedMainFrame = sourceFrame !== undefined
+        && sourceFrame !== null
+        && sourceFrame.parent === null
+        && isPluginRendererUrl(sourceFrame.url, registration.pluginId);
+      const trustedContents = details.webContentsId === policy.activeContentsId;
+      const trustedInitiator = details.initiatorOrigin === `it-plugin://${registration.pluginId}`;
+      callback({
+        cancel: !policy.capabilityBroker
+          || !trustedMainFrame
+          || !trustedContents
+          || !trustedInitiator
+          || details.resourceType !== 'xhr',
+      });
+      return;
+    }
+
+    callback({});
   });
   pluginSession.on('will-download', event => event.preventDefault());
-  configuredSessionRoots.set(pluginSession, registration.packageRoot);
+  configuredSessions.set(pluginSession, policy);
+  return policy;
 }
 
 function pluginResponse(body: BodyInit | null, status: number, extraHeaders: Record<string, string> = {}): Response {
@@ -209,6 +312,12 @@ function pluginResponse(body: BodyInit | null, status: number, extraHeaders: Rec
       'Referrer-Policy': 'no-referrer',
       'X-Content-Type-Options': 'nosniff',
     },
+  });
+}
+
+function pluginJsonResponse(status: number, value: unknown): Response {
+  return pluginResponse(JSON.stringify(value), status, {
+    'Content-Type': 'application/json; charset=utf-8',
   });
 }
 

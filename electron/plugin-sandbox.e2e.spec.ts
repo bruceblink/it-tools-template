@@ -26,6 +26,8 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   try {
+    const windows = electronApp?.windows() ?? [];
+    await Promise.all(windows.map(window => window.close({ runBeforeUnload: false }).catch(() => undefined)));
     await electronApp?.close();
   }
   finally {
@@ -44,6 +46,8 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   }
 
   await expect(pluginPage.locator('#sandbox-proof')).toHaveText('Sandbox fixture loaded');
+  await expect(pluginPage.locator('#runtime-capability-proof')).toHaveText('Runtime capability granted');
+  await expect(pluginPage.locator('#clipboard-capability-proof')).toHaveText('Clipboard capability denied');
   const response = await pluginPage.reload();
   const rendererState = await pluginPage.evaluate(() => ({
     origin: location.origin,
@@ -58,7 +62,7 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(rendererState.node).toBe('undefined');
   expect(rendererState.require).toBe('undefined');
   expect(rendererState.preloadBridge).toBe('undefined');
-  expect(response?.headers()['content-security-policy']).toContain("connect-src 'none'");
+  expect(response?.headers()['content-security-policy']).toContain("connect-src 'self'");
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
 
   await hostPage.evaluate(() => localStorage.setItem('sandbox-origin-isolation', 'host'));

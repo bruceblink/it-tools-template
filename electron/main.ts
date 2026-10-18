@@ -325,6 +325,14 @@ async function openPluginSandboxProof(): Promise<void> {
     pluginId: 'org.it-tools.sandbox-proof',
     packageRoot: resolve(app.getAppPath(), 'electron/plugin-fixtures/sample'),
     entrypoint: 'index.html',
+    requestedCapabilities: ['runtime.info', 'clipboard.write'],
+    grantedCapabilities: ['runtime.info'],
+    executeCapability: (call) => {
+      if (call.capability === 'runtime.info') {
+        return { platform: process.platform, version: app.getVersion() };
+      }
+      throw new Error('The sandbox proof does not execute this capability.');
+    },
   }, (contents, pluginId) => pluginRendererIds.set(contents, pluginId));
 }
 
