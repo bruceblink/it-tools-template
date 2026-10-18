@@ -17,16 +17,21 @@ test('tool cards do not retain hover styling when returning home', async () => {
     await page.waitForLoadState('load');
     await expect(page.getByRole('heading', { name: 'All the tools' })).toBeVisible();
 
+    const tokenCard = page.locator('.grid-wrapper .decoration-none[href="/token-generator"] .c-card').last();
+    const getTokenCardBorderColor = () => tokenCard.evaluate(card => getComputedStyle(card).borderColor);
+    const restingBorderColor = await getTokenCardBorderColor();
+
     await page.getByRole('link', { name: 'Token generator' }).first().click();
     await expect(page).toHaveURL('app://bundle/token-generator');
     await page.getByRole('link', { name: 'Home' }).click();
     await expect(page.getByRole('heading', { name: 'All the tools' })).toBeVisible();
 
-    const tokenCard = page.locator('.grid-wrapper .decoration-none[href="/token-generator"] .c-card').last();
     await expect(tokenCard).not.toHaveClass(/hover:border-primary/);
+    await expect.poll(getTokenCardBorderColor).toBe(restingBorderColor);
 
     await tokenCard.hover();
     await expect(tokenCard).toHaveClass(/hover:border-primary/);
+    await expect.poll(getTokenCardBorderColor).not.toBe(restingBorderColor);
   }
   finally {
     try {
