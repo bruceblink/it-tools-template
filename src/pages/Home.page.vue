@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IconDragDrop, IconHeart } from '@tabler/icons-vue';
 import { useHead } from '@vueuse/head';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import Draggable from 'vuedraggable';
 import ColoredCard from '../components/ColoredCard.vue';
 import ToolCard from '../components/ToolCard.vue';
@@ -15,6 +15,20 @@ const { t } = useI18n();
 
 const favoriteTools = computed(() => toolStore.favoriteTools);
 const repositoryUrl = config.app.repositoryUrl;
+const toolCardHoverEnabled = ref(false);
+
+// Wait for real pointer movement after this route mounts so a previous page's hover is not carried over.
+function enableToolCardHover() {
+  toolCardHoverEnabled.value = true;
+}
+
+onMounted(() => {
+  window.addEventListener('pointermove', enableToolCardHover, { once: true, passive: true });
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pointermove', enableToolCardHover);
+});
 
 // Update favorite tools order when drag is finished
 function onUpdateFavoriteTools() {
@@ -50,7 +64,7 @@ function onUpdateFavoriteTools() {
             @end="onUpdateFavoriteTools"
           >
             <template #item="{ element: tool }">
-              <ToolCard :tool="tool" />
+              <ToolCard :tool="tool" :hover-enabled="toolCardHoverEnabled" />
             </template>
           </Draggable>
         </div>
@@ -61,7 +75,7 @@ function onUpdateFavoriteTools() {
           {{ t('home.categories.newestTools') }}
         </h3>
         <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ToolCard v-for="tool in toolStore.newTools" :key="tool.name" :tool="tool" />
+          <ToolCard v-for="tool in toolStore.newTools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
         </div>
       </div>
 
@@ -69,7 +83,7 @@ function onUpdateFavoriteTools() {
         {{ $t('home.categories.allTools') }}
       </h3>
       <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ToolCard v-for="tool in toolStore.tools" :key="tool.name" :tool="tool" />
+        <ToolCard v-for="tool in toolStore.tools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
       </div>
     </div>
   </div>
