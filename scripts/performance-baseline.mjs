@@ -1,6 +1,6 @@
 import { access, lstat, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, dirname, relative, resolve, sep } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { preview } from 'vite';
 import {
   findReleaseInstallers,
@@ -26,7 +26,13 @@ const packageMetadata = JSON.parse(await readFile(resolve(projectRoot, 'package.
 const idleWindowMs = 3000;
 
 function parseOptions(argv) {
-  const options = { runs: 20, platform: 'all', output: 'docs/performance-baseline.json', force: false };
+  const options = {
+    runs: 20,
+    platform: 'all',
+    output: 'docs/performance-baseline.json',
+    force: false,
+    electronAppDirectory: null,
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--help' || argument === '-h') {
@@ -35,7 +41,7 @@ function parseOptions(argv) {
     else if (argument === '--force') {
       options.force = true;
     }
-    else if (['--runs', '--platform', '--output'].includes(argument)) {
+    else if (['--runs', '--platform', '--output', '--electron-app-dir'].includes(argument)) {
       const value = argv[index + 1];
       if (!value || value.startsWith('--')) {
         throw new Error('Missing value for ' + argument);
@@ -48,7 +54,7 @@ function parseOptions(argv) {
         options.platform = value;
       }
       else {
-        options.output = value;
+        options[argument === '--electron-app-dir' ? 'electronAppDirectory' : 'output'] = value;
       }
     }
     else {
@@ -62,7 +68,20 @@ function parseOptions(argv) {
   if (!['all', 'web', 'electron'].includes(options.platform)) {
     throw new Error('--platform must be all, web, or electron.');
   }
+  if (options.electronAppDirectory && options.platform === 'web') {
+    throw new Error('--electron-app-dir requires --platform all or --platform electron.');
+  }
   return options;
+}
+
+async function validateElectronAppDirectory(directory) {
+  const packagePath = join(directory, 'package.json');
+  const packageFile = JSON.parse(await readFile(packagePath, 'utf8'));
+  if (typeof packageFile.main !== 'string' || !packageFile.main.trim()) {
+    throw new Error('The Electron app directory package.json must declare a main entry.');
+  }
+  await access(resolve(directory, packageFile.main));
+  await access(resolve(directory, 'out/renderer/index.html'));
 }
 
 function printHelp() {
@@ -73,27 +92,41 @@ function printHelp() {
     '  --runs <count>         Repetitions per selected platform (default: 20)',
     '  --platform <all|web|electron>  Select measured runtime (default: all)',
     '  --output <path>        JSON report path (default: docs/performance-baseline.json)',
+    '  --electron-app-dir <path>  Launch the installed Electron runtime with a built app directory',
     '  --force                Replace the selected report file',
     '',
-    'Prerequisites: production dist/ and the current platform electron-builder unpacked app.',
+    'Prerequisites: production dist/. By default, the current platform electron-builder unpacked app is required.',
+    'With --electron-app-dir, the directory must contain package.json, its main entry, and out/renderer/index.html.',
     'Set CHROME_BIN and ELECTRON_BIN to override executable discovery.',
   ].join('\n'));
 }
 
 function displayPath(path) {
   const relativePath = relative(projectRoot, path);
+  if (!relativePath) {
+    return '.';
+  }
   return relativePath === '..' || relativePath.startsWith('..' + sep)
     ? basename(path)
     : relativePath;
 }
 
-async function createEnvironmentReport(source, webDirectory, electronExecutable, bundleReport) {
+async function createEnvironmentReport(source, webDirectory, electronExecutable, electronAppDirectory, bundleReport) {
   const machine = await hostDescription.hardware();
   const webArtifacts = await measureDirectory(webDirectory);
-  const electronDirectory = electronExecutable ? dirname(electronExecutable) : null;
-  const electronArtifacts = electronDirectory ? await measureDirectory(electronDirectory) : null;
+  const electronArtifactDirectory = electronAppDirectory
+    ? resolve(electronAppDirectory, 'out')
+    : electronExecutable ? dirname(electronExecutable) : null;
+  const electronArtifacts = electronArtifactDirectory ? await measureDirectory(electronArtifactDirectory) : null;
   if (electronArtifacts) {
-    electronArtifacts.path = displayPath(electronDirectory);
+    electronArtifacts.path = displayPath(electronArtifactDirectory);
+  }
+  const electronRuntimeDirectory = electronAppDirectory && electronExecutable ? dirname(electronExecutable) : null;
+  const electronRuntimeArtifacts = electronRuntimeDirectory
+    ? await measureDirectory(electronRuntimeDirectory)
+    : null;
+  if (electronRuntimeArtifacts) {
+    electronRuntimeArtifacts.path = displayPath(electronRuntimeDirectory);
   }
   return {
     ...machine,
@@ -114,7 +147,13 @@ async function createEnvironmentReport(source, webDirectory, electronExecutable,
         ...electronArtifacts,
         executable: displayPath(electronExecutable),
         executableBytes: (await lstat(electronExecutable)).size,
-        mode: 'electron-builder unpacked production application',
+        mode: electronAppDirectory
+          ? 'installed Electron runtime with electron-vite production output'
+          : 'electron-builder unpacked production application',
+        ...(electronAppDirectory ? {
+          appDirectory: displayPath(electronAppDirectory),
+          runtime: electronRuntimeArtifacts,
+        } : {}),
       } : { available: false, reason: 'Electron runtime was not selected.' },
       installers: await findReleaseInstallers(),
       bundleBudgets: bundleReport?.budgets ?? null,
@@ -192,7 +231,15 @@ const webDirectory = resolve(projectRoot, 'dist');
 const bundleReport = await readFile(resolve(webDirectory, 'bundle-report.json'), 'utf8').then(JSON.parse).catch(() => null);
 const selectedPlatforms = options.platform === 'all' ? ['web', 'electron'] : [options.platform];
 const chromeExecutable = selectedPlatforms.includes('web') ? await locateChrome() : null;
-const electronExecutable = selectedPlatforms.includes('electron') ? await locateElectron() : null;
+const electronAppDirectory = options.electronAppDirectory
+  ? resolve(projectRoot, options.electronAppDirectory)
+  : null;
+if (electronAppDirectory) {
+  await validateElectronAppDirectory(electronAppDirectory);
+}
+const electronExecutable = selectedPlatforms.includes('electron')
+  ? await locateElectron({ useProjectRuntime: Boolean(electronAppDirectory) })
+  : null;
 if (selectedPlatforms.includes('web')) {
   await access(resolve(webDirectory, 'index.html'));
 }
@@ -215,7 +262,10 @@ const report = {
     selectedPlatforms,
     webSource: 'dist served by Vite preview on loopback',
     webAutomation: 'headless Chrome with a fresh profile per run',
-    electronAutomation: 'packaged application with a fresh user-data directory per run',
+    electronAutomation: electronAppDirectory
+      ? 'built Electron app directory with a fresh user-data directory per run'
+      : 'packaged application with a fresh user-data directory per run',
+    electronAppDirectory: electronAppDirectory ? displayPath(electronAppDirectory) : null,
     syntheticInputIsolation: 'renderer reload between interaction workloads',
     routeCases: routeCases.map(({ id, path, query }) => ({ id, path, query })),
     syntheticInputs: {
@@ -226,7 +276,7 @@ const report = {
     chromeExecutable: chromeExecutable ? basename(chromeExecutable) : null,
     electronExecutable: electronExecutable ? displayPath(electronExecutable) : null,
   },
-  environment: await createEnvironmentReport(source, webDirectory, electronExecutable, bundleReport),
+  environment: await createEnvironmentReport(source, webDirectory, electronExecutable, electronAppDirectory, bundleReport),
   samples: { web: [], electron: [] },
   failures: [],
   summary: { web: null, electron: null },
@@ -253,7 +303,7 @@ try {
         console.log('[perf] Web run ' + index + '/' + options.runs + ': startup ' + sample.startupMs + ' ms');
       }
       if (selectedPlatforms.includes('electron')) {
-        const sample = await runElectronSample(index, { electronExecutable }, tempRoot, workloads);
+        const sample = await runElectronSample(index, { electronExecutable, electronAppDirectory }, tempRoot, workloads);
         report.samples.electron.push(sample);
         report.environment.runtime.electronRuntime = sample.electronVersion;
         report.environment.runtime.electronChrome = sample.electronChrome;

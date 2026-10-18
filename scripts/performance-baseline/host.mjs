@@ -147,12 +147,21 @@ export async function locateChrome() {
   return chrome;
 }
 
-export async function locateElectron() {
+export async function locateElectron({ useProjectRuntime = false } = {}) {
   const candidates = [];
   if (process.env.ELECTRON_BIN) {
     candidates.push(process.env.ELECTRON_BIN);
   }
-  if (process.platform === 'win32') {
+  if (useProjectRuntime && process.platform === 'win32') {
+    candidates.push(resolve(projectRoot, 'node_modules/electron/dist/electron.exe'));
+  }
+  else if (useProjectRuntime && process.platform === 'darwin') {
+    candidates.push(resolve(projectRoot, 'node_modules/electron/dist/Electron.app/Contents/MacOS/Electron'));
+  }
+  else if (useProjectRuntime) {
+    candidates.push(resolve(projectRoot, 'node_modules/electron/dist/electron'));
+  }
+  else if (process.platform === 'win32') {
     candidates.push(resolve(projectRoot, 'release/win-unpacked/IT Tools.exe'));
   }
   else if (process.platform === 'darwin') {
@@ -166,6 +175,9 @@ export async function locateElectron() {
   }
   const executable = await findExistingFile(candidates);
   if (!executable) {
+    if (useProjectRuntime) {
+      throw new Error('The installed Electron runtime was not found. Run pnpm install or set ELECTRON_BIN.');
+    }
     throw new Error('The current platform unpacked Electron app was not found. Run electron-builder --dir first or set ELECTRON_BIN.');
   }
   return executable;

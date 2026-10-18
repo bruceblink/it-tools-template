@@ -433,7 +433,8 @@ ZIP 使用 `yauzl` 3.4.0 按条目顺序读取。安装器拒绝超过 64 MiB �
 - `pnpm test:e2e`：生产 Web 的三浏览器流程；PWA 定向入口为 `pnpm test:e2e src/pwa-cache.e2e.spec.ts`。
 - `pnpm test:e2e:electron`：已构建桌面的 smoke；原生 runner 负责各平台打包和回归。
 - `pnpm headers:docker`：需要验证 Docker Nginx 时，仅连接本地 Docker，并记录镜像、端口与清理结果。
-- `pnpm perf:baseline -- --runs 20 --platform all --output docs/performance-baseline-2026-10-17.json`：使用现有生产 Web 构建与 Windows 解包桌面应用，输出 P0 的 20 次重复测量；不代替真实窗口验收。
+- `pnpm perf:baseline -- --runs 20 --platform all --output docs/performance-baseline-YYYY-MM-DD-main.json`：正式桌面基线使用当前平台的 electron-builder 解包应用，Web 使用生产构建；Electron 每轮使用独立用户目录。先为当前提交运行 `electron-builder --dir`。该自动化测量不代替真实窗口验收。
+- 可选参数 `--electron-app-dir .` 会改用当前 `electron-vite` 输出和本地 Electron 运行时。`out/` 必须由 `pnpm electron:build` 生成。此模式用于开发构建对照，不替代正式打包基线。
 
 插件清单、任务执行器和插件校验的专用命令由对应阶段新增。P0 报告已生成；后续代码变化后应使用新报告文件名保存对照，不能覆盖历史基线。
 

@@ -315,12 +315,16 @@ export async function runWebSample(index, options, baseUrl, workloads) {
 
 export async function runElectronSample(index, options, tempRoot, workloads) {
   const profilePath = join(tempRoot, 'electron-profile-' + String(index).padStart(2, '0'));
+  const electronArguments = ['--user-data-dir=' + profilePath, '--lang=en-US'];
+  if (options.electronAppDirectory) {
+    electronArguments.push(options.electronAppDirectory);
+  }
   let electronApp;
   try {
     const started = performance.now();
     electronApp = await _electron.launch({
       executablePath: options.electronExecutable,
-      args: ['--user-data-dir=' + profilePath, '--lang=en-US'],
+      args: electronArguments,
       env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
       timeout: 90_000,
     });
