@@ -1,6 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { parseShortStatusPaths } from './performance-baseline/host.mjs';
 import { routeCases, summarizePlatform } from './performance-baseline/runtime.mjs';
+
+test('preserves the first character of paths in git short status output', () => {
+  assert.deepEqual(
+    parseShortStatusPaths(' M scripts/performance-baseline.test.mjs\r\n?? docs/performance-report.json'),
+    ['scripts/performance-baseline.test.mjs', 'docs/performance-report.json'],
+  );
+  assert.deepEqual(parseShortStatusPaths(''), []);
+});
 
 function makeSample({ inputFillMs, outputUpdateMs, durationMs, inputEventMs, inputEventOutputUpdateMs }) {
   const routeTimings = Object.fromEntries(routeCases.map(route => [route.id, 100]));

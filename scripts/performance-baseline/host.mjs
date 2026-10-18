@@ -44,9 +44,13 @@ export function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+export function parseShortStatusPaths(status) {
+  return status ? status.split(/\r?\n/).filter(Boolean).map(line => line.slice(3)) : [];
+}
+
 export async function getSourceIdentity() {
   const commit = runSync('git', ['rev-parse', 'HEAD']);
-  const status = runSync('git', ['status', '--short']);
+  const status = runSyncBuffer('git', ['status', '--short']).toString('utf8').replace(/(?:\r?\n)+$/, '');
   const trackedDiff = runSyncBuffer('git', ['diff', '--binary', 'HEAD', '--']);
   const untrackedOutput = runSyncBuffer('git', ['ls-files', '--others', '--exclude-standard', '-z']);
   const untrackedPaths = untrackedOutput.toString('utf8').split('\0').filter(Boolean).sort();
@@ -71,7 +75,7 @@ export async function getSourceIdentity() {
   return {
     commit,
     dirty: status.length > 0,
-    dirtyPaths: status ? status.split(/\r?\n/).map(line => line.slice(3)) : [],
+    dirtyPaths: parseShortStatusPaths(status),
     workingTreeFingerprint: fingerprint.digest('hex'),
     lockfileSha256: sha256(await readFile(resolve(projectRoot, 'pnpm-lock.yaml'))),
   };
