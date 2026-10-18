@@ -28,6 +28,10 @@ const trustedSigningKeys = new Map<string, PluginPackageSigningKey>([
 ]);
 
 class FakePluginWindow extends EventEmitter {
+  readonly webContents = Object.assign(new EventEmitter(), {
+    executeJavaScript: vi.fn(async (_script: string) => undefined),
+  });
+
   private destroyed = false;
 
   isDestroyed(): boolean {
@@ -90,6 +94,16 @@ describe('Electron plugin lifecycle manager', () => {
     expect(windows[0]?.isDestroyed()).toBe(true);
     expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed', grantedCapabilities: [] });
     await expect(manager.disable(pluginId)).resolves.toBe(false);
+  });
+
+  it('disables every active plugin that uses a revoked signing key', async () => {
+    const { root, manager, windows } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', []);
+
+    await expect(manager.disableSignedByKey('test-key')).resolves.toBe(1);
+    expect(windows[0]?.isDestroyed()).toBe(true);
+    await expect(manager.disableSignedByKey('test-key')).resolves.toBe(0);
   });
 
   it('restores the previous version when an upgrade window fails to load', async () => {
@@ -178,6 +192,45 @@ describe('Electron plugin lifecycle manager', () => {
     finally {
       vi.useRealTimers();
     }
+  });
+
+  it('terminates a plugin renderer that stops answering responsiveness probes', async () => {
+    const { root, manager, windows } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    vi.useFakeTimers();
+    try {
+      await manager.activate(pluginId, '1.0.0', []);
+      const window = windows[0];
+      if (!window) {
+        throw new Error('The plugin window was not created.');
+      }
+      window.webContents.executeJavaScript.mockImplementation(() => new Promise<never>(() => {}));
+
+      await vi.advanceTimersByTimeAsync(pluginLifecycleLimits.rendererResponsivenessProbeIntervalMs);
+      expect(window.webContents.executeJavaScript).toHaveBeenCalledWith('void 0');
+      await vi.advanceTimersByTimeAsync(pluginLifecycleLimits.rendererResponsivenessProbeTimeoutMs);
+
+      expect(window.isDestroyed()).toBe(true);
+      expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed' });
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('terminates a plugin window when its renderer process exits', async () => {
+    const { root, manager, windows } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', []);
+    const window = windows[0];
+    if (!window) {
+      throw new Error('The plugin window was not created.');
+    }
+
+    window.webContents.emit('render-process-gone');
+
+    expect(window.isDestroyed()).toBe(true);
+    expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed' });
   });
 });
 

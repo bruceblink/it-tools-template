@@ -32,12 +32,18 @@ const maximumInstalledPackages = 128;
 const maximumActivePlugins = 4;
 const windowCloseTimeoutMs = 5_000;
 const unresponsiveWindowTimeoutMs = 10_000;
+const rendererResponsivenessProbeIntervalMs = 2_000;
+const rendererResponsivenessProbeTimeoutMs = 10_000;
 
 export const pluginLifecycleLimits = Object.freeze({
   maximumInstalledPackages,
   maximumActivePlugins,
   unresponsiveWindowTimeoutMs,
+  rendererResponsivenessProbeIntervalMs,
+  rendererResponsivenessProbeTimeoutMs,
 });
+
+export const pluginLifecycleCapabilities: readonly PluginCapability[] = [...supportedCapabilities];
 
 export type PluginLifecycleErrorCode =
   | 'not-installed'
@@ -79,10 +85,14 @@ export interface PluginLifecycleOptions {
 interface ActivePlugin {
   pluginId: string;
   version: string;
+  signingKeyId: string;
   packageRoot: string;
   grantedCapabilities: readonly PluginCapability[];
   window: BrowserWindow;
   unresponsiveTimer?: ReturnType<typeof setTimeout>;
+  responsivenessProbeInterval?: ReturnType<typeof setInterval>;
+  responsivenessProbeTimeout?: ReturnType<typeof setTimeout>;
+  responsivenessProbePending: boolean;
 }
 
 /** Own the installed package lifecycle while keeping all windows inside Electron's sandbox. */
@@ -248,6 +258,16 @@ export class PluginLifecycleManager {
     });
   }
 
+  async disableSignedByKey(keyId: string): Promise<number> {
+    return this.runExclusive(async () => {
+      const active = [...this.activePlugins.values()].filter(plugin => plugin.signingKeyId === keyId);
+      for (const plugin of active) {
+        await this.destroyActivePlugin(plugin);
+      }
+      return active.length;
+    });
+  }
+
   async uninstall(pluginId: string, version: string): Promise<boolean> {
     return this.runExclusive(async () => {
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
@@ -299,30 +319,63 @@ export class PluginLifecycleManager {
     const active: ActivePlugin = {
       pluginId,
       version,
+      signingKeyId: manifest.signature.keyId,
       packageRoot,
       grantedCapabilities,
       window,
+      responsivenessProbePending: false,
     };
     this.activePlugins.set(pluginId, active);
+    let terminationRequested = false;
+    const terminatePluginWindow = () => {
+      if (terminationRequested || this.activePlugins.get(pluginId) !== active || window.isDestroyed()) {
+        return;
+      }
+      terminationRequested = true;
+      clearInterval(active.responsivenessProbeInterval);
+      try {
+        window.destroy();
+      }
+      catch {
+        terminationRequested = false;
+        console.error('Failed to terminate an unresponsive plugin window.');
+      }
+    };
     window.on('unresponsive', () => {
       clearTimeout(active.unresponsiveTimer);
-      active.unresponsiveTimer = setTimeout(() => {
-        if (this.activePlugins.get(pluginId) === active && !window.isDestroyed()) {
-          try {
-            window.destroy();
-          }
-          catch {
-            console.error('Failed to terminate an unresponsive plugin window.');
-          }
-        }
-      }, unresponsiveWindowTimeoutMs);
+      active.unresponsiveTimer = setTimeout(terminatePluginWindow, unresponsiveWindowTimeoutMs);
     });
     window.on('responsive', () => {
       clearTimeout(active.unresponsiveTimer);
       active.unresponsiveTimer = undefined;
     });
+    window.webContents.on('render-process-gone', terminatePluginWindow);
+    // Keep the main process responsive when a plugin renderer stops processing queued work.
+    active.responsivenessProbeInterval = setInterval(() => {
+      if (
+        this.activePlugins.get(pluginId) !== active
+        || window.isDestroyed()
+        || active.responsivenessProbePending
+      ) {
+        return;
+      }
+
+      active.responsivenessProbePending = true;
+      const probeTimeout = setTimeout(terminatePluginWindow, rendererResponsivenessProbeTimeoutMs);
+      active.responsivenessProbeTimeout = probeTimeout;
+      void window.webContents.executeJavaScript('void 0').then(
+        () => completeResponsivenessProbe(active, probeTimeout),
+        () => {
+          completeResponsivenessProbe(active, probeTimeout);
+          terminatePluginWindow();
+        },
+      );
+    }, rendererResponsivenessProbeIntervalMs);
     window.once('closed', () => {
       clearTimeout(active.unresponsiveTimer);
+      clearInterval(active.responsivenessProbeInterval);
+      clearTimeout(active.responsivenessProbeTimeout);
+      active.responsivenessProbePending = false;
       if (this.activePlugins.get(pluginId) === active) {
         this.activePlugins.delete(pluginId);
       }
@@ -478,6 +531,15 @@ function validateGrantedCapabilities(
     }
   }
   return [...requestedGrants] as PluginCapability[];
+}
+
+function completeResponsivenessProbe(active: ActivePlugin, probeTimeout: ReturnType<typeof setTimeout>): void {
+  if (active.responsivenessProbeTimeout !== probeTimeout) {
+    return;
+  }
+  clearTimeout(probeTimeout);
+  active.responsivenessProbeTimeout = undefined;
+  active.responsivenessProbePending = false;
 }
 
 function sameItems(left: readonly string[], right: readonly string[]): boolean {
