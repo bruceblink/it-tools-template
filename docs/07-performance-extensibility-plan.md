@@ -257,6 +257,14 @@ Electron smoke 现覆盖四条 TOML 路径。另在 Electron 页面交替运行�
 
 本次还采集了转换前后的完整 V8 堆快照，并按对象类型汇总。节点数从 703,853 增至 712,192；对象自身大小总和从 41,594,453 字节增至 43,078,372 字节。增长较大的分组包括 `code`（增加 1,062,912 字节）、`HeapVectorBacking<CachedMatchedProperties::Entry>`（增加 92,136 字节）和 `DOMRectReadOnly`（增加 70,000 字节、1,250 个对象）。当前报告没有保留对象引用路径，因此不能据此说明增长原因，也不能判定没有泄漏。该测试只走 TOML 转换路由，媒体资源不适用；其他事件目标、媒体生命周期、真实窗口和 Linux/macOS 基线仍待验证。报告来自未打包的 Windows x64 Electron 44.8.0 / Chromium 152.0.7977.167 开发构建，源码工作区当时有未提交改动。Web 系统 Chrome 的 TOML 回归 8 项通过。
 
+### P2 第四片：分析重复任务后的堆引用路径
+
+新增 `scripts/heap-snapshot-analysis.mjs`。分析器读取 V8 堆快照的节点 ID、强引用边和对象类型。它比较两个快照，找出仍被保留的新对象，并从 GC 根节点寻找最短强引用路径。分析器忽略弱引用边，不输出字符串对象的内容。两项 Node.js 单测覆盖强引用路径、弱引用过滤和损坏的边表。
+
+Electron E2E 在 20 轮路由循环中执行 80 个 TOML Worker 任务，并在第 10 轮和第 20 轮采集快照。[正式报告](performance-worker-retainers-2026-10-18.json)记录 Windows x64、Node.js 24.22.0、Electron 44.8.0、Chromium 152.0.7977.167。报告来自提交 `5e6a19c`，采集前工作区干净。80 个 Worker 全部终止；结束时没有活动任务 Worker。`window` 和 `document` 监听数在整个过程中分别保持 19 和 3。垃圾回收后的 JS 堆增量为 1,004,880 字节；第 1–10 轮增加 821,024 字节，第 11–20 轮增加 183,856 字节，均低于 32 MiB 检查线。
+
+新增对象中，`code`、`DOMRectReadOnly`、`ComputedStyle` 和 `LayoutShift` 等分组增长较多。代表性的 `code` 引用路径从 `DocumentTimeline`、CSS transition 和选中菜单项进入 Vue 点击处理器，再到 V8 代码对象。报告的前 12 条路径未显示任务 Worker 或任务输入被保留。这些结果支持本次 TOML 循环没有出现明显的持续堆增长；它们不证明所有页面、浏览器或媒体设备都没有资源泄漏。该测量只统计 `window` 和 `document` 监听器。其他事件目标、摄像头流、录像 Blob URL、真实窗口和 Linux/macOS 仍待验收。
+
 ### P3：让新增工具通过同一条接入路径
 
 - 在现有 `defineTool` 上渐进引入 ToolDefinition：稳定 `id`、`path`、别名、分类 ID、翻译键、懒加载入口、支持平台、数据处理策略、离线条件和所需能力。保持 117 个工具路径及收藏兼容。
@@ -426,7 +434,7 @@ ZIP 使用 `yauzl` 3.4.0 按条目顺序读取。安装器拒绝超过 64 MiB �
 
 ## 下一轮直接执行的范围
 
-P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、JSON Lines、XML、YAML 和 TOML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker 和 `window`/`document` 监听器计数，也已采集并汇总转换前后的完整堆快照；对象增长的引用路径分析仍未完成。真实窗口耗时、Linux/macOS 基线、其他事件目标和媒体资源生命周期仍待补。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
+P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、JSON Lines、XML、YAML 和 TOML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。真实窗口耗时、Linux/macOS 基线、其他事件目标和媒体资源生命周期仍待补。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
 
 本轮状态更新（2026-10-18）：全局设置入口、语言与主题区、工具设置区和插件管理区已通过系统 Chrome E2E 与 Electron 真实窗口检查；导航顺序调整为语言、主题、设置、About、GitHub。滚动条宽度调整为 8px，轨道透明，滑块默认透明度为 36%。PDF 合成签名与篡改样例的 3 项 E2E 通过。P5 第五片已把签名密钥信任、生命周期服务和桌面管理界面接入主进程 IPC。能力授权按插件运行会话生效，撤销签名密钥会停止对应插件。下一步执行真实窗口安装、启用、拒绝授权、撤销、升级失败回退和卸载验收，再补 Linux/macOS 与资源计数证据。真实窗口耗时、PDF 外部样本和多平台隔离验收仍未完成。
 

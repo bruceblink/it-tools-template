@@ -1,0 +1,1614 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-18T14:54:34.097Z",
+  "source": {
+    "commit": "5e6a19c916e1f68c20a3d95ac414c84167d57531",
+    "workingTreeDirty": false
+  },
+  "machine": {
+    "platform": "win32",
+    "architecture": "x64",
+    "logicalCpuCount": 24,
+    "totalMemoryBytes": 51481890816
+  },
+  "runtime": {
+    "appVersion": "2026.10.16-08de8e6",
+    "packaged": false,
+    "platform": "win32",
+    "architecture": "x64",
+    "electron": "44.8.0",
+    "chromium": "152.0.7977.167",
+    "node": "24.22.0"
+  },
+  "workload": {
+    "routeCycles": 20,
+    "routes": [
+      "/toml-to-json",
+      "/toml-to-yaml",
+      "/json-to-toml",
+      "/yaml-to-toml"
+    ],
+    "measuredWorkerTasks": 80,
+    "warmupWorkerTasks": 4,
+    "returnedToStartingRoute": true
+  },
+  "workers": {
+    "created": 80,
+    "terminated": 80,
+    "active": 0,
+    "activeTaskWorkersAfterRun": 0
+  },
+  "listeners": {
+    "measuredTargets": [
+      "window",
+      "document"
+    ],
+    "before": {
+      "window": 19,
+      "document": 3
+    },
+    "after": {
+      "window": 19,
+      "document": 3
+    },
+    "maximum": {
+      "window": 19,
+      "document": 3
+    },
+    "samples": [
+      {
+        "cycle": 1,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 2,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 3,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 4,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 5,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 6,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 7,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 8,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 9,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 10,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 11,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 12,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 13,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 14,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 15,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 16,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 17,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 18,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 19,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 20,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      }
+    ],
+    "media": {
+      "status": "not-applicable",
+      "reason": "TOML conversion routes do not request or retain media streams."
+    }
+  },
+  "memory": {
+    "heapBeforeBytes": 29622144,
+    "heapAfterMidpointSnapshotBytes": 30443168,
+    "heapAfterPreSnapshotBytes": 30748828,
+    "heapAfterSnapshotBytes": 30627024,
+    "heapDeltaBytes": 1004880,
+    "heapDeltaSinceMidRunBytes": 183856,
+    "thresholdBytes": 33554432
+  },
+  "heapSnapshots": {
+    "before": {
+      "nodeCount": 709484,
+      "selfSizeBytes": 42018753
+    },
+    "midpoint": {
+      "nodeCount": 716160,
+      "selfSizeBytes": 43298973
+    },
+    "after": {
+      "nodeCount": 717868,
+      "selfSizeBytes": 43551801
+    },
+    "retention": {
+      "warmupNodeCount": 709484,
+      "matchedWarmupNodeCountAtMidpoint": 648129,
+      "newlyRetainedNodeCountAtMidpoint": 68031,
+      "midpointNodeCount": 716160,
+      "matchedMidpointNodeCountAtFinal": 654603,
+      "newlyRetainedNodeCountAfterMidpoint": 63265
+    },
+    "largestPositiveRetainedGrowth": [
+      {
+        "name": "code",
+        "beforeCount": 62798,
+        "afterCount": 66832,
+        "countDelta": 4034,
+        "beforeBytes": 5234560,
+        "afterBytes": 6318328,
+        "selfSizeDeltaBytes": 1083768
+      },
+      {
+        "name": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+        "beforeCount": 12,
+        "afterCount": 12,
+        "countDelta": 0,
+        "beforeBytes": 36192,
+        "afterBytes": 153696,
+        "selfSizeDeltaBytes": 117504
+      },
+      {
+        "name": "native:DOMRectReadOnly",
+        "beforeCount": 60,
+        "afterCount": 990,
+        "countDelta": 930,
+        "beforeBytes": 3360,
+        "afterBytes": 55440,
+        "selfSizeDeltaBytes": 52080
+      },
+      {
+        "name": "native:system / WeakArrayList",
+        "beforeCount": 1181,
+        "afterCount": 1437,
+        "countDelta": 256,
+        "beforeBytes": 69632,
+        "afterBytes": 100928,
+        "selfSizeDeltaBytes": 31296
+      },
+      {
+        "name": "native:LayoutShift",
+        "beforeCount": 9,
+        "afterCount": 150,
+        "countDelta": 141,
+        "beforeBytes": 1368,
+        "afterBytes": 22800,
+        "selfSizeDeltaBytes": 21432
+      },
+      {
+        "name": "native:LayoutShiftAttribution",
+        "beforeCount": 30,
+        "afterCount": 495,
+        "countDelta": 465,
+        "beforeBytes": 1200,
+        "afterBytes": 19800,
+        "selfSizeDeltaBytes": 18600
+      },
+      {
+        "name": "native:blink::TextRecord",
+        "beforeCount": 8,
+        "afterCount": 106,
+        "countDelta": 98,
+        "beforeBytes": 1152,
+        "afterBytes": 15264,
+        "selfSizeDeltaBytes": 14112
+      },
+      {
+        "name": "native:blink::ComputedStyleBase::StyleMiscInherited1Data",
+        "beforeCount": 717,
+        "afterCount": 779,
+        "countDelta": 62,
+        "beforeBytes": 149136,
+        "afterBytes": 162032,
+        "selfSizeDeltaBytes": 12896
+      },
+      {
+        "name": "native:PerformanceEventTiming",
+        "beforeCount": 18,
+        "afterCount": 67,
+        "countDelta": 49,
+        "beforeBytes": 4608,
+        "afterBytes": 17152,
+        "selfSizeDeltaBytes": 12544
+      },
+      {
+        "name": "native:blink::HashTrieNode<blink::CSSVariableData>",
+        "beforeCount": 438,
+        "afterCount": 482,
+        "countDelta": 44,
+        "beforeBytes": 119136,
+        "afterBytes": 131104,
+        "selfSizeDeltaBytes": 11968
+      },
+      {
+        "name": "native:blink::SoftNavigationContext",
+        "beforeCount": 6,
+        "afterCount": 55,
+        "countDelta": 49,
+        "beforeBytes": 1392,
+        "afterBytes": 12760,
+        "selfSizeDeltaBytes": 11368
+      },
+      {
+        "name": "native:LargestContentfulPaint",
+        "beforeCount": 5,
+        "afterCount": 85,
+        "countDelta": 80,
+        "beforeBytes": 680,
+        "afterBytes": 11560,
+        "selfSizeDeltaBytes": 10880
+      },
+      {
+        "name": "native:blink::ComputedStyleBase::StyleInheritedData",
+        "beforeCount": 980,
+        "afterCount": 1056,
+        "countDelta": 76,
+        "beforeBytes": 133280,
+        "afterBytes": 143616,
+        "selfSizeDeltaBytes": 10336
+      },
+      {
+        "name": "native:NavigationHistoryEntry",
+        "beforeCount": 7,
+        "afterCount": 52,
+        "countDelta": 45,
+        "beforeBytes": 1344,
+        "afterBytes": 9984,
+        "selfSizeDeltaBytes": 8640
+      },
+      {
+        "name": "native:InteractionContentfulPaint",
+        "beforeCount": 4,
+        "afterCount": 84,
+        "countDelta": 80,
+        "beforeBytes": 416,
+        "afterBytes": 8736,
+        "selfSizeDeltaBytes": 8320
+      },
+      {
+        "name": "native:blink::InterpolableColor",
+        "beforeCount": 288,
+        "afterCount": 378,
+        "countDelta": 90,
+        "beforeBytes": 25344,
+        "afterBytes": 33264,
+        "selfSizeDeltaBytes": 7920
+      },
+      {
+        "name": "native:blink::LargestContentfulPaintCalculator",
+        "beforeCount": 6,
+        "afterCount": 55,
+        "countDelta": 49,
+        "beforeBytes": 816,
+        "afterBytes": 7480,
+        "selfSizeDeltaBytes": 6664
+      },
+      {
+        "name": "object:Object",
+        "beforeCount": 65046,
+        "afterCount": 65306,
+        "countDelta": 260,
+        "beforeBytes": 3193392,
+        "afterBytes": 3199608,
+        "selfSizeDeltaBytes": 6216
+      },
+      {
+        "name": "native:PerformanceSoftNavigation",
+        "beforeCount": 4,
+        "afterCount": 50,
+        "countDelta": 46,
+        "beforeBytes": 448,
+        "afterBytes": 5600,
+        "selfSizeDeltaBytes": 5152
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::KeyValuePair<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+        "beforeCount": 2,
+        "afterCount": 2,
+        "countDelta": 0,
+        "beforeBytes": 5136,
+        "afterBytes": 10256,
+        "selfSizeDeltaBytes": 5120
+      }
+    ],
+    "largestPositiveRetainedGrowthAfterMidpoint": [
+      {
+        "name": "code",
+        "beforeCount": 66316,
+        "afterCount": 66832,
+        "countDelta": 516,
+        "beforeBytes": 6158952,
+        "afterBytes": 6318328,
+        "selfSizeDeltaBytes": 159376
+      },
+      {
+        "name": "native:DOMRectReadOnly",
+        "beforeCount": 660,
+        "afterCount": 990,
+        "countDelta": 330,
+        "beforeBytes": 36960,
+        "afterBytes": 55440,
+        "selfSizeDeltaBytes": 18480
+      },
+      {
+        "name": "native:blink::ComputedStyle",
+        "beforeCount": 6492,
+        "afterCount": 6645,
+        "countDelta": 153,
+        "beforeBytes": 467424,
+        "afterBytes": 478440,
+        "selfSizeDeltaBytes": 11016
+      },
+      {
+        "name": "native:blink::ComputedStyleBase::StyleInheritedData",
+        "beforeCount": 983,
+        "afterCount": 1056,
+        "countDelta": 73,
+        "beforeBytes": 133688,
+        "afterBytes": 143616,
+        "selfSizeDeltaBytes": 9928
+      },
+      {
+        "name": "native:system / WeakArrayList",
+        "beforeCount": 1362,
+        "afterCount": 1437,
+        "countDelta": 75,
+        "beforeBytes": 92652,
+        "afterBytes": 100928,
+        "selfSizeDeltaBytes": 8276
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::KeyValuePair<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+        "beforeCount": 2,
+        "afterCount": 2,
+        "countDelta": 0,
+        "beforeBytes": 2064,
+        "afterBytes": 10256,
+        "selfSizeDeltaBytes": 8192
+      },
+      {
+        "name": "native:blink::ComputedStyleBase::StyleMiscInherited1Data",
+        "beforeCount": 741,
+        "afterCount": 779,
+        "countDelta": 38,
+        "beforeBytes": 154128,
+        "afterBytes": 162032,
+        "selfSizeDeltaBytes": 7904
+      },
+      {
+        "name": "native:LayoutShift",
+        "beforeCount": 99,
+        "afterCount": 150,
+        "countDelta": 51,
+        "beforeBytes": 15048,
+        "afterBytes": 22800,
+        "selfSizeDeltaBytes": 7752
+      },
+      {
+        "name": "native:LayoutShiftAttribution",
+        "beforeCount": 330,
+        "afterCount": 495,
+        "countDelta": 165,
+        "beforeBytes": 13200,
+        "afterBytes": 19800,
+        "selfSizeDeltaBytes": 6600
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<blink::PseudoElementStyleCacheKey, blink::KeyValuePair<blink::PseudoElementStyleCacheKey, cppgc::internal::BasicMember<const blink::ComputedStyle, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<PseudoElementStyleCacheKey>, blink::HashTraits<cppgc::internal::BasicMember<const blink::ComputedStyle, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<PseudoElementStyleCacheKey>, blink::HeapAllocator>>",
+        "beforeCount": 1655,
+        "afterCount": 1684,
+        "countDelta": 29,
+        "beforeBytes": 331000,
+        "afterBytes": 336800,
+        "selfSizeDeltaBytes": 5800
+      },
+      {
+        "name": "native:LargestContentfulPaint",
+        "beforeCount": 44,
+        "afterCount": 85,
+        "countDelta": 41,
+        "beforeBytes": 5984,
+        "afterBytes": 11560,
+        "selfSizeDeltaBytes": 5576
+      },
+      {
+        "name": "native:InteractionContentfulPaint",
+        "beforeCount": 43,
+        "afterCount": 84,
+        "countDelta": 41,
+        "beforeBytes": 4472,
+        "afterBytes": 8736,
+        "selfSizeDeltaBytes": 4264
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Animation, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, cppgc::internal::BasicMember<blink::Animation, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::IdentityExtractor, blink::HashTraits<cppgc::internal::BasicMember<blink::Animation, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<cppgc::internal::BasicMember<blink::Animation, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+        "beforeCount": 1,
+        "afterCount": 1,
+        "countDelta": 0,
+        "beforeBytes": 520,
+        "afterBytes": 4104,
+        "selfSizeDeltaBytes": 3584
+      },
+      {
+        "name": "native:blink::HeapVectorBacking<std::pair<cppgc::internal::BasicMember<const blink::ActiveScriptWrappableBase, cppgc::internal::UntracedMemberTag, cppgc::internal::NoWriteBarrierPolicy>, cppgc::internal::BasicMember<const blink::ActiveScriptWrappableBase, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>",
+        "beforeCount": 1,
+        "afterCount": 1,
+        "countDelta": 0,
+        "beforeBytes": 3000,
+        "afterBytes": 5872,
+        "selfSizeDeltaBytes": 2872
+      },
+      {
+        "name": "native:blink::ComputedStyleBase::StyleMiscData",
+        "beforeCount": 739,
+        "afterCount": 767,
+        "countDelta": 28,
+        "beforeBytes": 65032,
+        "afterBytes": 67496,
+        "selfSizeDeltaBytes": 2464
+      },
+      {
+        "name": "native:blink::StyleScrollbarColor",
+        "beforeCount": 738,
+        "afterCount": 776,
+        "countDelta": 38,
+        "beforeBytes": 47232,
+        "afterBytes": 49664,
+        "selfSizeDeltaBytes": 2432
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<blink::ShapeCacheKey, blink::KeyValuePair<blink::ShapeCacheKey, cppgc::internal::BasicMember<const blink::ShapeResult, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<ShapeCacheKey>, blink::HashTraits<cppgc::internal::BasicMember<const blink::ShapeResult, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<ShapeCacheKey>, blink::HeapAllocator>>",
+        "beforeCount": 9,
+        "afterCount": 9,
+        "countDelta": 0,
+        "beforeBytes": 47880,
+        "afterBytes": 50184,
+        "selfSizeDeltaBytes": 2304
+      },
+      {
+        "name": "native:blink::TextRecord",
+        "beforeCount": 91,
+        "afterCount": 106,
+        "countDelta": 15,
+        "beforeBytes": 13104,
+        "afterBytes": 15264,
+        "selfSizeDeltaBytes": 2160
+      },
+      {
+        "name": "native:blink::SoftNavigationContext",
+        "beforeCount": 46,
+        "afterCount": 55,
+        "countDelta": 9,
+        "beforeBytes": 10672,
+        "afterBytes": 12760,
+        "selfSizeDeltaBytes": 2088
+      },
+      {
+        "name": "native:PerformanceEventTiming",
+        "beforeCount": 60,
+        "afterCount": 67,
+        "countDelta": 7,
+        "beforeBytes": 15360,
+        "afterBytes": 17152,
+        "selfSizeDeltaBytes": 1792
+      }
+    ],
+    "newlyRetainedGroupsAtMidpoint": [
+      {
+        "group": "code",
+        "count": 4078,
+        "selfSizeBytes": 1046140
+      },
+      {
+        "group": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+        "count": 12,
+        "selfSizeBytes": 153696
+      },
+      {
+        "group": "object:Object",
+        "count": 2443,
+        "selfSizeBytes": 124184
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleMiscInherited1Data",
+        "count": 329,
+        "selfSizeBytes": 68432
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleInheritedData",
+        "count": 415,
+        "selfSizeBytes": 56440
+      },
+      {
+        "group": "native:system / WeakArrayList",
+        "count": 353,
+        "selfSizeBytes": 53264
+      },
+      {
+        "group": "native:blink::ComputedStyle",
+        "count": 701,
+        "selfSizeBytes": 50472
+      },
+      {
+        "group": "native:blink::HashTrieNode<blink::CSSVariableData>",
+        "count": 174,
+        "selfSizeBytes": 47328
+      },
+      {
+        "group": "native:blink::GeometryMapperTransformCache::PlaneRootTransform",
+        "count": 156,
+        "selfSizeBytes": 44928
+      },
+      {
+        "group": "array:(object properties)",
+        "count": 136,
+        "selfSizeBytes": 35264
+      },
+      {
+        "group": "native:DOMRectReadOnly",
+        "count": 600,
+        "selfSizeBytes": 33600
+      },
+      {
+        "group": "native:blink::InterpolableColor",
+        "count": 360,
+        "selfSizeBytes": 31680
+      },
+      {
+        "group": "array:(object elements)",
+        "count": 731,
+        "selfSizeBytes": 29800
+      },
+      {
+        "group": "native:blink::HeapVectorBacking<blink::GeometryMapperClipCache::ClipCacheEntry>",
+        "count": 191,
+        "selfSizeBytes": 29032
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleMiscData",
+        "count": 322,
+        "selfSizeBytes": 28336
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleSurroundData",
+        "count": 69,
+        "selfSizeBytes": 21528
+      },
+      {
+        "group": "native:system / PropertyArray",
+        "count": 803,
+        "selfSizeBytes": 21004
+      },
+      {
+        "group": "native:blink::StyleScrollbarColor",
+        "count": 328,
+        "selfSizeBytes": 20992
+      },
+      {
+        "group": "array:",
+        "count": 199,
+        "selfSizeBytes": 18280
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleBoxData",
+        "count": 101,
+        "selfSizeBytes": 17776
+      }
+    ],
+    "newlyRetainedGroups": [
+      {
+        "group": "code",
+        "count": 936,
+        "selfSizeBytes": 274852
+      },
+      {
+        "group": "object:Object",
+        "count": 2183,
+        "selfSizeBytes": 117968
+      },
+      {
+        "group": "array:",
+        "count": 198,
+        "selfSizeBytes": 83648
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleMiscInherited1Data",
+        "count": 365,
+        "selfSizeBytes": 75920
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleInheritedData",
+        "count": 488,
+        "selfSizeBytes": 66368
+      },
+      {
+        "group": "native:blink::ComputedStyle",
+        "count": 850,
+        "selfSizeBytes": 61200
+      },
+      {
+        "group": "native:blink::GeometryMapperTransformCache::PlaneRootTransform",
+        "count": 156,
+        "selfSizeBytes": 44928
+      },
+      {
+        "group": "array:(object properties)",
+        "count": 136,
+        "selfSizeBytes": 35264
+      },
+      {
+        "group": "native:blink::HashTrieNode<blink::CSSVariableData>",
+        "count": 126,
+        "selfSizeBytes": 34272
+      },
+      {
+        "group": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+        "count": 5,
+        "selfSizeBytes": 30760
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleMiscData",
+        "count": 349,
+        "selfSizeBytes": 30712
+      },
+      {
+        "group": "native:blink::HeapVectorBacking<blink::GeometryMapperClipCache::ClipCacheEntry>",
+        "count": 191,
+        "selfSizeBytes": 29032
+      },
+      {
+        "group": "array:(object elements)",
+        "count": 610,
+        "selfSizeBytes": 27724
+      },
+      {
+        "group": "native:blink::InterpolableColor",
+        "count": 306,
+        "selfSizeBytes": 26928
+      },
+      {
+        "group": "native:blink::StyleScrollbarColor",
+        "count": 363,
+        "selfSizeBytes": 23232
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleSurroundData",
+        "count": 70,
+        "selfSizeBytes": 21840
+      },
+      {
+        "group": "native:system / PropertyArray",
+        "count": 803,
+        "selfSizeBytes": 21004
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleBoxData",
+        "count": 111,
+        "selfSizeBytes": 19536
+      },
+      {
+        "group": "native:system / WeakArrayList",
+        "count": 143,
+        "selfSizeBytes": 19204
+      },
+      {
+        "group": "native:DOMRectReadOnly",
+        "count": 330,
+        "selfSizeBytes": 18480
+      }
+    ],
+    "strongRetainerPaths": [
+      {
+        "group": "code",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "native:HTMLDocument",
+            "via": "property:<symbol Window#DocumentCachedAccessor>"
+          },
+          {
+            "node": "native:DocumentTimeline",
+            "via": "element:43"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Animation, cppgc::internal::StrongMembe",
+            "via": "element:3"
+          },
+          {
+            "node": "native:CSSTransition",
+            "via": "element:2"
+          },
+          {
+            "node": "native:<div class=\"n-menu-item-content-header\" role=\"none\">",
+            "via": "element:5"
+          },
+          {
+            "node": "native:<div role=\"none\" class=\"n-menu-item-content n-menu-item-content--selected\">",
+            "via": "element:9"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:<symbol _vei>"
+          },
+          {
+            "node": "closure:invoker",
+            "via": "property:onClick"
+          },
+          {
+            "node": "object:system / Context / scope @133221",
+            "via": "internal:context"
+          },
+          {
+            "node": "object:Object",
+            "via": "context:instance"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:parent"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:vnode"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:children"
+          },
+          {
+            "node": "closure:default",
+            "via": "property:default"
+          },
+          {
+            "node": "code:system / Code",
+            "via": "internal:code"
+          }
+        ],
+        "pathNodeCount": 20,
+        "pathTruncated": false
+      },
+      {
+        "group": "object:Object",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:C++ Persistent roots",
+            "via": "element:29"
+          },
+          {
+            "node": "native:blink::WebLocalFrameImpl",
+            "via": "internal:blink::WebLocalFrameImpl::WebLocalFrameImpl(base::PassKey<WebLocalFrameImpl>, mojom::blink::TreeScopeType, WebLocalFrame"
+          },
+          {
+            "node": "native:blink::LocalFrame",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::LocalFrameView",
+            "via": "element:9"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<cc::ElementId, blink::KeyValuePair<cc::ElementId, cppgc::internal::BasicMem",
+            "via": "element:5"
+          },
+          {
+            "node": "native:blink::PaintLayerScrollableArea",
+            "via": "element:44"
+          },
+          {
+            "node": "native:blink::PaintLayer",
+            "via": "element:5"
+          },
+          {
+            "node": "native:blink::LayoutBlockFlow",
+            "via": "element:1"
+          },
+          {
+            "node": "native:<div data-v-2027d8f6=\"\" class=\"menu n-menu n-menu--vertical\" role=\"menu\">",
+            "via": "element:6"
+          },
+          {
+            "node": "native:<div data-v-2027d8f6=\"\" class=\"toggle-bar\">",
+            "via": "element:9"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:<symbol _vei>"
+          },
+          {
+            "node": "closure:invoker",
+            "via": "property:onClick"
+          },
+          {
+            "node": "object:system / Context / scope @133221",
+            "via": "internal:context"
+          },
+          {
+            "node": "object:Object",
+            "via": "context:instance"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:subTree"
+          }
+        ],
+        "pathNodeCount": 17,
+        "pathTruncated": false
+      },
+      {
+        "group": "array:",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:C++ Persistent roots",
+            "via": "element:29"
+          },
+          {
+            "node": "native:blink::ScriptStateImpl",
+            "via": "internal:blink::ScriptState::ScriptState(v8::Local<v8::Context>, DOMWrapperWorld *, ExecutionContext *)@..\\..\\third_party\\blink\\r"
+          },
+          {
+            "node": "native:blink::V8PerContextData",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<const char *, blink::KeyValuePair<const char *, cppgc::internal::BasicMembe",
+            "via": "element:3"
+          },
+          {
+            "node": "native:Modulator",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ModuleRecordResolverImpl",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::BoxedV8Module, cppgc::internal::StrongM",
+            "via": "element:2"
+          },
+          {
+            "node": "native:blink::BoxedV8Module",
+            "via": "element:15"
+          },
+          {
+            "node": "native:system / SourceTextModule",
+            "via": "element:1"
+          },
+          {
+            "node": "array:",
+            "via": "hidden:<dummy>"
+          },
+          {
+            "node": "native:system / Cell",
+            "via": "internal:6"
+          },
+          {
+            "node": "object:TaskRunner",
+            "via": "internal:value"
+          },
+          {
+            "node": "object:Map",
+            "via": "property:pending"
+          },
+          {
+            "node": "array:",
+            "via": "internal:table"
+          }
+        ],
+        "pathNodeCount": 16,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleMiscInherited1Data",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "native:HTMLDocument",
+            "via": "property:<symbol Window#DocumentCachedAccessor>"
+          },
+          {
+            "node": "native:StyleEngine",
+            "via": "element:26"
+          },
+          {
+            "node": "native:blink::StyleResolver",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<unsigned int, blink::KeyValuePair<unsigned int, cppgc::internal::BasicMembe",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::CachedMatchedProperties",
+            "via": "element:28"
+          },
+          {
+            "node": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyleBase::StyleMiscInheritedData",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyleBase::StyleMiscInherited1Data",
+            "via": "element:1"
+          }
+        ],
+        "pathNodeCount": 14,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleInheritedData",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "native:HTMLDocument",
+            "via": "property:<symbol Window#DocumentCachedAccessor>"
+          },
+          {
+            "node": "native:StyleEngine",
+            "via": "element:26"
+          },
+          {
+            "node": "native:blink::StyleResolver",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<unsigned int, blink::KeyValuePair<unsigned int, cppgc::internal::BasicMembe",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::CachedMatchedProperties",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:2"
+          },
+          {
+            "node": "native:blink::StyleCachedData",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::BasicHeapHashMap<blink::internal::HeapCollectionType::kGCed, blink::PseudoElementStyleCacheKey, cppgc::internal::",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<blink::PseudoElementStyleCacheKey, blink::KeyValuePair<blink::PseudoElement",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyleBase::StyleInheritedData",
+            "via": "element:3"
+          }
+        ],
+        "pathNodeCount": 16,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::ComputedStyle",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "native:HTMLDocument",
+            "via": "property:<symbol Window#DocumentCachedAccessor>"
+          },
+          {
+            "node": "native:StyleEngine",
+            "via": "element:26"
+          },
+          {
+            "node": "native:blink::StyleResolver",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<unsigned int, blink::KeyValuePair<unsigned int, cppgc::internal::BasicMembe",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::CachedMatchedProperties",
+            "via": "element:28"
+          },
+          {
+            "node": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:5"
+          },
+          {
+            "node": "native:blink::StyleBaseData",
+            "via": "element:10"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:1"
+          }
+        ],
+        "pathNodeCount": 14,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::GeometryMapperTransformCache::PlaneRootTransform",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:C++ Persistent roots",
+            "via": "element:29"
+          },
+          {
+            "node": "native:blink::WebLocalFrameImpl",
+            "via": "internal:blink::WebLocalFrameImpl::WebLocalFrameImpl(base::PassKey<WebLocalFrameImpl>, mojom::blink::TreeScopeType, WebLocalFrame"
+          },
+          {
+            "node": "native:blink::LocalFrame",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::LocalFrameView",
+            "via": "element:9"
+          },
+          {
+            "node": "native:blink::PaintControllerPersistentData",
+            "via": "element:12"
+          },
+          {
+            "node": "native:blink::PaintArtifact",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::HeapVectorBacking<blink::PaintChunk>",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::TransformPaintPropertyNode",
+            "via": "element:5453"
+          },
+          {
+            "node": "native:blink::GeometryMapperTransformCache",
+            "via": "element:2"
+          },
+          {
+            "node": "native:blink::GeometryMapperTransformCache::PlaneRootTransform",
+            "via": "element:2"
+          }
+        ],
+        "pathNodeCount": 12,
+        "pathTruncated": false
+      },
+      {
+        "group": "array:(object properties)",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "…",
+            "via": "path-truncated"
+          },
+          {
+            "node": "object:WeakMap",
+            "via": "context:shallowReactiveMap"
+          },
+          {
+            "node": "array:",
+            "via": "internal:table"
+          },
+          {
+            "node": "native:system / JSProxy",
+            "via": "internal:539 / part of key (Object @571141) -> value (system / JSProxy @571089) pair in WeakMap (table @524999)"
+          },
+          {
+            "node": "object:Object",
+            "via": "hidden:"
+          },
+          {
+            "node": "closure:",
+            "via": "property:onClick"
+          },
+          {
+            "node": "object:system / Context / scope @127309",
+            "via": "internal:context"
+          },
+          {
+            "node": "object:system / Context / scope @137101",
+            "via": "internal:previous"
+          },
+          {
+            "node": "object:Object",
+            "via": "context:vNode"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:ctx"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:parent"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:subTree"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:props"
+          },
+          {
+            "node": "object:Object",
+            "via": "property:style"
+          },
+          {
+            "node": "array:(object properties)",
+            "via": "internal:properties"
+          }
+        ],
+        "pathNodeCount": 22,
+        "pathTruncated": true
+      },
+      {
+        "group": "native:blink::HashTrieNode<blink::CSSVariableData>",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "native:HTMLDocument",
+            "via": "property:<symbol Window#DocumentCachedAccessor>"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Element, cppgc::internal::StrongMemberT",
+            "via": "element:38"
+          },
+          {
+            "node": "native:<div data-v-60cf0b9b=\"\" class=\"c-modal--container palette-modal\" shadow-xl=\"\" important:max-w-650px=\"\" important:pa-12px",
+            "via": "element:11"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:6"
+          },
+          {
+            "node": "native:blink::ComputedStyleBase::StyleInheritedData",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::HashTrieNode<blink::CSSVariableData>",
+            "via": "element:4"
+          }
+        ],
+        "pathNodeCount": 11,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:(Global handles)",
+            "via": "element:10"
+          },
+          {
+            "node": "native:system / NativeContext / app://bundle",
+            "via": "internal:1 / blink::ScriptStateProtectingContext::context_"
+          },
+          {
+            "node": "object:Window [JSGlobalObject] / app://bundle",
+            "via": "internal:global_object"
+          },
+          {
+            "node": "native:HTMLDocument",
+            "via": "property:<symbol Window#DocumentCachedAccessor>"
+          },
+          {
+            "node": "native:StyleEngine",
+            "via": "element:26"
+          },
+          {
+            "node": "native:blink::StyleResolver",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<unsigned int, blink::KeyValuePair<unsigned int, cppgc::internal::BasicMembe",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::CachedMatchedProperties",
+            "via": "element:108"
+          },
+          {
+            "node": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+            "via": "element:1"
+          }
+        ],
+        "pathNodeCount": 11,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::ComputedStyleBase::StyleMiscData",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:C++ Persistent roots",
+            "via": "element:29"
+          },
+          {
+            "node": "native:blink::WebLocalFrameImpl",
+            "via": "internal:blink::WebLocalFrameImpl::WebLocalFrameImpl(base::PassKey<WebLocalFrameImpl>, mojom::blink::TreeScopeType, WebLocalFrame"
+          },
+          {
+            "node": "native:blink::LocalFrame",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::LocalFrameView",
+            "via": "element:9"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<cc::ElementId, blink::KeyValuePair<cc::ElementId, cppgc::internal::BasicMem",
+            "via": "element:5"
+          },
+          {
+            "node": "native:blink::PaintLayerScrollableArea",
+            "via": "element:75"
+          },
+          {
+            "node": "native:blink::PaintLayer",
+            "via": "element:5"
+          },
+          {
+            "node": "native:blink::LayoutBlockFlow",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::LayoutInline",
+            "via": "element:2"
+          },
+          {
+            "node": "native:<a href=\"/json-to-toml\" class=\"\">",
+            "via": "element:4"
+          },
+          {
+            "node": "native:blink::NodeRareData",
+            "via": "element:15"
+          },
+          {
+            "node": "native:blink::ElementAnimations",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::HeapHashTableBacking<blink::HashTable<blink::PropertyHandle, blink::KeyValuePair<blink::PropertyHandle, cppgc::in",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::CSSAnimations::RunningTransition",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ComputedStyle",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::ComputedStyleBase::StyleMiscData",
+            "via": "element:2"
+          }
+        ],
+        "pathNodeCount": 18,
+        "pathTruncated": false
+      },
+      {
+        "group": "native:blink::HeapVectorBacking<blink::GeometryMapperClipCache::ClipCacheEntry>",
+        "path": [
+          {
+            "node": "synthetic:",
+            "via": null
+          },
+          {
+            "node": "synthetic:(GC roots)",
+            "via": "element:1"
+          },
+          {
+            "node": "synthetic:C++ Persistent roots",
+            "via": "element:29"
+          },
+          {
+            "node": "native:blink::WebLocalFrameImpl",
+            "via": "internal:blink::WebLocalFrameImpl::WebLocalFrameImpl(base::PassKey<WebLocalFrameImpl>, mojom::blink::TreeScopeType, WebLocalFrame"
+          },
+          {
+            "node": "native:blink::LocalFrame",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::LocalFrameView",
+            "via": "element:9"
+          },
+          {
+            "node": "native:blink::PaintControllerPersistentData",
+            "via": "element:12"
+          },
+          {
+            "node": "native:blink::PaintArtifact",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::HeapVectorBacking<blink::PaintChunk>",
+            "via": "element:1"
+          },
+          {
+            "node": "native:blink::ClipPaintPropertyNode",
+            "via": "element:5518"
+          },
+          {
+            "node": "native:blink::GeometryMapperClipCache",
+            "via": "element:3"
+          },
+          {
+            "node": "native:blink::HeapVectorBacking<blink::GeometryMapperClipCache::ClipCacheEntry>",
+            "via": "element:1"
+          }
+        ],
+        "pathNodeCount": 12,
+        "pathTruncated": false
+      }
+    ]
+  }
+}
