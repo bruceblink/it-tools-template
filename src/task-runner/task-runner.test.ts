@@ -189,6 +189,18 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the SQL formatter input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('sql-prettify', 1, {
+      kind: 'sql-format',
+      value: 'x'.repeat(taskLimits.sqlFormatter.maxInputBytes + 1),
+      options: { keywordCase: 'upper', useTabs: false, language: 'sql', indentStyle: 'standard' },
+    }, taskLimits.sqlFormatter);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

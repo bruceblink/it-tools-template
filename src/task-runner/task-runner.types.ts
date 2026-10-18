@@ -4,6 +4,7 @@ import type { CsvToJsonOptions } from '@/tools/csv-to-json/csv-to-json.service';
 import type { JsonKeySorterOptions } from '@/tools/json-key-sorter/json-key-sorter.service';
 import type { Difference } from '@/tools/json-diff/json-diff.types';
 import type { JsonLinesConverterOptions, JsonLinesDirection, JsonLinesSummary } from '@/tools/json-lines-converter/json-lines-converter.service';
+import type { FormatOptionsWithLanguage } from 'sql-formatter';
 
 export interface JsonLinesTaskOptions extends JsonLinesConverterOptions {
   direction: JsonLinesDirection
@@ -22,6 +23,7 @@ export type WorkerTask =
   | { kind: 'json-path-extractor'; value: string; path: string }
   | { kind: 'json-diff'; leftValue: string; rightValue: string; onlyShowDifferences: boolean }
   | { kind: 'yaml-viewer'; value: string; sortKeys: boolean; indentSize: number }
+  | { kind: 'sql-format'; value: string; options: FormatOptionsWithLanguage }
   | { kind: 'json-minify'; value: string }
   | { kind: 'csv-to-json'; value: string; options: CsvToJsonOptions }
   | { kind: 'json-to-csv'; value: string }
@@ -39,7 +41,7 @@ export type WorkerTask =
 export type WorkerTaskResult =
   | { kind: 'regex'; matches: RegexMatch[]; summary: RegexMatchSummary; sample: string }
   | { kind: 'text-diff'; rows: TextDiffRow[] }
-  | { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'yaml-viewer' | 'json-minify' | 'csv-to-json' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
+  | { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'yaml-viewer' | 'sql-format' | 'json-minify' | 'csv-to-json' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
   | { kind: 'json-diff'; leftValid: boolean; rightValid: boolean; result?: Difference }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
@@ -113,6 +115,11 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
+  sqlFormatter: {
+    timeoutMs: 10_000,
+    maxInputBytes: 256 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+  },
   jsonMinify: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
@@ -143,4 +150,4 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;

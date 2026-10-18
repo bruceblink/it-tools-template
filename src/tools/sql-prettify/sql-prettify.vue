@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { type FormatOptionsWithLanguage, format as formatSQL } from 'sql-formatter';
+import { tryOnBeforeUnmount } from '@vueuse/core';
+import { useI18n } from 'vue-i18n';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
+import { taskRunner } from '@/task-runner/task-runner';
+import { taskLimits } from '@/task-runner/task-runner.types';
+import type { FormatOptionsWithLanguage } from 'sql-formatter';
+import CInputText from '@/ui/c-input-text/c-input-text.vue';
 import { useStyleStore } from '@/stores/style.store';
 
-const inputElement = ref<HTMLElement>();
+type SqlFormatterStatus = 'idle' | 'running' | 'input-limit' | 'output-limit' | 'timeout' | 'error';
+
+const inputElement = ref<InstanceType<typeof CInputText>>();
 const styleStore = useStyleStore();
+const { t } = useI18n();
 const config = reactive<FormatOptionsWithLanguage>({
   keywordCase: 'upper',
   useTabs: false,
@@ -13,7 +21,59 @@ const config = reactive<FormatOptionsWithLanguage>({
 });
 
 const rawSQL = ref('select field1,field2,field3 from my_table where my_condition;');
-const prettySQL = computed(() => formatSQL(rawSQL.value, config));
+const prettySQL = ref('');
+const taskStatus = ref<SqlFormatterStatus>('idle');
+const taskOptions = computed<FormatOptionsWithLanguage>(() => ({
+  keywordCase: config.keywordCase,
+  useTabs: config.useTabs,
+  language: config.language,
+  indentStyle: config.indentStyle,
+}));
+
+const taskKey = 'sql-prettify:format';
+let taskVersion = 0;
+let taskTimer: ReturnType<typeof setTimeout> | undefined;
+
+const inputFeedback = computed(() => {
+  if (taskStatus.value === 'input-limit' || taskStatus.value === 'output-limit') { return t('taskStatus.limit'); }
+  if (taskStatus.value === 'timeout') { return t('taskStatus.timeout'); }
+  if (taskStatus.value === 'error') { return t('taskStatus.error'); }
+  return '';
+});
+
+const validationStatus = computed(() => inputFeedback.value ? 'error' : undefined);
+
+watch([rawSQL, () => config.language, () => config.keywordCase, () => config.indentStyle], () => {
+  const version = ++taskVersion;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+  prettySQL.value = '';
+  taskStatus.value = rawSQL.value === '' ? 'idle' : 'running';
+  if (rawSQL.value === '') { return; }
+
+  // Debounce edits, cancel obsolete formatting, and ignore results from older input versions.
+  taskTimer = setTimeout(async () => {
+    const outcome = await taskRunner.run(taskKey, version, {
+      kind: 'sql-format',
+      value: rawSQL.value,
+      options: { ...taskOptions.value },
+    }, taskLimits.sqlFormatter);
+    if (version !== taskVersion) { return; }
+    if (outcome.status === 'success' && outcome.result.kind === 'sql-format') {
+      prettySQL.value = outcome.result.output;
+      taskStatus.value = 'idle';
+      return;
+    }
+    if (outcome.status === 'cancelled') { return; }
+    taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+  }, 150);
+}, { immediate: true });
+
+tryOnBeforeUnmount(() => {
+  taskVersion++;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+});
 </script>
 
 <template>
@@ -60,8 +120,12 @@ const prettySQL = computed(() => formatSQL(rawSQL.value, config));
     </div>
   </div>
 
-  <n-form-item label="Your SQL query">
-    <c-input-text
+  <n-form-item
+    label="Your SQL query"
+    :feedback="inputFeedback"
+    :validation-status="validationStatus"
+  >
+    <CInputText
       ref="inputElement"
       v-model:value="rawSQL"
       placeholder="Put your SQL query here..."
@@ -72,10 +136,14 @@ const prettySQL = computed(() => formatSQL(rawSQL.value, config));
       autocapitalize="off"
       spellcheck="false"
       monospace
+      test-id="input"
     />
   </n-form-item>
   <n-form-item label="Prettify version of your query">
-    <TextareaCopyable :value="prettySQL" language="sql" :follow-height-of="inputElement" />
+    <div v-if="taskStatus === 'running'" mb-2 text-center op-70>
+      {{ t('taskStatus.calculating') }}
+    </div>
+    <TextareaCopyable :value="prettySQL" language="sql" :follow-height-of="inputElement?.inputWrapperRef" />
   </n-form-item>
 </template>
 

@@ -202,6 +202,10 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
     };
   }
 
+  if (task.kind !== 'regex') {
+    throw new Error('This task must use a dedicated worker.');
+  }
+
   if (task.regex.length > (taskLimits.regex.maxPatternCharacters ?? Number.MAX_SAFE_INTEGER)) {
     throw new TaskExecutionError('input-limit');
   }
