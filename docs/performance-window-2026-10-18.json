@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-18",
+  "source": {
+    "commit": "952e600cacb747984c7213a36d1189c0a1a8f0fa",
+    "workingTreeDirty": true
+  },
+  "environment": {
+    "platform": "win32",
+    "architecture": "x64",
+    "cpuModel": "AMD Ryzen 9 5900X 12-Core Processor",
+    "logicalCores": 24,
+    "totalMemoryBytes": 51481890816
+  },
+  "runtime": {
+    "appVersion": "2026.10.16-08de8e6",
+    "packaged": false,
+    "electron": "44.8.0",
+    "chromium": "152.0.7977.167",
+    "interaction": "Computer Use on a visible Windows Electron development window"
+  },
+  "measurements": {
+    "startup": {
+      "status": "not-measured",
+      "reason": "The Electron development window was already open before observation."
+    },
+    "routeNavigation": {
+      "route": "app://bundle/json-minify",
+      "entry": "Command palette search followed by Return",
+      "samples": 1,
+      "elapsedMs": 300.69,
+      "boundary": "From Return-key dispatch until a Computer Use screenshot and accessibility state showed the JSON minify page.",
+      "result": "The page loaded and displayed its existing sample input and output."
+    },
+    "tomlConversion": {
+      "status": "passed",
+      "input": "value = 42",
+      "expectedOutput": "{\"value\": 42}",
+      "observedOutput": true,
+      "elapsedMs": null
+    },
+    "exit": {
+      "status": "not-measured",
+      "reason": "The window existed before this test and was left open."
+    }
+  },
+  "packagedBuildAttempt": {
+    "status": "aborted-no-progress",
+    "target": "A new temporary Windows x64 unpacked directory outside the repository.",
+    "observation": "electron-builder reached packaging but produced no output files for more than three minutes.",
+    "cleanup": "The build process was stopped. The existing release/win-unpacked directory was not changed."
+  },
+  "limitations": [
+    "The route timing is one development-window sample. It includes Computer Use screenshot capture and is not comparable to the automated production baseline.",
+    "This observation does not establish packaged startup or exit performance.",
+    "The TOML sample input was cleared and the application returned to its home route after the check."
+  ]
+}
