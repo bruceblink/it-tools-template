@@ -5,6 +5,7 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   net,
   protocol,
   session,
@@ -80,6 +81,8 @@ else {
   });
 
   app.whenReady().then(async () => {
+    // Do not let Electron generate the default File/Edit/View/Window menu.
+    Menu.setApplicationMenu(null);
     app.setAppUserModelId('org.it-tools.desktop');
     trustedRendererUrl = getDevelopmentRendererUrl(process.env.ELECTRON_RENDERER_URL) ?? APP_BASE_URL;
     app.on('web-contents-created', (_event, contents) => attachWebContentsSecurity(contents));
