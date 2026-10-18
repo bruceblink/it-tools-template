@@ -1,27 +1,64 @@
 <script setup lang="ts">
-import yaml from 'yaml';
-import { useStorage } from '@vueuse/core';
-import { formatYaml } from './yaml-models';
-import { withDefaultOnError } from '@/utils/defaults';
-import { useValidation } from '@/composable/validation';
+import { tryOnBeforeUnmount, useStorage } from '@vueuse/core';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
+import { taskRunner } from '@/task-runner/task-runner';
+import { taskLimits } from '@/task-runner/task-runner.types';
+import CInputText from '@/ui/c-input-text/c-input-text.vue';
 
-const inputElement = ref<HTMLElement>();
+type YamlViewerTaskStatus = 'idle' | 'running' | 'invalid' | 'input-limit' | 'output-limit' | 'timeout' | 'error';
 
+const inputElement = ref<InstanceType<typeof CInputText>>();
 const rawYaml = ref('');
 const indentSize = useStorage('yaml-prettify:indent-size', 2);
 const sortKeys = useStorage('yaml-prettify:sort-keys', false);
+const cleanYaml = ref('');
+const taskStatus = ref<YamlViewerTaskStatus>('idle');
+const { t } = useI18n();
 
-const cleanYaml = computed(() => withDefaultOnError(() => formatYaml({ rawYaml, indentSize, sortKeys }), ''));
+const inputFeedback = computed(() => {
+  if (taskStatus.value === 'invalid') { return 'Provided YAML is not valid.'; }
+  if (taskStatus.value === 'input-limit' || taskStatus.value === 'output-limit') { return t('taskStatus.limit'); }
+  if (taskStatus.value === 'timeout') { return t('taskStatus.timeout'); }
+  if (taskStatus.value === 'error') { return t('taskStatus.error'); }
+  return '';
+});
+const validationStatus = computed(() => inputFeedback.value ? 'error' : undefined);
 
-const rawYamlValidation = useValidation({
-  source: rawYaml,
-  rules: [
-    {
-      validator: v => v === '' || (typeof v === 'string' && yaml.parse(v)),
-      message: 'Provided YAML is not valid.',
-    },
-  ],
+const taskKey = 'yaml-viewer:format';
+let taskVersion = 0;
+let taskTimer: ReturnType<typeof setTimeout> | undefined;
+
+watch([rawYaml, indentSize, sortKeys], () => {
+  const version = ++taskVersion;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+  cleanYaml.value = '';
+  taskStatus.value = rawYaml.value === '' ? 'idle' : 'running';
+  if (rawYaml.value === '') { return; }
+
+  // Debounce edits and run YAML parsing, key sorting, and formatting outside the renderer thread.
+  taskTimer = setTimeout(async () => {
+    const outcome = await taskRunner.run(taskKey, version, {
+      kind: 'yaml-viewer',
+      value: rawYaml.value,
+      sortKeys: sortKeys.value,
+      indentSize: indentSize.value,
+    }, taskLimits.yamlViewer);
+    if (version !== taskVersion) { return; }
+    if (outcome.status === 'success' && outcome.result.kind === 'yaml-viewer') {
+      cleanYaml.value = outcome.result.output;
+      taskStatus.value = outcome.result.valid ? 'idle' : 'invalid';
+      return;
+    }
+    if (outcome.status === 'cancelled') { return; }
+    taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+  }, 150);
+}, { immediate: true });
+
+tryOnBeforeUnmount(() => {
+  taskVersion++;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
 });
 </script>
 
@@ -39,10 +76,10 @@ const rawYamlValidation = useValidation({
 
   <n-form-item
     label="Your raw YAML"
-    :feedback="rawYamlValidation.message"
-    :validation-status="rawYamlValidation.status"
+    :feedback="inputFeedback"
+    :validation-status="validationStatus"
   >
-    <c-input-text
+    <CInputText
       ref="inputElement"
       v-model:value="rawYaml"
       placeholder="Paste your raw YAML here..."
@@ -53,20 +90,14 @@ const rawYamlValidation = useValidation({
       autocapitalize="off"
       spellcheck="false"
       monospace
+      test-id="input"
     />
   </n-form-item>
+
   <n-form-item label="Prettified version of your YAML">
-    <TextareaCopyable :value="cleanYaml" language="yaml" :follow-height-of="inputElement" />
+    <div v-if="taskStatus === 'running'" mb-2 text-center op-70>
+      {{ t('taskStatus.calculating') }}
+    </div>
+    <TextareaCopyable :value="cleanYaml" language="yaml" :follow-height-of="inputElement?.inputWrapperRef" />
   </n-form-item>
 </template>
-
-<style lang="less" scoped>
-.result-card {
-  position: relative;
-  .copy-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-  }
-}
-</style>

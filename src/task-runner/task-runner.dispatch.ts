@@ -8,6 +8,7 @@ import { convertArrayToCsv } from '@/tools/json-to-csv/json-to-csv.service';
 import { convertJsonLines, JsonLinesConversionError } from '@/tools/json-lines-converter/json-lines-converter.service';
 import { sortJsonText } from '@/tools/json-key-sorter/json-key-sorter.service';
 import { formatJson } from '@/tools/json-viewer/json.models';
+import { formatYaml } from '@/tools/yaml-viewer/yaml-models';
 import { matchRegex, summarizeRegexMatches } from '@/tools/regex-tester/regex-tester.service';
 import { executeConversionTask } from './conversion-tasks';
 import { taskLimits } from './task-runner.types';
@@ -127,6 +128,19 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
       rightValid,
       result: diffJson(leftValue, rightValue, { onlyShowDifferences: task.onlyShowDifferences }),
     };
+  }
+
+  if (task.kind === 'yaml-viewer') {
+    try {
+      return {
+        kind: 'yaml-viewer',
+        valid: true,
+        output: formatYaml({ rawYaml: task.value, sortKeys: task.sortKeys, indentSize: task.indentSize }),
+      };
+    }
+    catch {
+      return { kind: 'yaml-viewer', valid: false, output: '' };
+    }
   }
 
   if (task.kind === 'csv-to-json') {

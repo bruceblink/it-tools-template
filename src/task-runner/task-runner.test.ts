@@ -176,6 +176,19 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the YAML viewer input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('yaml-viewer', 1, {
+      kind: 'yaml-viewer',
+      value: ' '.repeat(taskLimits.yamlViewer.maxInputBytes + 1),
+      sortKeys: false,
+      indentSize: 2,
+    }, taskLimits.yamlViewer);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

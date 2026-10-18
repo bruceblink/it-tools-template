@@ -141,6 +141,25 @@ describe('task runner worker dispatch', () => {
     });
   });
 
+  it('formats YAML in the worker with sorting and indentation options', () => {
+    expect(executeWorkerTask({
+      kind: 'yaml-viewer',
+      value: 'z: 1\na:\n  y: 3\n  b: 2\n',
+      sortKeys: true,
+      indentSize: 4,
+    })).toEqual({
+      kind: 'yaml-viewer',
+      valid: true,
+      output: 'a:\n    b: 2\n    y: 3\nz: 1\n',
+    });
+    expect(executeWorkerTask({
+      kind: 'yaml-viewer',
+      value: 'a: [',
+      sortKeys: false,
+      indentSize: 2,
+    })).toEqual({ kind: 'yaml-viewer', valid: false, output: '' });
+  });
+
   it('converts CSV and JSON to CSV in the worker', () => {
     expect(executeWorkerTask({
       kind: 'csv-to-json',
