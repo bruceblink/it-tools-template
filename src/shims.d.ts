@@ -1,3 +1,10 @@
+declare module '*.yml' {
+  import type { LocaleMessageValue, VueMessageType } from 'vue-i18n';
+
+  const messages: Record<string, LocaleMessageValue<VueMessageType>>;
+  export default messages;
+}
+
 declare module '*.vue' {
   import type {  ComponentOptions } from 'vue';
   const Component: ComponentOptions;

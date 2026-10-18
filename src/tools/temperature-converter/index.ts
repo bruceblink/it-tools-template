@@ -3,6 +3,9 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/temperature-converter',
+  categoryId: 'measurement',
+  translationKey: 'temperature-converter',
   name: translate('tools.temperature-converter.title'),
   path: '/temperature-converter',
   description: translate('tools.temperature-converter.description'),
@@ -21,4 +24,8 @@ export const tool = defineTool({
   ],
   component: () => import('./temperature-converter.vue'),
   icon: Temperature,
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
 });

@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useMessage } from 'naive-ui';
 import Editor from './editor/editor.vue';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
+import { saveFileContent } from '@/platform-adapter';
 
 const html = ref('<h1>Hey!</h1><p>Welcome to this html wysiwyg editor</p>');
+const message = useMessage();
 
 // Defer formatting code so the editor can render before loading its output formatter.
 const formattedHtml = asyncComputed(async () => {
@@ -16,12 +19,10 @@ const formattedHtml = asyncComputed(async () => {
 
 function downloadHtml() {
   const blob = new Blob([formattedHtml.value], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'document.html';
-  a.click();
-  URL.revokeObjectURL(url);
+  const result = saveFileContent(blob, 'document.html', 'text/html');
+  if (result.status !== 'started') {
+    message.error(result.status === 'unsupported' ? 'File downloads are not supported in this context.' : 'Could not start the file download.');
+  }
 }
 </script>
 

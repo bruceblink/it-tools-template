@@ -54,7 +54,7 @@ const tooltipText = computed(() => isJustCopied.value ? 'Copied!' : copyMessage.
       </n-scrollbar>
       <div absolute right-10px top-10px>
         <c-tooltip v-if="value" :tooltip="tooltipText" position="left">
-          <c-button circle important:h-10 important:w-10 @click="copy()">
+          <c-button :aria-label="copyMessage" circle important:h-10 important:w-10 @click="copy()">
             <n-icon size="22" :component="Copy" />
           </c-button>
         </c-tooltip>

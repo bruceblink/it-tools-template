@@ -3,10 +3,17 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/html-wysiwyg-editor',
+  categoryId: 'web',
+  translationKey: 'html-wysiwyg-editor',
   name: translate('tools.html-wysiwyg-editor.title'),
   path: '/html-wysiwyg-editor',
   description: translate('tools.html-wysiwyg-editor.description'),
   keywords: ['html', 'wysiwyg', 'editor', 'p', 'ul', 'ol', 'converter', 'live'],
   component: () => import('./html-wysiwyg-editor.vue'),
   icon: Edit,
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write', 'file.save'],
 });

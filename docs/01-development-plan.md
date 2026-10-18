@@ -1,6 +1,6 @@
 # IT Tools 长期开发计划
 
-本计划于 2026-10-17 复核。后续以 Electron 为主开发方向，共享 Vue 界面和工具逻辑，保持 Web/PWA 与 Docker 分发兼容。默认在 `main` 开发，每轮完成一个可独立验收的范围。
+本计划于 2026-10-18 复核。后续以 Electron 为主开发方向，共享 Vue 界面和工具逻辑，保持 Web/PWA 与 Docker 分发兼容。默认在 `main` 开发，每轮完成一个可独立验收的范围。
 
 ## 当前主线：性能与扩展接入
 
@@ -17,7 +17,7 @@
 
 P0–P5 按一位主开发者持续投入估算约 12–16 周，属于工作量窗口。平台插件化具备演进条件；先交付内置模块和第一方工具包，再验证第三方运行时代码的隔离与分发。公开插件商店在试点结果明确后单独排期。
 
-下一轮先执行 P0，再交付 P1 的语言按需加载切片。本次只制定评估与开发计划，没有启动上述实现。
+P0–P4 的主要实现已完成。P4 已接入仓库内 SDK v0、三类第一方工具包、按需命令搜索、设置管理界面、版本化设置迁移、OUI 数据提供器和兼容原 URL 的扩展工具路由。P5 已建立 Electron 插件沙箱、签名包校验与暂存、受限能力代理、生命周期管理、签名者信任、主进程 IPC 和桌面管理界面。Windows Electron 自动化已覆盖安装、权限拒绝与批准、升级失败回退、撤销签名者、卸载、无限循环终止和强制 renderer 终止后的插件窗口清理。P5 仍属隔离试点；公开插件商店尚未排期，仓库没有生产签名密钥或受维护的第三方插件包。自然发生的 Chromium 崩溃、人工真实窗口流程、Linux/macOS 隔离和资源计数仍待验收。实施细节、指标与回滚范围见[性能与扩展计划](07-performance-extensibility-plan.md)、[插件包格式 v1](08-electron-plugin-package-format-v1.md)、[生命周期服务 v1](10-electron-plugin-lifecycle-v1.md)及[SDK v0 接口说明](extension-sdk-v0.md)。
 
 ## 术语与命名约定
 
@@ -30,7 +30,7 @@ P0–P5 按一位主开发者持续投入估算约 12–16 周，属于工作量
 
 ## 当前基线
 
-项目注册了 117 个工具，提供 9 个语言包。2026-10-16 已发布 [v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6)，包含 Web ZIP、Windows x64、Linux x64、macOS ARM64 桌面包以及 Docker 镜像说明。[发布流水线](https://github.com/bruceblink/it-tools-template/actions/runs/38903578854) 与三平台 Electron smoke 已通过。上次本地统一检查通过 84 个测试文件、527 项单元测试、类型检查、零警告 lint 及 Web/Electron 构建；本轮规划没有重新执行这些检查。
+项目注册了 117 个工具，提供 9 个语言包。2026-10-16 已发布 [v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6)，包含 Web ZIP、Windows x64、Linux x64、macOS ARM64 桌面包以及 Docker 镜像说明。[发布流水线](https://github.com/bruceblink/it-tools-template/actions/runs/38903578854) 与三平台 Electron smoke 已通过。2026-10-18 的 `pnpm check` 最近一次记录通过类型检查、lint、Web/Electron 构建，以及 96 个测试文件的 599 项测试。System Chrome 的扩展路由与 PWA 回归 8 项通过；设置管理页面的迁移、保存和重载回归 1 项通过。Electron smoke 9 项通过，覆盖扩展设置迁移、保存、重载、Worker 资源回收和插件沙箱隔离原型。
 
 分发流程已经建立。桌面启动、内存、真实设备权限、签名、公证、安装升级和卸载仍需专项验收，不能从打包成功推断这些能力已完成。工具注册检查验证了英文和中文基础键，其他语言仍需单独审查。
 

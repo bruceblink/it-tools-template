@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-18",
+  "purpose": "Three independent Windows Electron runs with idle and retained-memory plugin workloads. The data checks metric sensitivity; it is not a performance baseline or a resource limit.",
+  "source": {
+    "commit": "2228426",
+    "worktreeDirty": true,
+    "worktreeEntryCountAtMeasurement": 258,
+    "testFileCommitted": false
+  },
+  "environment": {
+    "os": "Windows 11 Pro for Workstations",
+    "osVersion": "10.0.26300",
+    "platform": "win32",
+    "architecture": "x64",
+    "nodeVersion": "24.15.0",
+    "electronVersion": "44.8.0",
+    "cpu": "AMD Ryzen 9 5900X 12-Core Processor",
+    "logicalCpuCount": 24,
+    "totalMemoryBytes": 51481890816
+  },
+  "input": {
+    "pluginId": "org.example.manager-e2e",
+    "pluginVersion": "4.0.0",
+    "signedArchiveBytes": 4471,
+    "retainedBufferBytes": 33554432,
+    "rendererState": "Five idle samples, then three samples after retaining and touching a 32 MiB Uint8Array"
+  },
+  "sampling": {
+    "source": "Electron app.getAppMetrics()",
+    "samplesPerRun": { "idle": 5, "memoryPressure": 3 },
+    "sampleIntervalMs": 1000,
+    "appProcessCountPerSample": 5,
+    "hostAndPluginRendererPidsDifferInEveryRun": true,
+    "pluginRendererPidRemovedFromAppMetricsAfterCrashInEveryRun": true,
+    "workingSetIncreaseFromIdleMinimumKiBPerRun": [33100, 33096, 33100]
+  },
+  "runLevelMedianRanges": {
+    "memoryUnit": "KiB",
+    "idlePluginRendererWorkingSetSize": { "min": 107628, "max": 107760 },
+    "idlePluginRendererPrivateBytes": { "min": 25976, "max": 26000 },
+    "memoryPressurePluginRendererWorkingSetSize": { "min": 140680, "max": 140812 },
+    "memoryPressurePluginRendererPrivateBytes": { "min": 59036, "max": 59064 },
+    "idleElectronProcessGroupWorkingSetSum": { "min": 711748, "max": 718028 },
+    "idleElectronProcessGroupPrivateBytesSum": { "min": 520004, "max": 524276 },
+    "memoryPressureElectronProcessGroupWorkingSetSum": { "min": 744068, "max": 750696 },
+    "memoryPressureElectronProcessGroupPrivateBytesSum": { "min": 546608, "max": 554636 },
+    "idlePluginCpuPercentMeanPerRunAfterFirstSample": { "min": 0.0049099238, "max": 0.0051842362 },
+    "memoryPressurePluginCpuPercentMeanPerRun": { "min": 0.0103994574, "max": 0.0120729594 }
+  },
+  "runs": [
+    {
+      "run": 1,
+      "testDurationSeconds": 25.7,
+      "idlePluginRendererMedian": { "workingSetSize": 107760, "privateBytes": 25976 },
+      "idleElectronProcessGroupMedian": { "workingSetSizeSum": 718028, "privateBytesSum": 524276 },
+      "memoryPressurePluginRendererMedian": { "workingSetSize": 140812, "privateBytes": 59036 },
+      "memoryPressureElectronProcessGroupMedian": { "workingSetSizeSum": 750696, "privateBytesSum": 554636 },
+      "pluginWorkingSetIncreaseKiB": 33100,
+      "idlePluginCpuPercentMeanAfterFirstSample": 0.0051842362,
+      "memoryPressurePluginCpuPercentMean": 0.0103994574
+    },
+    {
+      "run": 2,
+      "testDurationSeconds": 25.5,
+      "idlePluginRendererMedian": { "workingSetSize": 107660, "privateBytes": 26000 },
+      "idleElectronProcessGroupMedian": { "workingSetSizeSum": 711824, "privateBytesSum": 521580 },
+      "memoryPressurePluginRendererMedian": { "workingSetSize": 140716, "privateBytes": 59064 },
+      "memoryPressureElectronProcessGroupMedian": { "workingSetSizeSum": 744068, "privateBytesSum": 548320 },
+      "pluginWorkingSetIncreaseKiB": 33096,
+      "idlePluginCpuPercentMeanAfterFirstSample": 0.0049099238,
+      "memoryPressurePluginCpuPercentMean": 0.0120729594
+    },
+    {
+      "run": 3,
+      "testDurationSeconds": 25.5,
+      "idlePluginRendererMedian": { "workingSetSize": 107628, "privateBytes": 25984 },
+      "idleElectronProcessGroupMedian": { "workingSetSizeSum": 711748, "privateBytesSum": 520004 },
+      "memoryPressurePluginRendererMedian": { "workingSetSize": 140680, "privateBytes": 59044 },
+      "memoryPressureElectronProcessGroupMedian": { "workingSetSizeSum": 744108, "privateBytesSum": 546608 },
+      "pluginWorkingSetIncreaseKiB": 33100,
+      "idlePluginCpuPercentMeanAfterFirstSample": 0.0051470931,
+      "memoryPressurePluginCpuPercentMean": 0.0104629814
+    }
+  ],
+  "notes": [
+    "The first CPU sample in each idle phase had no preceding interval and is excluded from idle CPU means.",
+    "Summed process working-set values can count shared pages in more than one process.",
+    "Process-group memory varies across independent runs more than the plugin renderer delta."
+  ],
+  "validation": {
+    "command": "pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts --reporter=list",
+    "result": "passed in all three runs",
+    "independentWindowsRuns": 3,
+    "e2eCasesPerRun": 1
+  },
+  "limitations": [
+    "Three runs on one Windows host do not establish a cross-platform budget or prove leak-free behavior.",
+    "The 4,471-byte package and 32 MiB retained buffer are synthetic test inputs, not a representative third-party plugin.",
+    "The test does not apply a memory cap or exercise long-term resource growth.",
+    "Linux and macOS process and memory behavior remain unmeasured."
+  ]
+}

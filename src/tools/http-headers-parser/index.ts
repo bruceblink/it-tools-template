@@ -3,6 +3,14 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/http-headers-parser',
+  extensionOwned: true,
+  categoryId: 'web',
+  translationKey: 'http-headers-parser',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.http-headers-parser.title'),
   path: '/http-headers-parser',
   description: translate('tools.http-headers-parser.description'),

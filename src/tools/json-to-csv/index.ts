@@ -3,6 +3,14 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/json-to-csv',
+  extensionOwned: true,
+  categoryId: 'development',
+  translationKey: 'json-to-csv',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.json-to-csv.title'),
   path: '/json-to-csv',
   description: translate('tools.json-to-csv.description'),

@@ -24,6 +24,7 @@ home:
     twitterXAccount: 'IT-Tools X 账号'
     about: '关于 IT-Tools'
     aboutLabel: '关于'
+    settings: '设置'
     backToTop: '返回顶部'
     darkMode: '深色模式'
     lightMode: '浅色模式'
@@ -46,6 +47,7 @@ about:
 
     如果您发现了 Bug，或者某些功能未能按预期工作，请在 GitHub 仓库的 [issues]({repositoryUrl}/issues/new/choose) 中提交错误报告。
 
+
 404:
   notFound: '404 页面不存在'
   sorry: '抱歉，该页面似乎不存在'
@@ -62,13 +64,18 @@ inputPrivacy:
   memoryNotice: 内容修改仅保存在当前页面内存中。离开或刷新后恢复默认内容。工具偏好可以单独保存。
   storageWarningTitle: 旧内容未能完全清除
   storageWarning: 旧版本保存的部分内容未能清除。当前修改仍只保存在内存中。如有需要，请清除此站点的浏览器数据。
+taskStatus:
+  calculating: 正在计算…
+  limit: 任务超过资源限制。请减少输入。
+  timeout: 任务超时。请简化输入。
+  error: 任务失败。
 tools:
   categories:
     favorite-tools: '我的收藏'
     crypto: '加密'
     converter: '转换器'
     web: Web
-    images and videos: '图片和视频'
+    images-and-videos: '图片和视频'
     development: '开发'
     network: '网络'
     math: '数学'
@@ -326,6 +333,13 @@ tools:
   mac-address-lookup:
     title: MAC地址查找
     description: 通过设备的MAC地址查找设备的供应商和制造商。
+    vendorInfo: 厂商信息：
+    loading: 正在加载厂商数据...
+    dataUnavailable: 暂时无法加载厂商数据。请检查网络后重试。
+    enterFullAddress: 请输入完整的六组 MAC 地址。
+    unknownVendor: 未找到此地址对应的厂商
+    retry: 重试
+    copyVendorInfo: 复制厂商信息
 
   mime-types:
     title: mime类型
@@ -509,6 +523,11 @@ tools:
   text-diff:
     title: 文本比较
     description: 比较两个文本并查看它们之间的差异。
+    originalText: 原始文本
+    modifiedText: 修改后的文本
+    sideBySide: 并排显示
+    ignoreWhitespace: 忽略行首和行尾空格
+    noDifferences: 未发现差异。
 
   otp-generator:
     title: OTP代码生成器

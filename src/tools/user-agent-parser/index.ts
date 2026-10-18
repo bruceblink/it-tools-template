@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/user-agent-parser',
+  categoryId: 'web',
+  translationKey: 'user-agent-parser',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.user-agent-parser.title'),
   path: '/user-agent-parser',
   description: translate('tools.user-agent-parser.description'),

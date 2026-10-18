@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useBase64 } from '@vueuse/core';
-import type { Ref } from 'vue';
+import { useMessage } from 'naive-ui';
 import { useCopy } from '@/composable/copy';
 import { getExtensionFromMimeType, getMimeTypeFromBase64, previewImageFromBase64, useDownloadFileFromBase64Refs } from '@/composable/downloadBase64';
+import { readSelectedFileAsDataUrl } from '@/platform-adapter';
 import { useValidation } from '@/composable/validation';
 import { isValidBase64 } from '@/utils/base64';
 
@@ -67,13 +67,24 @@ function downloadFile() {
   }
 }
 
-const fileInput = ref() as Ref<File>;
-const { base64: fileBase64 } = useBase64(fileInput);
+const fileBase64 = ref('');
 const { copy: copyFileBase64 } = useCopy({ source: fileBase64, text: 'Base64 string copied to the clipboard' });
+const message = useMessage();
 
 async function onUpload(file: File) {
   if (file) {
-    fileInput.value = file;
+    const result = await readSelectedFileAsDataUrl(file);
+    if (result.status === 'success') {
+      fileBase64.value = result.value;
+      return;
+    }
+
+    fileBase64.value = '';
+    message.error(result.status === 'unsupported'
+      ? 'Reading selected files is not supported in this context.'
+      : result.status === 'denied'
+        ? 'Access to the selected file was denied.'
+        : 'Could not read the selected file.');
   }
 }
 </script>

@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/regex-tester',
+  categoryId: 'development',
+  translationKey: 'regex-tester',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.regex-tester.title'),
   path: '/regex-tester',
   description: translate('tools.regex-tester.description'),

@@ -45,7 +45,7 @@ const { favoriteTools, toolsByCategory } = storeToRefs(toolStore);
 
 const tools = computed<ToolCategory[]>(() => [
   ...(favoriteTools.value.length > 0
-    ? [{ name: t('tools.categories.favorite-tools'), components: favoriteTools.value }]
+    ? [{ id: 'favorite-tools', name: t('tools.categories.favorite-tools'), components: favoriteTools.value }]
     : []),
   ...toolsByCategory.value,
 ]);

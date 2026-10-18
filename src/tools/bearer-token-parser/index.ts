@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/bearer-token-parser',
+  categoryId: 'web',
+  translationKey: 'bearer-token-parser',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.bearer-token-parser.title'),
   path: '/bearer-token-parser',
   description: translate('tools.bearer-token-parser.description'),

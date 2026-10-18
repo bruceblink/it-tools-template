@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/yaml-prettify',
+  categoryId: 'development',
+  translationKey: 'yaml-prettify',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.yaml-prettify.title'),
   path: '/yaml-prettify',
   description: translate('tools.yaml-prettify.description'),

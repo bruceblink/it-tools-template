@@ -28,7 +28,7 @@
 
 ### 构建与缓存边界
 
-- 启用 Vite manifest，从 `index.html` 递归收集静态 imports、CSS 和 assets。工具的动态入口不进入应用壳。PWA 注册助手 `workbox-window` 是启动时使用的动态依赖，单独按 manifest 中的包来源收集，保证断网重载时注册代码也可用。
+- 启用 Vite manifest，从 `index.html` 递归收集静态 imports、CSS 和 assets。工具的动态入口不进入应用壳。PWA 注册助手在应用挂载后再动态加载，不进入首屏或离线应用壳。首次注册仍需一次在线页面加载；注册完成后，Service Worker 继续提供缓存资源的离线访问。
 - PWA 改为 `injectManifest`，继续生成原来的 `sw.js` 地址。Workbox 候选清单按应用壳筛选，图标和 manifest 纳入测量；插件在转换后追加的 manifest 条目只计一次。缺失依赖、越界路径、符号链接逃逸或缺失文件都会让构建失败。
 - 静态依赖图之外，扫描本次 `assets/` 的实际构建文件，生成精确的运行时白名单，包含 Worker 和字体。只缓存同源、无查询参数的 GET；仅接收 HTTP 200 且非 HTML 的响应。工具页面 URL、请求内容、第三方资源、未生成的路径及带参数请求不进入工具缓存。
 - 使用 Cache First，每个版本和 Service Worker scope 最多 160 个资源、有效期 30 天，遇到存储配额不足允许清理。版本由构建文件清单生成，新版激活时只移除当前 scope 的旧工具缓存。Workbox 负责应用壳预缓存的更新和过期条目清理。
@@ -46,10 +46,14 @@
 | 首屏启动 JavaScript gzip | 338,143 字节，330.22 KiB，仍高于 300 KiB 目标 |
 | 可选入口静态 JS 闭包超标项 | MAC 查询、Text Diff、PDF 签名检查、WYSIWYG 编辑器、数学求值器 |
 
-本片在构建阶段强制执行 8 MiB 预缓存原始大小上限；300 KiB 和 500 KiB 目标保持原值并报告未达项，不在本片放宽目标，也不把仍超标的首屏与工具写成已达标。预缓存字节是缓存文件之和，不包含 Service Worker 自身，也不等同于首次安装的总网络传输量。Workbox 日志对自动追加 manifest 的 size 计为 0，完整大小以逐文件测量报告为准。
+本片在构建阶段强制执行 8 MiB 预缓存原始大小上限。后续性能工作也在构建阶段强制执行 300 KiB 首屏 JavaScript 与 500 KiB 可选入口闭包 gzip 上限；任一超限都会使生产构建失败。预缓存字节是缓存文件之和，不包含 Service Worker 自身，也不等同于首次安装的总网络传输量。Workbox 日志对自动追加 manifest 的 size 计为 0，完整大小以逐文件测量报告为准。
 
 `pnpm check` 已纳入 `pnpm test:pwa:build` 的清单、路径、去重、预算和缺失资源测试。CI 在校验后上传报告，失败时如报告已生成也会保留。原先手动禁用的独立 E2E workflow 未在本轮启用。
 
 最终验收：`pnpm check` 通过，包含 13 项 PWA 构建边界测试、82 个单元测试文件共 518 项测试、类型检查、零警告 lint 和生产构建。Playwright 离线验收在 Chromium、Firefox、WebKit 共 18 项通过；Docker Nginx 检查通过首页、工具深链、JS/CSS、Service Worker、manifest 和错误响应的安全响应头。自动化浏览器证据来自无头 Playwright；本轮未取得真实桌面窗口证据，Computer Use 尚不能识别用于该项目的真实窗口 URL。
 
 下一片先处理首屏 JavaScript 与上述五项工具的静态依赖体积，再明确语言模块和 Worker 的按需加载边界。通过这些目标后，继续推进阶段三的其余验收。
+
+### 2026-10-18 更新
+
+PWA 注册助手现在在应用挂载后加载。构建报告只把首屏静态 imports 计入应用壳。当前生产构建首屏 JavaScript gzip 为 297.76 KiB，应用壳为 1,042.33 KiB；构建预算检查通过。生产 PWA 与扩展路由离线端到端回归在 System Chrome 上 8 项通过。完整测量和其他性能工作见[性能、扩展接入与插件平台计划](07-performance-extensibility-plan.md)。

@@ -30,6 +30,7 @@ import {
   isPluginRendererUrl,
   PLUGIN_SCHEME,
 } from './plugin-sandbox';
+import { registerPluginLifecycleIpc } from './plugin-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -89,6 +90,12 @@ else {
     await installAppProtocol();
     installPermissionPolicy();
     installRuntimeInfoIpc();
+    await registerPluginLifecycleIpc({
+      userDataRoot: app.getPath('userData'),
+      getMainWindow: () => mainWindow,
+      getTrustedRendererUrl: () => trustedRendererUrl,
+      onPluginWebContentsCreated: (contents, pluginId) => pluginRendererIds.set(contents, pluginId),
+    });
     await createMainWindow();
     if (!app.isPackaged && process.env.IT_TOOLS_PLUGIN_SANDBOX_TEST === '1') {
       await openPluginSandboxProof();
@@ -324,19 +331,22 @@ function isAllowedRendererNavigation(contents: WebContents, url: string): boolea
 }
 
 async function openPluginSandboxProof(): Promise<void> {
-  await createPluginSandboxWindow({
-    pluginId: 'org.it-tools.sandbox-proof',
-    packageRoot: resolve(app.getAppPath(), 'electron/plugin-fixtures/sample'),
-    entrypoint: 'index.html',
-    requestedCapabilities: ['runtime.info', 'clipboard.write'],
-    grantedCapabilities: ['runtime.info'],
-    executeCapability: (call) => {
-      if (call.capability === 'runtime.info') {
-        return { platform: process.platform, version: app.getVersion() };
-      }
-      throw new Error('The sandbox proof does not execute this capability.');
-    },
-  }, (contents, pluginId) => pluginRendererIds.set(contents, pluginId));
+  const packageRoot = resolve(app.getAppPath(), 'electron/plugin-fixtures/sample');
+  for (const pluginId of ['org.it-tools.sandbox-proof', 'org.it-tools.sandbox-proof-peer']) {
+    await createPluginSandboxWindow({
+      pluginId,
+      packageRoot,
+      entrypoint: 'index.html',
+      requestedCapabilities: ['runtime.info', 'clipboard.write'],
+      grantedCapabilities: ['runtime.info'],
+      executeCapability: (call) => {
+        if (call.capability === 'runtime.info') {
+          return { platform: process.platform, version: app.getVersion() };
+        }
+        throw new Error('The sandbox proof does not execute this capability.');
+      },
+    }, (contents, id) => pluginRendererIds.set(contents, id));
+  }
 }
 
 async function openExternalLink(candidate: string) {

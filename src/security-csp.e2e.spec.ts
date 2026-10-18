@@ -105,48 +105,19 @@ test.describe('CSP-compatible tool behavior', () => {
     await securityAudit.expectClean();
   });
 
-  test('text diff edits both Monaco models and computes a diff in a worker', async ({ page }) => {
+  test('text diff edits both inputs and renders changes without CSP errors', async ({ page }) => {
     const securityAudit = await installSecurityAudit(page);
-    // Monaco switches to inline diff on narrow surfaces, where the original model is hidden.
-    await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto('/text-diff');
 
-    // Monaco also gives the non-editable gutter a monaco-editor class; target the two model-specific classes.
-    const originalEditor = page.locator('.monaco-editor.original-in-monaco-diff-editor');
-    const modifiedEditor = page.locator('.monaco-editor.modified-in-monaco-diff-editor');
-    // Monaco derives its shortcut platform from userAgent, which can differ from navigator.platform in WebKit.
-    const selectAll = await page.evaluate(() => navigator.userAgent.includes('Macintosh') ? 'Meta+A' : 'Control+A');
-    await expect(originalEditor).toBeVisible({ timeout: 15_000 });
-    await expect(modifiedEditor).toBeVisible({ timeout: 15_000 });
-    await originalEditor.getByText('original text', { exact: true }).click();
-    await page.keyboard.press(selectAll);
-    await page.keyboard.insertText('same line');
-    await page.keyboard.press('Enter');
-    await page.keyboard.insertText('original CSP text');
+    const original = page.getByLabel('Original text');
+    const modified = page.getByLabel('Modified text');
+    await expect(original).toBeVisible();
+    await expect(modified).toBeVisible();
+    await original.fill('same line\noriginal CSP text');
+    await modified.fill('same line\nmodified CSP text');
 
-    await modifiedEditor.getByText('modified text', { exact: true }).click();
-    await page.keyboard.press(selectAll);
-    await page.keyboard.insertText('same line');
-    await page.keyboard.press('Enter');
-    await page.keyboard.insertText('modified CSP text');
-
-    await expect(originalEditor.locator('.view-lines')).toContainText('original CSP text');
-    await expect(modifiedEditor.locator('.view-lines')).toContainText('modified CSP text');
-    await expect(originalEditor.locator('.view-lines')).not.toContainText('original text');
-    await expect(modifiedEditor.locator('.view-lines')).not.toContainText('modified text');
-    await expect.poll(
-      () => page.locator('.monaco-diff-editor .line-insert, .monaco-diff-editor .char-insert').count(),
-      { timeout: 5_000 },
-    )
-      .toBeGreaterThan(0);
-    await expect.poll(
-      () => page.evaluate(() => window.__securityWorkerScripts.length),
-      { timeout: 5_000 },
-    ).toBeGreaterThan(0);
-    await expect.poll(
-      () => page.evaluate(() => window.__securityWorkerReplies),
-      { timeout: 5_000 },
-    ).toBeGreaterThan(0);
+    await expect(page.locator('.diff-removed')).toContainText('original CSP text');
+    await expect(page.locator('.diff-added')).toContainText('modified CSP text');
 
     await securityAudit.expectClean();
   });

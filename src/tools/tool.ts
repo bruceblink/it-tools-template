@@ -1,13 +1,27 @@
-import { isAfter, subWeeks } from 'date-fns';
-import type { Tool } from './tools.types';
+import type { Tool, ToolConfig } from './tools.types';
 
-type WithOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+const newToolThreshold = new Date();
+newToolThreshold.setDate(newToolThreshold.getDate() - 14);
 
-export function defineTool(tool: WithOptional<Tool, 'isNew'>) {
-  const isNew = tool.createdAt ? isAfter(tool.createdAt, subWeeks(new Date(), 2)) : false;
+/** Keep the full definition in development for registry validation; production routes only carry UI fields. */
+export function defineTool(tool: ToolConfig): Tool {
+  const isNew = tool.isNew ?? (tool.createdAt ? tool.createdAt.getTime() > newToolThreshold.getTime() : false);
+  const translationKey = tool.translationKey ?? tool.path.replace(/^\/+/, '').replace(/\//g, '');
+  if (import.meta.env.DEV) {
+    return { ...tool, translationKey, isNew };
+  }
 
   return {
+    name: tool.name,
+    path: tool.path,
+    aliases: tool.aliases,
+    translationKey,
+    description: tool.description,
+    keywords: tool.keywords,
+    component: tool.component,
+    icon: tool.icon,
+    redirectFrom: tool.redirectFrom,
+    ...(tool.extensionOwned ? { extensionOwned: true } : {}),
     isNew,
-    ...tool,
   };
 }

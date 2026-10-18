@@ -1,13 +1,81 @@
-import messages from '@intlify/unplugin-vue-i18n/messages';
+import englishMessages from '../../locales/en.yml';
 import { get } from '@vueuse/core';
 import type { Plugin } from 'vue';
-import { createI18n } from 'vue-i18n';
+import { createI18n, type LocaleMessageValue, type VueMessageType } from 'vue-i18n';
 
-const i18n = createI18n({
+export const supportedLocaleCodes = ['en', 'de', 'es', 'fr', 'no', 'pt', 'uk', 'vi', 'zh'] as const;
+export type SupportedLocale = typeof supportedLocaleCodes[number];
+type LocaleMessages = Record<string, LocaleMessageValue<VueMessageType>>;
+
+const localeLoaders: Record<Exclude<SupportedLocale, 'en'>, () => Promise<LocaleMessages>> = {
+  de: async () => (await import('../../locales/de.yml')).default,
+  es: async () => (await import('../../locales/es.yml')).default,
+  fr: async () => (await import('../../locales/fr.yml')).default,
+  no: async () => (await import('../../locales/no.yml')).default,
+  pt: async () => (await import('../../locales/pt.yml')).default,
+  uk: async () => (await import('../../locales/uk.yml')).default,
+  vi: async () => (await import('../../locales/vi.yml')).default,
+  zh: async () => (await import('../../locales/zh.yml')).default,
+};
+
+const i18n = createI18n<false>({
   legacy: false,
-  locale: 'en',
-  messages,
+  locale: 'en' as string,
+  fallbackLocale: 'en',
+  messages: {
+    en: englishMessages,
+    de: {},
+    es: {},
+    fr: {},
+    no: {},
+    pt: {},
+    uk: {},
+    vi: {},
+    zh: {},
+  },
 });
+
+const loadedLocales = new Set<SupportedLocale>(['en']);
+const pendingLoads = new Map<SupportedLocale, Promise<void>>();
+let latestLocaleRequest = 0;
+
+// Share an in-flight load for each locale and register its messages before activation.
+async function loadLocale(locale: SupportedLocale) {
+  if (loadedLocales.has(locale)) {
+    return;
+  }
+
+  const existingLoad = pendingLoads.get(locale);
+  if (existingLoad) {
+    await existingLoad;
+    return;
+  }
+
+  const loader = localeLoaders[locale as Exclude<SupportedLocale, 'en'>];
+  const load = loader()
+    .then((messages) => {
+      i18n.global.setLocaleMessage(locale, messages);
+      loadedLocales.add(locale);
+    })
+    .finally(() => pendingLoads.delete(locale));
+  pendingLoads.set(locale, load);
+  await load;
+}
+
+function isSupportedLocale(value: string): value is SupportedLocale {
+  return supportedLocaleCodes.includes(value as SupportedLocale);
+}
+
+/** Load translations before changing the active locale; the most recent selection wins. */
+export async function activateLocale(value: string): Promise<SupportedLocale> {
+  const requestId = ++latestLocaleRequest;
+  const locale = isSupportedLocale(value) ? value : 'en';
+  await loadLocale(locale);
+  if (requestId === latestLocaleRequest) {
+    i18n.global.locale.value = locale;
+  }
+  return locale;
+}
 
 export const i18nPlugin: Plugin = {
   install: (app) => {

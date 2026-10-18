@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
+import { useMessage } from 'naive-ui';
 import _ from 'lodash';
 import { useCommandPaletteStore } from './command-palette.store';
 import type { PaletteOption } from './command-palette.types';
@@ -11,6 +12,8 @@ const isMac = computed(() => window.navigator.userAgent.toLowerCase().includes('
 
 const commandPaletteStore = useCommandPaletteStore();
 const { searchPrompt, filteredSearchResult } = storeToRefs(commandPaletteStore);
+const message = useMessage();
+const { t } = useI18n();
 
 const keys = useMagicKeys({
   passive: false,
@@ -32,7 +35,10 @@ whenever(() => keys.meta_k?.value ?? false, open);
 whenever(() => keys.escape?.value ?? false, close);
 
 function open() {
-  return (isModalOpen.value = true);
+  isModalOpen.value = true;
+  void commandPaletteStore.loadExtensionCommands().catch(() => {
+    message.error(t('taskStatus.error'));
+  });
 }
 
 function close() {
@@ -75,16 +81,19 @@ function getOptionIndex(option: PaletteOption) {
     .value();
 }
 
-function activateOption(option: PaletteOption) {
+async function activateOption(option: PaletteOption) {
   const { closeOnSelect } = option;
 
   if (option.action) {
-    option.action();
-
-    if (closeOnSelect) {
-      close();
+    try {
+      await option.action();
+      if (closeOnSelect) {
+        close();
+      }
     }
-
+    catch {
+      message.error(option.actionErrorMessage ?? t('taskStatus.error'));
+    }
     return;
   }
 
@@ -111,7 +120,7 @@ function activateOption(option: PaletteOption) {
 
 <template>
   <div flex-1>
-    <c-button w-full important:justify-start @click="isModalOpen = true">
+    <c-button w-full important:justify-start @click="open">
       <span flex items-center gap-3 op-40>
         <icon-mdi-search />
         {{ $t('search.label') }}

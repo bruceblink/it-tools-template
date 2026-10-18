@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/regex-memo',
+  categoryId: 'development',
+  translationKey: 'regex-memo',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'local-data',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.regex-memo.title'),
   path: '/regex-memo',
   description: translate('tools.regex-memo.description'),

@@ -5,6 +5,14 @@ import { codesByCategories } from './http-status-codes.constants';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/http-status-codes',
+  extensionOwned: true,
+  categoryId: 'web',
+  translationKey: 'http-status-codes',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'local-data',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.http-status-codes.title'),
   path: '/http-status-codes',
   description: translate('tools.http-status-codes.description'),

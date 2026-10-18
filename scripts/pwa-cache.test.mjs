@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
 import { gzipSync } from 'node:zlib';
-import { assertBuildPath, assertPrecacheBudget, budgets, collectAppShellFiles, collectStaticFiles, filterAppShell, getRuntimeAssets, shellIcons } from './pwa-cache.mjs';
+import { assertBuildPath, assertPerformanceBudgets, assertPrecacheBudget, budgets, collectAppShellFiles, collectStaticFiles, filterAppShell, getRuntimeAssets, shellIcons } from './pwa-cache.mjs';
 
 const manifest = {
   'index.html': { file: 'assets/home-12345678.js', imports: ['shared'], css: ['assets/home-12345678.css'], dynamicImports: ['src/tools/example/example.vue'] },
@@ -39,7 +39,7 @@ test('missing static imports fail instead of silently producing an incomplete sh
   assert.throws(() => collectStaticFiles(manifest, 'missing'), /Missing Vite manifest entry/);
 });
 
-test('the dynamic PWA registration helper belongs to the shell, while tool imports stay optional', () => {
+test('the deferred PWA registration helper and tool imports stay outside the application shell', () => {
   const entry = 'node_modules/.pnpm/workbox-window@7.4.0/node_modules/workbox-window/build/workbox-window.prod.es5.mjs';
   const withStartupHelper = {
     ...manifest,
@@ -47,7 +47,7 @@ test('the dynamic PWA registration helper belongs to the shell, while tool impor
     [entry]: { file: 'assets/registration-12345678.js' },
   };
   const files = collectAppShellFiles(withStartupHelper);
-  assert(files.includes('assets/registration-12345678.js'));
+  assert(!files.includes('assets/registration-12345678.js'));
   assert(!files.includes('assets/tool-12345678.js'));
 });
 
@@ -61,6 +61,21 @@ test('build paths reject traversal, URLs, query strings, encoded paths and Windo
 test('precache budget includes its exact boundary and rejects one extra byte', () => {
   assert.doesNotThrow(() => assertPrecacheBudget(budgets.precacheBytes));
   assert.throws(() => assertPrecacheBudget(budgets.precacheBytes + 1), /PWA precache budget exceeded/);
+});
+
+test('initial and tool JavaScript budgets include their exact boundaries and reject one extra byte', () => {
+  assert.doesNotThrow(() => assertPerformanceBudgets({
+    initial: { javaScriptGzipBytes: budgets.initialJavaScriptGzipBytes },
+    optionalEntries: [{ entry: 'tool', javaScriptGzipBytes: budgets.toolJavaScriptGzipBytes }],
+  }));
+  assert.throws(() => assertPerformanceBudgets({
+    initial: { javaScriptGzipBytes: budgets.initialJavaScriptGzipBytes + 1 },
+    optionalEntries: [],
+  }), /initial JavaScript gzip .* > /);
+  assert.throws(() => assertPerformanceBudgets({
+    initial: { javaScriptGzipBytes: budgets.initialJavaScriptGzipBytes },
+    optionalEntries: [{ entry: 'tool', javaScriptGzipBytes: budgets.toolJavaScriptGzipBytes + 1 }],
+  }), /tool JavaScript closure .* > /);
 });
 
 test('Workbox candidates are filtered by graph; report measures unique raw and gzip bytes', async (t) => {
@@ -156,6 +171,8 @@ test('runtime allowlist includes nested workers and fonts, excluding reports, ma
   assert(first.paths.includes('assets/font-12345678.woff2'));
   assert(!first.paths.some(path => path.endsWith('.map') || !path.startsWith('assets/')));
   assert.deepEqual(await getRuntimeAssets(directory), first);
+  await writeFile(resolve(directory, 'assets/home-12345678.js'), 'updated content at the same path');
+  assert.notEqual((await getRuntimeAssets(directory)).buildId, first.buildId);
   await writeFile(resolve(directory, 'assets/new-87654321.js'), 'new build');
   assert.notEqual((await getRuntimeAssets(directory)).buildId, first.buildId);
 });

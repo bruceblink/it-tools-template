@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
-import { convertCsvToJson } from './csv-to-json.service';
-import type { UseValidationRule } from '@/composable/validation';
-import { parseCsv } from '@/utils/csv';
-import { withDefaultOnError } from '@/utils/defaults';
 
 const delimiter = useStorage('csv-to-json:delimiter', ',');
 const hasHeader = useStorage('csv-to-json:has-header', true);
@@ -19,21 +15,12 @@ const delimiterOptions = [
 
 const sampleCsv = 'name,age,active\nAlice,30,true\nBob,25,false';
 
-function transformer(value: string) {
-  return withDefaultOnError(() => convertCsvToJson(value, {
-    delimiter: delimiter.value,
-    expandDotNotation: expandDotNotation.value,
-    hasHeader: hasHeader.value,
-    inferTypes: inferTypes.value,
-  }), '');
-}
-
-const rules: UseValidationRule<string>[] = [
-  {
-    validator: value => value === '' || parseCsv(value, { delimiter: delimiter.value }),
-    message: 'Provided CSV is not valid.',
-  },
-];
+const workerTaskOptions = computed(() => ({
+  delimiter: delimiter.value,
+  expandDotNotation: expandDotNotation.value,
+  hasHeader: hasHeader.value,
+  inferTypes: inferTypes.value,
+}));
 </script>
 
 <template>
@@ -63,7 +50,7 @@ const rules: UseValidationRule<string>[] = [
     input-placeholder="Paste your CSV here..."
     output-label="JSON output"
     output-language="json"
-    :input-validation-rules="rules"
-    :transformer="transformer"
+    worker-task-kind="csv-to-json"
+    :worker-task-options="workerTaskOptions"
   />
 </template>

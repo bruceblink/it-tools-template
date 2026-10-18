@@ -22,7 +22,9 @@ test.describe('Tool - JSON to TOML', () => {
 }
     `.trim());
 
-    const generatedJson = await page.getByTestId('area-content').innerText();
+    const output = page.getByTestId('area-content');
+    await expect(output).toContainText('foo = "bar"');
+    const generatedJson = await output.innerText();
 
     expect(generatedJson.trim()).toEqual(
       `

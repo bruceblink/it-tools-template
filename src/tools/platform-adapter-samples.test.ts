@@ -1,0 +1,171 @@
+import { describe, expect, it } from 'vitest';
+import { createValidatedToolRegistry } from './tool-registry';
+import { tools as runtimeTools } from './index';
+import type { ToolCategory } from './tools.types';
+import { tool as base64FileConverter } from './base64-file-converter';
+import { tool as cameraRecorder } from './camera-recorder';
+import { tool as htmlWysiwygEditor } from './html-wysiwyg-editor';
+import { tool as jsonLinesConverter } from './json-lines-converter';
+import { tool as macAddressLookup } from './mac-address-lookup';
+import { tool as mathEvaluator } from './math-evaluator';
+import { tool as etaCalculator } from './eta-calculator';
+import { tool as percentageCalculator } from './percentage-calculator';
+import { tool as chronometer } from './chronometer';
+import { tool as temperatureConverter } from './temperature-converter';
+import { tool as dataSizeConverter } from './data-size-converter';
+import { tool as lengthConverter } from './length-converter';
+import { tool as benchmarkBuilder } from './benchmark-builder';
+import { tool as pdfSignatureChecker } from './pdf-signature-checker';
+import { tool as phoneParserAndFormatter } from './phone-parser-and-formatter';
+import { tool as ibanValidatorAndParser } from './iban-validator-and-parser';
+import { tool as loremIpsumGenerator } from './lorem-ipsum-generator';
+import { tool as textStatistics } from './text-statistics';
+import { tool as emojiPicker } from './emoji-picker';
+import { tool as stringObfuscator } from './string-obfuscator';
+import { tool as textDiff } from './text-diff';
+import { tool as numeronymGenerator } from './numeronym-generator';
+import { tool as asciiTextDrawer } from './ascii-text-drawer';
+import { tool as ipv4SubnetCalculator } from './ipv4-subnet-calculator';
+import { tool as ipv4AddressConverter } from './ipv4-address-converter';
+import { tool as ipv4AddressClassifier } from './ipv4-address-classifier';
+import { tool as ipv4RangeExpander } from './ipv4-range-expander';
+import { tool as ipv4CidrContainmentChecker } from './ipv4-cidr-containment-checker';
+import { tool as ipv4CidrOverlapChecker } from './ipv4-cidr-overlap-checker';
+import { tool as ipv4CidrMerge } from './ipv4-cidr-merge';
+import { tool as ipv4CidrSplitter } from './ipv4-cidr-splitter';
+import { tool as ipv4WildcardMask } from './ipv4-wildcard-mask';
+import { tool as macAddressGenerator } from './mac-address-generator';
+import { tool as ipv6UlaGenerator } from './ipv6-ula-generator';
+import { tool as dateTimeConverter } from './date-time-converter';
+import { tool as integerBaseConverter } from './integer-base-converter';
+import { tool as romanNumeralConverter } from './roman-numeral-converter';
+import { tool as base32StringConverter } from './base32-string-converter';
+import { tool as base58StringConverter } from './base58-string-converter';
+import { tool as base64StringConverter } from './base64-string-converter';
+import { tool as hexStringConverter } from './hex-string-converter';
+import { tool as colorConverter } from './color-converter';
+import { tool as colorContrastChecker } from './color-contrast-checker';
+import { tool as caseConverter } from './case-converter';
+import { tool as textToNatoAlphabet } from './text-to-nato-alphabet';
+import { tool as textToBinary } from './text-to-binary';
+import { tool as textToUnicode } from './text-to-unicode';
+import { tool as yamlToJson } from './yaml-to-json-converter';
+import { tool as yamlToToml } from './yaml-to-toml';
+import { tool as jsonToYaml } from './json-to-yaml-converter';
+import { tool as jsonToToml } from './json-to-toml';
+import { tool as listConverter } from './list-converter';
+import { tool as tomlToJson } from './toml-to-json';
+import { tool as tomlToYaml } from './toml-to-yaml';
+import { tool as xmlToJson } from './xml-to-json';
+import { tool as jsonToXml } from './json-to-xml';
+import { tool as markdownToHtml } from './markdown-to-html';
+import { tool as qrCodeGenerator } from './qr-code-generator';
+import { tool as wifiQrCodeGenerator } from './wifi-qr-code-generator';
+import { tool as svgPlaceholderGenerator } from './svg-placeholder-generator';
+import { tool as tokenGenerator } from './token-generator';
+import { tool as hashText } from './hash-text';
+import { tool as bcrypt } from './bcrypt';
+import { tool as uuidGenerator } from './uuid-generator';
+import { tool as ulidGenerator } from './ulid-generator';
+import { tool as encryption } from './encryption';
+import { tool as bip39Generator } from './bip39-generator';
+import { tool as hmacGenerator } from './hmac-generator';
+import { tool as jwtSigner } from './jwt-signer';
+import { tool as rsaKeyPairGenerator } from './rsa-key-pair-generator';
+import { tool as passwordStrengthAnalyser } from './password-strength-analyser';
+import { tool as deviceInformation } from './device-information';
+import { tool as urlEncoder } from './url-encoder';
+import { tool as htmlEntities } from './html-entities';
+import { tool as urlParser } from './url-parser';
+import { tool as urlQueryBuilder } from './url-query-builder';
+import { tool as basicAuthGenerator } from './basic-auth-generator';
+import { tool as basicAuthParser } from './basic-auth-parser';
+import { tool as bearerTokenParser } from './bearer-token-parser';
+import { tool as metaTagGenerator } from './meta-tag-generator';
+import { tool as otpCodeGeneratorAndValidator } from './otp-code-generator-and-validator';
+import { tool as mimeTypeLookup } from './mime-types';
+import { tool as jwtParser } from './jwt-parser';
+import { tool as keycodeInfo } from './keycode-info';
+import { tool as slugifyString } from './slugify-string';
+import { tool as userAgentParser } from './user-agent-parser';
+import { tool as httpStatusCodes } from './http-status-codes';
+import { tool as httpHeadersParser } from './http-headers-parser';
+import { tool as httpCacheAnalyzer } from './http-cache-analyzer';
+import { tool as cookieParser } from './cookie-parser';
+import { tool as corsAnalyzer } from './cors-analyzer';
+import { tool as securityHeadersAnalyzer } from './security-headers-analyzer';
+import { tool as cspAnalyzer } from './csp-analyzer';
+import { tool as sriHashGenerator } from './sri-hash-generator';
+import { tool as robotsTxtTester } from './robots-txt-tester';
+import { tool as jsonDiff } from './json-diff';
+import { tool as safelinkDecoder } from './safelink-decoder';
+import { tool as gitMemo } from './git-memo';
+import { tool as randomPortGenerator } from './random-port-generator';
+import { tool as crontabGenerator } from './crontab-generator';
+import { tool as jsonViewer } from './json-viewer';
+import { tool as jsonPathExtractor } from './json-path-extractor';
+import { tool as jsonKeySorter } from './json-key-sorter';
+import { tool as jsonMinify } from './json-minify';
+import { tool as curlCodeGenerator } from './curl-code-generator';
+import { tool as jsonToCsv } from './json-to-csv';
+import { tool as csvToJson } from './csv-to-json';
+import { tool as csvToMarkdownTable } from './csv-to-markdown-table';
+import { tool as sqlPrettify } from './sql-prettify';
+import { tool as chmodCalculator } from './chmod-calculator';
+import { tool as dockerRunToDockerComposeConverter } from './docker-run-to-docker-compose-converter';
+import { tool as xmlFormatter } from './xml-formatter';
+import { tool as yamlViewer } from './yaml-viewer';
+import { tool as envVarsParser } from './env-vars-parser';
+import { tool as emailNormalizer } from './email-normalizer';
+import { tool as regexTester } from './regex-tester';
+import { tool as regexMemo } from './regex-memo';
+
+describe('platform adapter sample definitions', () => {
+  it('validates conversion, editor, local data, selected-file, camera, calculation, measurement, and clipboard tools as extensions', () => {
+    const categories: ToolCategory[] = [
+      { id: 'converter', name: 'Converter', components: [dateTimeConverter, integerBaseConverter, romanNumeralConverter, base32StringConverter, base58StringConverter, base64StringConverter, base64FileConverter, hexStringConverter, colorConverter, colorContrastChecker, caseConverter, textToNatoAlphabet, textToBinary, textToUnicode, yamlToJson, yamlToToml, jsonToYaml, jsonToToml, listConverter, tomlToJson, tomlToYaml, xmlToJson, jsonToXml, markdownToHtml] },
+      { id: 'crypto', name: 'Crypto', components: [tokenGenerator, hashText, bcrypt, uuidGenerator, ulidGenerator, encryption, bip39Generator, hmacGenerator, jwtSigner, rsaKeyPairGenerator, passwordStrengthAnalyser, pdfSignatureChecker] },
+      { id: 'data', name: 'Data', components: [phoneParserAndFormatter, ibanValidatorAndParser] },
+      { id: 'development', name: 'Development', components: [gitMemo, randomPortGenerator, crontabGenerator, jsonViewer, jsonLinesConverter, jsonPathExtractor, jsonKeySorter, jsonMinify, curlCodeGenerator, jsonToCsv, csvToJson, csvToMarkdownTable, sqlPrettify, chmodCalculator, dockerRunToDockerComposeConverter, xmlFormatter, yamlViewer, envVarsParser, emailNormalizer, regexTester, regexMemo] },
+      { id: 'images-and-videos', name: 'Images and videos', components: [qrCodeGenerator, wifiQrCodeGenerator, svgPlaceholderGenerator, cameraRecorder] },
+      { id: 'math', name: 'Math', components: [mathEvaluator, etaCalculator, percentageCalculator] },
+      { id: 'measurement', name: 'Measurement', components: [chronometer, temperatureConverter, dataSizeConverter, lengthConverter, benchmarkBuilder] },
+      { id: 'network', name: 'Network', components: [ipv4SubnetCalculator, ipv4AddressConverter, ipv4AddressClassifier, ipv4RangeExpander, ipv4CidrContainmentChecker, ipv4CidrOverlapChecker, ipv4CidrMerge, ipv4CidrSplitter, ipv4WildcardMask, macAddressLookup, macAddressGenerator, ipv6UlaGenerator] },
+      { id: 'text', name: 'Text', components: [loremIpsumGenerator, textStatistics, emojiPicker, stringObfuscator, textDiff, numeronymGenerator, asciiTextDrawer] },
+      { id: 'web', name: 'Web', components: [urlEncoder, htmlEntities, urlParser, urlQueryBuilder, deviceInformation, basicAuthGenerator, basicAuthParser, bearerTokenParser, metaTagGenerator, otpCodeGeneratorAndValidator, mimeTypeLookup, jwtParser, keycodeInfo, slugifyString, htmlWysiwygEditor, userAgentParser, httpStatusCodes, httpHeadersParser, httpCacheAnalyzer, cookieParser, corsAnalyzer, securityHeadersAnalyzer, cspAnalyzer, sriHashGenerator, robotsTxtTester, jsonDiff, safelinkDecoder] },
+    ];
+
+    const registry = createValidatedToolRegistry(categories, 'extension');
+    expect(registry.tools).toHaveLength(117);
+    expect(registry.tools.find(tool => tool.path === '/json-lines-converter')?.capabilities).toEqual([]);
+    expect(registry.tools.find(tool => tool.path === '/mac-address-lookup')?.capabilities).toEqual(['data.oui']);
+    expect(registry.tools.find(tool => tool.path === '/mac-address-lookup')?.offline).toBe('conditional');
+    expect(registry.tools.find(tool => tool.path === '/html-wysiwyg-editor')?.capabilities).toEqual(['clipboard.write', 'file.save']);
+    expect(registry.tools.find(tool => tool.path === '/percentage-calculator')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/benchmark-builder')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/phone-parser-and-formatter')?.dataProcessing).toBe('local-data');
+    expect(registry.tools.find(tool => tool.path === '/iban-validator-and-parser')?.offline).toBe('available');
+    expect(registry.tools.find(tool => tool.path === '/text-statistics')?.capabilities).toEqual([]);
+    expect(registry.tools.find(tool => tool.path === '/ascii-text-drawer')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/ipv4-address-converter')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/ipv4-subnet-calculator')?.offline).toBe('available');
+    expect(registry.tools.find(tool => tool.path === '/date-converter')?.translationKey).toBe('date-converter');
+    expect(registry.tools.find(tool => tool.path === '/base-converter')?.translationKey).toBe('base-converter');
+    expect(registry.tools.find(tool => tool.path === '/base64-string-converter')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/json-to-toml')?.capabilities).toEqual([]);
+    expect(registry.tools.find(tool => tool.path === '/qrcode-generator')?.capabilities).toEqual(['file.save']);
+    expect(registry.tools.find(tool => tool.path === '/svg-placeholder-generator')?.capabilities).toEqual(['clipboard.write', 'file.save']);
+    expect(registry.tools.find(tool => tool.path === '/token-generator')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/bip39-generator')?.dataProcessing).toBe('local-data');
+    expect(registry.tools.find(tool => tool.path === '/device-information')?.capabilities).toEqual(['runtime.info']);
+    expect(registry.tools.find(tool => tool.path === '/mime-types')?.dataProcessing).toBe('local-data');
+    expect(registry.tools.find(tool => tool.path === '/safelink-decoder')?.capabilities).toEqual(['clipboard.write']);
+    expect(registry.tools.find(tool => tool.path === '/git-memo')?.dataProcessing).toBe('local-data');
+    expect(registry.tools.find(tool => tool.path === '/docker-run-to-docker-compose-converter')?.capabilities).toEqual(['clipboard.write', 'file.save']);
+
+    const runtimeConverter = runtimeTools.find(tool => tool.path === '/ipv4-address-converter');
+    expect(runtimeConverter).toMatchObject({ path: '/ipv4-address-converter', translationKey: 'ipv4-address-converter' });
+    expect(runtimeConverter?.capabilities).toBeUndefined();
+    expect(runtimeConverter?.offline).toBeUndefined();
+  });
+});

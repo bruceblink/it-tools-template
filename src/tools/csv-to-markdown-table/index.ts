@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/csv-to-markdown-table',
+  categoryId: 'development',
+  translationKey: 'csv-to-markdown-table',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.csv-to-markdown-table.title'),
   path: '/csv-to-markdown-table',
   description: translate('tools.csv-to-markdown-table.description'),

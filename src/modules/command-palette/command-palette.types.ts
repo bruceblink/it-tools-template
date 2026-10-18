@@ -5,7 +5,8 @@ export interface PaletteOption {
   name: string
   description?: string
   icon?: Component
-  action?: () => void
+  action?: () => unknown | Promise<unknown>
+  actionErrorMessage?: string
   to?: RouteLocationRaw
   category: string
   keywords?: string[]

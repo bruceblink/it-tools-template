@@ -110,7 +110,7 @@ pnpm validate
 
 `auto-imports.d.ts` is generated locally and ignored by Git. `pnpm typecheck:app` prepares it automatically, so typechecking also works from a clean checkout.
 
-The current roadmap is in [Development Plan](docs/01-development-plan.md). The next stages focus on measured performance, consistent tool and capability registration, and a gradual plugin architecture; scope, acceptance criteria, and isolation requirements are in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-plan.md). Earlier quality work is recorded in [Quality Baseline](docs/02-quality-baseline.md).
+The current roadmap is in [Development Plan](docs/01-development-plan.md). Performance and tool-registration foundations and the internal first-party extension SDK are implemented. The Electron plugin pilot includes signed package installation, capability approval, version fallback, and signer revocation; cross-platform and native-window acceptance is still in progress. Scope and isolation requirements are in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-plan.md), and the current interface boundaries are in [First-Party Extension SDK v0](docs/extension-sdk-v0.md). Earlier quality work is recorded in [Quality Baseline](docs/02-quality-baseline.md).
 
 The two security tasks and their acceptance results are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
 
@@ -118,7 +118,7 @@ Content privacy, sanitized rendering, and deployment headers are described in [C
 
 The PWA precaches the application shell and caches tool assets after use. It stores only same-origin build resources, with a 160-entry, 30-day limit for each build and service-worker scope. Offline availability depends on those resources remaining in browser storage. Build budgets, cache boundaries, and remaining performance work are documented in [Application Shell and Offline Cache](docs/05-pwa-cache-plan.md).
 
-Every production build writes `dist/bundle-report.json` with raw and gzip sizes for the shell, optional entry dependency closures, and emitted runtime assets, including workers. Builds fail when the initial precache exceeds 8 MiB. The 300 KiB initial JavaScript and 500 KiB optional entry targets remain visible in the report; they are not yet enforced. CI uploads the report as an artifact. After building, run the focused offline acceptance with `pnpm test:e2e src/pwa-cache.e2e.spec.ts`.
+Every production build writes `dist/bundle-report.json` with raw and gzip sizes for the shell, optional entry dependency closures, and emitted runtime assets, including workers. Builds fail when the initial precache exceeds 8 MiB, initial JavaScript exceeds 300 KiB gzip, or an optional entry closure exceeds 500 KiB gzip. The PWA registration helper loads after the app mounts and is outside the shell. CI uploads the report as an artifact. After building, run the focused offline acceptance with `pnpm test:e2e src/pwa-cache.e2e.spec.ts`.
 
 The Electron desktop app shares the Vue interface and tool routes. Install the local Electron runtime once with `pnpm exec install-electron`, then use `pnpm electron:dev` for development and `pnpm electron:build` for the desktop build. Native runners create a Windows NSIS installer with `pnpm electron:package:win`, Linux AppImage and deb packages with `pnpm electron:package:linux`, or macOS dmg and zip packages with `pnpm electron:package:mac`. Run the Electron smoke checks with `pnpm test:e2e:electron`; [GitHub Actions](.github/workflows/electron-desktop.yml) builds and tests all three platforms. [Release v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6) includes the Web ZIP and Windows x64, Linux x64, and macOS ARM64 desktop packages, with Docker image tags in its notes. The desktop renderer uses a secure local `app://` origin, skips the Web Service Worker, and exposes a narrow sandboxed preload bridge. Camera Recorder has an explicit consent flow; real-device recovery, signing, notarization, installation, upgrade, and uninstall acceptance remain open.
 
@@ -130,13 +130,13 @@ After the final production build, `pnpm headers:docker` checks real Nginx respon
 
 ### Create a New Tool
 
-Run the scaffold script to generate boilerplate under `src/tools/`:
+Run the scaffold script to create a tool with an explicit category, platform, data policy, and offline policy:
 
 ```sh
-pnpm run script:create:tool my-tool-name
+pnpm run script:create:tool my-tool-name --category development --title-zh "我的工具" --data-processing memory-only --offline available --platforms web,electron
 ```
 
-This creates the directory, component, service, and registers the tool in `src/tools/index.ts`. Add it to the appropriate category and implement the logic.
+The script creates the component, a typed `ToolDefinition`, a registry validation test, and an end-to-end scaffold assertion. It registers the tool in the requested category and adds English and Chinese title and description entries. The generated description is a TODO. Replace it and review all declared metadata before implementing the tool. Add `--capabilities clipboard.write,file.save` only when the tool requires those capabilities.
 
 ### Release Flow
 

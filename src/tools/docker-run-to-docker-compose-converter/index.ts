@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/docker-run-to-docker-compose-converter',
+  categoryId: 'development',
+  translationKey: 'docker-run-to-docker-compose-converter',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write', 'file.save'],
   name: translate('tools.docker-run-to-docker-compose-converter.title'),
   path: '/docker-run-to-docker-compose-converter',
   description: translate('tools.docker-run-to-docker-compose-converter.description'),

@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/security-headers-analyzer',
+  categoryId: 'web',
+  translationKey: 'security-headers-analyzer',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.security-headers-analyzer.title'),
   path: '/security-headers-analyzer',
   description: translate('tools.security-headers-analyzer.description'),

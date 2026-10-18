@@ -1,6 +1,6 @@
 # Electron Plugin Package Format v1
 
-Status: experimental. The package validator, staging service, capability broker, and lifecycle service exist. The application has no install screen, trusted-key catalog, lifecycle IPC, or production signing keys.
+Status: experimental. The package validator, staging service, capability broker, lifecycle service, local signer trust store, and desktop management UI exist. The repository has no production signing keys or public plugin catalog.
 
 ## Scope
 
@@ -87,6 +87,8 @@ The installer checks archive metadata before extraction. It also checks actual s
 
 The staged path is `<installRoot>/<pluginId>/<version>`. The installer does not replace an existing version. It stores the validated manifest as normalized JSON. It serializes staging operations for the same install root and cleans abandoned staging directories before a new install.
 
-The lifecycle service revalidates the signed manifest and every file before activation, limits active plugin windows, restores the previous version if a replacement fails to start, and supports disable and uninstall operations. It accepts a host-provided trusted-key map and per-session grants for `runtime.info` and `clipboard.write`.
+The lifecycle service revalidates the signed manifest and every file before activation, limits active plugin windows, restores the previous version if a replacement fails to start, and supports disable and uninstall operations. The trusted desktop renderer calls it through main-process IPC that checks the sender frame and app origin. Package installation uses the Electron file picker. Renderer code does not receive local file paths.
 
-This repository does not ship a production plugin signing key or a user-managed trust store. The application does not yet expose lifecycle operations through main-process IPC or an install screen. The capability broker exists as a bounded local protocol, but the plugin manager is not yet connected to it in the production application.
+The desktop UI stores only public Ed25519 keys in the application user-data directory. Each key is limited to named plugin IDs. The UI displays a SHA-256 fingerprint before trust, and a native confirmation dialog records the user's decision. Signature trust confirms package origin and integrity. It does not grant plugin capabilities. The main process asks for separate approval before it grants `runtime.info` or `clipboard.write` for a running window.
+
+The Electron management UI is in the Plugins section of `/settings`. The legacy `/settings/extensions` route redirects there. The web UI states that external plugin packages are desktop-only. No production signer key, maintained first-party plugin package, automatic startup, or public plugin catalog ships with this repository. A local signer key must be verified with its publisher before it is trusted.

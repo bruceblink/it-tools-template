@@ -20,7 +20,7 @@ export interface RegexMatchSummary {
   coveragePercent: number
 }
 
-export function matchRegex(regex: string, text: string, flags: string): RegexMatch[] {
+export function matchRegex(regex: string, text: string, flags: string, maxResults = Number.POSITIVE_INFINITY): RegexMatch[] {
   // if (regex === '' || text === '') {
   //   return [];
   // }
@@ -74,6 +74,9 @@ export function matchRegex(regex: string, text: string, flags: string): RegexMat
       captures,
       groups,
     });
+    if (results.length >= maxResults) {
+      break;
+    }
     lastIndex = re.lastIndex;
     match = re.exec(text);
   }

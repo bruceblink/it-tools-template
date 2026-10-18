@@ -3,6 +3,14 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/cors-analyzer',
+  extensionOwned: true,
+  categoryId: 'web',
+  translationKey: 'cors-analyzer',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.cors-analyzer.title'),
   path: '/cors-analyzer',
   description: translate('tools.cors-analyzer.description'),

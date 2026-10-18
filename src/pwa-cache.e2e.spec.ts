@@ -81,6 +81,9 @@ const report = JSON.parse(readFileSync(new URL('../dist/bundle-report.json', imp
   precache: { bytes: number; files: Array<{ file: string }> }
 };
 const manifest = JSON.parse(readFileSync(new URL('../dist/.vite/manifest.json', import.meta.url), 'utf8')) as Record<string, { file: string; name?: string; isDynamicEntry?: boolean }>;
+const ouiManifest = JSON.parse(readFileSync(new URL('../dist/assets/oui-data/manifest.json', import.meta.url), 'utf8')) as {
+  shards: Array<{ prefix: string; file: string }>
+};
 const shellFiles = new Set(report.precache.files.map(file => `/${file.file}`));
 function toolEntry(name: string) {
   const entry = manifest[`src/tools/${name}/${name}.vue`] ?? Object.values(manifest).find(entry => entry.isDynamicEntry && entry.name === name);
@@ -90,13 +93,22 @@ function toolEntry(name: string) {
   return entry.file;
 }
 const macEntry = toolEntry('mac-address-lookup');
+const ouiManifestEntry = 'assets/oui-data/manifest.json';
+function ouiShardEntry(address: string) {
+  const normalized = address.replace(/[:-]/g, '').toUpperCase();
+  const shard = ouiManifest.shards.find(entry => normalized.startsWith(entry.prefix));
+  if (!shard) {
+    throw new Error(`No generated OUI shard contains ${normalized.slice(0, 3)}.`);
+  }
+  return `assets/oui-data/${shard.file}`;
+}
+const knownOuiShard = ouiShardEntry('20:37:06:12:34:56');
+const unknownOuiShard = ouiShardEntry('FF:FF:FF:FF:FF:FF');
 const diffEntry = toolEntry('text-diff');
 const jsonEntry = toolEntry('json-minify');
-
-declare global {
-  interface Window {
-    __pwaWorkerAudit: { replies: number }
-  }
+const zhEntry = manifest['locales/zh.yml']?.file;
+if (!zhEntry) {
+  throw new Error('No built entry found for the Chinese locale.');
 }
 
 test.describe('Production PWA caching', () => {
@@ -164,6 +176,25 @@ test.describe('Production PWA caching', () => {
     expect((await cacheContents(page)).some(url => new URL(url).pathname === '/json-minify')).toBe(false);
   });
 
+  test('a saved language reloads offline after its locale chunk is cached', async ({ page, staticSite }) => {
+    await startWithControlledHome(page);
+    await page.goto('/regex-tester');
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toHaveText('Regex Tester');
+
+    const language = page.locator('.c-select').first();
+    await language.locator('.c-select-input').click();
+    await language.getByText('中文', { exact: true }).click();
+    await expect(heading).not.toHaveText('Regex Tester');
+    const translatedTitle = await heading.innerText();
+    await expectToolCached(page, zhEntry);
+
+    staticSite.disconnect();
+    await page.reload();
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(translatedTitle);
+    await expect(page.locator('.c-select-input').first()).toContainText('中文');
+  });
+
   test('MAC vendor data is available after online use and an offline reload', async ({ page, staticSite }) => {
     await startWithControlledHome(page);
     await page.goto('/mac-address-lookup');
@@ -171,9 +202,15 @@ test.describe('Production PWA caching', () => {
     await expect(input).toBeVisible();
     await input.fill('20:37:06:12:34:56');
     const tool = page.locator('.tool-content');
-    await expect(tool).not.toContainText('Unknown vendor for this address');
+    await expect(tool.locator('.c-card')).toContainText('Cisco Systems');
     const onlineVendor = await tool.locator('.c-card').innerText();
     await expectToolCached(page, macEntry);
+    await expectToolCached(page, ouiManifestEntry);
+    await expectToolCached(page, knownOuiShard);
+
+    await input.fill('FF:FF:FF:FF:FF:FF');
+    await expect(tool.locator('.c-card')).toContainText('Unknown vendor for this address');
+    await expectToolCached(page, unknownOuiShard);
 
     staticSite.disconnect();
     await page.reload();
@@ -183,42 +220,25 @@ test.describe('Production PWA caching', () => {
     await expect(tool).toContainText('Unknown vendor for this address');
   });
 
-  test('Text Diff loads its worker and computes changes again after an offline reload', async ({ page, staticSite }) => {
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.addInitScript(() => {
-      const audit = { replies: 0 };
-      Object.assign(window, { __pwaWorkerAudit: audit });
-      window.Worker = new Proxy(window.Worker, {
-        construct(target, args, newTarget) {
-          const worker = Reflect.construct(target, args, newTarget) as Worker;
-          worker.addEventListener('message', () => { audit.replies++; });
-          return worker;
-        },
-      });
-    });
+  test('Text Diff compares changes after an offline reload', async ({ page, staticSite }) => {
     await startWithControlledHome(page);
     await page.goto('/text-diff');
 
-    const original = page.locator('.monaco-editor.original-in-monaco-diff-editor');
-    const modified = page.locator('.monaco-editor.modified-in-monaco-diff-editor');
-    const workerReplies = () => page.evaluate(() => window.__pwaWorkerAudit.replies);
+    const original = page.getByLabel('Original text');
+    const modified = page.getByLabel('Modified text');
     await expect(original).toBeVisible();
     await expect(modified).toBeVisible();
-    await expect.poll(workerReplies).toBeGreaterThan(0);
     await expectToolCached(page, diffEntry);
-    await expect.poll(async () => (await cacheContents(page, true)).some(url => /editor\.worker[^/]*\.js$/.test(url))).toBe(true);
+    await expect(page.locator('.diff-removed')).toContainText('original text');
+    await expect(page.locator('.diff-added')).toContainText('modified text');
 
     staticSite.disconnect();
     await page.reload();
     await expect(original).toBeVisible();
     await expect(modified).toBeVisible();
-    await expect.poll(workerReplies).toBeGreaterThan(0);
-    const selectAll = await page.evaluate(() => navigator.userAgent.includes('Macintosh') ? 'Meta+A' : 'Control+A');
-    await modified.getByText('modified text', { exact: true }).click();
-    await page.keyboard.press(selectAll);
-    await page.keyboard.insertText('offline diff result');
-    await expect(modified.locator('.view-lines')).toContainText('offline diff result');
-    await expect.poll(() => page.locator('.monaco-diff-editor .line-insert, .monaco-diff-editor .char-insert').count()).toBeGreaterThan(0);
+    await modified.fill('offline diff result');
+    await expect(page.locator('.diff-removed')).toContainText('original text');
+    await expect(page.locator('.diff-added')).toContainText('offline diff result');
   });
 
   test('runtime cache excludes query strings, page URLs and unknown assets; uncached offline requests fail', async ({ page, staticSite }) => {

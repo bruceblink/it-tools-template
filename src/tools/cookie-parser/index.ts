@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/cookie-parser',
+  categoryId: 'web',
+  translationKey: 'cookie-parser',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.cookie-parser.title'),
   path: '/cookie-parser',
   description: translate('tools.cookie-parser.description'),

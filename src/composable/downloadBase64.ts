@@ -1,6 +1,8 @@
-import { extension as getExtensionFromMimeType, lookup as getMimeTypeFromExtension } from 'mime-types';
+import { extension as getExtensionFromMimeType, types as mimeTypes } from 'mime-types';
+import { useMessage } from 'naive-ui';
 import type { Ref } from 'vue';
 import _ from 'lodash';
+import { saveFileContent, type FileSaveResult } from '@/platform-adapter';
 
 export {
   getMimeTypeFromBase64,
@@ -41,10 +43,20 @@ function getFileExtensionFromMimeType({
   defaultExtension?: string
 }) {
   if (mimeType) {
-    return getExtensionFromMimeType(mimeType) ?? defaultExtension;
+    const inferredExtension = getExtensionFromMimeType(mimeType);
+    return typeof inferredExtension === 'string' ? inferredExtension : defaultExtension;
   }
 
   return defaultExtension;
+}
+
+/** Resolve MIME types from extensions without calling the Node path module in browsers. */
+function getMimeTypeFromExtension(filenameOrExtension: string): string | false {
+  const value = filenameOrExtension.trim().split(/[?#]/, 1)[0] ?? '';
+  const filename = value.split(/[\\/]/).pop() ?? '';
+  const dotIndex = filename.lastIndexOf('.');
+  const extension = (dotIndex >= 0 ? filename.slice(dotIndex + 1) : filename.replace(/^\./, '')).toLowerCase();
+  return extension ? mimeTypes[extension] ?? false : false;
 }
 
 function downloadFromBase64({ sourceValue, filename, extension, fileMimeType }:
@@ -68,18 +80,30 @@ function downloadFromBase64({ sourceValue, filename, extension, fileMimeType }:
     cleanFileName = `${cleanFileName}.${cleanExtension}`;
   }
 
-  const a = document.createElement('a');
-  a.href = base64String;
-  a.download = cleanFileName;
-  a.click();
+  const extensionMimeType = getMimeTypeFromExtension(cleanExtension);
+  const downloadMimeType = fileMimeType ?? (typeof extensionMimeType === 'string' ? extensionMimeType : 'application/octet-stream');
+  return saveFileContent(base64String, cleanFileName, downloadMimeType);
+}
+
+function notifyDownloadFailure(status: Exclude<FileSaveResult['status'], 'started'>, message: ReturnType<typeof useMessage>): void {
+  const errorMessage = status === 'unsupported'
+    ? 'File downloads are not supported in this context.'
+    : status === 'denied'
+      ? 'Permission to save the file was denied.'
+      : 'Could not start the file download.';
+  message.error(errorMessage);
 }
 
 function useDownloadFileFromBase64(
   { source, filename, extension, fileMimeType }:
   { source: Ref<string>; filename?: string; extension?: string; fileMimeType?: string }) {
+  const message = useMessage();
   return {
     download() {
-      downloadFromBase64({ sourceValue: source.value, filename, extension, fileMimeType });
+      const result = downloadFromBase64({ sourceValue: source.value, filename, extension, fileMimeType });
+      if (result.status !== 'started') {
+        notifyDownloadFailure(result.status, message);
+      }
     },
   };
 }
@@ -87,9 +111,13 @@ function useDownloadFileFromBase64(
 function useDownloadFileFromBase64Refs(
   { source, filename, extension }:
   { source: Ref<string>; filename?: Ref<string>; extension?: Ref<string> }) {
+  const message = useMessage();
   return {
     download() {
-      downloadFromBase64({ sourceValue: source.value, filename: filename?.value, extension: extension?.value });
+      const result = downloadFromBase64({ sourceValue: source.value, filename: filename?.value, extension: extension?.value });
+      if (result.status !== 'started') {
+        notifyDownloadFailure(result.status, message);
+      }
     },
   };
 }

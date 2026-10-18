@@ -3,6 +3,9 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/hash-text',
+  categoryId: 'crypto',
+  translationKey: 'hash-text',
   name: translate('tools.hash-text.title'),
   path: '/hash-text',
   description: translate('tools.hash-text.description'),
@@ -25,5 +28,9 @@ export const tool = defineTool({
   ],
   component: () => import('./hash-text.vue'),
   icon: EyeOff,
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
   redirectFrom: ['/hash'],
 });

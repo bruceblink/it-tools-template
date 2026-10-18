@@ -110,7 +110,7 @@ import { tool as svgPlaceholderGenerator } from './svg-placeholder-generator';
 import { tool as temperatureConverter } from './temperature-converter';
 import { tool as textStatistics } from './text-statistics';
 import { tool as tokenGenerator } from './token-generator';
-import type { ToolCategory } from './tools.types';
+import type { Tool, ToolCategory, ToolWithCategory } from './tools.types';
 import { tool as urlEncoder } from './url-encoder';
 import { tool as urlParser } from './url-parser';
 import { tool as urlQueryBuilder } from './url-query-builder';
@@ -118,13 +118,18 @@ import { tool as uuidGenerator } from './uuid-generator';
 import { tool as macAddressLookup } from './mac-address-lookup';
 import { tool as xmlFormatter } from './xml-formatter';
 import { tool as yamlViewer } from './yaml-viewer';
+import { validateToolRegistry } from './tool-registry';
 
-export const toolsByCategory: ToolCategory[] = [
+type DeclaredToolCategory = ToolCategory & { id: string };
+
+const declaredToolCategories: DeclaredToolCategory[] = [
   {
+    id: 'crypto',
     name: 'Crypto',
     components: [tokenGenerator, hashText, bcrypt, uuidGenerator, ulidGenerator, cypher, bip39, hmacGenerator, jwtSigner, rsaKeyPairGenerator, passwordStrengthAnalyser, pdfSignatureChecker],
   },
   {
+    id: 'converter',
     name: 'Converter',
     components: [
       dateTimeConverter,
@@ -154,6 +159,7 @@ export const toolsByCategory: ToolCategory[] = [
     ],
   },
   {
+    id: 'web',
     name: 'Web',
     components: [
       urlEncoder,
@@ -186,10 +192,12 @@ export const toolsByCategory: ToolCategory[] = [
     ],
   },
   {
+    id: 'images-and-videos',
     name: 'Images and videos',
     components: [qrCodeGenerator, wifiQrCodeGenerator, svgPlaceholderGenerator, cameraRecorder],
   },
   {
+    id: 'development',
     name: 'Development',
     components: [
       gitMemo,
@@ -216,18 +224,22 @@ export const toolsByCategory: ToolCategory[] = [
     ],
   },
   {
+    id: 'network',
     name: 'Network',
     components: [ipv4SubnetCalculator, ipv4AddressConverter, ipv4AddressClassifier, ipv4RangeExpander, ipv4CidrContainmentChecker, ipv4CidrOverlapChecker, ipv4CidrMerge, ipv4CidrSplitter, ipv4WildcardMask, macAddressLookup, macAddressGenerator, ipv6UlaGenerator],
   },
   {
+    id: 'math',
     name: 'Math',
     components: [mathEvaluator, etaCalculator, percentageCalculator],
   },
   {
+    id: 'measurement',
     name: 'Measurement',
     components: [chronometer, temperatureConverter, dataSizeConverter, lengthConverter, benchmarkBuilder],
   },
   {
+    id: 'text',
     name: 'Text',
     components: [
       loremIpsumGenerator,
@@ -240,12 +252,46 @@ export const toolsByCategory: ToolCategory[] = [
     ],
   },
   {
+    id: 'data',
     name: 'Data',
     components: [phoneParserAndFormatter, ibanValidatorAndParser],
   },
 ];
 
+if (import.meta.env.DEV) {
+  validateToolRegistry(declaredToolCategories, 'builtin-compatibility');
+}
+
+/** Full definitions remain available for governance checks and extension tooling. */
+export const toolDefinitions = declaredToolCategories;
+
+/** Keep extension-only governance metadata out of route and navigation payloads. */
+function projectRuntimeTool(tool: Tool): Tool {
+  const { name, path, aliases, translationKey, description, keywords, component, icon, redirectFrom, isNew } = tool;
+  const runtimeTool: Tool = {
+    name,
+    path,
+    aliases,
+    translationKey,
+    description,
+    keywords,
+    component,
+    icon,
+    redirectFrom,
+    isNew,
+  };
+  if (tool.extensionOwned) {
+    runtimeTool.extensionOwned = true;
+  }
+  return runtimeTool;
+}
+
+export const toolsByCategory: DeclaredToolCategory[] = declaredToolCategories.map(({ id, name, components }) => ({
+  id,
+  name,
+  components: components.map(projectRuntimeTool),
+}));
 export const tools = toolsByCategory.flatMap(({ components }) => components);
-export const toolsWithCategory = toolsByCategory.flatMap(({ components, name }) =>
-  components.map(tool => ({ category: name, ...tool })),
+export const toolsWithCategory: ToolWithCategory[] = toolsByCategory.flatMap(({ id, name, components }) =>
+  components.map(tool => ({ ...tool, categoryId: id, category: name })),
 );

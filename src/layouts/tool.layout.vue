@@ -1,16 +1,15 @@
 <script lang="ts" setup>
 import { useRoute } from 'vue-router';
-import { useHead } from '@vueuse/head';
-import type { HeadObject } from '@vueuse/head';
+import { useHead } from '@unhead/vue';
+import type { ReactiveHead } from '@unhead/vue';
 
 import BaseLayout from './base.layout.vue';
 import FavoriteButton from '@/components/FavoriteButton.vue';
-import type { Tool } from '@/tools/tools.types';
 import { clearLegacyToolContent, hasMemoryOnlyContent } from '@/tools/input-privacy';
 
 const route = useRoute();
 
-const head = computed<HeadObject>(() => ({
+const head = computed<ReactiveHead>(() => ({
   title: `${route.meta.name} - IT Tools`,
   meta: [
     {
@@ -26,7 +25,7 @@ const head = computed<HeadObject>(() => ({
 useHead(head);
 const { t } = useI18n();
 
-const i18nKey = computed<string>(() => route.path.trim().replace('/', ''));
+const i18nKey = computed<string>(() => String(route.meta.translationKey ?? route.path.trim().replace('/', '')));
 const toolTitle = computed<string>(() => t(`tools.${i18nKey.value}.title`, String(route.meta.name)));
 const toolDescription = computed<string>(() => t(`tools.${i18nKey.value}.description`, String(route.meta.description)));
 const hasPrivateContent = computed(() => hasMemoryOnlyContent(route.path));
@@ -49,7 +48,7 @@ watch(() => route.path, (toolPath) => {
           </n-h1>
 
           <div>
-            <FavoriteButton :tool="{ name: route.meta.name, path: route.path } as Tool" />
+            <FavoriteButton :tool="{ name: String(route.meta.name), path: route.path }" />
           </div>
         </div>
 

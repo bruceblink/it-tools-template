@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core';
+import { getRuntimeInfo, type RuntimeInfo } from '@/platform-adapter';
 
 const { width, height } = useWindowSize();
+const runtimeInfo = shallowRef<RuntimeInfo>();
+
+// Runtime metadata is optional; browser fields remain useful if the preload bridge is unavailable.
+onMounted(async () => {
+  const result = await getRuntimeInfo();
+  if (result.status === 'success') {
+    runtimeInfo.value = result.value;
+  }
+});
 
 const sections = [
   {
@@ -36,6 +46,18 @@ const sections = [
   {
     name: 'Device',
     information: [
+      {
+        label: 'Runtime',
+        value: computed(() => runtimeInfo.value?.runtime),
+      },
+      {
+        label: 'Runtime platform',
+        value: computed(() => runtimeInfo.value?.platform),
+      },
+      {
+        label: 'Runtime version',
+        value: computed(() => runtimeInfo.value?.version),
+      },
       {
         label: 'Browser vendor',
         value: computed(() => navigator.vendor),

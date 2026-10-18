@@ -12,20 +12,6 @@ const styleStore = useStyleStore();
 const theme = computed(() => (styleStore.isDarkTheme ? darkTheme : null));
 const themeOverrides = computed(() => (styleStore.isDarkTheme ? darkThemeOverrides : lightThemeOverrides));
 
-const { availableLocales, locale } = useI18n();
-const storedLocale = useStorage('locale', locale.value);
-
-// Restore the saved language first; removed or unsupported settings fall back to English.
-syncRef(
-  storedLocale,
-  locale,
-  {
-    transform: {
-      ltr: value => value && availableLocales.includes(value) ? value : 'en',
-      rtl: value => value,
-    },
-  },
-);
 </script>
 
 <template>
@@ -56,5 +42,30 @@ html {
 
 * {
   box-sizing: border-box;
+}
+
+* {
+  scrollbar-color: rgb(128 128 128 / 36%) transparent;
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-color: rgb(128 128 128 / 36%);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(128 128 128 / 56%);
 }
 </style>

@@ -16,6 +16,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
   const toolStore = useToolStore();
   const styleStore = useStyleStore();
   const router = useRouter();
+  const { locale, t } = useI18n();
   const searchPrompt = ref('');
   const repositoryUrl = config.app.repositoryUrl;
 
@@ -26,7 +27,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
     category: 'Tools',
   }));
 
-  const searchOptions: PaletteOption[] = [
+  const builtInSearchOptions: PaletteOption[] = [
     ...toolsOptions,
     {
       name: 'Random tool',
@@ -73,6 +74,47 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
       icon: InfoIcon,
     },
   ];
+  const searchOptions = ref<PaletteOption[]>(builtInSearchOptions);
+  let extensionCommandLoad: Promise<void> | undefined;
+  let extensionCommandLoadLocale: string | undefined;
+  let loadedExtensionCommandLocale: string | undefined;
+  let latestExtensionCommandRequest: symbol | undefined;
+
+  function loadExtensionCommands(): Promise<void> {
+    const requestLocale = locale.value;
+    if (
+      extensionCommandLoad
+      && (extensionCommandLoadLocale === requestLocale || loadedExtensionCommandLocale === requestLocale)
+    ) {
+      return extensionCommandLoad;
+    }
+
+    const requestId = Symbol(requestLocale);
+    latestExtensionCommandRequest = requestId;
+    extensionCommandLoadLocale = requestLocale;
+    extensionCommandLoad = import('./extension-command-options')
+      .then(({ loadExtensionCommandOptions }) => loadExtensionCommandOptions({
+        locale: requestLocale,
+        navigate: targetPath => router.push(targetPath),
+        actionErrorMessage: t('taskStatus.error'),
+      }))
+      .then((extensionCommands) => {
+        if (latestExtensionCommandRequest !== requestId) {
+          return;
+        }
+        searchOptions.value = [...builtInSearchOptions, ...extensionCommands];
+        loadedExtensionCommandLocale = requestLocale;
+        extensionCommandLoadLocale = undefined;
+      })
+      .catch((error: unknown) => {
+        if (latestExtensionCommandRequest === requestId) {
+          extensionCommandLoad = undefined;
+          extensionCommandLoadLocale = undefined;
+        }
+        throw error;
+      });
+    return extensionCommandLoad;
+  }
 
   const { searchResult } = useFuzzySearch({
     search: searchPrompt,
@@ -92,6 +134,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
 
   return {
     filteredSearchResult,
+    loadExtensionCommands,
     searchPrompt,
   };
 });

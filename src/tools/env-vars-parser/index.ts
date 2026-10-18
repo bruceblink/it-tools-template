@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/env-vars-parser',
+  categoryId: 'development',
+  translationKey: 'env-vars-parser',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.env-vars-parser.title'),
   path: '/env-vars-parser',
   description: translate('tools.env-vars-parser.description'),

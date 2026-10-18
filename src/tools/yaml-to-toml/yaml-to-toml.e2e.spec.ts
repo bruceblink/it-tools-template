@@ -19,7 +19,9 @@ list:
     number: 1
     `.trim());
 
-    const generatedJson = await page.getByTestId('area-content').innerText();
+    const output = page.getByTestId('area-content');
+    await expect(output).toContainText('foo = "bar"');
+    const generatedJson = await output.innerText();
 
     expect(generatedJson.trim()).toEqual(
       `

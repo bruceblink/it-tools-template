@@ -1,7 +1,19 @@
 <script setup lang="ts">
 import { tryOnBeforeUnmount, useVModel } from '@vueuse/core';
 import { Editor, EditorContent } from '@tiptap/vue-3';
-import StarterKit from '@tiptap/starter-kit';
+import { Blockquote } from '@tiptap/extension-blockquote';
+import { Bold } from '@tiptap/extension-bold';
+import { Code } from '@tiptap/extension-code';
+import { CodeBlock } from '@tiptap/extension-code-block';
+import { Document } from '@tiptap/extension-document';
+import { HardBreak } from '@tiptap/extension-hard-break';
+import { Heading } from '@tiptap/extension-heading';
+import { Italic } from '@tiptap/extension-italic';
+import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension-list';
+import { Paragraph } from '@tiptap/extension-paragraph';
+import { Strike } from '@tiptap/extension-strike';
+import { Text } from '@tiptap/extension-text';
+import { UndoRedo } from '@tiptap/extensions';
 import { useThemeVars } from 'naive-ui';
 import MenuBar from './menu-bar.vue';
 
@@ -12,7 +24,24 @@ const html = useVModel(props, 'html', emit);
 
 const editor = new Editor({
   content: html.value,
-  extensions: [StarterKit],
+  extensions: [
+    Blockquote,
+    Bold,
+    BulletList,
+    Code,
+    CodeBlock,
+    Document,
+    HardBreak,
+    Heading,
+    Italic,
+    ListItem,
+    ListKeymap,
+    OrderedList,
+    Paragraph,
+    Strike,
+    Text,
+    UndoRedo,
+  ],
 });
 
 editor.on('update', ({ editor }) => emit('update:html', editor.getHTML()));

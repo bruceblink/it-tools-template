@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/json-key-sorter',
+  categoryId: 'development',
+  translationKey: 'json-key-sorter',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
   name: translate('tools.json-key-sorter.title'),
   path: '/json-key-sorter',
   description: translate('tools.json-key-sorter.description'),

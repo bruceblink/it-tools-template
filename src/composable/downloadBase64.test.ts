@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getMimeTypeFromBase64 } from './downloadBase64';
+import { getMimeTypeFromBase64, getMimeTypeFromExtension } from './downloadBase64';
 
 describe('downloadBase64', () => {
   describe('getMimeTypeFromBase64', () => {
@@ -27,6 +27,19 @@ describe('downloadBase64', () => {
 
     it('when the base64 string has no data URI and no signature, it returns an undefined mimeType', () => {
       expect(getMimeTypeFromBase64({ base64String: 'JVBERi' })).to.deep.equal({ mimeType: undefined });
+    });
+  });
+
+  describe('getMimeTypeFromExtension', () => {
+    it('resolves extensions and file paths without relying on Node path APIs', () => {
+      expect(getMimeTypeFromExtension('html')).toBe('text/html');
+      expect(getMimeTypeFromExtension('.svg')).toBe('image/svg+xml');
+      expect(getMimeTypeFromExtension('C:\\downloads\\report.pdf')).toBe('application/pdf');
+    });
+
+    it('returns false for unknown or empty extensions', () => {
+      expect(getMimeTypeFromExtension('unknown-extension')).toBe(false);
+      expect(getMimeTypeFromExtension('')).toBe(false);
     });
   });
 });

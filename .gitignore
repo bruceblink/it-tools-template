@@ -17,6 +17,7 @@ coverage
 *.local
 *.tsbuildinfo
 /auto-imports.d.ts
+/public/assets/oui-data/
 
 /cypress/videos/
 /cypress/screenshots/

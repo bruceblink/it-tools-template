@@ -2,9 +2,10 @@ import { _electron, expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 let electronApp: ElectronApplication;
 let hostPage: Page;
@@ -39,10 +40,16 @@ test.afterAll(async () => {
 
 test('runs a first-party proof in a sandboxed, network-denied plugin renderer', async () => {
   const pluginOrigin = 'it-plugin://org.it-tools.sandbox-proof/';
+  const peerPluginOrigin = 'it-plugin://org.it-tools.sandbox-proof-peer/';
   await expect.poll(async () => (await electronApp.windows()).some(candidate => candidate.url().startsWith(pluginOrigin))).toBe(true);
   const pluginPage = (await electronApp.windows()).find(candidate => candidate.url().startsWith(pluginOrigin));
   if (!pluginPage) {
     throw new Error('The plugin sandbox proof window did not open.');
+  }
+  await expect.poll(async () => (await electronApp.windows()).some(candidate => candidate.url().startsWith(peerPluginOrigin))).toBe(true);
+  const peerPluginPage = (await electronApp.windows()).find(candidate => candidate.url().startsWith(peerPluginOrigin));
+  if (!peerPluginPage) {
+    throw new Error('The peer plugin sandbox proof window did not open.');
   }
 
   await expect(pluginPage.locator('#sandbox-proof')).toHaveText('Sandbox fixture loaded');
@@ -71,11 +78,38 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(response?.headers()['content-security-policy']).toContain("connect-src 'self'");
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
 
+  const hostPrivateFile = join(userDataDirectory, 'host-private.txt');
+  await writeFile(hostPrivateFile, 'host-only test data');
+  const fileUrl = pathToFileURL(hostPrivateFile).href;
+  const fileReadResult = await pluginPage.evaluate(async (url) => {
+    try {
+      const fileResponse = await fetch(url);
+      return await fileResponse.text();
+    }
+    catch {
+      return null;
+    }
+  }, fileUrl);
+  expect(fileReadResult).toBeNull();
+
+  const fileNavigation = pluginPage.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 1_000 })
+    .then(() => 'navigated')
+    .catch(() => 'blocked');
+  await pluginPage.evaluate((url) => window.location.assign(url), fileUrl);
+  expect(await fileNavigation).toBe('blocked');
+  expect(pluginPage.url()).toBe(`${pluginOrigin}index.html`);
+  await expect(pluginPage.locator('#sandbox-proof')).toHaveText('Sandbox fixture loaded');
+
   await hostPage.evaluate(() => localStorage.setItem('sandbox-origin-isolation', 'host'));
   await pluginPage.evaluate(() => localStorage.setItem('sandbox-origin-isolation', 'plugin'));
   await expect.poll(async () => hostPage.evaluate(() => localStorage.getItem('sandbox-origin-isolation'))).toBe('host');
   expect(await pluginPage.evaluate(() => localStorage.getItem('sandbox-origin-isolation'))).toBe('plugin');
+  await pluginPage.evaluate(() => localStorage.setItem('cross-plugin-isolation', 'first-plugin-data'));
+  expect(await peerPluginPage.evaluate(() => localStorage.getItem('cross-plugin-isolation'))).toBeNull();
+  await peerPluginPage.evaluate(() => localStorage.setItem('cross-plugin-isolation', 'peer-plugin-data'));
+  expect(await pluginPage.evaluate(() => localStorage.getItem('cross-plugin-isolation'))).toBe('first-plugin-data');
   expect(await pluginPage.evaluate(() => window.open('https://example.invalid'))).toBeNull();
+  expect(await pluginPage.evaluate(() => window.open('app://bundle/settings'))).toBeNull();
 
   let localServerRequests = 0;
   const server = createServer((_request, response) => {

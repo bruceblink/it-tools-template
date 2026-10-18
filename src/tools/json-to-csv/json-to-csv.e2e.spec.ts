@@ -17,9 +17,9 @@ test.describe('Tool - JSON to CSV', () => {
 ]
     `);
 
-    const generatedJson = await page.getByTestId('area-content').innerText();
+    const generatedJson = page.getByTestId('area-content');
 
-    expect(generatedJson.trim()).toEqual(`
+    await expect(generatedJson).toHaveText(`
 Age,Salary,Gender,Country,Purchased
 18,20000,Male,Germany,N
 19,22000,Female,France,N

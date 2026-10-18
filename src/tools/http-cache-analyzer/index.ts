@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/http-cache-analyzer',
+  categoryId: 'web',
+  translationKey: 'http-cache-analyzer',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.http-cache-analyzer.title'),
   path: '/http-cache-analyzer',
   description: translate('tools.http-cache-analyzer.description'),

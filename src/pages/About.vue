@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useHead } from '@vueuse/head';
+import { useHead } from '@unhead/vue';
 import { config } from '@/config';
 
 useHead({ title: 'About - IT Tools' });

@@ -37,6 +37,25 @@ test('language selection updates a tool title and survives reload', async ({ pag
   await expect(language.locator('.c-select-input')).toContainText('中文');
 });
 
+test.describe('locale loading failures', () => {
+  test.use({ serviceWorkers: 'block' });
+
+  test('keeps the active language when a selected locale chunk fails to load', async ({ page }) => {
+    await page.route('**/assets/zh-*.js', route => route.abort());
+    await page.goto('/regex-tester');
+    const heading = page.getByRole('heading', { level: 1 });
+    await expect(heading).toHaveText('Regex Tester');
+
+    const language = page.locator('.c-select').first();
+    await language.locator('.c-select-input').click();
+    await language.getByText('中文', { exact: true }).click();
+
+    await expect(page.getByText('The language could not be loaded. The current language is unchanged.')).toBeVisible();
+    await expect(heading).toHaveText('Regex Tester');
+    await expect(language.locator('.c-select-input')).toContainText('English');
+  });
+});
+
 test('roman conversion preserves terminal symbols and rejects invalid input', async ({ page }) => {
   await page.goto('/roman-numeral-converter');
   // The numeric field is also type=text; identify the Roman field itself before interacting.

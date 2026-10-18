@@ -1,7 +1,7 @@
 import xmlFormat, { type XMLFormatterOptions } from 'xml-formatter';
 import { withDefaultOnError } from '@/utils/defaults';
 
-export { formatXml, isValidXML };
+export { formatXml, formatXmlResult, isValidXML };
 
 function cleanRawXml(rawXml: string): string {
   return rawXml.trim();
@@ -11,18 +11,20 @@ function formatXml(rawXml: string, options?: XMLFormatterOptions): string {
   return withDefaultOnError(() => xmlFormat(cleanRawXml(rawXml), options) ?? '', '');
 }
 
-function isValidXML(rawXml: string): boolean {
+function formatXmlResult(rawXml: string, options?: XMLFormatterOptions): { valid: boolean; output: string } {
   const cleanedRawXml = cleanRawXml(rawXml);
-
   if (cleanedRawXml === '') {
-    return true;
+    return { valid: true, output: '' };
   }
 
   try {
-    xmlFormat(cleanedRawXml);
-    return true;
+    return { valid: true, output: xmlFormat(cleanedRawXml, options) ?? '' };
   }
   catch {
-    return false;
+    return { valid: false, output: '' };
   }
+}
+
+function isValidXML(rawXml: string): boolean {
+  return formatXmlResult(rawXml).valid;
 }

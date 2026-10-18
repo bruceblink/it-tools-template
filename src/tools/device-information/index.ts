@@ -3,6 +3,9 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/device-information',
+  categoryId: 'web',
+  translationKey: 'device-information',
   name: translate('tools.device-information.title'),
   path: '/device-information',
   description: translate('tools.device-information.description'),
@@ -21,4 +24,8 @@ export const tool = defineTool({
   ],
   component: () => import('./device-information.vue'),
   icon: DeviceDesktop,
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['runtime.info'],
 });

@@ -24,6 +24,7 @@ home:
     twitterXAccount: 'IT Tools X account'
     about: 'About  IT-Tools'
     aboutLabel: 'About'
+    settings: 'Settings'
     backToTop: 'Back to top'
     darkMode: 'Dark mode'
     lightMode: 'Light mode'
@@ -46,6 +47,7 @@ about:
 
     And if you found a bug, or something doesn't work as expected, please file a bug report in the [issues section]({repositoryUrl}/issues/new/choose) in the GitHub repository.
 
+
 404:
   notFound: '404 Not Found'
   sorry: 'Sorry, this page does not seem to exist'
@@ -62,13 +64,18 @@ inputPrivacy:
   memoryNotice: Content edits stay in this page's memory. Leaving or reloading restores default content. Tool preferences may be saved separately.
   storageWarningTitle: Saved content could not be fully removed
   storageWarning: Some content saved by an earlier version could not be removed. Current edits stay in memory. Clear this site's browser data if needed.
+taskStatus:
+  calculating: Calculating…
+  limit: Task limits exceeded. Reduce the input.
+  timeout: Task timed out. Simplify the input.
+  error: Task failed.
 tools:
   categories:
     favorite-tools: 'Your favorite tools'
     crypto: Crypto
     converter: Converter
     web: Web
-    images and videos: 'Images & Videos'
+    images-and-videos: 'Images & Videos'
     development: Development
     network: Network
     math: Math
@@ -330,6 +337,13 @@ tools:
   mac-address-lookup:
     title: MAC address lookup
     description: Find the vendor and manufacturer of a device by its MAC address.
+    vendorInfo: 'Vendor info:'
+    loading: Loading vendor data...
+    dataUnavailable: Vendor data is unavailable. Check your connection and retry.
+    enterFullAddress: Enter a complete six-octet MAC address.
+    unknownVendor: Unknown vendor for this address
+    retry: Retry
+    copyVendorInfo: Copy vendor info
 
   mime-types:
     title: MIME types
@@ -514,6 +528,11 @@ tools:
   text-diff:
     title: Text diff
     description: Compare two texts and see the differences between them.
+    originalText: Original text
+    modifiedText: Modified text
+    sideBySide: Side by side
+    ignoreWhitespace: Ignore surrounding whitespace
+    noDifferences: No differences found.
 
   otp-generator:
     title: OTP code generator

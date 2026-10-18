@@ -3,6 +3,13 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/otp-generator',
+  categoryId: 'web',
+  translationKey: 'otp-generator',
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: ['clipboard.write'],
   name: translate('tools.otp-generator.title'),
   path: '/otp-generator',
   description: translate('tools.otp-generator.description'),

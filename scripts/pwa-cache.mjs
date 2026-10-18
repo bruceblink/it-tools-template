@@ -50,17 +50,11 @@ export function collectStaticFiles(manifest, entry) {
   return [...files].sort();
 }
 
-/** The registration helper is a dynamic startup dependency, rather than an optional tool.
+/** Only static app imports are required before the first render.
  * @param {import('vite').Manifest} manifest
  */
 export function collectAppShellFiles(manifest) {
-  const files = new Set(collectStaticFiles(manifest, 'index.html'));
-  for (const entry of manifest['index.html'].dynamicImports ?? []) {
-    if (/(?:^|\/)workbox-window\//.test(entry)) {
-      collectStaticFiles(manifest, entry).forEach(file => files.add(file));
-    }
-  }
-  return [...files].sort();
+  return collectStaticFiles(manifest, 'index.html');
 }
 
 /** @param {string} directory @param {string} file */
@@ -94,13 +88,33 @@ export async function getRuntimeAssets(directory) {
   }
   await visit('assets');
   paths.sort();
-  return { paths, buildId: createHash('sha256').update(JSON.stringify(paths)).digest('hex').slice(0, 16) };
+  const hash = createHash('sha256');
+  for (const path of paths) {
+    hash.update(path).update('\0').update(await readBuildFile(directory, path)).update('\0');
+  }
+  return { paths, buildId: hash.digest('hex').slice(0, 16) };
 }
 
 /** @param {number} bytes @param {number} limit */
 export function assertPrecacheBudget(bytes, limit = budgets.precacheBytes) {
   if (bytes > limit) {
     throw new Error(`PWA precache budget exceeded: ${bytes} bytes > ${limit} bytes.`);
+  }
+}
+
+/** Fail production builds when the initial JavaScript or any static tool closure exceeds its gzip budget. */
+export function assertPerformanceBudgets({ initial, optionalEntries }) {
+  const failures = [];
+  if (initial.javaScriptGzipBytes > budgets.initialJavaScriptGzipBytes) {
+    failures.push(`initial JavaScript gzip ${initial.javaScriptGzipBytes} bytes > ${budgets.initialJavaScriptGzipBytes} bytes`);
+  }
+  for (const entry of optionalEntries) {
+    if (entry.javaScriptGzipBytes > budgets.toolJavaScriptGzipBytes) {
+      failures.push(`${entry.entry} JavaScript closure ${entry.javaScriptGzipBytes} bytes > ${budgets.toolJavaScriptGzipBytes} bytes`);
+    }
+  }
+  if (failures.length) {
+    throw new Error(`Performance gzip budget exceeded: ${failures.join('; ')}.`);
   }
 }
 
@@ -156,7 +170,7 @@ export async function filterAppShell(directory, entries, additionalEntries = [])
     initial,
     optionalEntries: optional,
     runtimeAssets: summarize(runtimeAssets.paths),
-    // Only the precache limit is enforced in this slice. Keep the long-term targets visible.
+    // Keep the measured values available to CI artifacts and plan reports.
     pendingOptimizations: {
       initialJavaScript: initial.javaScriptGzipBytes > budgets.initialJavaScriptGzipBytes,
       entries: optional.filter(entry => entry.javaScriptGzipBytes > budgets.toolJavaScriptGzipBytes).map(entry => entry.entry),
@@ -165,6 +179,7 @@ export async function filterAppShell(directory, entries, additionalEntries = [])
   };
   await writeFile(resolve(directory, 'bundle-report.json'), `${JSON.stringify(report, null, 2)}\n`);
   assertPrecacheBudget(precache.bytes);
+  assertPerformanceBudgets(report);
   console.log(`[PWA] Application shell: ${shell.size} files, ${(precache.bytes / 1024).toFixed(2)} KiB; initial JS gzip: ${(initial.javaScriptGzipBytes / 1024).toFixed(2)} KiB.`);
   const appendedFiles = new Set(additionalEntries.map(entry => entry.url));
   return { manifest: [...shell].sort().filter(file => !appendedFiles.has(file)).map(file => candidates.get(file)), warnings: [] };

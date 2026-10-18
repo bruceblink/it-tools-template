@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import {
@@ -58,12 +59,18 @@ export function isValidPluginId(pluginId: string): boolean {
   return pluginId.length <= 128 && pluginIdPattern.test(pluginId);
 }
 
-export function getPluginSessionPartition(pluginId: string): string {
+export function getPluginSessionPartition(pluginId: string, packageRoot: string): string {
   assertPluginId(pluginId);
-  return `it-plugin-${pluginId}`;
+  const identity = createHash('sha256')
+    .update(pluginId)
+    .update('\0')
+    .update(resolve(packageRoot))
+    .digest('hex')
+    .slice(0, 32);
+  return `it-plugin-${identity}`;
 }
 
-/** Keep one package directory bound to each in-memory session until a restartable upgrade flow exists. */
+/** Keep each installed package version bound to its own in-memory session. */
 export function assertPluginSessionRoot(currentRoot: string | undefined, requestedRoot: string): void {
   if (currentRoot !== undefined && currentRoot !== requestedRoot) {
     throw new Error('A plugin session cannot be rebound to a different package directory.');
@@ -127,7 +134,7 @@ export async function createPluginSandboxWindow(
     throw new Error(`Plugin ${registration.pluginId} has no readable HTML entrypoint.`);
   }
 
-  const partition = getPluginSessionPartition(registration.pluginId);
+  const partition = getPluginSessionPartition(registration.pluginId, packageRoot);
   const pluginSession = electronSession.fromPartition(partition, { cache: false });
   const requestedCapabilities = registration.requestedCapabilities ?? [];
   const grantedCapabilities = registration.grantedCapabilities ?? [];

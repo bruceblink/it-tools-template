@@ -19,7 +19,11 @@ const props = withDefaults(
 
 const emits = defineEmits(['update:value']);
 
-const { options: rawOptions, size } = toRefs(props);
+const { options: rawOptions } = toRefs(props);
+const buttonSize = computed<'small' | 'medium' | 'large'>(() => {
+  const candidate = props.size;
+  return candidate === 'small' || candidate === 'large' ? candidate : 'medium';
+});
 
 const options = computed<CButtonSelectOption<T>[]>(() => {
   if (_.isArray(rawOptions.value)) {
@@ -57,7 +61,7 @@ function getOptionTestId(option: CButtonSelectOption<T>) {
       >
         <c-button
           :test-id="getOptionTestId(option)"
-          :size="size"
+          :size="buttonSize"
           :type="option.value === value ? 'primary' : 'default'"
           @click="selectOption(option)"
         >

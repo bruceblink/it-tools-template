@@ -12,6 +12,14 @@ const tableHeaders = {
   pemCertificate: 'PEM certificate',
 };
 
+// Show signature integrity and certificate trust as separate results.
+const verificationRows = computed(() => [
+  { check: 'Overall result', result: signature.value.verified ? 'Verified' : 'Not verified' },
+  { check: 'Document integrity', result: signature.value.integrity ? 'Valid' : 'Invalid' },
+  { check: 'Certificate chain', result: signature.value.authenticity ? 'Trusted' : 'Not trusted' },
+  { check: 'Certificate time validity', result: signature.value.expired ? 'Expired or not yet valid' : 'Currently valid' },
+]);
+
 // The table exposes dynamic slot values as unknown, so validate certificate fields before rendering them.
 function getValidityPeriodItems(value: unknown): CKeyValueListItems {
   if (!isRecord(value)) {
@@ -65,6 +73,15 @@ const certs = computed(() => signature.value.meta.certs.map((certificate, index)
 
 <template>
   <div flex flex-col gap-2>
+    <c-table
+      :data="verificationRows"
+      :headers="[
+        { key: 'check', label: 'Check' },
+        { key: 'result', label: 'Result' },
+      ]"
+      description="PDF signature verification status"
+    />
+
     <c-table :data="certs" :headers="tableHeaders">
       <template #validityPeriod="{ value }">
         <c-key-value-list :items="getValidityPeriodItems(value)" />

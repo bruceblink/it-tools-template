@@ -3,6 +3,9 @@ import { defineTool } from '../tool';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
+  id: 'builtin/math-evaluator',
+  categoryId: 'math',
+  translationKey: 'math-evaluator',
   name: translate('tools.math-evaluator.title'),
   path: '/math-evaluator',
   description: translate('tools.math-evaluator.description'),
@@ -41,4 +44,8 @@ export const tool = defineTool({
   ],
   component: () => import('./math-evaluator.vue'),
   icon: Math,
+  platforms: ['web', 'electron'],
+  dataProcessing: 'memory-only',
+  offline: 'available',
+  capabilities: [],
 });

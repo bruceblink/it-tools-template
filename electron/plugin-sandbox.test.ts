@@ -19,11 +19,17 @@ afterEach(async () => {
 });
 
 describe('Electron plugin renderer boundary', () => {
-  it('uses stable valid IDs as unique custom-protocol origins and memory sessions', () => {
+  it('uses separate memory sessions for each plugin version and custom-protocol origin', () => {
     const pluginId = 'org.it-tools.sample';
+    const versionOneRoot = 'C:\\plugins\\sample\\1.0.0';
+    const versionTwoRoot = 'C:\\plugins\\sample\\2.0.0';
+    const versionOnePartition = getPluginSessionPartition(pluginId, versionOneRoot);
     expect(isValidPluginId(pluginId)).toBe(true);
-    expect(getPluginSessionPartition(pluginId)).toBe('it-plugin-org.it-tools.sample');
-    expect(getPluginSessionPartition(pluginId)).not.toContain('persist:');
+    expect(versionOnePartition).toMatch(/^it-plugin-[a-f0-9]{32}$/);
+    expect(getPluginSessionPartition(pluginId, versionOneRoot)).toBe(versionOnePartition);
+    expect(getPluginSessionPartition(pluginId, versionTwoRoot)).not.toBe(versionOnePartition);
+    expect(getPluginSessionPartition('org.it-tools.other', versionOneRoot)).not.toBe(versionOnePartition);
+    expect(versionOnePartition).not.toContain('persist:');
     expect(getPluginEntryUrl(pluginId, 'index.html')).toBe('it-plugin://org.it-tools.sample/index.html');
     expect(isPluginRendererUrl('it-plugin://org.it-tools.sample/tools/example', pluginId)).toBe(true);
   });

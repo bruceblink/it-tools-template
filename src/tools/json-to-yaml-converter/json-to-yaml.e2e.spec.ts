@@ -12,8 +12,6 @@ test.describe('Tool - json to yaml', () => {
   test('json is parsed and output clean yaml', async ({ page }) => {
     await page.getByTestId('input').fill('{"foo":"bar","list":["item",{"key":"value"}]}');
 
-    const generatedJson = await page.getByTestId('area-content').innerText();
-
-    expect(generatedJson.trim()).toEqual('foo: bar\nlist:\n  - item\n  - key: value'.trim());
+    await expect(page.getByTestId('area-content')).toHaveText('foo: bar\nlist:\n  - item\n  - key: value');
   });
 });

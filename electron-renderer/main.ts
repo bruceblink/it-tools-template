@@ -1,3 +1,5 @@
 import { mountSharedApp } from '../src/app';
 
-mountSharedApp();
+void mountSharedApp().catch((error: unknown) => {
+  console.error('[app] Failed to mount the shared interface.', error);
+});

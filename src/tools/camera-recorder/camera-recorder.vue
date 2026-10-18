@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import _ from 'lodash';
+import { useMessage } from 'naive-ui';
+import { isElectronRuntime, saveFileContent } from '@/platform-adapter';
 
 import { useMediaRecorder } from './useMediaRecorder';
 
@@ -24,7 +26,8 @@ const medias = ref<Media[]>([]);
 const currentCamera = ref(cameras.value[0]?.deviceId);
 const currentMicrophone = ref(microphones.value[0]?.deviceId);
 const permissionRequestFailed = ref(false);
-const isDesktop = Boolean(window.itToolsDesktop);
+const isDesktop = isElectronRuntime();
+const message = useMessage();
 
 const {
   stream,
@@ -98,10 +101,10 @@ async function requestPermissions() {
 }
 
 function downloadMedia({ type, value, createdAt }: Media) {
-  const link = document.createElement('a');
-  link.href = value;
-  link.download = `${type}-${createdAt.getTime()}.${type === 'image' ? 'png' : 'webm'}`;
-  link.click();
+  const result = saveFileContent(value, `${type}-${createdAt.getTime()}.${type === 'image' ? 'png' : 'webm'}`);
+  if (result.status !== 'started') {
+    message.error(result.status === 'unsupported' ? 'File downloads are not supported in this context.' : 'Could not start the media download.');
+  }
 }
 </script>
 

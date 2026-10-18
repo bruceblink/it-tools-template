@@ -1,9 +1,6 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
 import type { JsonLinesDirection } from './json-lines-converter.service';
-import { convertJsonLines, summarizeJsonLines } from './json-lines-converter.service';
-import type { UseValidationRule } from '@/composable/validation';
-import { withDefaultOnError } from '@/utils/defaults';
 
 const direction = useStorage<JsonLinesDirection>('json-lines-converter:direction', 'jsonl-to-json');
 const indentSize = useStorage('json-lines-converter:indent-size', 2);
@@ -30,52 +27,11 @@ const inputPlaceholder = computed(() =>
     : 'Paste a JSON array or object here...',
 );
 
-function transformer(value: string) {
-  return withDefaultOnError(() => convertJsonLines(value, direction.value, {
-    ignoreEmptyLines: ignoreEmptyLines.value,
-    indentSize: indentSize.value,
-  }), '');
-}
-
-function validateJsonLines(value: string) {
-  if (value === '') {
-    return true;
-  }
-
-  convertJsonLines(value, direction.value, {
-    ignoreEmptyLines: ignoreEmptyLines.value,
-    indentSize: indentSize.value,
-  });
-
-  return true;
-}
-
-function getSummary(value: string) {
-  return withDefaultOnError(() => summarizeJsonLines(value, direction.value, {
-    ignoreEmptyLines: ignoreEmptyLines.value,
-    indentSize: indentSize.value,
-  }), {
-    inputLines: 0,
-    outputValues: 0,
-    emptyLines: 0,
-  });
-}
-
-const rules: UseValidationRule<string>[] = [
-  {
-    validator: validateJsonLines,
-    message: 'Provided input is not valid for the selected conversion: {0}',
-    getErrorMessage: (value) => {
-      try {
-        validateJsonLines(value);
-        return '';
-      }
-      catch (error) {
-        return error instanceof Error ? error.message : String(error);
-      }
-    },
-  },
-];
+const workerTaskOptions = computed(() => ({
+  direction: direction.value,
+  ignoreEmptyLines: ignoreEmptyLines.value,
+  indentSize: indentSize.value,
+}));
 </script>
 
 <template>
@@ -102,14 +58,15 @@ const rules: UseValidationRule<string>[] = [
     :input-placeholder="inputPlaceholder"
     :output-label="outputLabel"
     :output-language="outputLanguage"
-    :input-validation-rules="rules"
-    :transformer="transformer"
+    worker-task-kind="json-lines"
+    :worker-task-options="workerTaskOptions"
+    worker-invalid-message="Provided input is not valid for the selected conversion."
   >
-    <template #extra="{ input }">
+    <template #extra="{ summary }">
       <div my-4 grid grid-cols-1 gap-3 md:grid-cols-3>
-        <n-statistic label="Input lines" :value="getSummary(String(input)).inputLines" />
-        <n-statistic label="Output values" :value="getSummary(String(input)).outputValues" />
-        <n-statistic label="Empty lines" :value="getSummary(String(input)).emptyLines" />
+        <n-statistic label="Input lines" :value="summary?.inputLines ?? 0" />
+        <n-statistic label="Output values" :value="summary?.outputValues ?? 0" />
+        <n-statistic label="Empty lines" :value="summary?.emptyLines ?? 0" />
       </div>
     </template>
   </format-transformer>

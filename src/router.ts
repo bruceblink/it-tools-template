@@ -6,17 +6,23 @@ import { config } from './config';
 import { routes as demoRoutes } from './ui/demo/demo.routes';
 import { layouts } from '@/layouts';
 
-const toolsRoutes = tools.map(({ path, name, component, ...config }) => ({
+const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, extensionOwned }) => ({
   path,
   name,
   component,
-  meta: { isTool: true, layout: layouts.toolLayout, name, ...config },
+  meta: {
+    isTool: true,
+    layout: layouts.toolLayout,
+    name,
+    translationKey,
+    description,
+    keywords,
+    ...(extensionOwned ? { extensionOwned: true } : {}),
+  },
 }));
-const toolsRedirectRoutes = tools
-  .filter(({ redirectFrom }) => redirectFrom && redirectFrom.length > 0)
-  .flatMap(
-    ({ path, redirectFrom }) => redirectFrom?.map(redirectSource => ({ path: redirectSource, redirect: path })) ?? [],
-  );
+const toolsRedirectRoutes = tools.flatMap(({ path, aliases, redirectFrom }) =>
+  (aliases ?? redirectFrom ?? []).map(alias => ({ path: alias, redirect: path })),
+);
 
 const router = createRouter({
   history: createWebHistory(config.app.baseUrl),
@@ -31,11 +37,28 @@ const router = createRouter({
       name: 'about',
       component: () => import('./pages/About.vue'),
     },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('./pages/Settings.page.vue'),
+    },
+    {
+      path: '/settings/extensions',
+      redirect: { name: 'settings' },
+    },
     ...toolsRoutes,
     ...toolsRedirectRoutes,
     ...(config.app.env === 'development' ? demoRoutes : []),
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
   ],
+});
+
+router.beforeEach(async (to) => {
+  if (to.meta.extensionOwned === true) {
+    const { activateExtensionToolRoute } = await import('./extensions/route-activation-runtime');
+    await activateExtensionToolRoute(to.path);
+  }
+  return true;
 });
 
 export default router;
