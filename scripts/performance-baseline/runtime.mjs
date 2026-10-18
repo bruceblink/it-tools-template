@@ -135,6 +135,7 @@ async function measureJsonInputs(page, workloads) {
     try {
       const started = performance.now();
       await input.fill(workload.input, { timeout: 60_000 });
+      const inputFillMs = performance.now() - started;
       stage = 'wait for transformed output';
       await page.waitForFunction(
         expectedLength => {
@@ -144,11 +145,14 @@ async function measureJsonInputs(page, workloads) {
         workload.outputBytes,
         { timeout: 60_000 },
       );
+      const outputUpdateMs = performance.now() - started - inputFillMs;
       records.push({
         name: workload.name,
         inputBytes: workload.inputBytes,
         outputBytes: workload.outputBytes,
         outputSha256: workload.outputSha256,
+        inputFillMs: Math.round(inputFillMs * 100) / 100,
+        outputUpdateMs: Math.round(outputUpdateMs * 100) / 100,
         durationMs: Math.round((performance.now() - started) * 100) / 100,
       });
       await reloadRenderer(page, { id: 'jsonMinify', path: '/json-minify', ready: 'json' });
@@ -405,11 +409,16 @@ export function summarizePlatform(samples, workloads) {
     metrics.toolFirstOpenMs[route.id] = summarize(samples.map(sample => sample.routeOpenMs.firstOpen[route.id]));
     metrics.toolWarmOpenMs[route.id] = summarize(samples.map(sample => sample.routeOpenMs.warmOpen[route.id]));
   }
+  metrics.interactions.jsonInputFill = {};
+  metrics.interactions.jsonOutputUpdate = {};
   for (const workload of workloads) {
-    metrics.interactions['json.' + workload.name] = summarize(samples.map((sample) => {
+    const records = samples.map((sample) => {
       const record = sample.routeOpenMs.interactions.jsonTransform.find(item => item.name === workload.name);
-      return record?.durationMs;
-    }));
+      return record;
+    });
+    metrics.interactions['json.' + workload.name] = summarize(records.map(record => record?.durationMs));
+    metrics.interactions.jsonInputFill[workload.name] = summarize(records.map(record => record?.inputFillMs));
+    metrics.interactions.jsonOutputUpdate[workload.name] = summarize(records.map(record => record?.outputUpdateMs));
   }
   metrics.interactions.regexMatch = summarize(samples.map(sample => sample.routeOpenMs.interactions.regexMatch.durationMs));
   metrics.interactions.mathEvaluation = summarize(samples.map(sample => sample.routeOpenMs.interactions.mathEvaluation.durationMs));
