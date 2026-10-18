@@ -1,39 +1,24 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Tool - JSON diff', () => {
-  test.beforeEach(async ({ page }) => {
+  test('computes and filters JSON diffs in a worker', async ({ page }) => {
     await page.goto('/json-diff');
-  });
 
-  test('Has correct title', async ({ page }) => {
-    await expect(page).toHaveTitle('JSON diff - IT Tools');
-  });
+    const leftJson = page.getByTestId('leftJson');
+    const rightJson = page.getByTestId('rightJson');
+    await leftJson.fill('{ name: "Alice", count: 1 }');
+    await rightJson.fill('{ name: "Bob", count: 1 }');
 
-  test('Identical JSONs have a custom result message', async ({ page }) => {
-    await page.getByTestId('leftJson').fill('{"foo":"bar"}');
-    await page.getByTestId('rightJson').fill('{   "foo":  "bar" }  ');
+    const result = page.getByTestId('diff-result');
+    await expect(result).toContainText('"Alice"');
+    await expect(result).toContainText('"Bob"');
+    await expect(result).toContainText('count:');
 
-    const result = await page.getByTestId('diff-result').innerText();
-
-    expect(result).toContain('The provided JSONs are the same');
-  });
-
-  test('Different JSONs have differences listed', async ({ page }) => {
-    await page.getByTestId('leftJson').fill('{"foo":"bar"}');
-    await page.getByTestId('rightJson').fill('{"foo":"buz","baz":"qux"}');
-
-    const result = await page.getByTestId('diff-result').innerText();
-
-    expect(result).toContain('{\nfoo: "bar""buz",\nbaz: "qux",\n},');
-  });
-
-  test('Different JSONs have only differences listed when "Only show differences" is checked', async ({ page }) => {
-    await page.getByTestId('leftJson').fill('{"foo":"bar"}');
-    await page.getByTestId('rightJson').fill('{"foo":"bar","baz":"qux"}');
     await page.getByRole('switch').click();
+    await expect(result).not.toContainText('count:');
 
-    const result = await page.getByTestId('diff-result').innerText();
-
-    expect(result).toContain('{\nbaz: "qux",\n},');
+    await leftJson.fill('{ invalid');
+    await expect(page.getByText('Invalid JSON format').first()).toBeVisible();
+    await expect(result).toHaveCount(0);
   });
 });

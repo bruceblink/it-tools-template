@@ -76,5 +76,10 @@ describe('json-diff models', () => {
         status: 'children-updated',
       });
     });
+
+    it('treats object key order and JSON5 NaN values as equal', () => {
+      expect(diff({ a: 1, b: 2 }, { b: 2, a: 1 }).status).toBe('unchanged');
+      expect(diff(Number.NaN, Number.NaN).status).toBe('unchanged');
+    });
   });
 });

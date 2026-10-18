@@ -3,6 +3,7 @@ import JSON5 from 'json5';
 import { diffTextLines } from '@/tools/text-diff/text-diff.service';
 import { convertCsvToJson } from '@/tools/csv-to-json/csv-to-json.service';
 import { extractJsonPath } from '@/tools/json-path-extractor/json-path-extractor.service';
+import { diff as diffJson } from '@/tools/json-diff/json-diff.models';
 import { convertArrayToCsv } from '@/tools/json-to-csv/json-to-csv.service';
 import { convertJsonLines, JsonLinesConversionError } from '@/tools/json-lines-converter/json-lines-converter.service';
 import { sortJsonText } from '@/tools/json-key-sorter/json-key-sorter.service';
@@ -98,6 +99,34 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
     catch {
       return { kind: 'json-path-extractor', valid: false, output: '' };
     }
+  }
+
+  if (task.kind === 'json-diff') {
+    let leftValue: unknown;
+    let rightValue: unknown;
+    let leftValid = true;
+    let rightValid = true;
+    try {
+      leftValue = JSON5.parse(task.leftValue);
+    }
+    catch {
+      leftValid = false;
+    }
+    try {
+      rightValue = JSON5.parse(task.rightValue);
+    }
+    catch {
+      rightValid = false;
+    }
+    if (!leftValid || !rightValid) {
+      return { kind: 'json-diff', leftValid, rightValid };
+    }
+    return {
+      kind: 'json-diff',
+      leftValid,
+      rightValid,
+      result: diffJson(leftValue, rightValue, { onlyShowDifferences: task.onlyShowDifferences }),
+    };
   }
 
   if (task.kind === 'csv-to-json') {

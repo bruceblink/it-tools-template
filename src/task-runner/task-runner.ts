@@ -41,13 +41,15 @@ export class TaskRunner {
 
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'regex' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'regex' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'text-diff' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'text-diff' }>>>
-  run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>>>
+  run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-diff' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-diff' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>>>
   run(taskKey: string, inputVersion: number, task: WorkerTask, limits: TaskLimits): Promise<TaskOutcome<WorkerTaskResult>> {
     this.cancel(taskKey);
     const inputCharacters = task.kind === 'regex'
       ? task.regex.length + task.text.length + task.flags.length
       : task.kind === 'text-diff'
         ? task.originalText.length + task.modifiedText.length
+        : task.kind === 'json-diff'
+          ? task.leftValue.length + task.rightValue.length
         : task.value.length;
     if (inputCharacters > limits.maxInputBytes) {
       return Promise.resolve({ status: 'input-limit' });

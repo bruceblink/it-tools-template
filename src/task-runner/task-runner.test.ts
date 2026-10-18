@@ -163,6 +163,19 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the JSON diff combined input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('json-diff', 1, {
+      kind: 'json-diff',
+      leftValue: ' '.repeat(taskLimits.jsonDiff.maxInputBytes),
+      rightValue: ' ',
+      onlyShowDifferences: false,
+    }, taskLimits.jsonDiff);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

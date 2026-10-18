@@ -104,6 +104,43 @@ describe('task runner worker dispatch', () => {
     })).toEqual({ kind: 'json-path-extractor', valid: false, output: '' });
   });
 
+  it('diffs JSON5 inputs in the worker and filters unchanged entries', () => {
+    const input = {
+      kind: 'json-diff' as const,
+      leftValue: '{ name: "Alice", count: 1 }',
+      rightValue: '{ name: "Bob", count: 1 }',
+      onlyShowDifferences: false,
+    };
+    const complete = executeWorkerTask(input);
+    expect(complete).toMatchObject({
+      kind: 'json-diff',
+      leftValid: true,
+      rightValid: true,
+      result: {
+        type: 'object',
+        status: 'children-updated',
+        children: [
+          { key: 'name', status: 'updated', oldValue: 'Alice', value: 'Bob' },
+          { key: 'count', status: 'unchanged', oldValue: 1, value: 1 },
+        ],
+      },
+    });
+
+    expect(executeWorkerTask({ ...input, onlyShowDifferences: true })).toMatchObject({
+      kind: 'json-diff',
+      leftValid: true,
+      rightValid: true,
+      result: {
+        children: [{ key: 'name', status: 'updated', oldValue: 'Alice', value: 'Bob' }],
+      },
+    });
+    expect(executeWorkerTask({ ...input, leftValue: '{ invalid' })).toMatchObject({
+      kind: 'json-diff',
+      leftValid: false,
+      rightValid: true,
+    });
+  });
+
   it('converts CSV and JSON to CSV in the worker', () => {
     expect(executeWorkerTask({
       kind: 'csv-to-json',

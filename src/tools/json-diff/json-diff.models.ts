@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import type { Difference, DifferenceStatus } from './json-diff.types';
 
 export { diff };
@@ -8,7 +7,7 @@ function diff(
   newObj: unknown,
   { onlyShowDifferences = false }: { onlyShowDifferences?: boolean } = {},
 ): Difference {
-  if (_.isArray(obj) && _.isArray(newObj)) {
+  if (Array.isArray(obj) && Array.isArray(newObj)) {
     return {
       key: '',
       type: 'array',
@@ -19,7 +18,7 @@ function diff(
     };
   }
 
-  if (_.isObject(obj) && _.isObject(newObj)) {
+  if (isObjectLike(obj) && isObjectLike(newObj)) {
     return {
       key: '',
       type: 'object',
@@ -126,7 +125,7 @@ function getStatus(value: unknown, newValue: unknown): DifferenceStatus {
 
   const bothAreObjects = getType(value) === 'object' && getType(newValue) === 'object';
   const bothAreArrays = getType(value) === 'array' && getType(newValue) === 'array';
-  const bothAreDeepEqual = _.isEqual(value, newValue);
+  const bothAreDeepEqual = areJsonValuesEqual(value, newValue);
 
   if (bothAreDeepEqual) {
     return 'unchanged';
@@ -137,4 +136,39 @@ function getStatus(value: unknown, newValue: unknown): DifferenceStatus {
   }
 
   return 'updated';
+}
+
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+// Compare parsed JSON values without loading a general-purpose utility bundle into the shared worker.
+function areJsonValuesEqual(left: unknown, right: unknown): boolean {
+  if (left === right) {
+    return true;
+  }
+
+  if (typeof left === 'number' && typeof right === 'number' && Number.isNaN(left) && Number.isNaN(right)) {
+    return true;
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => areJsonValuesEqual(value, right[index]));
+  }
+
+  if (isObjectLike(left) || isObjectLike(right)) {
+    if (!isObjectLike(left) || !isObjectLike(right)) {
+      return false;
+    }
+
+    const leftKeys = Object.keys(left);
+    const rightKeys = Object.keys(right);
+    return leftKeys.length === rightKeys.length
+      && leftKeys.every(key => Object.prototype.hasOwnProperty.call(right, key) && areJsonValuesEqual(left[key], right[key]));
+  }
+
+  return false;
 }
