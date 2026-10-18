@@ -4,9 +4,9 @@ FROM node:lts-alpine AS build-stage
 ENV NPM_CONFIG_LOGLEVEL warn
 ENV CI true
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
-RUN npm install -g pnpm && pnpm i --frozen-lockfile
+RUN npm install -g pnpm@12.14.0 && pnpm i --frozen-lockfile
 COPY . .
 RUN pnpm build
 

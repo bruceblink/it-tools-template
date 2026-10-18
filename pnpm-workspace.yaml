@@ -1,0 +1,12 @@
+overrides:
+  '@types/node': 25.5.0
+
+patchedDependencies:
+  iarna-toml-esm@3.0.5: patches/iarna-toml-esm@3.0.5.patch
+  vuedraggable@4.1.0: patches/vuedraggable@4.1.0.patch
+
+allowBuilds:
+  '@swc/core': true
+  electron: true
+  electron-winstaller: false
+  esbuild: true

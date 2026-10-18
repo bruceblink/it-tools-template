@@ -5,10 +5,10 @@
   "desktopName": "it-tools",
   "main": "out/main/main.cjs",
   "engines": {
-    "node": ">=22",
+    "node": ">=22.13",
     "npm": "please-use-pnpm"
   },
-  "packageManager": "pnpm@10.28.1",
+  "packageManager": "pnpm@12.14.0",
   "description": "Collection of handy online tools for developers, with great UX. ",
   "author": "[likanug <likanug.g@qq.com>](https://likanug.top)",
   "authorUrl": "https://likanug.top",
@@ -97,20 +97,6 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
     }
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/node": "25.5.0"
-    },
-    "patchedDependencies": {
-      "iarna-toml-esm@3.0.5": "patches/iarna-toml-esm@3.0.5.patch",
-      "vuedraggable@4.1.0": "patches/vuedraggable@4.1.0.patch"
-    },
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "electron",
-      "esbuild"
-    ]
   },
   "dependencies": {
     "@it-tools/bip39": "^0.0.4",
