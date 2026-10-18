@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   getPluginPackageSigningPayload,
   PluginPackageError,
+  pluginPackageLimits,
   stagePluginPackageArchive,
   type PluginPackageFile,
   type PluginPackageUnsignedManifest,
@@ -151,6 +152,19 @@ describe('Electron plugin package staging', () => {
       hostApiVersion: '1.2.0',
       trustedSigningKeys,
     })).rejects.toBeInstanceOf(PluginPackageError);
+
+    const deepPath = join(root, 'deep-path.itplugin');
+    const nestedAsset = `${Array.from({ length: pluginPackageLimits.maximumPathSegments + 1 }, () => 'a').join('/')}.txt`;
+    await writeFile(deepPath, makeZip([
+      { path: 'plugin.json', contents: '{}' },
+      { path: nestedAsset, contents: 'too deep' },
+    ]));
+    await expect(stagePluginPackageArchive({
+      archivePath: deepPath,
+      installRoot: join(root, 'deep-path-install'),
+      hostApiVersion: '1.2.0',
+      trustedSigningKeys,
+    })).rejects.toMatchObject({ code: 'unsafe-archive-entry' });
 
     const symlinkPath = join(root, 'symlink.itplugin');
     await writeFile(symlinkPath, makeZip([

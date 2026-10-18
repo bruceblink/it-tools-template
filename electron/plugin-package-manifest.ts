@@ -24,6 +24,7 @@ export const pluginPackageLimits = Object.freeze({
   maximumManifestBytes: 1024 * 1024,
   maximumFiles: 512,
   maximumEntries: 1024,
+  maximumPathSegments: 32,
   maximumCompressionRatio: 100,
 });
 
@@ -276,7 +277,7 @@ export function normalizePluginPackagePath(fileName: string, isDirectory = false
     || segment.endsWith(' ')
     || windowsDeviceNamePattern.test(segment)
     || [...segment].some(character => character.charCodeAt(0) < 0x20)
-  ))) {
+  )) || segments.length > pluginPackageLimits.maximumPathSegments) {
     throw new PluginPackageError('unsafe-archive-entry', 'The plugin package contains an unsafe file path.');
   }
   return candidate;

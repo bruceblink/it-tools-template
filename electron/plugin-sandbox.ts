@@ -20,6 +20,7 @@ export const PLUGIN_SCHEME = 'it-plugin';
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const maximumPluginAssetBytes = 16 * 1024 * 1024;
+const pluginEntrypointLoadTimeoutMs = 15_000;
 const blockedNetworkProtocols = new Set(['http:', 'https:', 'ws:', 'wss:', 'ftp:']);
 
 interface PluginSessionPolicy {
@@ -182,7 +183,13 @@ export async function createPluginSandboxWindow(
   onWebContentsCreated(window.webContents, registration.pluginId);
   window.once('ready-to-show', () => window.show());
   try {
-    await window.loadURL(entryUrl);
+    let timeout: ReturnType<typeof setTimeout>;
+    await Promise.race([
+      window.loadURL(entryUrl),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error('The plugin entrypoint did not load in time.')), pluginEntrypointLoadTimeoutMs);
+      }),
+    ]).finally(() => clearTimeout(timeout));
     return window;
   }
   catch (error) {

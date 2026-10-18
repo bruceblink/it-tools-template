@@ -1,6 +1,6 @@
 # Electron Plugin Package Format v1
 
-Status: experimental. The package validator and staging service exist, but the application has no install screen, trusted-key catalog, activation flow, or capability broker.
+Status: experimental. The package validator, staging service, capability broker, and lifecycle service exist. The application has no install screen, trusted-key catalog, lifecycle IPC, or production signing keys.
 
 ## Scope
 
@@ -66,7 +66,7 @@ The host resolves `signature.keyId` from a host-owned key map. Each key entry li
 
 ## Path rules
 
-Package paths use `/` separators and must be relative. The installer rejects empty, `.` and `..` segments, backslashes, drive prefixes, control characters, `%`, `?`, `#`, reserved Windows device names, trailing dots or spaces, and paths that are not in Unicode NFC form. A path can contain at most 1,024 characters. Each segment can contain at most 255 UTF-16 code units.
+Package paths use `/` separators and must be relative. The installer rejects empty, `.` and `..` segments, backslashes, drive prefixes, control characters, `%`, `?`, `#`, reserved Windows device names, trailing dots or spaces, and paths that are not in Unicode NFC form. A path can contain at most 1,024 characters and 32 segments. Each segment can contain at most 255 UTF-16 code units.
 
 ## Resource limits
 
@@ -78,6 +78,7 @@ Package paths use `/` separators and must be relative. The installer rejects emp
 | Manifest | 1 MiB |
 | Payload files | 512 |
 | All ZIP entries, including directories | 1,024 |
+| Path segments | 32 |
 | One file compression ratio | 100:1 |
 
 The installer checks archive metadata before extraction. It also checks actual streamed byte counts and SHA-256 hashes while writing each file. A file that exceeds its declared size or the configured limit aborts the operation and removes the staging directory.
@@ -86,4 +87,6 @@ The installer checks archive metadata before extraction. It also checks actual s
 
 The staged path is `<installRoot>/<pluginId>/<version>`. The installer does not replace an existing version. It stores the validated manifest as normalized JSON. It serializes staging operations for the same install root and cleans abandoned staging directories before a new install.
 
-The service requires a host-provided trusted-key map. This repository does not yet ship a production plugin signing key or a user-managed trust store. The application does not yet expose this service through an install screen or activate staged packages. Capability grants, per-request source checks, bounded IPC, plugin disable, upgrade, rollback, and uninstall are later milestones.
+The lifecycle service revalidates the signed manifest and every file before activation, limits active plugin windows, restores the previous version if a replacement fails to start, and supports disable and uninstall operations. It accepts a host-provided trusted-key map and per-session grants for `runtime.info` and `clipboard.write`.
+
+This repository does not ship a production plugin signing key or a user-managed trust store. The application does not yet expose lifecycle operations through main-process IPC or an install screen. The capability broker exists as a bounded local protocol, but the plugin manager is not yet connected to it in the production application.
