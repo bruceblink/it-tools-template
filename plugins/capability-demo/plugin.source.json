@@ -1,0 +1,15 @@
+{
+  "formatVersion": 1,
+  "id": "org.it-tools.capability-demo",
+  "name": "Capability demo",
+  "version": "1.0.0",
+  "apiVersion": {
+    "minInclusive": "1.2.0",
+    "maxExclusive": "2.0.0"
+  },
+  "entrypoint": "index.html",
+  "requestedCapabilities": [
+    "runtime.info",
+    "clipboard.write"
+  ]
+}

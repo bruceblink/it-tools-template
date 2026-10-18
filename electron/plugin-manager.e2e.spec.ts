@@ -1,13 +1,13 @@
 import { _electron, expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import type { BrowserWindow as BrowserWindowType, LoadURLOptions } from 'electron';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
+import { generateKeyPairSync } from 'node:crypto';
+import { cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { getPluginPackageSigningPayload } from './plugin-package';
+import { join, resolve } from 'node:path';
+import { buildPluginPackage } from '../scripts/plugin-pack.mjs';
 
-const pluginId = 'org.example.manager-e2e';
+const pluginId = 'org.it-tools.capability-demo';
 const keyId = 'manager-e2e-publisher';
 const signingPair = generateKeyPairSync('ed25519');
 let electronApp: ElectronApplication;
@@ -26,14 +26,14 @@ test.beforeAll(async () => {
   upgradeArchivePath = join(temporaryDirectory, 'manager-e2e-upgrade.itplugin');
   unresponsiveArchivePath = join(temporaryDirectory, 'manager-e2e-unresponsive.itplugin');
   crashArchivePath = join(temporaryDirectory, 'manager-e2e-crash.itplugin');
-  await writeFile(archivePath, createSignedPackage());
-  await writeFile(upgradeArchivePath, createSignedPackage('2.0.0'));
-  await writeFile(unresponsiveArchivePath, createSignedPackage('3.0.0', true));
-  await writeFile(crashArchivePath, createSignedPackage('4.0.0'));
+  await writeFile(archivePath, await createSignedPackage('1.0.0'));
+  await writeFile(upgradeArchivePath, await createSignedPackage('2.0.0'));
+  await writeFile(unresponsiveArchivePath, await createSignedPackage('3.0.0', true));
+  await writeFile(crashArchivePath, await createSignedPackage('4.0.0'));
   const fixtureDirectory = process.env.IT_TOOLS_PLUGIN_MANAGER_FIXTURE_DIR;
   if (fixtureDirectory) {
     await mkdir(fixtureDirectory, { recursive: true });
-    await writeFile(join(fixtureDirectory, 'manager-e2e.itplugin'), createSignedPackage());
+    await writeFile(join(fixtureDirectory, 'manager-e2e.itplugin'), await createSignedPackage('1.0.0'));
     await writeFile(join(fixtureDirectory, 'manager-e2e-public-key.pem'), getPackagePublicKey());
   }
 
@@ -69,6 +69,16 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   test.setTimeout(90_000);
   await page.getByRole('link', { name: 'Settings' }).click();
   await expect(page).toHaveURL('app://bundle/settings');
+  await electronApp.evaluate(({ clipboard }) => {
+    let writeCount = 0;
+    Object.defineProperty(clipboard, 'writeText', {
+      configurable: true,
+      value: (text: string) => {
+        writeCount += 1;
+        Object.assign(globalThis, { __testClipboardText: text, __testClipboardWrites: writeCount });
+      },
+    });
+  });
   await electronApp.evaluate(({ dialog }, selectedPackagePath) => {
     Object.defineProperty(dialog, 'showOpenDialog', {
       configurable: true,
@@ -95,6 +105,8 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
 
   const runtimeGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
     .getByRole('checkbox', { name: 'Read platform and app version' });
+  const clipboardGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
+    .getByRole('checkbox', { name: 'Write to the system clipboard' });
   await runtimeGrant.check();
   await electronApp.evaluate(({ dialog }) => {
     Object.defineProperty(dialog, 'showMessageBox', {
@@ -112,8 +124,12 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!deniedWindow) {
     throw new Error('The plugin window was not created after capability denial.');
   }
-  await expect(deniedWindow.locator('#runtime-proof')).toHaveText('Unavailable');
+  await expect(deniedWindow.locator('#runtime-proof')).toHaveText('Not authorized');
+  await deniedWindow.locator('#clipboard-text').fill('denied clipboard test');
+  await deniedWindow.getByRole('button', { name: 'Copy to clipboard' }).click();
   await expect(deniedWindow.locator('#clipboard-proof')).toHaveText('Not authorized');
+  await expect(deniedWindow.locator('#copy-result')).toHaveText('Enable clipboard access in the plugin settings to copy text.');
+  expect(await electronApp.evaluate(() => (globalThis as typeof globalThis & { __testClipboardWrites?: number }).__testClipboardWrites ?? 0)).toBe(0);
   const deniedWindowClosed = deniedWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await deniedWindowClosed;
@@ -126,6 +142,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     });
   });
   await runtimeGrant.check();
+  await clipboardGrant.check();
   await page.getByRole('button', { name: 'Run plugin' }).click();
   await expect(page.getByText('Plugin window started.')).toBeVisible();
   await expect.poll(async () => (
@@ -136,16 +153,14 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!pluginWindow) {
     throw new Error('The plugin window was not created.');
   }
-  const capabilityToast = pluginWindow.getByRole('status');
-  await expect(capabilityToast).toBeVisible();
-  await expect(capabilityToast).toHaveCSS('position', 'fixed');
-  await expect(capabilityToast).toHaveCSS('border-radius', '14px');
   await expect(pluginWindow.locator('#runtime-proof')).toHaveText('Available');
-  await expect(pluginWindow.locator('#clipboard-proof')).toHaveText('Not authorized');
+  await pluginWindow.locator('#clipboard-text').fill('signed plugin clipboard sample');
+  await pluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();
+  await expect(pluginWindow.locator('#clipboard-proof')).toHaveText('Available');
+  await expect(pluginWindow.locator('#copy-result')).toHaveText('Text copied.');
+  expect(await electronApp.evaluate(() => (globalThis as typeof globalThis & { __testClipboardText?: string }).__testClipboardText)).toBe('signed plugin clipboard sample');
   await expect(page.getByText('Running', { exact: true })).toBeVisible();
   await pluginWindow.evaluate(() => localStorage.setItem('rollback-proof', 'version-1'));
-  await pluginWindow.getByRole('button', { name: 'Dismiss capability status' }).click();
-  await expect(pluginWindow.getByRole('status')).toBeHidden();
 
   await electronApp.evaluate(({ dialog }, selectedPackagePath) => {
     Object.defineProperty(dialog, 'showOpenDialog', {
@@ -155,7 +170,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   }, upgradeArchivePath);
   await page.getByRole('button', { name: 'Install signed package' }).click();
   await expect(page.getByTestId(`plugin-package-${pluginId}-2.0.0`)).toBeVisible();
-  await electronApp.evaluate(({ BrowserWindow }) => {
+  await electronApp.evaluate(({ BrowserWindow }, targetPluginId) => {
     const originalLoadURL = BrowserWindow.prototype.loadURL as (
       this: BrowserWindowType,
       url: string,
@@ -165,14 +180,14 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     Object.defineProperty(BrowserWindow.prototype, 'loadURL', {
       configurable: true,
       value: function (this: BrowserWindowType, url: string, options?: LoadURLOptions) {
-        if (failNextPluginLoad && String(url).startsWith('it-plugin://org.example.manager-e2e/')) {
+        if (failNextPluginLoad && String(url).startsWith(`it-plugin://${targetPluginId}/`)) {
           failNextPluginLoad = false;
           return Promise.reject(new Error('Injected plugin upgrade failure.'));
         }
         return originalLoadURL.call(this, url, options);
       },
     });
-  });
+  }, pluginId);
   const originalWindowClosed = pluginWindow.waitForEvent('close');
   await page.getByTestId(`plugin-package-${pluginId}-2.0.0`).getByRole('button', { name: 'Run plugin' }).click();
   await originalWindowClosed;
@@ -207,7 +222,6 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!revokedWindow) {
     throw new Error('The reactivated plugin window was not created.');
   }
-  await expect(revokedWindow.getByRole('status')).toBeVisible();
   await expect(revokedWindow.locator('#runtime-proof')).toHaveText('Available');
 
   await electronApp.evaluate(({ dialog }, selectedPackagePath) => {
@@ -434,127 +448,21 @@ function getPackagePublicKey(): string {
   return signingPair.publicKey.export({ type: 'spki', format: 'pem' }).toString();
 }
 
-function createSignedPackage(version = '1.0.0', freezeRenderer = false): Buffer {
-  const files = {
-    'index.html': [
-      '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
-      '<link rel="stylesheet" href="/styles.css"></head><body>',
-      '<section id="capability-toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden>',
-      '<header class="head"><h1 class="title">Capability check</h1><button class="dismiss" type="button" aria-label="Dismiss capability status">×</button></header>',
-      '<p class="description">Results for this plugin session</p><dl class="list">',
-      '<div class="row"><dt>Runtime information</dt><dd id="runtime-proof" class="result" data-state="pending">Checking</dd></div>',
-      '<div class="row"><dt>Clipboard write</dt><dd id="clipboard-proof" class="result" data-state="pending">Checking</dd></div>',
-      '</dl></section><script src="/plugin.js"></script></body></html>',
-    ].join(''),
-    'styles.css': [
-      ':root{color-scheme:light;font-family:"Segoe UI",sans-serif;color:#1f2937;background:#f4f6f8}',
-      'body{margin:0;min-height:100vh}',
-      '.toast{position:fixed;top:24px;right:24px;width:min(380px,calc(100vw - 48px));padding:20px;border:1px solid #e5e7eb;border-radius:14px;background:#fff;box-shadow:0 16px 40px #0f172324}',
-      '.toast[hidden]{display:none}',
-      '.head,.row{display:flex;align-items:center;justify-content:space-between;gap:16px}',
-      '.title{margin:0;font-size:16px;font-weight:650}',
-      '.description{margin:6px 0 16px;color:#64748b;font-size:13px;line-height:1.5}',
-      '.dismiss{display:grid;width:32px;height:32px;place-items:center;border:0;border-radius:8px;background:transparent;color:#64748b;cursor:pointer;font-size:20px}',
-      '.dismiss:hover{color:#111827;background:#f1f5f9}',
-      '.list{display:grid;gap:10px;margin:0}',
-      '.row{min-height:38px;padding:0 12px;border-radius:9px;background:#f8fafc;font-size:13px}',
-      '.result{color:#166534;font-weight:600}',
-      '.result[data-state="blocked"]{color:#9a3412}',
-      '.result[data-state="unexpected"]{color:#a16207}',
-      '@media(prefers-reduced-motion:no-preference){.toast:not([hidden]){animation:enter 180ms ease-out}@keyframes enter{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}}',
-    ].join('\n'),
-    'plugin.js': [
-      'async function call(id, capability, operation, input) {',
-      '  const response = await fetch("/__it_tools/v1/call", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, capability, operation, input }) });',
-      '  return { status: response.status, body: await response.json() };',
-      '}',
-      'const toast = document.querySelector("#capability-toast"); let completed = 0;',
-      'function finish(id, value, state) { const output = document.querySelector(id); output.textContent = value; output.dataset.state = state; completed += 1; if (completed === 2) toast.hidden = false; }',
-      'document.querySelector(".dismiss").addEventListener("click", () => { toast.hidden = true; });',
-      'void call("runtime", "runtime.info", "read", {}).then(({ status, body }) => { const granted = status === 200 && body.ok; finish("#runtime-proof", granted ? "Available" : "Unavailable", granted ? "granted" : "blocked"); }).catch(() => finish("#runtime-proof", "Unavailable", "blocked"));',
-      'void call("clipboard", "clipboard.write", "writeText", { text: "test" }).then(({ status, body }) => { const denied = status === 403 && body.error === "permission-denied"; finish("#clipboard-proof", denied ? "Not authorized" : "Unexpected response", denied ? "blocked" : "unexpected"); }).catch(() => finish("#clipboard-proof", "Unavailable", "blocked"));',
-      ...(freezeRenderer ? ['setTimeout(() => { while (true) {} }, 500);'] : []),
-    ].join('\n'),
-  };
-  const manifestFiles = Object.entries(files)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([path, contents]) => ({ path, sha256: createHash('sha256').update(contents).digest('hex') }));
-  const unsignedManifest = {
-    formatVersion: 1 as const,
-    id: pluginId,
-    name: 'Manager e2e plugin',
-    version,
-    apiVersion: { minInclusive: '1.0.0', maxExclusive: '2.0.0' },
-    entrypoint: 'index.html',
-    requestedCapabilities: ['runtime.info', 'clipboard.write'],
-    files: manifestFiles,
-  };
-  const signature = sign(
-    null,
-    Buffer.from(getPluginPackageSigningPayload(unsignedManifest), 'utf8'),
-    signingPair.privateKey,
-  ).toString('base64');
-  const manifest = {
-    ...unsignedManifest,
-    signature: { algorithm: 'Ed25519', keyId, value: signature },
-  };
-  return makeStoredZip([
-    { path: 'plugin.json', contents: JSON.stringify(manifest) },
-    ...Object.entries(files).map(([path, contents]) => ({ path, contents })),
-  ]);
-}
-
-function makeStoredZip(entries: readonly { path: string; contents: string }[]): Buffer {
-  const localRecords: Buffer[] = [];
-  const centralRecords: Buffer[] = [];
-  let localOffset = 0;
-  for (const entry of entries) {
-    const name = Buffer.from(entry.path, 'utf8');
-    const contents = Buffer.from(entry.contents, 'utf8');
-    const checksum = crc32(contents);
-    const localHeader = Buffer.alloc(30);
-    localHeader.writeUInt32LE(0x04034b50, 0);
-    localHeader.writeUInt16LE(20, 4);
-    localHeader.writeUInt16LE(0x0800, 6);
-    localHeader.writeUInt32LE(checksum, 14);
-    localHeader.writeUInt32LE(contents.length, 18);
-    localHeader.writeUInt32LE(contents.length, 22);
-    localHeader.writeUInt16LE(name.length, 26);
-    const localRecord = Buffer.concat([localHeader, name, contents]);
-    localRecords.push(localRecord);
-
-    const centralHeader = Buffer.alloc(46);
-    centralHeader.writeUInt32LE(0x02014b50, 0);
-    centralHeader.writeUInt16LE((3 << 8) | 20, 4);
-    centralHeader.writeUInt16LE(20, 6);
-    centralHeader.writeUInt16LE(0x0800, 8);
-    centralHeader.writeUInt32LE(checksum, 16);
-    centralHeader.writeUInt32LE(contents.length, 20);
-    centralHeader.writeUInt32LE(contents.length, 24);
-    centralHeader.writeUInt16LE(name.length, 28);
-    centralHeader.writeUInt32LE((0o100644 * 0x10000) >>> 0, 38);
-    centralHeader.writeUInt32LE(localOffset, 42);
-    centralRecords.push(Buffer.concat([centralHeader, name]));
-    localOffset += localRecord.length;
+async function createSignedPackage(version = '1.0.0', freezeRenderer = false): Promise<Buffer> {
+  const sourceDirectory = join(temporaryDirectory, `capability-demo-${version}-${freezeRenderer ? 'frozen' : 'normal'}`);
+  await cp(resolve('plugins/capability-demo'), sourceDirectory, { recursive: true });
+  const sourceManifestPath = join(sourceDirectory, 'plugin.source.json');
+  const sourceManifest = JSON.parse(await readFile(sourceManifestPath, 'utf8')) as { version: string };
+  sourceManifest.version = version;
+  await writeFile(sourceManifestPath, `${JSON.stringify(sourceManifest, null, 2)}\n`);
+  if (freezeRenderer) {
+    const pluginScriptPath = join(sourceDirectory, 'plugin.js');
+    const pluginScript = await readFile(pluginScriptPath, 'utf8');
+    await writeFile(pluginScriptPath, `${pluginScript}\nsetTimeout(() => { while (true) {} }, 500);\n`);
   }
-
-  const centralDirectory = Buffer.concat(centralRecords);
-  const endRecord = Buffer.alloc(22);
-  endRecord.writeUInt32LE(0x06054b50, 0);
-  endRecord.writeUInt16LE(entries.length, 8);
-  endRecord.writeUInt16LE(entries.length, 10);
-  endRecord.writeUInt32LE(centralDirectory.length, 12);
-  endRecord.writeUInt32LE(localOffset, 16);
-  return Buffer.concat([...localRecords, centralDirectory, endRecord]);
-}
-
-function crc32(bytes: Buffer): number {
-  let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ ((crc & 1) === 1 ? 0xedb88320 : 0);
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
+  return (await buildPluginPackage({
+    sourceDirectory,
+    signingKey: signingPair.privateKey,
+    keyId,
+  })).archive;
 }

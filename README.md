@@ -112,6 +112,8 @@ pnpm validate
 
 The current roadmap is in [Development Plan](docs/01-development-plan.md). Performance and tool-registration foundations and the internal first-party extension SDK are implemented. The Electron plugin pilot includes signed package installation, capability approval, version fallback, and signer revocation; cross-platform and native-window acceptance is still in progress. Scope and isolation requirements are in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-plan.md), and the current interface boundaries are in [First-Party Extension SDK v0](docs/extension-sdk-v0.md). Earlier quality work is recorded in [Quality Baseline](docs/02-quality-baseline.md).
 
+Electron plugin developers can use the signed package CLI and maintained [Capability demo](plugins/capability-demo/). See [Electron Plugin MVP Quickstart](docs/11-electron-plugin-mvp-quickstart.md) for key storage, package creation, trust, and install steps. External plugins remain Electron-only.
+
 The two security tasks and their acceptance results are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
 
 Content privacy, sanitized rendering, and deployment headers are described in [Content, HTML, and Deployment Boundaries](docs/04-security-boundaries.md). The credential, request, configuration, and document inputs covered there stay in page memory; existing display and processing preferences may still be saved.

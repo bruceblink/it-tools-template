@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Capability demo</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="page">
+      <header class="heading">
+        <p class="eyebrow">IT Tools plugin sample</p>
+        <h1>Capability demo</h1>
+        <p class="intro">A small signed plugin that asks the host for platform details and copies text after you request it.</p>
+      </header>
+
+      <section class="card" aria-labelledby="runtime-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="runtime-heading">Host runtime</h2>
+            <p>Read-only information supplied by the desktop host.</p>
+          </div>
+          <span id="runtime-proof" class="badge" role="status" data-state="pending">Checking</span>
+        </div>
+        <dl class="runtime-details">
+          <div><dt>Platform</dt><dd id="runtime-platform">Waiting for approval</dd></div>
+          <div><dt>Application version</dt><dd id="runtime-version">Waiting for approval</dd></div>
+        </dl>
+      </section>
+
+      <section class="card" aria-labelledby="clipboard-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="clipboard-heading">Copy text</h2>
+            <p>The host writes only after you press Copy.</p>
+          </div>
+          <span id="clipboard-proof" class="badge" role="status" data-state="pending">Not checked</span>
+        </div>
+        <form id="clipboard-form">
+          <label for="clipboard-text">Text to copy</label>
+          <textarea id="clipboard-text" maxlength="16384" rows="4" placeholder="Type text to copy"></textarea>
+          <div class="form-footer">
+            <span id="copy-result" class="copy-result" role="status" aria-live="polite"></span>
+            <button id="copy-button" type="submit">Copy to clipboard</button>
+          </div>
+        </form>
+      </section>
+
+      <p class="privacy-note">Plugin code runs in an isolated window. The host exposes only the capabilities you approve.</p>
+    </main>
+    <script src="/plugin.js"></script>
+  </body>
+</html>

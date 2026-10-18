@@ -1,6 +1,6 @@
 # Electron Plugin Package Format v1
 
-Status: experimental. The package validator, staging service, capability broker, lifecycle service, local signer trust store, and desktop management UI exist. The repository has no production signing keys or public plugin catalog.
+Status: experimental. The package validator, staging service, capability broker, lifecycle service, local signer trust store, desktop management UI, signing and packaging CLI, and maintained capability demo source exist. The repository ships no production signing key, prebuilt signed package, automatic updater, or public plugin catalog. See the [Electron Plugin MVP Quickstart](11-electron-plugin-mvp-quickstart.md).
 
 ## Scope
 
@@ -91,4 +91,4 @@ The lifecycle service revalidates the signed manifest and every file before acti
 
 The desktop UI stores only public Ed25519 keys in the application user-data directory. Each key is limited to named plugin IDs. The UI displays a SHA-256 fingerprint before trust, and a native confirmation dialog records the user's decision. Signature trust confirms package origin and integrity. It does not grant plugin capabilities. The main process asks for separate approval before it grants `runtime.info` or `clipboard.write` for a running window.
 
-The Electron management UI is in the Plugins section of `/settings`. The legacy `/settings/extensions` route redirects there. The web UI states that external plugin packages are desktop-only. No production signer key, maintained first-party plugin package, automatic startup, or public plugin catalog ships with this repository. A local signer key must be verified with its publisher before it is trusted.
+The Electron management UI is in the Plugins section of `/settings`. The legacy `/settings/extensions` route redirects there. The web UI states that external plugin packages are desktop-only. A local signer key must be verified with its publisher before it is trusted. The current CSP blocks plugin Workers with `worker-src 'none'`; support remains disabled until the host can enforce a per-plugin worker limit.

@@ -1,0 +1,47 @@
+# Electron 插件 MVP 使用说明
+
+本文面向维护 IT Tools 插件的开发者和桌面应用用户。当前 MVP 只支持 Electron 桌面版的本地 `.itplugin` 包。Web 和 Docker 版继续使用仓库内置工具与第一方扩展，不加载外部包。
+
+## 插件源码
+
+从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。
+
+MVP 提供两个宿主能力：读取平台与应用版本，以及在用户操作后写入文本到系统剪贴板。插件不能继承宿主 preload、本地存储或网络访问。插件窗口不允许创建 Web Worker；此限制避免当前缺少运行时 Worker 数量监控的问题。需要 Worker 的插件暂不适合此版本。
+
+## 创建签名密钥
+
+使用 Node.js 24 和仓库指定的 pnpm 版本。把密钥放在仓库以外、仅当前用户可访问的目录。密钥目录应有受限 ACL，并保留离线备份。
+
+```powershell
+pnpm run plugin:keygen -- --key-id capability-demo-publisher --output-directory "D:\secure-keys\it-tools"
+```
+
+命令输出私钥文件路径、公钥文件路径和 SHA-256 指纹。命令不会输出私钥内容。它拒绝把密钥写进仓库，并且不会覆盖已有密钥文件。
+
+## 打包插件
+
+```powershell
+pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itplugin"
+```
+
+打包器生成确定性的未压缩 ZIP。它把每个文件的 SHA-256 写入签名清单，并用 Ed25519 私钥签名清单。包不包含 `plugin.source.json` 或签名私钥。安装器会再次检查包签名、清单、文件路径和每个文件哈希。
+
+包字段、签名输入、路径规则和安装上限见[插件包格式 v1](08-electron-plugin-package-format-v1.md)。
+
+签名只证明包与该公钥匹配。它不证明插件代码安全。发布者应通过独立渠道提供公钥指纹，并审查插件源码。
+
+## 安装和运行
+
+1. 在 Electron 桌面版的“设置 → Electron 插件包”中输入签名密钥 ID、公钥 PEM 和允许的插件 ID。
+2. 对照发布者通过独立渠道提供的指纹，再预览并信任签名者。信任签名者不会自动授予系统能力。
+3. 安装 `.itplugin` 包。安装器先验证和暂存资源，再登记已安装版本。
+4. 选择能力并点击“运行插件”。桌面确认对话框会再次显示本次授权。
+5. 在运行窗口验证插件功能。停止、升级、切换旧版本、撤销签名者和卸载都从设置页面执行。
+
+MVP 的端到端样例会拒绝未授权的剪贴板写入；批准能力后，样例会把用户输入的文本写入宿主能力代理。自动化回归替换系统对话框结果，并将剪贴板写入记录在测试进程内存，因此测试不会改动桌面剪贴板。
+
+## 验证
+
+运行 `pnpm test:plugin-pack` 检查密钥路径、文件覆盖保护、确定性 ZIP、清单签名、文件哈希和不支持的能力。运行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts --reporter=list` 检查沙箱、网络、文件、能力授权、版本回退和插件生命周期。`pnpm check` 会运行打包测试。
+
+MVP 不包括插件商店、Web/Docker 外部插件、插件内 Worker、任意网络代理或生产签名者名单。启用这些能力前，需要分别完成来源、资源和跨平台隔离验收。
