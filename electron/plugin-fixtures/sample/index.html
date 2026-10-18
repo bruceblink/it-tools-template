@@ -4,11 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sandbox proof</title>
+    <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
-    <main id="sandbox-proof">Sandbox fixture loaded</main>
-    <output id="runtime-capability-proof">Runtime capability pending</output>
-    <output id="clipboard-capability-proof">Clipboard capability pending</output>
+    <main id="sandbox-proof" hidden>Sandbox fixture loaded</main>
+    <section id="capability-toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden>
+      <header class="toast-header">
+        <h1 class="toast-title">Capability check</h1>
+        <button class="dismiss" type="button" aria-label="Dismiss capability status">×</button>
+      </header>
+      <p class="toast-description">Results for this plugin session</p>
+      <dl class="capability-list">
+        <div class="capability-row">
+          <dt>Runtime information</dt>
+          <dd id="runtime-capability-proof" class="capability-result" data-state="pending">Checking</dd>
+        </div>
+        <div class="capability-row">
+          <dt>Clipboard write</dt>
+          <dd id="clipboard-capability-proof" class="capability-result" data-state="pending">Checking</dd>
+        </div>
+      </dl>
+    </section>
     <script type="module" src="/plugin.js"></script>
   </body>
 </html>

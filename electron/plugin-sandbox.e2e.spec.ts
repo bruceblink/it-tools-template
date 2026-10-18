@@ -46,8 +46,14 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   }
 
   await expect(pluginPage.locator('#sandbox-proof')).toHaveText('Sandbox fixture loaded');
-  await expect(pluginPage.locator('#runtime-capability-proof')).toHaveText('Runtime capability granted');
-  await expect(pluginPage.locator('#clipboard-capability-proof')).toHaveText('Clipboard capability denied');
+  const capabilityToast = pluginPage.getByRole('status');
+  await expect(capabilityToast).toBeVisible();
+  await expect(capabilityToast).toHaveCSS('position', 'fixed');
+  await expect(capabilityToast).toHaveCSS('border-radius', '14px');
+  await expect(pluginPage.locator('#runtime-capability-proof')).toHaveText('Available');
+  await expect(pluginPage.locator('#clipboard-capability-proof')).toHaveText('Not authorized');
+  await pluginPage.getByRole('button', { name: 'Dismiss capability status' }).click();
+  await expect(capabilityToast).toBeHidden();
   const response = await pluginPage.reload();
   const rendererState = await pluginPage.evaluate(() => ({
     origin: location.origin,

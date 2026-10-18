@@ -1,0 +1,104 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", sans-serif;
+  color: #1f2937;
+  background: #f4f6f8;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: min(380px, calc(100vw - 48px));
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgb(15 23 42 / 14%);
+}
+
+.toast[hidden] {
+  display: none;
+}
+
+.toast-header,
+.capability-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.toast-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.toast-description {
+  margin: 6px 0 16px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dismiss {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.dismiss:hover {
+  color: #111827;
+  background: #f1f5f9;
+}
+
+.capability-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.capability-row {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 9px;
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.capability-result {
+  color: #166534;
+  font-weight: 600;
+}
+
+.capability-result[data-state="blocked"] {
+  color: #9a3412;
+}
+
+.capability-result[data-state="unexpected"] {
+  color: #a16207;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast:not([hidden]) {
+    animation: toast-enter 180ms ease-out;
+  }
+
+  @keyframes toast-enter {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
