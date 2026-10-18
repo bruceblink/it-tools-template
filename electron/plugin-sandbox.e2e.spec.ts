@@ -77,6 +77,34 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(rendererState.preloadBridge).toBe('undefined');
   expect(response?.headers()['content-security-policy']).toContain("connect-src 'self'");
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
+  expect(response?.headers()['content-security-policy']).toContain("worker-src 'none'");
+
+  const workerResult = await pluginPage.evaluate(() => new Promise<string>((resolve) => {
+    let worker: Worker | undefined;
+    const timeout = setTimeout(() => {
+      worker?.terminate();
+      resolve('timeout');
+    }, 1_000);
+    try {
+      worker = new Worker('/worker.js');
+      worker.onmessage = () => {
+        clearTimeout(timeout);
+        worker?.terminate();
+        resolve('started');
+      };
+      worker.onerror = (event) => {
+        event.preventDefault();
+        clearTimeout(timeout);
+        resolve('blocked');
+      };
+    }
+    catch {
+      clearTimeout(timeout);
+      resolve('blocked');
+    }
+  }));
+  expect(workerResult).toBe('blocked');
+  expect(await hostPage.evaluate(() => document.readyState)).toMatch(/interactive|complete/);
 
   const hostPrivateFile = join(userDataDirectory, 'host-private.txt');
   await writeFile(hostPrivateFile, 'host-only test data');

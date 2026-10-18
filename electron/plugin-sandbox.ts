@@ -112,7 +112,8 @@ export function getPluginContentSecurityPolicy(): string {
     "img-src 'self' data:",
     "font-src 'self'",
     "connect-src 'self'",
-    "worker-src 'self'",
+    // Workers stay disabled until the sandbox can enforce an active worker count per plugin.
+    "worker-src 'none'",
     "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'none'",

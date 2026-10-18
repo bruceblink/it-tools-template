@@ -57,6 +57,7 @@ describe('Electron plugin renderer boundary', () => {
     expect(policy).toContain("default-src 'none'");
     expect(policy).toContain("script-src 'self'");
     expect(policy).toContain("connect-src 'self'");
+    expect(policy).toContain("worker-src 'none'");
     expect(policy).toContain("frame-src 'none'");
     expect(policy).not.toContain('unsafe-inline');
     expect(policy).not.toContain('https:');
