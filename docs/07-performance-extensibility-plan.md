@@ -179,7 +179,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化和 Environment Variables Parser 已迁移到任务执行器。cURL Code Generator 保持同步执行；当前合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser 和 Bcrypt 哈希/比较已迁移到任务执行器。cURL Code Generator 保持同步执行；当前合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
@@ -187,6 +187,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - Worker 和页面离开时取消的任务都会终止对应 Worker。后续仍需验证 Worker、监听器和媒体资源在连续切换 20 轮后的计数与回收。
 - TOML 的 JSON、YAML 双向转换已迁入共享 Worker。其余大输入工具仍需逐项设定字节、行数和输出上限。确需整体载入的算法要先检查大小；批量文件再评估流式处理。
 - SQL Formatter 使用独立 Worker，避免把 `sql-formatter` 加入共享 Worker；输入最多 256 KiB，输出最多 2 MiB，运行最多 10 秒。Environment Variables Parser 使用共享 Worker，一次解析后同时返回诊断与所选格式；输入最多 256 KiB、2,000 行，输出最多 2 MiB，运行最多 10 秒。
+- Bcrypt 哈希与比较使用独立 Worker；盐轮数限制为 4–16，合并输入最多 64 KiB，输出最多 4 KiB，任务最多运行 5 秒。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
@@ -492,3 +493,7 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 本轮 cURL Code Generator 同步路径评估（2026-10-19）：Windows 11 工作站版、AMD Ryzen 9 5900X、Node.js 24.15.0 上，每个合成请求先预热一次，再完整测量解析和生成 fetch、axios、HTTPie 三份输出 5 次。2,704 字节 / 100 个请求头的中位数 / 最大值为 0.36 / 0.95 毫秒；14,304 字节 / 500 个请求头为 0.86 / 1.08 毫秒；44,304 字节 / 1,500 个请求头为 2.10 / 2.39 毫秒；90,804 字节 / 3,000 个请求头为 4.53 / 4.70 毫秒；183,804 字节 / 6,000 个请求头为 8.67 / 10.51 毫秒。这是合成 Node.js 微基准，不包含页面输入和渲染。当前数据不足以支持把该工具迁入 Worker；原页面仍没有输入上限，后续需按用户输入规模再评估。
 
 本轮 Math Evaluator 初步评估（2026-10-19）：同一 Windows 和 Node 环境中先预热一次，再对每种表达式测量 3 次。`2 * sqrt(6)` 的中位数 / 最大值为 0.07 / 0.09 毫秒；1,000 项加法链（1,999 字节）为 1.33 / 1.38 毫秒；2,000 项（3,999 字节）为 2.38 / 2.59 毫秒；`sum(1:50000)` 为 2.91 / 8.71 毫秒；`sum(ones(1200,1200))` 为 11.67 / 12.60 毫秒。5,000 项加法链（9,999 字节）触发 Math.js `RangeError`，页面当前的通用错误处理会返回空结果。该结果未证明普通表达式存在明显页面延迟；下一步应先评估表达式深度、矩阵和结果大小的资源限制，再决定是否改为专用 Worker。
+
+本轮 Bcrypt Worker 迁移（2026-10-19）：Bcrypt 输入更新时不再在渲染器线程同步运行 `hashSync` 或 `compareSync`。本机 Node.js 24.15.0 在 Windows 11、AMD Ryzen 9 5900X 上对合成密码各测 4 次；盐轮数 8、10、12、14 的中位数 / 最大值分别为 14.6 / 22.2、55.3 / 57.8、218.3 / 226.2、862.8 / 866.9 毫秒。`genSaltSync(100)` 返回 31 轮盐值，原界面允许选择 100 轮。改造后界面限制 4–16 轮，哈希和比较都由专用 Worker 执行，任务超时为 5 秒，密码与比较输入合计最多 64 KiB，结果最多 4 KiB。旧输入会终止旧 Worker，页面卸载时也取消任务。
+
+`pnpm check` 通过 104 个测试文件、657 项单元测试，并完成类型检查、lint、Web 与 Electron 构建。Chromium 定向 E2E 的 1 项测试通过，覆盖哈希、正确比较和错误比较。Bcrypt Worker 构建大小为 Web 18.47 KiB、Electron 31.13 KiB。此片没有真实操作系统窗口证据；没有测量 Web/Electron 端的哈希延迟，Node 基准不能代表浏览器运行时。下一步先为 Math Evaluator 的表达式深度和矩阵分配确定硬限制，再判断是否迁移。

@@ -213,6 +213,18 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the bcrypt hash input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('bcrypt-hash', 1, {
+      kind: 'bcrypt-hash',
+      value: 'x'.repeat(taskLimits.bcryptHash.maxInputBytes + 1),
+      saltRounds: 10,
+    }, taskLimits.bcryptHash);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

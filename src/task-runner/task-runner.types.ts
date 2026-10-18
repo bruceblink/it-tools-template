@@ -26,6 +26,8 @@ export type WorkerTask =
   | { kind: 'yaml-viewer'; value: string; sortKeys: boolean; indentSize: number }
   | { kind: 'sql-format'; value: string; options: FormatOptionsWithLanguage }
   | { kind: 'env-vars-parser'; value: string; outputFormat: EnvOutputFormat }
+  | { kind: 'bcrypt-hash'; value: string; saltRounds: number }
+  | { kind: 'bcrypt-compare'; value: string; hash: string }
   | { kind: 'json-minify'; value: string }
   | { kind: 'csv-to-json'; value: string; options: CsvToJsonOptions }
   | { kind: 'json-to-csv'; value: string }
@@ -45,6 +47,8 @@ export type WorkerTaskResult =
   | { kind: 'text-diff'; rows: TextDiffRow[] }
   | { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'yaml-viewer' | 'sql-format' | 'json-minify' | 'csv-to-json' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
   | { kind: 'env-vars-parser'; result: EnvParseResult; output: string }
+  | { kind: 'bcrypt-hash'; hash: string }
+  | { kind: 'bcrypt-compare'; matches: boolean }
   | { kind: 'json-diff'; leftValid: boolean; rightValid: boolean; result?: Difference }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
@@ -129,6 +133,16 @@ export const taskLimits = {
     maxOutputBytes: 2 * 1024 * 1024,
     maxLines: 2_000,
   },
+  bcryptHash: {
+    timeoutMs: 5_000,
+    maxInputBytes: 64 * 1024,
+    maxOutputBytes: 4 * 1024,
+  },
+  bcryptCompare: {
+    timeoutMs: 5_000,
+    maxInputBytes: 64 * 1024,
+    maxOutputBytes: 4 * 1024,
+  },
   jsonMinify: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
@@ -159,4 +173,4 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;
