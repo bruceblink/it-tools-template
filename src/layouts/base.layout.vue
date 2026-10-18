@@ -104,7 +104,7 @@ const tools = computed<ToolCategory[]>(() => [
     </template>
 
     <template #content>
-      <div class="top-navigation" flex items-center gap-2>
+      <div class="top-navigation" :class="{ 'is-dark-theme': styleStore.isDarkTheme }" flex items-center gap-2>
         <c-button
           circle
           variant="text"
@@ -193,8 +193,12 @@ const tools = computed<ToolCategory[]>(() => [
   min-height: 64px;
   margin-inline: calc(0px - var(--layout-scroll-padding, 26px));
   padding: 8px var(--layout-scroll-padding, 26px);
-  background: v-bind('themeVars.cardColor');
+  background: v-bind('themeVars.bodyColor');
   border-bottom: 1px solid v-bind('themeVars.borderColor');
+
+  &.is-dark-theme {
+    border-bottom: none;
+  }
 }
 
 .footer {
