@@ -51,6 +51,25 @@ describe('task runner worker dispatch', () => {
     });
   });
 
+  it('formats JSON5 in the worker with sorting and indentation options', () => {
+    expect(executeWorkerTask({
+      kind: 'json-viewer',
+      value: '{ z: 2, a: [3, 1,], }',
+      sortKeys: true,
+      indentSize: 2,
+    })).toEqual({
+      kind: 'json-viewer',
+      valid: true,
+      output: '{\n  "a": [\n    3,\n    1\n  ],\n  "z": 2\n}',
+    });
+    expect(executeWorkerTask({
+      kind: 'json-viewer',
+      value: '{ invalid',
+      sortKeys: false,
+      indentSize: 3,
+    })).toEqual({ kind: 'json-viewer', valid: false, output: '' });
+  });
+
   it('converts CSV and JSON to CSV in the worker', () => {
     expect(executeWorkerTask({
       kind: 'csv-to-json',

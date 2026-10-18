@@ -1,26 +1,67 @@
 <script setup lang="ts">
-import JSON5 from 'json5';
+import { tryOnBeforeUnmount } from '@vueuse/core';
 import { useStorage } from '@vueuse/core';
-import { formatJson } from './json.models';
-import { withDefaultOnError } from '@/utils/defaults';
-import { useValidation } from '@/composable/validation';
+import { useI18n } from 'vue-i18n';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
+import { taskRunner } from '@/task-runner/task-runner';
+import { taskLimits } from '@/task-runner/task-runner.types';
+import CInputText from '@/ui/c-input-text/c-input-text.vue';
 
-const inputElement = ref<HTMLElement>();
+type JsonViewerStatus = 'idle' | 'running' | 'invalid' | 'input-limit' | 'output-limit' | 'timeout' | 'error';
 
+const inputElement = ref<InstanceType<typeof CInputText>>();
 const rawJson = ref('{"hello": "world", "foo": "bar"}');
 const indentSize = useStorage('json-prettify:indent-size', 3);
 const sortKeys = useStorage('json-prettify:sort-keys', true);
-const cleanJson = computed(() => withDefaultOnError(() => formatJson({ rawJson, indentSize, sortKeys }), ''));
+const cleanJson = ref('');
+const taskStatus = ref<JsonViewerStatus>('idle');
+const { t } = useI18n();
 
-const rawJsonValidation = useValidation({
-  source: rawJson,
-  rules: [
-    {
-      validator: v => v === '' || (typeof v === 'string' && JSON5.parse(v)),
-      message: 'Provided JSON is not valid.',
-    },
-  ],
+const taskKey = 'json-viewer:format';
+let taskVersion = 0;
+let taskTimer: ReturnType<typeof setTimeout> | undefined;
+
+const inputFeedback = computed(() => {
+  if (taskStatus.value === 'invalid') { return 'Provided JSON is not valid.'; }
+  if (taskStatus.value === 'input-limit' || taskStatus.value === 'output-limit') { return t('taskStatus.limit'); }
+  if (taskStatus.value === 'timeout') { return t('taskStatus.timeout'); }
+  if (taskStatus.value === 'error') { return t('taskStatus.error'); }
+  return '';
+});
+
+const validationStatus = computed(() => inputFeedback.value ? 'error' : undefined);
+
+watch([rawJson, indentSize, sortKeys], () => {
+  const version = ++taskVersion;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+  cleanJson.value = '';
+  taskStatus.value = rawJson.value === '' ? 'idle' : 'running';
+  if (rawJson.value === '') { return; }
+
+  // Debounce edits, cancel the previous worker, and ignore any result from an older input version.
+  taskTimer = setTimeout(async () => {
+    const outcome = await taskRunner.run(taskKey, version, {
+      kind: 'json-viewer',
+      value: rawJson.value,
+      sortKeys: sortKeys.value,
+      indentSize: indentSize.value,
+    }, taskLimits.jsonViewer);
+    if (version !== taskVersion) { return; }
+    if (outcome.status === 'success' && outcome.result.kind === 'json-viewer') {
+      cleanJson.value = outcome.result.output;
+      taskStatus.value = outcome.result.valid ? 'idle' : 'invalid';
+      return;
+    }
+    if (outcome.status === 'cancelled') { return; }
+    taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+  }, 150);
+}, { immediate: true });
+
+tryOnBeforeUnmount(() => {
+  taskVersion++;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
 });
 </script>
 
@@ -38,34 +79,29 @@ const rawJsonValidation = useValidation({
 
   <n-form-item
     label="Your raw JSON"
-    :feedback="rawJsonValidation.message"
-    :validation-status="rawJsonValidation.status"
+    :feedback="inputFeedback"
+    :validation-status="validationStatus"
   >
-    <c-input-text
+    <CInputText
       ref="inputElement"
       v-model:value="rawJson"
       placeholder="Paste your raw JSON here..."
       rows="20"
       multiline
+      autosize
+      :autosize-max-height="600"
       autocomplete="off"
       autocorrect="off"
       autocapitalize="off"
       spellcheck="false"
       monospace
+      test-id="input"
     />
   </n-form-item>
   <n-form-item label="Prettified version of your JSON">
-    <TextareaCopyable :value="cleanJson" language="json" :follow-height-of="inputElement" />
+    <div v-if="taskStatus === 'running'" mb-2 text-center op-70>
+      {{ t('taskStatus.calculating') }}
+    </div>
+    <TextareaCopyable :value="cleanJson" language="json" :follow-height-of="inputElement?.inputWrapperRef" />
   </n-form-item>
 </template>
-
-<style lang="less" scoped>
-.result-card {
-  position: relative;
-  .copy-button {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-  }
-}
-</style>

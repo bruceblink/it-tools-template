@@ -15,6 +15,7 @@ export interface XmlFormatTaskOptions {
 export type WorkerTask =
   | { kind: 'regex'; regex: string; text: string; flags: string }
   | { kind: 'text-diff'; originalText: string; modifiedText: string; ignoreWhitespace: boolean }
+  | { kind: 'json-viewer'; value: string; sortKeys: boolean; indentSize: number }
   | { kind: 'json-minify'; value: string }
   | { kind: 'csv-to-json'; value: string; options: CsvToJsonOptions }
   | { kind: 'json-to-csv'; value: string }
@@ -32,7 +33,7 @@ export type WorkerTask =
 export type WorkerTaskResult =
   | { kind: 'regex'; matches: RegexMatch[]; summary: RegexMatchSummary; sample: string }
   | { kind: 'text-diff'; rows: TextDiffRow[] }
-  | { kind: 'json-minify' | 'csv-to-json' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
+  | { kind: 'json-viewer' | 'json-minify' | 'csv-to-json' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
 
@@ -80,6 +81,11 @@ export const taskLimits = {
     maxOutputBytes: 2 * 1024 * 1024,
     maxLines: 20_000,
   },
+  jsonViewer: {
+    timeoutMs: 10_000,
+    maxInputBytes: 256 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+  },
   jsonMinify: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
@@ -110,4 +116,4 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;

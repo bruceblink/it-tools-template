@@ -4,6 +4,7 @@ import { diffTextLines } from '@/tools/text-diff/text-diff.service';
 import { convertCsvToJson } from '@/tools/csv-to-json/csv-to-json.service';
 import { convertArrayToCsv } from '@/tools/json-to-csv/json-to-csv.service';
 import { convertJsonLines, JsonLinesConversionError } from '@/tools/json-lines-converter/json-lines-converter.service';
+import { formatJson } from '@/tools/json-viewer/json.models';
 import { matchRegex, summarizeRegexMatches } from '@/tools/regex-tester/regex-tester.service';
 import { executeConversionTask } from './conversion-tasks';
 import { taskLimits } from './task-runner.types';
@@ -63,6 +64,19 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
     }
     catch {
       return { kind: 'json-minify', valid: false, output: '' };
+    }
+  }
+
+  if (task.kind === 'json-viewer') {
+    try {
+      return {
+        kind: 'json-viewer',
+        valid: true,
+        output: formatJson({ rawJson: task.value, sortKeys: task.sortKeys, indentSize: task.indentSize }),
+      };
+    }
+    catch {
+      return { kind: 'json-viewer', valid: false, output: '' };
     }
   }
 
