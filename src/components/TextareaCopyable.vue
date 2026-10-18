@@ -34,7 +34,8 @@ hljs.registerLanguage('toml', iniHljs);
 hljs.registerLanguage('markdown', markdownHljs);
 
 const { value, language, followHeightOf, copyPlacement, copyMessage } = toRefs(props);
-const { height } = followHeightOf.value ? useElementSize(followHeightOf) : { height: ref(null) };
+// Keep observing the ref while its target is still being mounted by the parent.
+const { height } = useElementSize(followHeightOf);
 
 const { copy, isJustCopied } = useCopy({ source: value, createToast: false });
 const tooltipText = computed(() => isJustCopied.value ? 'Copied!' : copyMessage.value);

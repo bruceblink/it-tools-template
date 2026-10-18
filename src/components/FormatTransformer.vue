@@ -139,6 +139,7 @@ tryOnBeforeUnmount(() => {
     :label="inputLabel"
     rows="20"
     autosize
+    :autosize-max-height="600"
     raw-text
     multiline
     test-id="input"

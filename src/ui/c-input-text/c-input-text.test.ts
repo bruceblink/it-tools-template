@@ -2,6 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { mount, shallowMount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { nextTick } from 'vue';
 import _ from 'lodash';
 import CInputText from './c-input-text.vue';
 import { useValidation } from '@/composable/validation';
@@ -157,5 +158,36 @@ describe('CInputText', () => {
     });
 
     expect(wrapper.get('input').attributes('data-test-id')).to.equal('TEST');
+  });
+
+  it('caps autosized textareas and lets their height shrink with shorter content', async () => {
+    const wrapper = mount(CInputText, {
+      props: {
+        value: 'Long content',
+        multiline: true,
+        autosize: true,
+        autosizeMaxHeight: 600,
+      },
+    });
+    const textarea = wrapper.get('textarea').element as HTMLTextAreaElement;
+    const inputWrapper = wrapper.get('.input-wrapper').element as HTMLElement;
+    let measuredScrollHeight = 900;
+    Object.defineProperty(textarea, 'scrollHeight', {
+      configurable: true,
+      get: () => measuredScrollHeight,
+    });
+
+    await nextTick();
+
+    expect(inputWrapper.style.height).to.equal('600px');
+    expect(textarea.style.overflowY).to.equal('auto');
+
+    measuredScrollHeight = 300;
+    await wrapper.setProps({ value: 'Short content' });
+    await nextTick();
+
+    expect(inputWrapper.style.height).to.equal('302px');
+    expect(textarea.style.overflowY).to.equal('hidden');
+    wrapper.unmount();
   });
 });

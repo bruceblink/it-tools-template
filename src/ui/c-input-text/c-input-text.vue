@@ -29,6 +29,7 @@ const props = withDefaults(
     multiline?: boolean
     rows?: number | string
     autosize?: boolean
+    autosizeMaxHeight?: number
     autofocus?: boolean
     monospace?: boolean
   }>(),
@@ -56,6 +57,7 @@ const props = withDefaults(
     multiline: false,
     rows: 3,
     autosize: false,
+    autosizeMaxHeight: undefined,
     autofocus: false,
     monospace: false,
   },
@@ -64,7 +66,7 @@ const emit = defineEmits(['update:value']);
 const value = useVModel(props, 'value', emit);
 const showPassword = ref(false);
 
-const { id, placeholder, label, validationRules, labelPosition, labelWidth, labelAlign, autosize, readonly, disabled, clearable, type, multiline, rows, rawText, autofocus, monospace } = toRefs(props);
+const { id, placeholder, label, validationRules, labelPosition, labelWidth, labelAlign, autosize, autosizeMaxHeight, readonly, disabled, clearable, type, multiline, rows, rawText, autofocus, monospace } = toRefs(props);
 
 const validation
   = props.validation
@@ -82,7 +84,7 @@ const inputRef = ref<HTMLInputElement>();
 const inputWrapperRef = ref<HTMLElement>();
 
 watch(
-  [value, autosize, multiline, inputWrapperRef, textareaRef],
+  [value, autosize, autosizeMaxHeight, multiline, inputWrapperRef, textareaRef],
   () => nextTick(() => {
     if (props.multiline && autosize.value) {
       resizeTextarea();
@@ -96,9 +98,25 @@ function resizeTextarea() {
     return;
   }
 
-  const scrollHeight = textareaRef.value.scrollHeight + 2;
+  // Measure autosized content, cap the wrapper when requested, and scroll oversized text inside the textarea.
+  const requestedMaxHeight = autosizeMaxHeight.value;
+  const maxHeight = typeof requestedMaxHeight === 'number'
+    && Number.isFinite(requestedMaxHeight)
+    && requestedMaxHeight > 0
+    ? requestedMaxHeight
+    : undefined;
 
-  inputWrapperRef.value.style.height = `${scrollHeight}px`;
+  if (maxHeight !== undefined) {
+    textareaRef.value.style.height = 'auto';
+    inputWrapperRef.value.style.height = 'auto';
+  }
+
+  const scrollHeight = textareaRef.value.scrollHeight + 2;
+  const wrapperHeight = maxHeight === undefined ? scrollHeight : Math.min(scrollHeight, maxHeight);
+
+  inputWrapperRef.value.style.height = `${wrapperHeight}px`;
+  textareaRef.value.style.overflowY = maxHeight !== undefined && scrollHeight > maxHeight ? 'auto' : 'hidden';
+  textareaRef.value.style.height = '100%';
 }
 
 const htmlInputType = computed(() => {
