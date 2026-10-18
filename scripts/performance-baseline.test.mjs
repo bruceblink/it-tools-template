@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { routeCases, summarizePlatform } from './performance-baseline/runtime.mjs';
 
-function makeSample({ inputFillMs, outputUpdateMs, durationMs }) {
+function makeSample({ inputFillMs, outputUpdateMs, durationMs, inputEventMs, inputEventOutputUpdateMs }) {
   const routeTimings = Object.fromEntries(routeCases.map(route => [route.id, 100]));
   return {
     startupMs: 100,
@@ -15,7 +15,7 @@ function makeSample({ inputFillMs, outputUpdateMs, durationMs }) {
       firstOpen: routeTimings,
       warmOpen: routeTimings,
       interactions: {
-        jsonTransform: [{ name: 'stress', inputFillMs, outputUpdateMs, durationMs }],
+        jsonTransform: [{ name: 'stress', inputFillMs, outputUpdateMs, durationMs, inputEventMs, inputEventOutputUpdateMs }],
         regexMatch: { durationMs: 50 },
         mathEvaluation: { durationMs: 60 },
       },
@@ -23,11 +23,11 @@ function makeSample({ inputFillMs, outputUpdateMs, durationMs }) {
   };
 }
 
-test('summarizes JSON input fill and output update timing separately', () => {
+test('summarizes JSON fill, bulk input event, and output update timings separately', () => {
   const summary = summarizePlatform([
-    makeSample({ inputFillMs: 40, outputUpdateMs: 60, durationMs: 100 }),
-    makeSample({ inputFillMs: 20, outputUpdateMs: 80, durationMs: 100 }),
-    makeSample({ inputFillMs: 100, outputUpdateMs: 50, durationMs: 150 }),
+    makeSample({ inputFillMs: 40, outputUpdateMs: 60, durationMs: 100, inputEventMs: 12, inputEventOutputUpdateMs: 100 }),
+    makeSample({ inputFillMs: 20, outputUpdateMs: 80, durationMs: 100, inputEventMs: 10, inputEventOutputUpdateMs: 90 }),
+    makeSample({ inputFillMs: 100, outputUpdateMs: 50, durationMs: 150, inputEventMs: 20, inputEventOutputUpdateMs: 130 }),
   ], [{ name: 'stress' }]);
 
   assert.deepEqual(summary.interactions['json.stress'], {
@@ -44,5 +44,15 @@ test('summarizes JSON input fill and output update timing separately', () => {
     samples: 3,
     median: 60,
     p95: 80,
+  });
+  assert.deepEqual(summary.interactions.jsonBulkInputEvent.stress, {
+    samples: 3,
+    median: 12,
+    p95: 20,
+  });
+  assert.deepEqual(summary.interactions.jsonBulkInputEventOutputUpdate.stress, {
+    samples: 3,
+    median: 100,
+    p95: 130,
   });
 });

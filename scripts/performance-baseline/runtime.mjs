@@ -156,6 +156,31 @@ async function measureJsonInputs(page, workloads) {
         durationMs: Math.round((performance.now() - started) * 100) / 100,
       });
       await reloadRenderer(page, { id: 'jsonMinify', path: '/json-minify', ready: 'json' });
+
+      stage = 'dispatch bulk input event';
+      const inputEventStarted = performance.now();
+      await input.evaluate((element, value) => {
+        const setValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        if (!setValue) {
+          throw new Error('Textarea value setter is unavailable.');
+        }
+        setValue.call(element, value);
+        element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste' }));
+      }, workload.input);
+      const inputEventMs = performance.now() - inputEventStarted;
+      stage = 'wait for bulk input event output';
+      await page.waitForFunction(
+        expectedLength => {
+          const output = document.querySelector('[data-test-id="area-content"]');
+          return (output?.textContent ?? '').length === expectedLength;
+        },
+        workload.outputBytes,
+        { timeout: 60_000 },
+      );
+      const inputEventOutputUpdateMs = performance.now() - inputEventStarted - inputEventMs;
+      records.at(-1).inputEventMs = Math.round(inputEventMs * 100) / 100;
+      records.at(-1).inputEventOutputUpdateMs = Math.round(inputEventOutputUpdateMs * 100) / 100;
+      await reloadRenderer(page, { id: 'jsonMinify', path: '/json-minify', ready: 'json' });
     }
     catch (error) {
       throw new Error('JSON workload ' + workload.name + ' (' + stage + '): ' + briefError(error));
@@ -411,6 +436,8 @@ export function summarizePlatform(samples, workloads) {
   }
   metrics.interactions.jsonInputFill = {};
   metrics.interactions.jsonOutputUpdate = {};
+  metrics.interactions.jsonBulkInputEvent = {};
+  metrics.interactions.jsonBulkInputEventOutputUpdate = {};
   for (const workload of workloads) {
     const records = samples.map((sample) => {
       const record = sample.routeOpenMs.interactions.jsonTransform.find(item => item.name === workload.name);
@@ -419,6 +446,8 @@ export function summarizePlatform(samples, workloads) {
     metrics.interactions['json.' + workload.name] = summarize(records.map(record => record?.durationMs));
     metrics.interactions.jsonInputFill[workload.name] = summarize(records.map(record => record?.inputFillMs));
     metrics.interactions.jsonOutputUpdate[workload.name] = summarize(records.map(record => record?.outputUpdateMs));
+    metrics.interactions.jsonBulkInputEvent[workload.name] = summarize(records.map(record => record?.inputEventMs));
+    metrics.interactions.jsonBulkInputEventOutputUpdate[workload.name] = summarize(records.map(record => record?.inputEventOutputUpdateMs));
   }
   metrics.interactions.regexMatch = summarize(samples.map(sample => sample.routeOpenMs.interactions.regexMatch.durationMs));
   metrics.interactions.mathEvaluation = summarize(samples.map(sample => sample.routeOpenMs.interactions.mathEvaluation.durationMs));
