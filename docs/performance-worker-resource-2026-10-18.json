@@ -1,0 +1,404 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-18T05:50:11.313Z",
+  "source": {
+    "commit": "f5acd69577e6b701f09bab2bbfaf7722ce9ee47d",
+    "workingTreeDirty": true
+  },
+  "machine": {
+    "platform": "win32",
+    "architecture": "x64",
+    "logicalCpuCount": 24,
+    "totalMemoryBytes": 51481890816
+  },
+  "runtime": {
+    "appVersion": "2026.10.16-08de8e6",
+    "packaged": false,
+    "platform": "win32",
+    "architecture": "x64",
+    "electron": "44.8.0",
+    "chromium": "152.0.7977.167",
+    "node": "24.22.0"
+  },
+  "workload": {
+    "routeCycles": 20,
+    "routes": [
+      "/toml-to-json",
+      "/toml-to-yaml",
+      "/json-to-toml",
+      "/yaml-to-toml"
+    ],
+    "measuredWorkerTasks": 80,
+    "warmupWorkerTasks": 4,
+    "returnedToStartingRoute": true
+  },
+  "workers": {
+    "created": 80,
+    "terminated": 80,
+    "active": 0,
+    "activeTaskWorkersAfterRun": 0
+  },
+  "listeners": {
+    "measuredTargets": [
+      "window",
+      "document"
+    ],
+    "before": {
+      "window": 19,
+      "document": 3
+    },
+    "after": {
+      "window": 19,
+      "document": 3
+    },
+    "maximum": {
+      "window": 19,
+      "document": 3
+    },
+    "samples": [
+      {
+        "cycle": 1,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 2,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 3,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 4,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 5,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 6,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 7,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 8,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 9,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 10,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 11,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 12,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 13,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 14,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 15,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 16,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 17,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 18,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 19,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      },
+      {
+        "cycle": 20,
+        "counts": {
+          "window": 19,
+          "document": 3
+        }
+      }
+    ],
+    "media": {
+      "status": "not-applicable",
+      "reason": "TOML conversion routes do not request or retain media streams."
+    }
+  },
+  "memory": {
+    "heapBeforeBytes": 29509464,
+    "heapAfterPreSnapshotBytes": 30608788,
+    "heapAfterSnapshotBytes": 30470644,
+    "heapDeltaBytes": 961180,
+    "thresholdBytes": 33554432
+  },
+  "heapSnapshots": {
+    "before": {
+      "nodeCount": 703853,
+      "selfSizeBytes": 41594453
+    },
+    "after": {
+      "nodeCount": 712192,
+      "selfSizeBytes": 43078372
+    },
+    "largestPositiveRetainedGrowth": [
+      {
+        "name": "code",
+        "beforeCount": 62593,
+        "afterCount": 66531,
+        "countDelta": 3938,
+        "beforeBytes": 5215352,
+        "afterBytes": 6278264,
+        "selfSizeDeltaBytes": 1062912
+      },
+      {
+        "name": "native:blink::HeapVectorBacking<blink::CachedMatchedProperties::Entry>",
+        "beforeCount": 16,
+        "afterCount": 13,
+        "countDelta": -3,
+        "beforeBytes": 36992,
+        "afterBytes": 129128,
+        "selfSizeDeltaBytes": 92136
+      },
+      {
+        "name": "native:DOMRectReadOnly",
+        "beforeCount": 80,
+        "afterCount": 1330,
+        "countDelta": 1250,
+        "beforeBytes": 4480,
+        "afterBytes": 74480,
+        "selfSizeDeltaBytes": 70000
+      },
+      {
+        "name": "native:system / WeakArrayList",
+        "beforeCount": 1180,
+        "afterCount": 1423,
+        "countDelta": 243,
+        "beforeBytes": 69336,
+        "afterBytes": 96916,
+        "selfSizeDeltaBytes": 27580
+      },
+      {
+        "name": "native:LayoutShiftAttribution",
+        "beforeCount": 40,
+        "afterCount": 665,
+        "countDelta": 625,
+        "beforeBytes": 1600,
+        "afterBytes": 26600,
+        "selfSizeDeltaBytes": 25000
+      },
+      {
+        "name": "native:LayoutShift",
+        "beforeCount": 9,
+        "afterCount": 150,
+        "countDelta": 141,
+        "beforeBytes": 1368,
+        "afterBytes": 22800,
+        "selfSizeDeltaBytes": 21432
+      },
+      {
+        "name": "native:blink::HashTrieNode<blink::CSSVariableData>",
+        "beforeCount": 474,
+        "afterCount": 533,
+        "countDelta": 59,
+        "beforeBytes": 128928,
+        "afterBytes": 144976,
+        "selfSizeDeltaBytes": 16048
+      },
+      {
+        "name": "native:blink::TextRecord",
+        "beforeCount": 8,
+        "afterCount": 106,
+        "countDelta": 98,
+        "beforeBytes": 1152,
+        "afterBytes": 15264,
+        "selfSizeDeltaBytes": 14112
+      },
+      {
+        "name": "native:PerformanceEventTiming",
+        "beforeCount": 28,
+        "afterCount": 77,
+        "countDelta": 49,
+        "beforeBytes": 7168,
+        "afterBytes": 19712,
+        "selfSizeDeltaBytes": 12544
+      },
+      {
+        "name": "native:blink::SoftNavigationContext",
+        "beforeCount": 6,
+        "afterCount": 55,
+        "countDelta": 49,
+        "beforeBytes": 1392,
+        "afterBytes": 12760,
+        "selfSizeDeltaBytes": 11368
+      },
+      {
+        "name": "native:LargestContentfulPaint",
+        "beforeCount": 5,
+        "afterCount": 85,
+        "countDelta": 80,
+        "beforeBytes": 680,
+        "afterBytes": 11560,
+        "selfSizeDeltaBytes": 10880
+      },
+      {
+        "name": "native:NavigationHistoryEntry",
+        "beforeCount": 7,
+        "afterCount": 52,
+        "countDelta": 45,
+        "beforeBytes": 1344,
+        "afterBytes": 9984,
+        "selfSizeDeltaBytes": 8640
+      },
+      {
+        "name": "native:InteractionContentfulPaint",
+        "beforeCount": 4,
+        "afterCount": 84,
+        "countDelta": 80,
+        "beforeBytes": 416,
+        "afterBytes": 8736,
+        "selfSizeDeltaBytes": 8320
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, blink::KeyValuePair<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>, cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HashTraits<cppgc::internal::BasicMember<blink::SoftNavigationPaintAttributionTracker::NodeState, cppgc::internal::StrongMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<cppgc::internal::BasicMember<blink::Node, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::HeapAllocator>>",
+        "beforeCount": 2,
+        "afterCount": 2,
+        "countDelta": 0,
+        "beforeBytes": 3088,
+        "afterBytes": 10256,
+        "selfSizeDeltaBytes": 7168
+      },
+      {
+        "name": "native:blink::LargestContentfulPaintCalculator",
+        "beforeCount": 6,
+        "afterCount": 55,
+        "countDelta": 49,
+        "beforeBytes": 816,
+        "afterBytes": 7480,
+        "selfSizeDeltaBytes": 6664
+      },
+      {
+        "name": "object:Object",
+        "beforeCount": 64687,
+        "afterCount": 64938,
+        "countDelta": 251,
+        "beforeBytes": 3173876,
+        "afterBytes": 3179900,
+        "selfSizeDeltaBytes": 6024
+      },
+      {
+        "name": "native:PerformanceSoftNavigation",
+        "beforeCount": 4,
+        "afterCount": 50,
+        "countDelta": 46,
+        "beforeBytes": 448,
+        "afterBytes": 5600,
+        "selfSizeDeltaBytes": 5152
+      },
+      {
+        "name": "native:blink::PaintLayerScrollableArea",
+        "beforeCount": 142,
+        "afterCount": 155,
+        "countDelta": 13,
+        "beforeBytes": 52256,
+        "afterBytes": 57040,
+        "selfSizeDeltaBytes": 4784
+      },
+      {
+        "name": "native:blink::ClipPaintPropertyNode",
+        "beforeCount": 281,
+        "afterCount": 302,
+        "countDelta": 21,
+        "beforeBytes": 56200,
+        "afterBytes": 60400,
+        "selfSizeDeltaBytes": 4200
+      },
+      {
+        "name": "native:blink::HeapHashTableBacking<blink::HashTable<unsigned long long, blink::KeyValuePair<unsigned long long, cppgc::internal::BasicMember<blink::SoftNavigationContext, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>, blink::KeyValuePairExtractor, blink::HashMapValueTraits<blink::HashTraits<unsigned long long>, blink::HashTraits<cppgc::internal::BasicMember<blink::SoftNavigationContext, cppgc::internal::WeakMemberTag, cppgc::internal::DijkstraWriteBarrierPolicy>>>, blink::HashTraits<unsigned long long>, blink::HeapAllocator>>",
+        "beforeCount": 1,
+        "afterCount": 1,
+        "countDelta": 0,
+        "beforeBytes": 520,
+        "afterBytes": 4104,
+        "selfSizeDeltaBytes": 3584
+      }
+    ]
+  }
+}
