@@ -7,5 +7,6 @@ export default defineConfig({
   workers: 1,
   reporter: 'line',
   timeout: 30_000,
-  expect: { timeout: 5_000 },
+  // Plugin entrypoints may take up to 15 seconds to load before lifecycle management fails them.
+  expect: { timeout: 20_000 },
 });
