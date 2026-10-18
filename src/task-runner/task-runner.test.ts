@@ -151,6 +151,18 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('applies the JSONPath extractor input cap before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('json-path-extractor', 1, {
+      kind: 'json-path-extractor',
+      value: ' '.repeat(taskLimits.jsonPathExtractor.maxInputBytes + 1),
+      path: '$.values[*]',
+    }, taskLimits.jsonPathExtractor);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('applies the TOML conversion input cap before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('toml-tool', 1, {

@@ -2,6 +2,7 @@ import RandExp from 'randexp';
 import JSON5 from 'json5';
 import { diffTextLines } from '@/tools/text-diff/text-diff.service';
 import { convertCsvToJson } from '@/tools/csv-to-json/csv-to-json.service';
+import { extractJsonPath } from '@/tools/json-path-extractor/json-path-extractor.service';
 import { convertArrayToCsv } from '@/tools/json-to-csv/json-to-csv.service';
 import { convertJsonLines, JsonLinesConversionError } from '@/tools/json-lines-converter/json-lines-converter.service';
 import { sortJsonText } from '@/tools/json-key-sorter/json-key-sorter.service';
@@ -87,6 +88,15 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
     }
     catch {
       return { kind: 'json-key-sorter', valid: false, output: '' };
+    }
+  }
+
+  if (task.kind === 'json-path-extractor') {
+    try {
+      return { kind: 'json-path-extractor', valid: true, output: extractJsonPath(task.value, task.path) };
+    }
+    catch {
+      return { kind: 'json-path-extractor', valid: false, output: '' };
     }
   }
 

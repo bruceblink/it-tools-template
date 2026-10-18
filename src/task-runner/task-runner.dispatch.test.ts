@@ -87,6 +87,23 @@ describe('task runner worker dispatch', () => {
     })).toEqual({ kind: 'json-key-sorter', valid: false, output: '' });
   });
 
+  it('extracts JSONPath results in the worker and handles invalid JSON', () => {
+    expect(executeWorkerTask({
+      kind: 'json-path-extractor',
+      value: '{ users: [{ name: "Alice" }, { name: "Bob" }] }',
+      path: '$.users[*].name',
+    })).toEqual({
+      kind: 'json-path-extractor',
+      valid: true,
+      output: '[\n  "Alice",\n  "Bob"\n]',
+    });
+    expect(executeWorkerTask({
+      kind: 'json-path-extractor',
+      value: '{ invalid',
+      path: '$.users[*].name',
+    })).toEqual({ kind: 'json-path-extractor', valid: false, output: '' });
+  });
+
   it('converts CSV and JSON to CSV in the worker', () => {
     expect(executeWorkerTask({
       kind: 'csv-to-json',
