@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "capturedAt": "2026-10-18",
   "source": {
-    "commit": "952e600cacb747984c7213a36d1189c0a1a8f0fa",
+    "commit": "9938785e24d20df38a460a3d1677e18383636c35",
     "workingTreeDirty": true
   },
   "environment": {
@@ -12,37 +12,53 @@
     "logicalCores": 24,
     "totalMemoryBytes": 51481890816
   },
-  "runtime": {
+  "developmentWindow": {
     "appVersion": "2026.10.16-08de8e6",
     "packaged": false,
     "electron": "44.8.0",
     "chromium": "152.0.7977.167",
     "interaction": "Computer Use on a visible Windows Electron development window"
   },
+  "packagedArtifact": {
+    "path": "release/win-unpacked/IT Tools.exe",
+    "version": "2026.10.16-08de8e6",
+    "lastWriteTime": "2026-10-17T21:44:05.1772648+08:00",
+    "sha256": "37408681f8da48a20c87eb506761b0c0576f0fab8ae361335a21b1c91277472d",
+    "directoryFileCount": 73,
+    "directoryBytes": 814953975,
+    "identityNote": "File count and directory size match the Windows Electron artifact recorded in performance-baseline-2026-10-17.json. That report did not store the executable SHA-256, so exact binary identity with its samples is not proven."
+  },
   "measurements": {
-    "startup": {
-      "status": "not-measured",
-      "reason": "The Electron development window was already open before observation."
+    "packagedStartup": {
+      "status": "measured",
+      "samples": 1,
+      "elapsedMs": 1563,
+      "boundary": "From Start-Process timestamp until Computer Use captured the activated package window showing the home page.",
+      "artifactVersion": "2026.10.16-08de8e6"
     },
-    "routeNavigation": {
+    "packagedRouteNavigation": {
       "route": "app://bundle/json-minify",
       "entry": "Command palette search followed by Return",
       "samples": 1,
-      "elapsedMs": 300.69,
-      "boundary": "From Return-key dispatch until a Computer Use screenshot and accessibility state showed the JSON minify page.",
-      "result": "The page loaded and displayed its existing sample input and output."
+      "elapsedMs": 410.5,
+      "boundary": "From Return-key dispatch until Computer Use captured the visible JSON minify page.",
+      "result": "The screenshot showed the JSON minify heading, sample input, and output.",
+      "accessibilityNote": "The accessibility tree in that capture still described the home route; route confirmation uses the screenshot."
     },
-    "tomlConversion": {
+    "packagedExit": {
+      "status": "measured",
+      "samplesMs": [225.05, 216.99],
+      "medianMs": 221.02,
+      "boundary": "From Alt+F4 dispatch until sky.list_windows reported no window for the packaged executable."
+    },
+    "developmentTomlConversion": {
       "status": "passed",
       "input": "value = 42",
       "expectedOutput": "{\"value\": 42}",
       "observedOutput": true,
       "elapsedMs": null
     },
-    "exit": {
-      "status": "not-measured",
-      "reason": "The window existed before this test and was left open."
-    }
+    "developmentWindowRestore": "The TOML sample was cleared, the development app returned to its home route, and the pre-existing Sandbox proof window was restored to the foreground."
   },
   "packagedBuildAttempt": {
     "status": "aborted-no-progress",
@@ -51,8 +67,9 @@
     "cleanup": "The build process was stopped. The existing release/win-unpacked directory was not changed."
   },
   "limitations": [
-    "The route timing is one development-window sample. It includes Computer Use screenshot capture and is not comparable to the automated production baseline.",
-    "This observation does not establish packaged startup or exit performance.",
-    "The TOML sample input was cleared and the application returned to its home route after the check."
+    "Each packaged startup and route timing has one sample. Exit timing has two samples. These measurements include Computer Use window observation and are not comparable to the automated production baseline.",
+    "The measured package is version 2026.10.16-08de8e6, not the current modified source tree. Linux and macOS were not measured.",
+    "A fresh package build from the current source was stopped after electron-builder produced no output files for more than three minutes. The existing release directory was not changed.",
+    "Three isolated profile directories remain under the system temporary directory because automatic review rejected their recursive removal. No test process still uses them."
   ]
 }
