@@ -1,5 +1,5 @@
 overrides:
-  '@types/node': 25.5.0
+  '@types/node': 24.19.2
 
 patchedDependencies:
   iarna-toml-esm@3.0.5: patches/iarna-toml-esm@3.0.5.patch

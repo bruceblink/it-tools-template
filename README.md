@@ -76,6 +76,8 @@ Recommended workspace settings:
 
 ### Project Setup
 
+Requires Node.js 24 LTS or newer. The repository selects the Node 24 release line in `.nvmrc` and pins pnpm 12.14.0 through Corepack.
+
 ```sh
 pnpm install
 ```
