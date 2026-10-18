@@ -41,7 +41,7 @@ const compareMatch = computed(() => compareSync(compareString.value, compareHash
   </c-card>
 
   <c-card title="Compare string with hash">
-    <n-form label-width="120">
+    <n-form label-width="140">
       <n-form-item label="Your string: " label-placement="left">
         <c-input-text v-model:value="compareString" placeholder="Your string to compare..." raw-text />
       </n-form-item>
