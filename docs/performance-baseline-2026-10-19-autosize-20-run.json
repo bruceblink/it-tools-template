@@ -1,0 +1,6053 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-18T19:51:49.290Z",
+  "status": "measured",
+  "provenance": {
+    "electronArtifactCommit": "224eb3b80d35c2156799c91485d616e88f2dd8ff",
+    "sourceCommit": "224eb3b80d35c2156799c91485d616e88f2dd8ff",
+    "notes": [
+      "The Electron unpacked application was packaged from the same clean source tree recorded in this report.",
+      "The production Web dist directory was built from this source commit."
+    ]
+  },
+  "configuration": {
+    "runsRequested": 20,
+    "idleWindowMs": 3000,
+    "selectedPlatforms": [
+      "web",
+      "electron"
+    ],
+    "webSource": "dist served by Vite preview on loopback",
+    "webAutomation": "headless Chrome with a fresh profile per run",
+    "electronAutomation": "packaged application with a fresh user-data directory per run",
+    "electronAppDirectory": null,
+    "syntheticInputIsolation": "renderer reload between interaction workloads",
+    "routeCases": [
+      {
+        "id": "jsonMinify",
+        "path": "/json-minify",
+        "query": "JSON minify"
+      },
+      {
+        "id": "regexTester",
+        "path": "/regex-tester",
+        "query": "Regex Tester"
+      },
+      {
+        "id": "macLookup",
+        "path": "/mac-address-lookup",
+        "query": "MAC address lookup"
+      },
+      {
+        "id": "textDiff",
+        "path": "/text-diff",
+        "query": "Text diff"
+      },
+      {
+        "id": "pdfSignatureChecker",
+        "path": "/pdf-signature-checker",
+        "query": "PDF signature checker"
+      },
+      {
+        "id": "mathEvaluator",
+        "path": "/math-evaluator",
+        "query": "Math evaluator"
+      },
+      {
+        "id": "rsaKeyPairGenerator",
+        "path": "/rsa-key-pair-generator",
+        "query": "RSA key pair generator"
+      },
+      {
+        "id": "cameraRecorder",
+        "path": "/camera-recorder",
+        "query": "Camera recorder"
+      }
+    ],
+    "syntheticInputs": {
+      "json": [
+        {
+          "name": "small",
+          "inputBytes": 1379,
+          "outputBytes": 963,
+          "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db"
+        },
+        {
+          "name": "large",
+          "inputBytes": 42099,
+          "outputBytes": 31891,
+          "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d"
+        },
+        {
+          "name": "stress",
+          "inputBytes": 89199,
+          "outputBytes": 68791,
+          "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe"
+        }
+      ],
+      "regex": {
+        "name": "large-safe-mismatch",
+        "pattern": "^Z$",
+        "inputBytes": 262144
+      },
+      "math": {
+        "name": "sum-200-values",
+        "inputBytes": 406,
+        "expectedResult": "200"
+      }
+    },
+    "chromeExecutable": "chrome.exe",
+    "electronExecutable": "C:\\Users\\likanug\\AppData\\Local\\Temp\\it-tools-autosize-final-20261019\\win-unpacked\\IT Tools.exe",
+    "webBaseUrl": "http://127.0.0.1:9307"
+  },
+  "environment": {
+    "os": {
+      "platform": "win32",
+      "name": "windows",
+      "release": "10.0.26300",
+      "version": "Windows 11 Pro for Workstations",
+      "architecture": "x64"
+    },
+    "hardware": {
+      "cpuModel": "AMD Ryzen 9 5900X 12-Core Processor            ",
+      "logicalCores": 24,
+      "totalMemoryBytes": 51481890816
+    },
+    "runtime": {
+      "node": "v24.15.0",
+      "packageManager": "pnpm@12.14.0",
+      "electronDeclared": "44.8.0",
+      "electronRuntime": "44.8.0",
+      "electronChrome": "152.0.7977.167",
+      "electronNode": "24.22.0",
+      "appVersion": "2026.10.16-08de8e6",
+      "chrome": "155.0.8059.80"
+    },
+    "source": {
+      "commit": "224eb3b80d35c2156799c91485d616e88f2dd8ff",
+      "dirty": false,
+      "dirtyPaths": [],
+      "workingTreeFingerprint": "378552387e0646938d51157842fc46ce4876672458d33f99e2612142d619cfa2",
+      "lockfileSha256": "8a7ab3d2f80450c38e8183fddd1820e33694712d14efad2c9d64d33b3ffd3be4"
+    },
+    "artifacts": {
+      "web": {
+        "path": "dist",
+        "bytes": 12657932,
+        "files": 298,
+        "available": true,
+        "mode": "production Vite build"
+      },
+      "electron": {
+        "path": "C:\\Users\\likanug\\AppData\\Local\\Temp\\it-tools-autosize-final-20261019\\win-unpacked",
+        "bytes": 678544405,
+        "files": 73,
+        "available": true,
+        "executable": "C:\\Users\\likanug\\AppData\\Local\\Temp\\it-tools-autosize-final-20261019\\win-unpacked\\IT Tools.exe",
+        "executableBytes": 247111680,
+        "mode": "electron-builder unpacked production application"
+      },
+      "installers": [],
+      "bundleBudgets": {
+        "precacheBytes": 8388608,
+        "initialJavaScriptGzipBytes": 307200,
+        "toolJavaScriptGzipBytes": 512000
+      },
+      "bundlePrecacheBytes": 1071816,
+      "bundleInitialJavaScriptGzipBytes": 305872,
+      "bundlePendingOptimizations": {
+        "initialJavaScript": false,
+        "entries": [],
+        "assets": []
+      }
+    }
+  },
+  "samples": {
+    "web": [
+      {
+        "iteration": 1,
+        "startupMs": 816.57,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 389.66,
+            "regexTester": 194.56,
+            "macLookup": 158.5,
+            "textDiff": 122.59,
+            "pdfSignatureChecker": 124.48,
+            "mathEvaluator": 211.22,
+            "rsaKeyPairGenerator": 226.93,
+            "cameraRecorder": 105.48
+          },
+          "warmOpen": {
+            "jsonMinify": 107.17,
+            "regexTester": 122.26,
+            "macLookup": 159.03,
+            "textDiff": 106.56,
+            "pdfSignatureChecker": 121.14,
+            "mathEvaluator": 106.99,
+            "rsaKeyPairGenerator": 174.8,
+            "cameraRecorder": 124.52
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 34.49
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 212.3
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2194.44
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8098.01
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 146.33,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 94890685,
+          "totalBytes": 189804037,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 532,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 2226311168,
+            "privateBytes": 2040573952,
+            "cpuSeconds": 24.671875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 2236993536,
+            "privateBytes": 2026246144,
+            "cpuSeconds": 25.375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 7064,
+          "normalizedIdleCpuPercent": 0.41
+        }
+      },
+      {
+        "iteration": 2,
+        "startupMs": 888.65,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 425.75,
+            "regexTester": 192.49,
+            "macLookup": 158.74,
+            "textDiff": 123.82,
+            "pdfSignatureChecker": 125.14,
+            "mathEvaluator": 246.1,
+            "rsaKeyPairGenerator": 229.08,
+            "cameraRecorder": 122.58
+          },
+          "warmOpen": {
+            "jsonMinify": 107.84,
+            "regexTester": 122.79,
+            "macLookup": 123.12,
+            "textDiff": 105.77,
+            "pdfSignatureChecker": 105.05,
+            "mathEvaluator": 106.27,
+            "rsaKeyPairGenerator": 174.96,
+            "cameraRecorder": 105.9
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.66
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 196.36
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2103.21
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 10937.64
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 127.51,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 100424125,
+          "totalBytes": 152286825,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 18868,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1889480704,
+            "privateBytes": 1682145280,
+            "cpuSeconds": 26.046875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1887068160,
+            "privateBytes": 1676054528,
+            "cpuSeconds": 26.09375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3501,
+          "normalizedIdleCpuPercent": 0.06
+        }
+      },
+      {
+        "iteration": 3,
+        "startupMs": 805.63,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 408.04,
+            "regexTester": 158.07,
+            "macLookup": 157.86,
+            "textDiff": 122.8,
+            "pdfSignatureChecker": 122.79,
+            "mathEvaluator": 209.78,
+            "rsaKeyPairGenerator": 211.35,
+            "cameraRecorder": 106.59
+          },
+          "warmOpen": {
+            "jsonMinify": 122.82,
+            "regexTester": 125.36,
+            "macLookup": 141.72,
+            "textDiff": 105.13,
+            "pdfSignatureChecker": 104,
+            "mathEvaluator": 106.31,
+            "rsaKeyPairGenerator": 176.59,
+            "cameraRecorder": 106.96
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 34.23
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 198.43
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2485.79
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7408.06
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 128.9,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 210330761,
+          "totalBytes": 256892905,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 29920,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1374306304,
+            "privateBytes": 1175728128,
+            "cpuSeconds": 25.078125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1391661056,
+            "privateBytes": 1179746304,
+            "cpuSeconds": 25.71875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3475,
+          "normalizedIdleCpuPercent": 0.77
+        }
+      },
+      {
+        "iteration": 4,
+        "startupMs": 785.14,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 390.71,
+            "regexTester": 174.96,
+            "macLookup": 157.85,
+            "textDiff": 140.42,
+            "pdfSignatureChecker": 123.92,
+            "mathEvaluator": 214.14,
+            "rsaKeyPairGenerator": 226.53,
+            "cameraRecorder": 107.03
+          },
+          "warmOpen": {
+            "jsonMinify": 107,
+            "regexTester": 121.25,
+            "macLookup": 141.69,
+            "textDiff": 106.14,
+            "pdfSignatureChecker": 104.23,
+            "mathEvaluator": 107.35,
+            "rsaKeyPairGenerator": 209.85,
+            "cameraRecorder": 88.44
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.12
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 196.57
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2223.22
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8862.06
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 130.11,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 131051365,
+          "totalBytes": 198132141,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 8844,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1316757504,
+            "privateBytes": 1107161088,
+            "cpuSeconds": 26.0625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 955678720,
+            "privateBytes": 727379968,
+            "cpuSeconds": 26.78125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 15506,
+          "normalizedIdleCpuPercent": 0.19
+        }
+      },
+      {
+        "iteration": 5,
+        "startupMs": 834.06,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 436.13,
+            "regexTester": 159.07,
+            "macLookup": 157.78,
+            "textDiff": 122.02,
+            "pdfSignatureChecker": 124.37,
+            "mathEvaluator": 228.67,
+            "rsaKeyPairGenerator": 246.95,
+            "cameraRecorder": 108.21
+          },
+          "warmOpen": {
+            "jsonMinify": 106.5,
+            "regexTester": 121.01,
+            "macLookup": 140.27,
+            "textDiff": 313.85,
+            "pdfSignatureChecker": 104.09,
+            "mathEvaluator": 107.28,
+            "rsaKeyPairGenerator": 208.81,
+            "cameraRecorder": 106.24
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 34.01
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 197.69
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 3630.25
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 10570.7
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 131.62,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 122621425,
+          "totalBytes": 219437793,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 35484,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1353564160,
+            "privateBytes": 1162317824,
+            "cpuSeconds": 24.359375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1351544832,
+            "privateBytes": 1142829056,
+            "cpuSeconds": 24.390625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 5170,
+          "normalizedIdleCpuPercent": 0.03
+        }
+      },
+      {
+        "iteration": 6,
+        "startupMs": 2495.5,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 375.9,
+            "regexTester": 249.37,
+            "macLookup": 159.12,
+            "textDiff": 122.24,
+            "pdfSignatureChecker": 140.63,
+            "mathEvaluator": 210.55,
+            "rsaKeyPairGenerator": 176.49,
+            "cameraRecorder": 106.31
+          },
+          "warmOpen": {
+            "jsonMinify": 108.32,
+            "regexTester": 121,
+            "macLookup": 140.62,
+            "textDiff": 109.12,
+            "pdfSignatureChecker": 104.79,
+            "mathEvaluator": 107.92,
+            "rsaKeyPairGenerator": 176.62,
+            "cameraRecorder": 106.32
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.84
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 196.77
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2125.77
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7765.03
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 909.67,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 100174285,
+          "totalBytes": 153335689,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 27316,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1880289280,
+            "privateBytes": 1692725248,
+            "cpuSeconds": 24.5625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1893892096,
+            "privateBytes": 1673289728,
+            "cpuSeconds": 25.25,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 7885,
+          "normalizedIdleCpuPercent": 0.36
+        }
+      },
+      {
+        "iteration": 7,
+        "startupMs": 3199.24,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 354.19,
+            "regexTester": 191.21,
+            "macLookup": 159.18,
+            "textDiff": 140.24,
+            "pdfSignatureChecker": 140.58,
+            "mathEvaluator": 210.97,
+            "rsaKeyPairGenerator": 212.91,
+            "cameraRecorder": 106.99
+          },
+          "warmOpen": {
+            "jsonMinify": 106.88,
+            "regexTester": 122.04,
+            "macLookup": 122.29,
+            "textDiff": 106.18,
+            "pdfSignatureChecker": 105.44,
+            "mathEvaluator": 107,
+            "rsaKeyPairGenerator": 209.72,
+            "cameraRecorder": 107.2
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.03
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 199.49
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2111.56
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8241.4
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 137.68,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 94938733,
+          "totalBytes": 188755461,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 27832,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 2225905664,
+            "privateBytes": 2041823232,
+            "cpuSeconds": 24.390625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 2239729664,
+            "privateBytes": 2033041408,
+            "cpuSeconds": 25.0625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3510,
+          "normalizedIdleCpuPercent": 0.8
+        }
+      },
+      {
+        "iteration": 8,
+        "startupMs": 904.43,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 381.05,
+            "regexTester": 158.07,
+            "macLookup": 159.05,
+            "textDiff": 123.82,
+            "pdfSignatureChecker": 1958.07,
+            "mathEvaluator": 653.21,
+            "rsaKeyPairGenerator": 920.99,
+            "cameraRecorder": 3609.06
+          },
+          "warmOpen": {
+            "jsonMinify": 221.14,
+            "regexTester": 123.38,
+            "macLookup": 122.03,
+            "textDiff": 107.85,
+            "pdfSignatureChecker": 103.67,
+            "mathEvaluator": 108.31,
+            "rsaKeyPairGenerator": 641.34,
+            "cameraRecorder": 107.29
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.98
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 214.27
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2092.54
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7356.69
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 128.57,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 122641627,
+          "totalBytes": 228874999,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 22000,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1350873088,
+            "privateBytes": 1159983104,
+            "cpuSeconds": 25.265625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1350332416,
+            "privateBytes": 1143320576,
+            "cpuSeconds": 25.3125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 5336,
+          "normalizedIdleCpuPercent": 0.04
+        }
+      },
+      {
+        "iteration": 9,
+        "startupMs": 4165.45,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 356.53,
+            "regexTester": 166.05,
+            "macLookup": 144.39,
+            "textDiff": 122.92,
+            "pdfSignatureChecker": 123.67,
+            "mathEvaluator": 247.55,
+            "rsaKeyPairGenerator": 5051.11,
+            "cameraRecorder": 105.49
+          },
+          "warmOpen": {
+            "jsonMinify": 106.03,
+            "regexTester": 126.58,
+            "macLookup": 139.38,
+            "textDiff": 106.76,
+            "pdfSignatureChecker": 105.41,
+            "mathEvaluator": 106.09,
+            "rsaKeyPairGenerator": 212.67,
+            "cameraRecorder": 106.33
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.84
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 214.07
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2125.07
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7909.58
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 135.91,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 98951311,
+          "totalBytes": 154383943,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 31000,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1941135360,
+            "privateBytes": 1727139840,
+            "cpuSeconds": 25.765625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1935609856,
+            "privateBytes": 1705312256,
+            "cpuSeconds": 25.921875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3489,
+          "normalizedIdleCpuPercent": 0.19
+        }
+      },
+      {
+        "iteration": 10,
+        "startupMs": 803.97,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 408.62,
+            "regexTester": 210.54,
+            "macLookup": 194.67,
+            "textDiff": 123.01,
+            "pdfSignatureChecker": 124.69,
+            "mathEvaluator": 229.43,
+            "rsaKeyPairGenerator": 351.66,
+            "cameraRecorder": 108.56
+          },
+          "warmOpen": {
+            "jsonMinify": 106.87,
+            "regexTester": 120.65,
+            "macLookup": 140.26,
+            "textDiff": 107.82,
+            "pdfSignatureChecker": 104.14,
+            "mathEvaluator": 106.31,
+            "rsaKeyPairGenerator": 226.92,
+            "cameraRecorder": 106.49
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.71
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 213.23
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2125.89
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7481.26
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 126.71,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 200131633,
+          "totalBytes": 257219409,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 34288,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1638363136,
+            "privateBytes": 1438720000,
+            "cpuSeconds": 25,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1652334592,
+            "privateBytes": 1433989120,
+            "cpuSeconds": 25.75,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 7135,
+          "normalizedIdleCpuPercent": 0.44
+        }
+      },
+      {
+        "iteration": 11,
+        "startupMs": 807.36,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 384.51,
+            "regexTester": 159.38,
+            "macLookup": 157.2,
+            "textDiff": 122.93,
+            "pdfSignatureChecker": 123.58,
+            "mathEvaluator": 212.55,
+            "rsaKeyPairGenerator": 300.31,
+            "cameraRecorder": 107.01
+          },
+          "warmOpen": {
+            "jsonMinify": 106.26,
+            "regexTester": 120.84,
+            "macLookup": 141.04,
+            "textDiff": 106.75,
+            "pdfSignatureChecker": 104.56,
+            "mathEvaluator": 107.55,
+            "rsaKeyPairGenerator": 227.49,
+            "cameraRecorder": 90
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.89
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 215.54
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2097.94
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8057.05
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 161.26,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 94817465,
+          "totalBytes": 185871877,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 38132,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 2229735424,
+            "privateBytes": 2042040320,
+            "cpuSeconds": 24.171875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 2229587968,
+            "privateBytes": 2032865280,
+            "cpuSeconds": 24.25,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3504,
+          "normalizedIdleCpuPercent": 0.09
+        }
+      },
+      {
+        "iteration": 12,
+        "startupMs": 1047.86,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 2228.14,
+            "regexTester": 193.69,
+            "macLookup": 176.63,
+            "textDiff": 161.46,
+            "pdfSignatureChecker": 159.97,
+            "mathEvaluator": 247.63,
+            "rsaKeyPairGenerator": 265.47,
+            "cameraRecorder": 106.81
+          },
+          "warmOpen": {
+            "jsonMinify": 107.76,
+            "regexTester": 122.6,
+            "macLookup": 141.93,
+            "textDiff": 106.27,
+            "pdfSignatureChecker": 120.83,
+            "mathEvaluator": 107.46,
+            "rsaKeyPairGenerator": 192.75,
+            "cameraRecorder": 105.6
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 32.33
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 197.07
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2155.8
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7537.88
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 131.64,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 99741868,
+          "totalBytes": 186627588,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 23264,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1517232128,
+            "privateBytes": 1334722560,
+            "cpuSeconds": 23.53125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1517793280,
+            "privateBytes": 1320550400,
+            "cpuSeconds": 23.578125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3484,
+          "normalizedIdleCpuPercent": 0.06
+        }
+      },
+      {
+        "iteration": 13,
+        "startupMs": 1784.95,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 4576.59,
+            "regexTester": 195.12,
+            "macLookup": 176.23,
+            "textDiff": 177.67,
+            "pdfSignatureChecker": 195.65,
+            "mathEvaluator": 248.12,
+            "rsaKeyPairGenerator": 246.45,
+            "cameraRecorder": 107.43
+          },
+          "warmOpen": {
+            "jsonMinify": 107.08,
+            "regexTester": 122.26,
+            "macLookup": 141.44,
+            "textDiff": 107.08,
+            "pdfSignatureChecker": 105.35,
+            "mathEvaluator": 107.38,
+            "rsaKeyPairGenerator": 227.1,
+            "cameraRecorder": 104.2
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.68
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 213.78
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2163.3
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 11567.07
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 128.75,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 100137343,
+          "totalBytes": 192394831,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 33216,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1992314880,
+            "privateBytes": 1793806336,
+            "cpuSeconds": 25.8125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1986654208,
+            "privateBytes": 1768538112,
+            "cpuSeconds": 25.875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 6036,
+          "normalizedIdleCpuPercent": 0.04
+        }
+      },
+      {
+        "iteration": 14,
+        "startupMs": 1280.01,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 418.33,
+            "regexTester": 193.85,
+            "macLookup": 195.05,
+            "textDiff": 124.19,
+            "pdfSignatureChecker": 202.14,
+            "mathEvaluator": 1184.95,
+            "rsaKeyPairGenerator": 244.96,
+            "cameraRecorder": 1909.83
+          },
+          "warmOpen": {
+            "jsonMinify": 105.93,
+            "regexTester": 120.92,
+            "macLookup": 122.4,
+            "textDiff": 108.23,
+            "pdfSignatureChecker": 104.21,
+            "mathEvaluator": 106.58,
+            "rsaKeyPairGenerator": 157.54,
+            "cameraRecorder": 107.23
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 49.72
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 197.26
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2103.29
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7399.21
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 129.16,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 122689735,
+          "totalBytes": 225467127,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 26128,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1352687616,
+            "privateBytes": 1158189056,
+            "cpuSeconds": 24.859375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1353252864,
+            "privateBytes": 1141878784,
+            "cpuSeconds": 24.96875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3506,
+          "normalizedIdleCpuPercent": 0.13
+        }
+      },
+      {
+        "iteration": 15,
+        "startupMs": 9387.4,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 5863.18,
+            "regexTester": 193.45,
+            "macLookup": 160.37,
+            "textDiff": 123.19,
+            "pdfSignatureChecker": 122.91,
+            "mathEvaluator": 230.17,
+            "rsaKeyPairGenerator": 230.62,
+            "cameraRecorder": 123.27
+          },
+          "warmOpen": {
+            "jsonMinify": 123.17,
+            "regexTester": 486.25,
+            "macLookup": 123.22,
+            "textDiff": 122.8,
+            "pdfSignatureChecker": 104.83,
+            "mathEvaluator": 122.33,
+            "rsaKeyPairGenerator": 229.37,
+            "cameraRecorder": 107.28
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.3
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 197.75
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2159.6
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7395.6
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 127.6,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 122627100,
+          "totalBytes": 228613112,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 24276,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1348427776,
+            "privateBytes": 1149636608,
+            "cpuSeconds": 24.265625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1344331776,
+            "privateBytes": 1127194624,
+            "cpuSeconds": 24.28125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 5232,
+          "normalizedIdleCpuPercent": 0.01
+        }
+      },
+      {
+        "iteration": 16,
+        "startupMs": 852.97,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 392.67,
+            "regexTester": 178.21,
+            "macLookup": 159.13,
+            "textDiff": 122.25,
+            "pdfSignatureChecker": 140.98,
+            "mathEvaluator": 227.52,
+            "rsaKeyPairGenerator": 194.32,
+            "cameraRecorder": 122.53
+          },
+          "warmOpen": {
+            "jsonMinify": 108.04,
+            "regexTester": 122.55,
+            "macLookup": 123.69,
+            "textDiff": 106.4,
+            "pdfSignatureChecker": 105.3,
+            "mathEvaluator": 106.97,
+            "rsaKeyPairGenerator": 318.19,
+            "cameraRecorder": 106.34
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.57
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 213.71
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2118.45
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7847.82
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 2164.66,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 99892270,
+          "totalBytes": 158054266,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 39272,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1949130752,
+            "privateBytes": 1761095680,
+            "cpuSeconds": 25.078125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1920450560,
+            "privateBytes": 1705873408,
+            "cpuSeconds": 25.78125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3495,
+          "normalizedIdleCpuPercent": 0.84
+        }
+      },
+      {
+        "iteration": 17,
+        "startupMs": 5250,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 395.3,
+            "regexTester": 213.79,
+            "macLookup": 141.23,
+            "textDiff": 124.29,
+            "pdfSignatureChecker": 122.59,
+            "mathEvaluator": 211.22,
+            "rsaKeyPairGenerator": 212.75,
+            "cameraRecorder": 106.11
+          },
+          "warmOpen": {
+            "jsonMinify": 106.66,
+            "regexTester": 141.62,
+            "macLookup": 156.99,
+            "textDiff": 106.89,
+            "pdfSignatureChecker": 104.01,
+            "mathEvaluator": 106.73,
+            "rsaKeyPairGenerator": 227.81,
+            "cameraRecorder": 88.88
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.86
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 196.37
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 5033.42
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7572
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 133.08,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 122617193,
+          "totalBytes": 221797089,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 20896,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1347092480,
+            "privateBytes": 1154854912,
+            "cpuSeconds": 24.09375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1346359296,
+            "privateBytes": 1135218688,
+            "cpuSeconds": 24.15625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 7117,
+          "normalizedIdleCpuPercent": 0.04
+        }
+      },
+      {
+        "iteration": 18,
+        "startupMs": 2141.41,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 369.32,
+            "regexTester": 194.51,
+            "macLookup": 158.56,
+            "textDiff": 140.84,
+            "pdfSignatureChecker": 124.48,
+            "mathEvaluator": 211.89,
+            "rsaKeyPairGenerator": 280.6,
+            "cameraRecorder": 107.17
+          },
+          "warmOpen": {
+            "jsonMinify": 107.63,
+            "regexTester": 140.39,
+            "macLookup": 122.68,
+            "textDiff": 107.74,
+            "pdfSignatureChecker": 103.98,
+            "mathEvaluator": 108.55,
+            "rsaKeyPairGenerator": 246.14,
+            "cameraRecorder": 106.83
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.89
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 6892.83
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 3061.14
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7401.95
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 127.85,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 131082410,
+          "totalBytes": 205210494,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 10484,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1364414464,
+            "privateBytes": 1164967936,
+            "cpuSeconds": 23.09375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1364578304,
+            "privateBytes": 1152561152,
+            "cpuSeconds": 23.125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3693,
+          "normalizedIdleCpuPercent": 0.04
+        }
+      },
+      {
+        "iteration": 19,
+        "startupMs": 780.86,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 380.8,
+            "regexTester": 160.53,
+            "macLookup": 159.47,
+            "textDiff": 141.18,
+            "pdfSignatureChecker": 124.58,
+            "mathEvaluator": 214.55,
+            "rsaKeyPairGenerator": 210.4,
+            "cameraRecorder": 106.4
+          },
+          "warmOpen": {
+            "jsonMinify": 106.32,
+            "regexTester": 122.46,
+            "macLookup": 122.37,
+            "textDiff": 107.11,
+            "pdfSignatureChecker": 105.97,
+            "mathEvaluator": 106.25,
+            "rsaKeyPairGenerator": 157.77,
+            "cameraRecorder": 89.61
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.67
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 216.22
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2114.56
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8046.45
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 127.93,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 100112383,
+          "totalBytes": 161199695,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30708,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1938935808,
+            "privateBytes": 1753034752,
+            "cpuSeconds": 24.65625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1956106240,
+            "privateBytes": 1749262336,
+            "cpuSeconds": 25.34375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3499,
+          "normalizedIdleCpuPercent": 0.82
+        }
+      },
+      {
+        "iteration": 20,
+        "startupMs": 916.25,
+        "browserVersion": "155.0.8059.80",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 917.61,
+            "regexTester": 210.19,
+            "macLookup": 175.7,
+            "textDiff": 159.41,
+            "pdfSignatureChecker": 159.33,
+            "mathEvaluator": 248.44,
+            "rsaKeyPairGenerator": 245.65,
+            "cameraRecorder": 413.18
+          },
+          "warmOpen": {
+            "jsonMinify": 108.7,
+            "regexTester": 122.69,
+            "macLookup": 123.48,
+            "textDiff": 107.17,
+            "pdfSignatureChecker": 122.43,
+            "mathEvaluator": 108.45,
+            "rsaKeyPairGenerator": 192.27,
+            "cameraRecorder": 105.8
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 32.67
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 214.21
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2129.86
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7220.47
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 127.69,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 193080766,
+          "totalBytes": 253134194,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 9048,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1399177216,
+            "privateBytes": 1217830912,
+            "cpuSeconds": 24.28125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1417609216,
+            "privateBytes": 1213685760,
+            "cpuSeconds": 24.9375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 4335,
+          "normalizedIdleCpuPercent": 0.63
+        }
+      }
+    ],
+    "electron": [
+      {
+        "iteration": 1,
+        "startupMs": 961.86,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 612.25,
+            "regexTester": 187.74,
+            "macLookup": 141.84,
+            "textDiff": 124.82,
+            "pdfSignatureChecker": 169.2,
+            "mathEvaluator": 286.65,
+            "rsaKeyPairGenerator": 195.62,
+            "cameraRecorder": 148.15
+          },
+          "warmOpen": {
+            "jsonMinify": 306.09,
+            "regexTester": 1416.99,
+            "macLookup": 141.18,
+            "textDiff": 280.84,
+            "pdfSignatureChecker": 18023,
+            "mathEvaluator": 3838.03,
+            "rsaKeyPairGenerator": 265.65,
+            "cameraRecorder": 89.39
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.66
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 236.74
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2142.16
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 9549.43
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 1696.75,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 75432992,
+          "totalBytes": 121761560,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 2820,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 290984,
+            "privateBytes": 254048,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31044,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 123272,
+            "privateBytes": 171080,
+            "sharedBytes": null
+          },
+          {
+            "pid": 6896,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49332,
+            "privateBytes": 12360,
+            "sharedBytes": null
+          },
+          {
+            "pid": 28644,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 791324,
+            "privateBytes": 736904,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3328,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96336,
+            "privateBytes": 10152,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22332,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129444,
+            "privateBytes": 61640,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 2820,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.7489504060689335,
+            "workingSetKb": 290696,
+            "privateBytes": 253688,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31044,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.04924382572216432,
+            "workingSetKb": 122980,
+            "privateBytes": 157868,
+            "sharedBytes": null
+          },
+          {
+            "pid": 6896,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49332,
+            "privateBytes": 12360,
+            "sharedBytes": null
+          },
+          {
+            "pid": 28644,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.027728053531595156,
+            "workingSetKb": 791360,
+            "privateBytes": 737268,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3328,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96336,
+            "privateBytes": 10152,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22332,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0016192782989594443,
+            "workingSetKb": 129444,
+            "privateBytes": 61640,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 10520,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1524850688,
+            "privateBytes": 1281122304,
+            "cpuSeconds": 36.9375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 963923968,
+            "privateBytes": 698372096,
+            "cpuSeconds": 38,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 8346,
+          "normalizedIdleCpuPercent": 0.53
+        }
+      },
+      {
+        "iteration": 2,
+        "startupMs": 930.72,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 448.16,
+            "regexTester": 203.21,
+            "macLookup": 166.84,
+            "textDiff": 158.35,
+            "pdfSignatureChecker": 177.72,
+            "mathEvaluator": 265.27,
+            "rsaKeyPairGenerator": 212.37,
+            "cameraRecorder": 144.41
+          },
+          "warmOpen": {
+            "jsonMinify": 142.59,
+            "regexTester": 159.03,
+            "macLookup": 177.21,
+            "textDiff": 1311.34,
+            "pdfSignatureChecker": 177.13,
+            "mathEvaluator": 142.09,
+            "rsaKeyPairGenerator": 265.27,
+            "cameraRecorder": 141.16
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 46.35
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 220.63
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2159.13
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7706.9
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 244.88,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 167600193,
+          "totalBytes": 228758925,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 34256,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 282028,
+            "privateBytes": 245492,
+            "sharedBytes": null
+          },
+          {
+            "pid": 2108,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 120988,
+            "privateBytes": 169856,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30268,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49352,
+            "privateBytes": 12388,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3932,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1383744,
+            "privateBytes": 1353912,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25888,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96360,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34264,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129480,
+            "privateBytes": 61540,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 34256,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.8145031135129969,
+            "workingSetKb": 283836,
+            "privateBytes": 247804,
+            "sharedBytes": null
+          },
+          {
+            "pid": 2108,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.06408866862467573,
+            "workingSetKb": 119724,
+            "privateBytes": 155304,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30268,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0006115816275400827,
+            "workingSetKb": 49352,
+            "privateBytes": 12388,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3932,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.05666902230717893,
+            "workingSetKb": 1385224,
+            "privateBytes": 1355900,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25888,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96360,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34264,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001727290183711892,
+            "workingSetKb": 129480,
+            "privateBytes": 61540,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 21904,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 2121474048,
+            "privateBytes": 1909186560,
+            "cpuSeconds": 27.578125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 2120036352,
+            "privateBytes": 1891991552,
+            "cpuSeconds": 28.296875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 4621,
+          "normalizedIdleCpuPercent": 0.65
+        }
+      },
+      {
+        "iteration": 3,
+        "startupMs": 1643.7,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 587.74,
+            "regexTester": 195.25,
+            "macLookup": 176.25,
+            "textDiff": 159.08,
+            "pdfSignatureChecker": 140.71,
+            "mathEvaluator": 299.95,
+            "rsaKeyPairGenerator": 250.36,
+            "cameraRecorder": 155.09
+          },
+          "warmOpen": {
+            "jsonMinify": 141.31,
+            "regexTester": 144.04,
+            "macLookup": 172.8,
+            "textDiff": 142.53,
+            "pdfSignatureChecker": 160.1,
+            "mathEvaluator": 123.72,
+            "rsaKeyPairGenerator": 210.9,
+            "cameraRecorder": 125.09
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.17
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 208.64
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2145.91
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 10264.36
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 269.1,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 107126863,
+          "totalBytes": 159631923,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 26640,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 289304,
+            "privateBytes": 253652,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35428,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 117668,
+            "privateBytes": 164532,
+            "sharedBytes": null
+          },
+          {
+            "pid": 24396,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49392,
+            "privateBytes": 12480,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22716,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 724196,
+            "privateBytes": 674208,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30524,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96352,
+            "privateBytes": 10128,
+            "sharedBytes": null
+          },
+          {
+            "pid": 16812,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129408,
+            "privateBytes": 61112,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 26640,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.408149709018042,
+            "workingSetKb": 289176,
+            "privateBytes": 254064,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35428,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.040329776620089124,
+            "workingSetKb": 117648,
+            "privateBytes": 155468,
+            "sharedBytes": null
+          },
+          {
+            "pid": 24396,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0004411828298550148,
+            "workingSetKb": 49392,
+            "privateBytes": 12480,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22716,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.24383098661917316,
+            "workingSetKb": 724612,
+            "privateBytes": 672376,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30524,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96352,
+            "privateBytes": 10128,
+            "sharedBytes": null
+          },
+          {
+            "pid": 16812,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0017032283557998618,
+            "workingSetKb": 129408,
+            "privateBytes": 61112,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 4048,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1448538112,
+            "privateBytes": 1211117568,
+            "cpuSeconds": 29.171875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1408622592,
+            "privateBytes": 1155989504,
+            "cpuSeconds": 29.984375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3594,
+          "normalizedIdleCpuPercent": 0.94
+        }
+      },
+      {
+        "iteration": 4,
+        "startupMs": 916.24,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 451.11,
+            "regexTester": 214.5,
+            "macLookup": 158.82,
+            "textDiff": 159.05,
+            "pdfSignatureChecker": 158.46,
+            "mathEvaluator": 282.55,
+            "rsaKeyPairGenerator": 213.66,
+            "cameraRecorder": 174.88
+          },
+          "warmOpen": {
+            "jsonMinify": 159.27,
+            "regexTester": 143.52,
+            "macLookup": 172.69,
+            "textDiff": 142.65,
+            "pdfSignatureChecker": 158.54,
+            "mathEvaluator": 107.69,
+            "rsaKeyPairGenerator": 265.69,
+            "cameraRecorder": 142.57
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.2
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 1467.76
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2365.84
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7522.15
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 289.58,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 108216034,
+          "totalBytes": 193280922,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 40428,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 283920,
+            "privateBytes": 248624,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30220,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 122436,
+            "privateBytes": 164528,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34984,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49252,
+            "privateBytes": 12344,
+            "sharedBytes": null
+          },
+          {
+            "pid": 21220,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1014916,
+            "privateBytes": 963852,
+            "sharedBytes": null
+          },
+          {
+            "pid": 38744,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96356,
+            "privateBytes": 10124,
+            "sharedBytes": null
+          },
+          {
+            "pid": 20752,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129384,
+            "privateBytes": 62584,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 40428,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 1.0604536019076727,
+            "workingSetKb": 284356,
+            "privateBytes": 249232,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30220,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.07130541723266065,
+            "workingSetKb": 122096,
+            "privateBytes": 151632,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34984,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.000583653746373978,
+            "workingSetKb": 49252,
+            "privateBytes": 12344,
+            "sharedBytes": null
+          },
+          {
+            "pid": 21220,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.057938486088821524,
+            "workingSetKb": 1015740,
+            "privateBytes": 964864,
+            "sharedBytes": null
+          },
+          {
+            "pid": 38744,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96356,
+            "privateBytes": 10124,
+            "sharedBytes": null
+          },
+          {
+            "pid": 20752,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0017275663635787745,
+            "workingSetKb": 129384,
+            "privateBytes": 62584,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 31692,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1747701760,
+            "privateBytes": 1508462592,
+            "cpuSeconds": 28.359375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1745666048,
+            "privateBytes": 1492553728,
+            "cpuSeconds": 28.9375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3463,
+          "normalizedIdleCpuPercent": 0.7
+        }
+      },
+      {
+        "iteration": 5,
+        "startupMs": 911.94,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 576.35,
+            "regexTester": 181.54,
+            "macLookup": 157.37,
+            "textDiff": 159.09,
+            "pdfSignatureChecker": 209.87,
+            "mathEvaluator": 282.53,
+            "rsaKeyPairGenerator": 231.77,
+            "cameraRecorder": 178.01
+          },
+          "warmOpen": {
+            "jsonMinify": 106.94,
+            "regexTester": 176.51,
+            "macLookup": 159.32,
+            "textDiff": 107.09,
+            "pdfSignatureChecker": 141.24,
+            "mathEvaluator": 122.38,
+            "rsaKeyPairGenerator": 319.4,
+            "cameraRecorder": 124.56
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.22
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 216.86
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2137.45
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7876.55
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 288.83,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 79205305,
+          "totalBytes": 106558853,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 38536,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 286872,
+            "privateBytes": 251196,
+            "sharedBytes": null
+          },
+          {
+            "pid": 19792,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 119972,
+            "privateBytes": 166856,
+            "sharedBytes": null
+          },
+          {
+            "pid": 20868,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49416,
+            "privateBytes": 12520,
+            "sharedBytes": null
+          },
+          {
+            "pid": 11200,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 598508,
+            "privateBytes": 543764,
+            "sharedBytes": null
+          },
+          {
+            "pid": 4556,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96336,
+            "privateBytes": 10120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32300,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129472,
+            "privateBytes": 61896,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 38536,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.8858092270551743,
+            "workingSetKb": 287112,
+            "privateBytes": 250960,
+            "sharedBytes": null
+          },
+          {
+            "pid": 19792,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.06490196573806876,
+            "workingSetKb": 119148,
+            "privateBytes": 154004,
+            "sharedBytes": null
+          },
+          {
+            "pid": 20868,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0006269209982229129,
+            "workingSetKb": 49416,
+            "privateBytes": 12520,
+            "sharedBytes": null
+          },
+          {
+            "pid": 11200,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.057710391870649,
+            "workingSetKb": 599848,
+            "privateBytes": 545836,
+            "sharedBytes": null
+          },
+          {
+            "pid": 4556,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96336,
+            "privateBytes": 10120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32300,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0015485827847560691,
+            "workingSetKb": 129472,
+            "privateBytes": 61896,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 23196,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1321095168,
+            "privateBytes": 1081139200,
+            "cpuSeconds": 28.5,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1319956480,
+            "privateBytes": 1067270144,
+            "cpuSeconds": 29.171875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3472,
+          "normalizedIdleCpuPercent": 0.81
+        }
+      },
+      {
+        "iteration": 6,
+        "startupMs": 914.97,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 479.24,
+            "regexTester": 199.59,
+            "macLookup": 157.83,
+            "textDiff": 158.91,
+            "pdfSignatureChecker": 176.98,
+            "mathEvaluator": 266.23,
+            "rsaKeyPairGenerator": 1771.06,
+            "cameraRecorder": 127.56
+          },
+          "warmOpen": {
+            "jsonMinify": 143.51,
+            "regexTester": 171.81,
+            "macLookup": 146.15,
+            "textDiff": 139.43,
+            "pdfSignatureChecker": 174.96,
+            "mathEvaluator": 106.5,
+            "rsaKeyPairGenerator": 192.5,
+            "cameraRecorder": 159.11
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 44.62
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 215.93
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2120.46
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7535.75
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 237.61,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 131465149,
+          "totalBytes": 185364329,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 26556,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 279120,
+            "privateBytes": 242628,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35856,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 120800,
+            "privateBytes": 170968,
+            "sharedBytes": null
+          },
+          {
+            "pid": 28452,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49248,
+            "privateBytes": 12296,
+            "sharedBytes": null
+          },
+          {
+            "pid": 13448,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 994068,
+            "privateBytes": 951064,
+            "sharedBytes": null
+          },
+          {
+            "pid": 24124,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96376,
+            "privateBytes": 10108,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32560,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129396,
+            "privateBytes": 61624,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 26556,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.6362030816503986,
+            "workingSetKb": 278232,
+            "privateBytes": 242320,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35856,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.060514069724301955,
+            "workingSetKb": 120060,
+            "privateBytes": 156136,
+            "sharedBytes": null
+          },
+          {
+            "pid": 28452,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0009077271670237767,
+            "workingSetKb": 49248,
+            "privateBytes": 12296,
+            "sharedBytes": null
+          },
+          {
+            "pid": 13448,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.41983688856877815,
+            "workingSetKb": 962272,
+            "privateBytes": 907428,
+            "sharedBytes": null
+          },
+          {
+            "pid": 24124,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96376,
+            "privateBytes": 10108,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32560,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001680065750262029,
+            "workingSetKb": 129396,
+            "privateBytes": 61624,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 15500,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1717428224,
+            "privateBytes": 1493135360,
+            "cpuSeconds": 27.265625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1683460096,
+            "privateBytes": 1428000768,
+            "cpuSeconds": 28.125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 4080,
+          "normalizedIdleCpuPercent": 0.88
+        }
+      },
+      {
+        "iteration": 7,
+        "startupMs": 914.63,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 451.55,
+            "regexTester": 166.43,
+            "macLookup": 151.71,
+            "textDiff": 177.4,
+            "pdfSignatureChecker": 160.46,
+            "mathEvaluator": 264.24,
+            "rsaKeyPairGenerator": 282.51,
+            "cameraRecorder": 139.54
+          },
+          "warmOpen": {
+            "jsonMinify": 146.27,
+            "regexTester": 174.49,
+            "macLookup": 159.89,
+            "textDiff": 134.4,
+            "pdfSignatureChecker": 131.95,
+            "mathEvaluator": 142.6,
+            "rsaKeyPairGenerator": 210.96,
+            "cameraRecorder": 106.5
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.72
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 247.55
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2111.02
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7658.27
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 256.78,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 166234856,
+          "totalBytes": 227447272,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 21484,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 287024,
+            "privateBytes": 251880,
+            "sharedBytes": null
+          },
+          {
+            "pid": 19488,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 118480,
+            "privateBytes": 169900,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32940,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49324,
+            "privateBytes": 12424,
+            "sharedBytes": null
+          },
+          {
+            "pid": 18356,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1345244,
+            "privateBytes": 1314016,
+            "sharedBytes": null
+          },
+          {
+            "pid": 38400,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96344,
+            "privateBytes": 10100,
+            "sharedBytes": null
+          },
+          {
+            "pid": 18980,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129408,
+            "privateBytes": 60840,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 21484,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.7255994894648777,
+            "workingSetKb": 286292,
+            "privateBytes": 251160,
+            "sharedBytes": null
+          },
+          {
+            "pid": 19488,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.02506614296683479,
+            "workingSetKb": 117948,
+            "privateBytes": 165696,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32940,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49324,
+            "privateBytes": 12424,
+            "sharedBytes": null
+          },
+          {
+            "pid": 18356,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.006037305643068793,
+            "workingSetKb": 1345156,
+            "privateBytes": 1314016,
+            "sharedBytes": null
+          },
+          {
+            "pid": 38400,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96344,
+            "privateBytes": 10100,
+            "sharedBytes": null
+          },
+          {
+            "pid": 18980,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0015666871579399705,
+            "workingSetKb": 129420,
+            "privateBytes": 60840,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 33832,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 2081288192,
+            "privateBytes": 1868886016,
+            "cpuSeconds": 27.609375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 2080620544,
+            "privateBytes": 1863544832,
+            "cpuSeconds": 27.984375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3492,
+          "normalizedIdleCpuPercent": 0.45
+        }
+      },
+      {
+        "iteration": 8,
+        "startupMs": 912.07,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 580.88,
+            "regexTester": 184.19,
+            "macLookup": 168.95,
+            "textDiff": 156.81,
+            "pdfSignatureChecker": 158.98,
+            "mathEvaluator": 264.07,
+            "rsaKeyPairGenerator": 337.39,
+            "cameraRecorder": 121.84
+          },
+          "warmOpen": {
+            "jsonMinify": 124.05,
+            "regexTester": 7074.51,
+            "macLookup": 131.3,
+            "textDiff": 169.35,
+            "pdfSignatureChecker": 122.48,
+            "mathEvaluator": 387.78,
+            "rsaKeyPairGenerator": 229.06,
+            "cameraRecorder": 106.75
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.82
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 231.11
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2157.61
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7947.3
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 261.79,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 104554748,
+          "totalBytes": 163826760,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 8788,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 284740,
+            "privateBytes": 250316,
+            "sharedBytes": null
+          },
+          {
+            "pid": 23768,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 124320,
+            "privateBytes": 171872,
+            "sharedBytes": null
+          },
+          {
+            "pid": 36188,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49232,
+            "privateBytes": 12340,
+            "sharedBytes": null
+          },
+          {
+            "pid": 17820,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1194164,
+            "privateBytes": 1149076,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30916,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96300,
+            "privateBytes": 10128,
+            "sharedBytes": null
+          },
+          {
+            "pid": 4444,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129408,
+            "privateBytes": 61184,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 8788,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 1.0119359089451356,
+            "workingSetKb": 283384,
+            "privateBytes": 247784,
+            "sharedBytes": null
+          },
+          {
+            "pid": 23768,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.08358301399623667,
+            "workingSetKb": 125012,
+            "privateBytes": 166348,
+            "sharedBytes": null
+          },
+          {
+            "pid": 36188,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0011072072153482028,
+            "workingSetKb": 49200,
+            "privateBytes": 12276,
+            "sharedBytes": null
+          },
+          {
+            "pid": 17820,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.0851668768128936,
+            "workingSetKb": 1201668,
+            "privateBytes": 1157116,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30916,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96300,
+            "privateBytes": 10128,
+            "sharedBytes": null
+          },
+          {
+            "pid": 4444,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0015884562577269572,
+            "workingSetKb": 129408,
+            "privateBytes": 61184,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 7588,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1943085056,
+            "privateBytes": 1714958336,
+            "cpuSeconds": 30.09375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1937760256,
+            "privateBytes": 1698418688,
+            "cpuSeconds": 30.921875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3582,
+          "normalizedIdleCpuPercent": 0.96
+        }
+      },
+      {
+        "iteration": 9,
+        "startupMs": 932.17,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 500.84,
+            "regexTester": 177.03,
+            "macLookup": 176.69,
+            "textDiff": 158.1,
+            "pdfSignatureChecker": 140.45,
+            "mathEvaluator": 281.81,
+            "rsaKeyPairGenerator": 280.37,
+            "cameraRecorder": 160.18
+          },
+          "warmOpen": {
+            "jsonMinify": 122.27,
+            "regexTester": 160.47,
+            "macLookup": 150.67,
+            "textDiff": 131.32,
+            "pdfSignatureChecker": 123.69,
+            "mathEvaluator": 127.32,
+            "rsaKeyPairGenerator": 210.98,
+            "cameraRecorder": 123.19
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.74
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 240.82
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2155.77
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7504.76
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 249.43,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 108072348,
+          "totalBytes": 167591236,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 34612,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 284252,
+            "privateBytes": 249476,
+            "sharedBytes": null
+          },
+          {
+            "pid": 20280,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 122320,
+            "privateBytes": 166748,
+            "sharedBytes": null
+          },
+          {
+            "pid": 8064,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49216,
+            "privateBytes": 12336,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35392,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 760204,
+            "privateBytes": 706524,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25052,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96288,
+            "privateBytes": 10088,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25476,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129364,
+            "privateBytes": 62480,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 34612,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.9650279880547914,
+            "workingSetKb": 286584,
+            "privateBytes": 251984,
+            "sharedBytes": null
+          },
+          {
+            "pid": 20280,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.08417869616040503,
+            "workingSetKb": 122880,
+            "privateBytes": 165404,
+            "sharedBytes": null
+          },
+          {
+            "pid": 8064,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0007504659005233218,
+            "workingSetKb": 49216,
+            "privateBytes": 12336,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35392,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.08339452327226761,
+            "workingSetKb": 754852,
+            "privateBytes": 700644,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25052,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96288,
+            "privateBytes": 10088,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25476,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001555036237755207,
+            "workingSetKb": 129364,
+            "privateBytes": 62480,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 38020,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1482280960,
+            "privateBytes": 1243750400,
+            "cpuSeconds": 27.828125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1481199616,
+            "privateBytes": 1235734528,
+            "cpuSeconds": 28.453125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 5475,
+          "normalizedIdleCpuPercent": 0.48
+        }
+      },
+      {
+        "iteration": 10,
+        "startupMs": 949.13,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 10818.4,
+            "regexTester": 206.43,
+            "macLookup": 153.22,
+            "textDiff": 159.33,
+            "pdfSignatureChecker": 160.46,
+            "mathEvaluator": 299.29,
+            "rsaKeyPairGenerator": 254.67,
+            "cameraRecorder": 151.34
+          },
+          "warmOpen": {
+            "jsonMinify": 141.13,
+            "regexTester": 172.4,
+            "macLookup": 144.59,
+            "textDiff": 141.22,
+            "pdfSignatureChecker": 116.85,
+            "mathEvaluator": 149.14,
+            "rsaKeyPairGenerator": 279.06,
+            "cameraRecorder": 128.43
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 36.8
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 223.38
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2226.42
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7345.35
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 270.14,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 109654064,
+          "totalBytes": 130506720,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 22444,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 287756,
+            "privateBytes": 251788,
+            "sharedBytes": null
+          },
+          {
+            "pid": 40860,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 122924,
+            "privateBytes": 167980,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22284,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49460,
+            "privateBytes": 12536,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30612,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 673580,
+            "privateBytes": 619956,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35660,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96428,
+            "privateBytes": 10116,
+            "sharedBytes": null
+          },
+          {
+            "pid": 16520,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129456,
+            "privateBytes": 62408,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 22444,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.9390929200987355,
+            "workingSetKb": 279424,
+            "privateBytes": 241716,
+            "sharedBytes": null
+          },
+          {
+            "pid": 40860,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.0648349838073304,
+            "workingSetKb": 122124,
+            "privateBytes": 151648,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22284,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.00109223762324554,
+            "workingSetKb": 49464,
+            "privateBytes": 12540,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30612,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.27816943863257565,
+            "workingSetKb": 650252,
+            "privateBytes": 593008,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35660,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96428,
+            "privateBytes": 10116,
+            "sharedBytes": null
+          },
+          {
+            "pid": 16520,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001656072530728479,
+            "workingSetKb": 129456,
+            "privateBytes": 62408,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 11144,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1402064896,
+            "privateBytes": 1161584640,
+            "cpuSeconds": 29.4375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1366544384,
+            "privateBytes": 1100414976,
+            "cpuSeconds": 30.234375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 4561,
+          "normalizedIdleCpuPercent": 0.73
+        }
+      },
+      {
+        "iteration": 11,
+        "startupMs": 923.87,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 575.49,
+            "regexTester": 185.95,
+            "macLookup": 149.95,
+            "textDiff": 159.03,
+            "pdfSignatureChecker": 160.54,
+            "mathEvaluator": 295.5,
+            "rsaKeyPairGenerator": 338.4,
+            "cameraRecorder": 156.58
+          },
+          "warmOpen": {
+            "jsonMinify": 124.76,
+            "regexTester": 148.38,
+            "macLookup": 172,
+            "textDiff": 141.33,
+            "pdfSignatureChecker": 130.1,
+            "mathEvaluator": 151.34,
+            "rsaKeyPairGenerator": 195.37,
+            "cameraRecorder": 141.21
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 33.35
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 232.03
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2610.98
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7828.88
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 263.5,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 168764011,
+          "totalBytes": 219969007,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 9724,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 291008,
+            "privateBytes": 255876,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34616,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 120208,
+            "privateBytes": 168444,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30408,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49340,
+            "privateBytes": 12428,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32300,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1360584,
+            "privateBytes": 1328416,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30256,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96368,
+            "privateBytes": 10108,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32720,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129412,
+            "privateBytes": 61788,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 9724,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 1.1339991574300072,
+            "workingSetKb": 293200,
+            "privateBytes": 258792,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34616,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.0865747931231821,
+            "workingSetKb": 118828,
+            "privateBytes": 160900,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30408,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0007044128466087519,
+            "workingSetKb": 49340,
+            "privateBytes": 12428,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32300,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.086075908520366,
+            "workingSetKb": 1368232,
+            "privateBytes": 1336668,
+            "sharedBytes": null
+          },
+          {
+            "pid": 30256,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96368,
+            "privateBytes": 10108,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32720,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0016804740719667196,
+            "workingSetKb": 129412,
+            "privateBytes": 61788,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 6212,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 2114023424,
+            "privateBytes": 1900019712,
+            "cpuSeconds": 29.3125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 2112647168,
+            "privateBytes": 1891971072,
+            "cpuSeconds": 29.984375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3567,
+          "normalizedIdleCpuPercent": 0.78
+        }
+      },
+      {
+        "iteration": 12,
+        "startupMs": 947.21,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 439.45,
+            "regexTester": 195.12,
+            "macLookup": 142.54,
+            "textDiff": 195.04,
+            "pdfSignatureChecker": 139.83,
+            "mathEvaluator": 263.61,
+            "rsaKeyPairGenerator": 212.17,
+            "cameraRecorder": 174.45
+          },
+          "warmOpen": {
+            "jsonMinify": 106.98,
+            "regexTester": 175.91,
+            "macLookup": 141.53,
+            "textDiff": 124.27,
+            "pdfSignatureChecker": 187.4,
+            "mathEvaluator": 123.23,
+            "rsaKeyPairGenerator": 266.6,
+            "cameraRecorder": 106.48
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.71
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 241.8
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2138.05
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7480.34
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 236,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 103682410,
+          "totalBytes": 163302130,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 16176,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 287060,
+            "privateBytes": 250580,
+            "sharedBytes": null
+          },
+          {
+            "pid": 26192,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 120436,
+            "privateBytes": 170716,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35992,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49476,
+            "privateBytes": 12444,
+            "sharedBytes": null
+          },
+          {
+            "pid": 24596,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 741476,
+            "privateBytes": 691232,
+            "sharedBytes": null
+          },
+          {
+            "pid": 26844,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96284,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 27264,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129408,
+            "privateBytes": 62264,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 16176,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.8908240296899662,
+            "workingSetKb": 287132,
+            "privateBytes": 250556,
+            "sharedBytes": null
+          },
+          {
+            "pid": 26192,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.06644485839074735,
+            "workingSetKb": 119692,
+            "privateBytes": 156768,
+            "sharedBytes": null
+          },
+          {
+            "pid": 35992,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0008450402730829782,
+            "workingSetKb": 49476,
+            "privateBytes": 12444,
+            "sharedBytes": null
+          },
+          {
+            "pid": 24596,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.31219451498659423,
+            "workingSetKb": 693572,
+            "privateBytes": 636308,
+            "sharedBytes": null
+          },
+          {
+            "pid": 26844,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96284,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 27264,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0016309872834048887,
+            "workingSetKb": 129408,
+            "privateBytes": 62264,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 32004,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1467797504,
+            "privateBytes": 1236369408,
+            "cpuSeconds": 28.15625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1417609216,
+            "privateBytes": 1163857920,
+            "cpuSeconds": 29.140625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3493,
+          "normalizedIdleCpuPercent": 1.17
+        }
+      },
+      {
+        "iteration": 13,
+        "startupMs": 933.53,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 433.48,
+            "regexTester": 191.97,
+            "macLookup": 151.06,
+            "textDiff": 158.99,
+            "pdfSignatureChecker": 192.68,
+            "mathEvaluator": 266.62,
+            "rsaKeyPairGenerator": 281.23,
+            "cameraRecorder": 176.37
+          },
+          "warmOpen": {
+            "jsonMinify": 141.72,
+            "regexTester": 151.66,
+            "macLookup": 182.51,
+            "textDiff": 142.59,
+            "pdfSignatureChecker": 116.47,
+            "mathEvaluator": 146.97,
+            "rsaKeyPairGenerator": 304.36,
+            "cameraRecorder": 117.02
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.18
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 235.19
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2171.69
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7646.74
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 268.34,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 108379209,
+          "totalBytes": 194854249,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 31024,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 282560,
+            "privateBytes": 246392,
+            "sharedBytes": null
+          },
+          {
+            "pid": 23540,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 119300,
+            "privateBytes": 160388,
+            "sharedBytes": null
+          },
+          {
+            "pid": 4644,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49324,
+            "privateBytes": 12392,
+            "sharedBytes": null
+          },
+          {
+            "pid": 39244,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 789360,
+            "privateBytes": 736476,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3356,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96280,
+            "privateBytes": 10120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32776,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129300,
+            "privateBytes": 61800,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 31024,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.9172924488944515,
+            "workingSetKb": 283720,
+            "privateBytes": 247732,
+            "sharedBytes": null
+          },
+          {
+            "pid": 23540,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.0722363498664401,
+            "workingSetKb": 118892,
+            "privateBytes": 151728,
+            "sharedBytes": null
+          },
+          {
+            "pid": 4644,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.000646914970518331,
+            "workingSetKb": 49324,
+            "privateBytes": 12392,
+            "sharedBytes": null
+          },
+          {
+            "pid": 39244,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.06141514505676781,
+            "workingSetKb": 791092,
+            "privateBytes": 738328,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3356,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96280,
+            "privateBytes": 10120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 32776,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0017456217298337832,
+            "workingSetKb": 129300,
+            "privateBytes": 61800,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 39288,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1512321024,
+            "privateBytes": 1268559872,
+            "cpuSeconds": 30.296875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1511636992,
+            "privateBytes": 1258442752,
+            "cpuSeconds": 30.859375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3507,
+          "normalizedIdleCpuPercent": 0.67
+        }
+      },
+      {
+        "iteration": 14,
+        "startupMs": 908.45,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 455.06,
+            "regexTester": 201.33,
+            "macLookup": 142.29,
+            "textDiff": 159.45,
+            "pdfSignatureChecker": 177.62,
+            "mathEvaluator": 263.14,
+            "rsaKeyPairGenerator": 281.23,
+            "cameraRecorder": 124.93
+          },
+          "warmOpen": {
+            "jsonMinify": 180.44,
+            "regexTester": 141.63,
+            "macLookup": 1401.11,
+            "textDiff": 4588.73,
+            "pdfSignatureChecker": 122.14,
+            "mathEvaluator": 142.72,
+            "rsaKeyPairGenerator": 250.26,
+            "cameraRecorder": 144.17
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 34.66
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 207.93
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2131.36
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7533.21
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 255.19,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 85199374,
+          "totalBytes": 154791390,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 24612,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 283220,
+            "privateBytes": 248120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 33056,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 119592,
+            "privateBytes": 161192,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25988,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49280,
+            "privateBytes": 12340,
+            "sharedBytes": null
+          },
+          {
+            "pid": 27120,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1073792,
+            "privateBytes": 1019360,
+            "sharedBytes": null
+          },
+          {
+            "pid": 37020,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96292,
+            "privateBytes": 10120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34112,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129408,
+            "privateBytes": 62036,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 24612,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 1.2157142025671284,
+            "workingSetKb": 280292,
+            "privateBytes": 244004,
+            "sharedBytes": null
+          },
+          {
+            "pid": 33056,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.07741343673180327,
+            "workingSetKb": 119276,
+            "privateBytes": 157280,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25988,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0013858402749732407,
+            "workingSetKb": 49248,
+            "privateBytes": 12276,
+            "sharedBytes": null
+          },
+          {
+            "pid": 27120,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.2534699780191308,
+            "workingSetKb": 1065908,
+            "privateBytes": 1009828,
+            "sharedBytes": null
+          },
+          {
+            "pid": 37020,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96292,
+            "privateBytes": 10120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34112,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0016334232185478022,
+            "workingSetKb": 129408,
+            "privateBytes": 62036,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 23432,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1803632640,
+            "privateBytes": 1560072192,
+            "cpuSeconds": 29.03125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1787883520,
+            "privateBytes": 1533333504,
+            "cpuSeconds": 29.890625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3550,
+          "normalizedIdleCpuPercent": 1.01
+        }
+      },
+      {
+        "iteration": 15,
+        "startupMs": 924.41,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 559.45,
+            "regexTester": 194.79,
+            "macLookup": 168.14,
+            "textDiff": 170.38,
+            "pdfSignatureChecker": 139.88,
+            "mathEvaluator": 282.02,
+            "rsaKeyPairGenerator": 247.42,
+            "cameraRecorder": 158.38
+          },
+          "warmOpen": {
+            "jsonMinify": 154.99,
+            "regexTester": 146.92,
+            "macLookup": 160.19,
+            "textDiff": 129.81,
+            "pdfSignatureChecker": 119.5,
+            "mathEvaluator": 125.62,
+            "rsaKeyPairGenerator": 247.46,
+            "cameraRecorder": 125.18
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.91
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 233.71
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2139.44
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7606.02
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 239.64,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 77826968,
+          "totalBytes": 161084272,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 16244,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 293072,
+            "privateBytes": 259736,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31108,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 119696,
+            "privateBytes": 177280,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31280,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49412,
+            "privateBytes": 12520,
+            "sharedBytes": null
+          },
+          {
+            "pid": 27240,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 987776,
+            "privateBytes": 934092,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34896,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96364,
+            "privateBytes": 10108,
+            "sharedBytes": null
+          },
+          {
+            "pid": 26948,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129500,
+            "privateBytes": 62460,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 16244,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.7313290916569503,
+            "workingSetKb": 293568,
+            "privateBytes": 259828,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31108,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.062145566382123346,
+            "workingSetKb": 119868,
+            "privateBytes": 156808,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31280,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0005477952798369686,
+            "workingSetKb": 49412,
+            "privateBytes": 12520,
+            "sharedBytes": null
+          },
+          {
+            "pid": 27240,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.056803080952642714,
+            "workingSetKb": 989772,
+            "privateBytes": 936624,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34896,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96364,
+            "privateBytes": 10108,
+            "sharedBytes": null
+          },
+          {
+            "pid": 26948,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0015642856468232604,
+            "workingSetKb": 129500,
+            "privateBytes": 62460,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 8968,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1726758912,
+            "privateBytes": 1501822976,
+            "cpuSeconds": 30.3125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1726427136,
+            "privateBytes": 1479745536,
+            "cpuSeconds": 30.96875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3892,
+          "normalizedIdleCpuPercent": 0.7
+        }
+      },
+      {
+        "iteration": 16,
+        "startupMs": 916.24,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 579.37,
+            "regexTester": 196.49,
+            "macLookup": 154.81,
+            "textDiff": 176.98,
+            "pdfSignatureChecker": 158.77,
+            "mathEvaluator": 274.04,
+            "rsaKeyPairGenerator": 264.8,
+            "cameraRecorder": 156.32
+          },
+          "warmOpen": {
+            "jsonMinify": 123.62,
+            "regexTester": 179.96,
+            "macLookup": 194.49,
+            "textDiff": 156.47,
+            "pdfSignatureChecker": 106.11,
+            "mathEvaluator": 142.49,
+            "rsaKeyPairGenerator": 227.46,
+            "cameraRecorder": 144.55
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.92
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 235.72
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2141.44
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7396.42
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 267.38,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 42825057,
+          "totalBytes": 100053789,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 29148,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 290308,
+            "privateBytes": 254212,
+            "sharedBytes": null
+          },
+          {
+            "pid": 40804,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 118768,
+            "privateBytes": 165952,
+            "sharedBytes": null
+          },
+          {
+            "pid": 29224,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49316,
+            "privateBytes": 12412,
+            "sharedBytes": null
+          },
+          {
+            "pid": 8076,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 642684,
+            "privateBytes": 586584,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34192,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96368,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 19016,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129516,
+            "privateBytes": 62860,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 29148,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.7852025502608582,
+            "workingSetKb": 292488,
+            "privateBytes": 256440,
+            "sharedBytes": null
+          },
+          {
+            "pid": 40804,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.07349061385850224,
+            "workingSetKb": 119204,
+            "privateBytes": 162008,
+            "sharedBytes": null
+          },
+          {
+            "pid": 29224,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0006944650779569474,
+            "workingSetKb": 49324,
+            "privateBytes": 12412,
+            "sharedBytes": null
+          },
+          {
+            "pid": 8076,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.0963278751428311,
+            "workingSetKb": 623436,
+            "privateBytes": 566084,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34192,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96368,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 19016,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0016447833837969382,
+            "workingSetKb": 129516,
+            "privateBytes": 62860,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 29048,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1354039296,
+            "privateBytes": 1113567232,
+            "cpuSeconds": 28.40625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1349636096,
+            "privateBytes": 1102667776,
+            "cpuSeconds": 28.9375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3518,
+          "normalizedIdleCpuPercent": 0.63
+        }
+      },
+      {
+        "iteration": 17,
+        "startupMs": 993.24,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 427.49,
+            "regexTester": 252.37,
+            "macLookup": 171.14,
+            "textDiff": 165.82,
+            "pdfSignatureChecker": 139.01,
+            "mathEvaluator": 248.8,
+            "rsaKeyPairGenerator": 214.51,
+            "cameraRecorder": 160.07
+          },
+          "warmOpen": {
+            "jsonMinify": 135.11,
+            "regexTester": 167.53,
+            "macLookup": 176.14,
+            "textDiff": 140.85,
+            "pdfSignatureChecker": 107.04,
+            "mathEvaluator": 123.63,
+            "rsaKeyPairGenerator": 209.48,
+            "cameraRecorder": 106.17
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.6
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 220.19
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2133.81
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 16570.35
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 271.3,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 78006527,
+          "totalBytes": 129102263,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 28880,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 290112,
+            "privateBytes": 254532,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34036,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 121964,
+            "privateBytes": 176448,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25596,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49416,
+            "privateBytes": 12524,
+            "sharedBytes": null
+          },
+          {
+            "pid": 12296,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 643680,
+            "privateBytes": 587728,
+            "sharedBytes": null
+          },
+          {
+            "pid": 11388,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96324,
+            "privateBytes": 10116,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22952,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129432,
+            "privateBytes": 61224,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 28880,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 1.15820936578743,
+            "workingSetKb": 281428,
+            "privateBytes": 243784,
+            "sharedBytes": null
+          },
+          {
+            "pid": 34036,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.06869155311539545,
+            "workingSetKb": 121592,
+            "privateBytes": 154420,
+            "sharedBytes": null
+          },
+          {
+            "pid": 25596,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0012573873261539092,
+            "workingSetKb": 49364,
+            "privateBytes": 12424,
+            "sharedBytes": null
+          },
+          {
+            "pid": 12296,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.05682803205297693,
+            "workingSetKb": 644840,
+            "privateBytes": 589496,
+            "sharedBytes": null
+          },
+          {
+            "pid": 11388,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96324,
+            "privateBytes": 10116,
+            "sharedBytes": null
+          },
+          {
+            "pid": 22952,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001724497872580751,
+            "workingSetKb": 129432,
+            "privateBytes": 61224,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 1932,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1372508160,
+            "privateBytes": 1138753536,
+            "cpuSeconds": 29.203125,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1360027648,
+            "privateBytes": 1098461184,
+            "cpuSeconds": 30.265625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3819,
+          "normalizedIdleCpuPercent": 1.16
+        }
+      },
+      {
+        "iteration": 18,
+        "startupMs": 924.84,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 587.71,
+            "regexTester": 186.26,
+            "macLookup": 199.28,
+            "textDiff": 193.48,
+            "pdfSignatureChecker": 176.29,
+            "mathEvaluator": 316.41,
+            "rsaKeyPairGenerator": 245.61,
+            "cameraRecorder": 169.43
+          },
+          "warmOpen": {
+            "jsonMinify": 133.24,
+            "regexTester": 158.78,
+            "macLookup": 175.26,
+            "textDiff": 106.75,
+            "pdfSignatureChecker": 141.18,
+            "mathEvaluator": 126.2,
+            "rsaKeyPairGenerator": 215.43,
+            "cameraRecorder": 119
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.15
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 250.77
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2118.85
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8264.9
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 267.12,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 109659075,
+          "totalBytes": 130244595,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 26888,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 288880,
+            "privateBytes": 254528,
+            "sharedBytes": null
+          },
+          {
+            "pid": 39004,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 120796,
+            "privateBytes": 170484,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3196,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49368,
+            "privateBytes": 12444,
+            "sharedBytes": null
+          },
+          {
+            "pid": 23972,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 640416,
+            "privateBytes": 588484,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31636,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96344,
+            "privateBytes": 10104,
+            "sharedBytes": null
+          },
+          {
+            "pid": 37072,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129408,
+            "privateBytes": 62608,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 26888,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.7446429967364665,
+            "workingSetKb": 289224,
+            "privateBytes": 254692,
+            "sharedBytes": null
+          },
+          {
+            "pid": 39004,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.061384200097994064,
+            "workingSetKb": 119888,
+            "privateBytes": 158580,
+            "sharedBytes": null
+          },
+          {
+            "pid": 3196,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0008911135609661708,
+            "workingSetKb": 49368,
+            "privateBytes": 12444,
+            "sharedBytes": null
+          },
+          {
+            "pid": 23972,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.28192396575072554,
+            "workingSetKb": 621088,
+            "privateBytes": 564780,
+            "sharedBytes": null
+          },
+          {
+            "pid": 31636,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96344,
+            "privateBytes": 10104,
+            "sharedBytes": null
+          },
+          {
+            "pid": 37072,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001627813665902384,
+            "workingSetKb": 129420,
+            "privateBytes": 62608,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 28100,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1366958080,
+            "privateBytes": 1135308800,
+            "cpuSeconds": 29.25,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1344802816,
+            "privateBytes": 1094737920,
+            "cpuSeconds": 29.984375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 4121,
+          "normalizedIdleCpuPercent": 0.74
+        }
+      },
+      {
+        "iteration": 19,
+        "startupMs": 907.66,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 542.74,
+            "regexTester": 199.24,
+            "macLookup": 169.25,
+            "textDiff": 177.72,
+            "pdfSignatureChecker": 159.4,
+            "mathEvaluator": 248.25,
+            "rsaKeyPairGenerator": 282.14,
+            "cameraRecorder": 142.07
+          },
+          "warmOpen": {
+            "jsonMinify": 138.4,
+            "regexTester": 145.31,
+            "macLookup": 177.95,
+            "textDiff": 142.24,
+            "pdfSignatureChecker": 123.93,
+            "mathEvaluator": 123.77,
+            "rsaKeyPairGenerator": 338.11,
+            "cameraRecorder": 122.22
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 34.38
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 219.57
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2158.35
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 8860.55
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 261.13,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 119563104,
+          "totalBytes": 138371196,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 30736,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 288480,
+            "privateBytes": 253456,
+            "sharedBytes": null
+          },
+          {
+            "pid": 40476,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 118820,
+            "privateBytes": 164840,
+            "sharedBytes": null
+          },
+          {
+            "pid": 38420,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49284,
+            "privateBytes": 12376,
+            "sharedBytes": null
+          },
+          {
+            "pid": 36696,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 971404,
+            "privateBytes": 917680,
+            "sharedBytes": null
+          },
+          {
+            "pid": 10356,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96364,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 29384,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129528,
+            "privateBytes": 62304,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 30736,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.6036672707952214,
+            "workingSetKb": 289580,
+            "privateBytes": 255120,
+            "sharedBytes": null
+          },
+          {
+            "pid": 40476,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.06381426764848924,
+            "workingSetKb": 119232,
+            "privateBytes": 156992,
+            "sharedBytes": null
+          },
+          {
+            "pid": 38420,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0008777386507684603,
+            "workingSetKb": 49284,
+            "privateBytes": 12376,
+            "sharedBytes": null
+          },
+          {
+            "pid": 36696,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.35858728001017043,
+            "workingSetKb": 950604,
+            "privateBytes": 894028,
+            "sharedBytes": null
+          },
+          {
+            "pid": 10356,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96364,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 29384,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.0014852954570014636,
+            "workingSetKb": 129528,
+            "privateBytes": 62304,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 24368,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1705205760,
+            "privateBytes": 1466454016,
+            "cpuSeconds": 30.875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1681420288,
+            "privateBytes": 1430228992,
+            "cpuSeconds": 31.5625,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 3554,
+          "normalizedIdleCpuPercent": 0.81
+        }
+      },
+      {
+        "iteration": 20,
+        "startupMs": 947.26,
+        "appVersion": "2026.10.16-08de8e6",
+        "electronVersion": "44.8.0",
+        "electronChrome": "152.0.7977.167",
+        "electronNode": "24.22.0",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 585.73,
+            "regexTester": 178.22,
+            "macLookup": 140.97,
+            "textDiff": 141.08,
+            "pdfSignatureChecker": 159.64,
+            "mathEvaluator": 300.92,
+            "rsaKeyPairGenerator": 264.74,
+            "cameraRecorder": 123.65
+          },
+          "warmOpen": {
+            "jsonMinify": 106.34,
+            "regexTester": 160.32,
+            "macLookup": 160.02,
+            "textDiff": 107.16,
+            "pdfSignatureChecker": 159.19,
+            "mathEvaluator": 141.43,
+            "rsaKeyPairGenerator": 262.04,
+            "cameraRecorder": 125.01
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 35.05
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "durationMs": 346.04
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "durationMs": 2125.52
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "durationMs": 7627.16
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 258.05,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 43056329,
+          "totalBytes": 134918717,
+          "limitBytes": 4395630592
+        },
+        "electronMetricsBeforeIdle": [
+          {
+            "pid": 33416,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 281948,
+            "privateBytes": 245636,
+            "sharedBytes": null
+          },
+          {
+            "pid": 29544,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 120696,
+            "privateBytes": 164292,
+            "sharedBytes": null
+          },
+          {
+            "pid": 36052,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49404,
+            "privateBytes": 12448,
+            "sharedBytes": null
+          },
+          {
+            "pid": 37220,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 1057196,
+            "privateBytes": 1011900,
+            "sharedBytes": null
+          },
+          {
+            "pid": 17160,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96340,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 6708,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 129492,
+            "privateBytes": 61572,
+            "sharedBytes": null
+          }
+        ],
+        "electronMetricsAfterIdle": [
+          {
+            "pid": 33416,
+            "type": "Browser",
+            "cpuPercentSincePreviousSnapshot": 0.8275733200220571,
+            "workingSetKb": 281336,
+            "privateBytes": 246184,
+            "sharedBytes": null
+          },
+          {
+            "pid": 29544,
+            "type": "GPU",
+            "cpuPercentSincePreviousSnapshot": 0.049080448450932096,
+            "workingSetKb": 120412,
+            "privateBytes": 159816,
+            "sharedBytes": null
+          },
+          {
+            "pid": 36052,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 49404,
+            "privateBytes": 12448,
+            "sharedBytes": null
+          },
+          {
+            "pid": 37220,
+            "type": "Tab",
+            "cpuPercentSincePreviousSnapshot": 0.07731700580786614,
+            "workingSetKb": 1041252,
+            "privateBytes": 987864,
+            "sharedBytes": null
+          },
+          {
+            "pid": 17160,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0,
+            "workingSetKb": 96340,
+            "privateBytes": 10112,
+            "sharedBytes": null
+          },
+          {
+            "pid": 6708,
+            "type": "Utility",
+            "cpuPercentSincePreviousSnapshot": 0.001499789180577447,
+            "workingSetKb": 129492,
+            "privateBytes": 61572,
+            "sharedBytes": null
+          }
+        ],
+        "processGroup": {
+          "rootPid": 24076,
+          "beforeIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1767616512,
+            "privateBytes": 1525583872,
+            "cpuSeconds": 28.84375,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "afterIdle": {
+            "processCount": 7,
+            "workingSetBytes": 1767165952,
+            "privateBytes": 1519710208,
+            "cpuSeconds": 29.421875,
+            "cpuTimeResolution": "PowerShell Get-Process CPU seconds"
+          },
+          "idleWindowMs": 4487,
+          "normalizedIdleCpuPercent": 0.54
+        }
+      }
+    ]
+  },
+  "failures": [],
+  "summary": {
+    "web": {
+      "startupMs": {
+        "samples": 20,
+        "median": 910.34,
+        "p95": 5250
+      },
+      "normalizedIdleCpuPercent": {
+        "samples": 20,
+        "median": 0.16,
+        "p95": 0.82
+      },
+      "workingSetBytes": {
+        "samples": 20,
+        "median": 1585063936,
+        "p95": 2236993536
+      },
+      "privateBytes": {
+        "samples": 20,
+        "median": 1377269760,
+        "p95": 2032865280
+      },
+      "rendererHeapUsedBytes": {
+        "samples": 20,
+        "median": 111520659,
+        "p95": 200131633
+      },
+      "toolFirstOpenMs": {
+        "jsonMinify": {
+          "samples": 20,
+          "median": 393.99,
+          "p95": 4576.59
+        },
+        "regexTester": {
+          "samples": 20,
+          "median": 192.97,
+          "p95": 213.79
+        },
+        "macLookup": {
+          "samples": 20,
+          "median": 159.09,
+          "p95": 194.67
+        },
+        "textDiff": {
+          "samples": 20,
+          "median": 123.82,
+          "p95": 161.46
+        },
+        "pdfSignatureChecker": {
+          "samples": 20,
+          "median": 124.64,
+          "p95": 202.14
+        },
+        "mathEvaluator": {
+          "samples": 20,
+          "median": 228.1,
+          "p95": 653.21
+        },
+        "rsaKeyPairGenerator": {
+          "samples": 20,
+          "median": 237.79,
+          "p95": 920.99
+        },
+        "cameraRecorder": {
+          "samples": 20,
+          "median": 107.1,
+          "p95": 1909.83
+        }
+      },
+      "toolWarmOpenMs": {
+        "jsonMinify": {
+          "samples": 20,
+          "median": 107.13,
+          "p95": 123.17
+        },
+        "regexTester": {
+          "samples": 20,
+          "median": 122.51,
+          "p95": 141.62
+        },
+        "macLookup": {
+          "samples": 20,
+          "median": 139.82,
+          "p95": 156.99
+        },
+        "textDiff": {
+          "samples": 20,
+          "median": 106.99,
+          "p95": 122.8
+        },
+        "pdfSignatureChecker": {
+          "samples": 20,
+          "median": 104.81,
+          "p95": 121.14
+        },
+        "mathEvaluator": {
+          "samples": 20,
+          "median": 107.14,
+          "p95": 108.55
+        },
+        "rsaKeyPairGenerator": {
+          "samples": 20,
+          "median": 209.79,
+          "p95": 318.19
+        },
+        "cameraRecorder": {
+          "samples": 20,
+          "median": 106.32,
+          "p95": 107.29
+        }
+      },
+      "interactions": {
+        "json.small": {
+          "samples": 20,
+          "median": 205.9,
+          "p95": 216.22
+        },
+        "json.large": {
+          "samples": 20,
+          "median": 2127.88,
+          "p95": 3630.25
+        },
+        "json.stress": {
+          "samples": 20,
+          "median": 7806.42,
+          "p95": 10937.64
+        },
+        "regexMatch": {
+          "samples": 20,
+          "median": 129.64,
+          "p95": 909.67
+        },
+        "mathEvaluation": {
+          "samples": 20,
+          "median": 33.78,
+          "p95": 34.49
+        }
+      }
+    },
+    "electron": {
+      "startupMs": {
+        "samples": 20,
+        "median": 924.63,
+        "p95": 993.24
+      },
+      "normalizedIdleCpuPercent": {
+        "samples": 20,
+        "median": 0.74,
+        "p95": 1.16
+      },
+      "workingSetBytes": {
+        "samples": 20,
+        "median": 1596528640,
+        "p95": 2112647168
+      },
+      "privateBytes": {
+        "samples": 20,
+        "median": 1343221760,
+        "p95": 1891971072
+      },
+      "rendererHeapUsedBytes": {
+        "samples": 20,
+        "median": 107599605.5,
+        "p95": 167600193
+      },
+      "toolFirstOpenMs": {
+        "jsonMinify": {
+          "samples": 20,
+          "median": 551.1,
+          "p95": 612.25
+        },
+        "regexTester": {
+          "samples": 20,
+          "median": 194.96,
+          "p95": 214.5
+        },
+        "macLookup": {
+          "samples": 20,
+          "median": 157.6,
+          "p95": 176.69
+        },
+        "textDiff": {
+          "samples": 20,
+          "median": 159.09,
+          "p95": 193.48
+        },
+        "pdfSignatureChecker": {
+          "samples": 20,
+          "median": 160.05,
+          "p95": 192.68
+        },
+        "mathEvaluator": {
+          "samples": 20,
+          "median": 277.93,
+          "p95": 300.92
+        },
+        "rsaKeyPairGenerator": {
+          "samples": 20,
+          "median": 259.71,
+          "p95": 338.4
+        },
+        "cameraRecorder": {
+          "samples": 20,
+          "median": 155.7,
+          "p95": 176.37
+        }
+      },
+      "toolWarmOpenMs": {
+        "jsonMinify": {
+          "samples": 20,
+          "median": 139.76,
+          "p95": 180.44
+        },
+        "regexTester": {
+          "samples": 20,
+          "median": 160.39,
+          "p95": 1416.99
+        },
+        "macLookup": {
+          "samples": 20,
+          "median": 166.1,
+          "p95": 194.49
+        },
+        "textDiff": {
+          "samples": 20,
+          "median": 141.28,
+          "p95": 1311.34
+        },
+        "pdfSignatureChecker": {
+          "samples": 20,
+          "median": 131.02,
+          "p95": 187.4
+        },
+        "mathEvaluator": {
+          "samples": 20,
+          "median": 134.38,
+          "p95": 387.78
+        },
+        "rsaKeyPairGenerator": {
+          "samples": 20,
+          "median": 248.86,
+          "p95": 319.4
+        },
+        "cameraRecorder": {
+          "samples": 20,
+          "median": 124.79,
+          "p95": 144.55
+        }
+      },
+      "interactions": {
+        "json.small": {
+          "samples": 20,
+          "median": 232.87,
+          "p95": 346.04
+        },
+        "json.large": {
+          "samples": 20,
+          "median": 2141.8,
+          "p95": 2365.84
+        },
+        "json.stress": {
+          "samples": 20,
+          "median": 7652.51,
+          "p95": 10264.36
+        },
+        "regexMatch": {
+          "samples": 20,
+          "median": 262.65,
+          "p95": 289.58
+        },
+        "mathEvaluation": {
+          "samples": 20,
+          "median": 35.63,
+          "p95": 44.62
+        }
+      }
+    }
+  },
+  "coverage": {
+    "measuredHost": "windows",
+    "selectedRuntimes": [
+      "web",
+      "electron"
+    ],
+    "repetitionsPerRuntime": {
+      "web": 20,
+      "electron": 20
+    },
+    "meetsTwentyRunTarget": true,
+    "unmeasuredPlatforms": [
+      "linux",
+      "macos"
+    ],
+    "gaps": [
+      "Signed PDF file parsing was not measured; the baseline measures PDF dependency and page readiness.",
+      "Camera and microphone permissions or capture were not requested; only Camera Recorder page readiness was measured.",
+      "Catastrophic regex-backtracking payloads were excluded until P2 provides bounded, cancellable execution.",
+      "Native-window timing and user-visible interaction require a separate Computer Use run; these samples use automated browser control.",
+      "No measurements were taken on: linux, macos."
+    ]
+  }
+}
