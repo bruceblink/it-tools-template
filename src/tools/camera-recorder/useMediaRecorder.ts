@@ -1,10 +1,10 @@
-import { type Ref, computed, ref } from 'vue';
+import { type Ref, computed, onScopeDispose, ref } from 'vue';
 
 export { useMediaRecorder };
 
 function useMediaRecorder({ stream }: { stream: Ref<MediaStream | undefined> }): {
   isRecordingSupported: Ref<boolean>
-  recordingState: Ref<'stopped' | 'recording' | 'paused'>
+  recordingState: Ref<'stopped' | 'recording' | 'paused' | 'stopping'>
   startRecording: () => void
   stopRecording: () => void
   pauseRecording: () => void
@@ -15,7 +15,7 @@ function useMediaRecorder({ stream }: { stream: Ref<MediaStream | undefined> }):
   const mediaRecorder = ref<MediaRecorder | null>(null);
   const recordedChunks = ref<Blob[]>([]);
   const recordAvailable = createEventHook();
-  const recordingState = ref<'stopped' | 'recording' | 'paused'>('stopped');
+  const recordingState = ref<'stopped' | 'recording' | 'paused' | 'stopping'>('stopped');
 
   const createVideo = () => {
     const blob = new Blob(recordedChunks.value, { type: 'video/webm' });
@@ -35,23 +35,29 @@ function useMediaRecorder({ stream }: { stream: Ref<MediaStream | undefined> }):
       return;
     }
 
-    mediaRecorder.value = new MediaRecorder(stream.value, { mimeType: 'video/webm' });
+    const recorder = new MediaRecorder(stream.value, { mimeType: 'video/webm' });
+    mediaRecorder.value = recorder;
 
-    mediaRecorder.value.ondataavailable = (e) => {
+    recorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
         recordedChunks.value.push(e.data);
       }
     };
 
-    mediaRecorder.value.onstop = () => {
+    recorder.onstop = () => {
+      mediaRecorder.value = null;
+      recordingState.value = 'stopped';
       recordAvailable.trigger(createVideo());
     };
 
-    if (mediaRecorder.value.state !== 'inactive') {
+    if (recorder.state !== 'inactive') {
+      mediaRecorder.value = null;
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
       return;
     }
 
-    mediaRecorder.value.start();
+    recorder.start();
     recordingState.value = 'recording';
   };
 
@@ -62,12 +68,20 @@ function useMediaRecorder({ stream }: { stream: Ref<MediaStream | undefined> }):
     if (!mediaRecorder.value) {
       return;
     }
-    if (recordingState.value === 'stopped') {
+    if (recordingState.value === 'stopped' || recordingState.value === 'stopping') {
       return;
     }
 
-    mediaRecorder.value.stop();
-    recordingState.value = 'stopped';
+    const recorder = mediaRecorder.value;
+    const previousState = recordingState.value;
+    recordingState.value = 'stopping';
+    try {
+      recorder.stop();
+    }
+    catch (error) {
+      recordingState.value = previousState;
+      throw error;
+    }
   };
 
   const pauseRecording = () => {
@@ -100,6 +114,25 @@ function useMediaRecorder({ stream }: { stream: Ref<MediaStream | undefined> }):
     mediaRecorder.value.resume();
     recordingState.value = 'recording';
   };
+
+  // Stop active capture and discard unfinished chunks when the owning tool scope closes.
+  const dispose = () => {
+    const recorder = mediaRecorder.value;
+    mediaRecorder.value = null;
+    recordingState.value = 'stopped';
+    recordedChunks.value = [];
+    if (!recorder) {
+      return;
+    }
+
+    recorder.ondataavailable = null;
+    recorder.onstop = null;
+    recorder.onerror = null;
+    if (recorder.state !== 'inactive') {
+      recorder.stop();
+    }
+  };
+  onScopeDispose(dispose);
 
   return {
     isRecordingSupported,

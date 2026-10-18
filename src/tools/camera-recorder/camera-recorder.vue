@@ -3,9 +3,10 @@ import _ from 'lodash';
 import { useMessage } from 'naive-ui';
 import { isElectronRuntime, saveFileContent } from '@/platform-adapter';
 
+import { useCameraMediaCollection } from './media-resource';
 import { useMediaRecorder } from './useMediaRecorder';
 
-interface Media { type: 'image' | 'video'; value: string; createdAt: Date }
+type Media = import('./media-resource').CameraMediaResource;
 
 const {
   videoInputs: cameras,
@@ -22,7 +23,7 @@ const {
 });
 
 const video = ref<HTMLVideoElement>();
-const medias = ref<Media[]>([]);
+const { mediaItems: medias, addMedia, removeMedia } = useCameraMediaCollection();
 const currentCamera = ref(cameras.value[0]?.deviceId);
 const currentMicrophone = ref(microphones.value[0]?.deviceId);
 const permissionRequestFailed = ref(false);
@@ -55,7 +56,7 @@ const {
 });
 
 onRecordAvailable((value) => {
-  medias.value.unshift({ type: 'video', value, createdAt: new Date() });
+  addMedia({ type: 'video', value, createdAt: new Date() });
 });
 
 function refreshCurrentDevices() {
@@ -79,7 +80,7 @@ function takeScreenshot() {
   canvas.getContext('2d')?.drawImage(video.value, 0, 0);
   const image = canvas.toDataURL('image/png');
 
-  medias.value.unshift({ type: 'image', value: image, createdAt: new Date() });
+  addMedia({ type: 'image', value: image, createdAt: new Date() });
 }
 
 watchEffect(() => {
@@ -106,6 +107,7 @@ function downloadMedia({ type, value, createdAt }: Media) {
     message.error(result.status === 'unsupported' ? 'File downloads are not supported in this context.' : 'Could not start the media download.');
   }
 }
+
 </script>
 
 <template>
@@ -188,7 +190,7 @@ function downloadMedia({ type, value, createdAt }: Media) {
               Resume
             </c-button>
 
-            <c-button v-if="recordingState !== 'stopped'" type="error" @click="stopRecording">
+            <c-button v-if="recordingState !== 'stopped'" type="error" :disabled="recordingState === 'stopping'" @click="stopRecording">
               <span mr-2> <icon-mdi-record /></span>
               Stop
             </c-button>
@@ -216,7 +218,7 @@ function downloadMedia({ type, value, createdAt }: Media) {
               <icon-mdi-download />
             </c-button>
 
-            <c-button @click="medias = medias.filter((_ignored, i) => i !== index)">
+            <c-button @click="removeMedia(index)">
               <icon-mdi-delete-outline />
             </c-button>
           </div>

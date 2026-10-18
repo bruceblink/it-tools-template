@@ -265,6 +265,12 @@ Electron E2E 在 20 轮路由循环中执行 80 个 TOML Worker 任务，并在�
 
 新增对象中，`code`、`DOMRectReadOnly`、`ComputedStyle` 和 `LayoutShift` 等分组增长较多。代表性的 `code` 引用路径从 `DocumentTimeline`、CSS transition 和选中菜单项进入 Vue 点击处理器，再到 V8 代码对象。报告的前 12 条路径未显示任务 Worker 或任务输入被保留。这些结果支持本次 TOML 循环没有出现明显的持续堆增长；它们不证明所有页面、浏览器或媒体设备都没有资源泄漏。该测量只统计 `window` 和 `document` 监听器。其他事件目标、摄像头流、录像 Blob URL、真实窗口和 Linux/macOS 仍待验收。
 
+### P2 第五片：摄像头录制资源生命周期
+
+摄像头工具现在会在录制停止事件完成后才允许开始下一段录制。工具作用域关闭时会解除 `MediaRecorder` 事件处理器、停止活动录制并丢弃未完成的数据。移除录像时，以及摄像头工具离开页面时，媒体集合会撤销所属的 Blob URL；截图使用的 data URL 不做撤销。单测覆盖停止事件期间拒绝重启、页面关闭时停止并丢弃未完成录制，以及录像删除和页面关闭时的 URL 回收。
+
+本片新增的 3 项生命周期单测和完整 `pnpm check` 通过；完整检查共 102 个单测文件、636 项测试，并通过类型检查、lint、Web 与 Electron 构建。Computer Use 的应用清单仍返回空列表，且 `listWindows` 接口不可用，因此没有真实窗口或摄像头硬件验收。本片验证生命周期控制逻辑，不代表已测量真实媒体流、`MediaRecorder` 浏览器实现或跨平台资源回收。Electron 媒体权限和 Linux/macOS 行为仍待验收。
+
 ### P3：让新增工具通过同一条接入路径
 
 - 在现有 `defineTool` 上渐进引入 ToolDefinition：稳定 `id`、`path`、别名、分类 ID、翻译键、懒加载入口、支持平台、数据处理策略、离线条件和所需能力。保持 117 个工具路径及收藏兼容。
