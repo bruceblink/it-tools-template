@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { format } from 'prettier';
-import htmlParser from 'prettier/plugins/html';
 import Editor from './editor/editor.vue';
 import TextareaCopyable from '@/components/TextareaCopyable.vue';
 
 const html = ref('<h1>Hey!</h1><p>Welcome to this html wysiwyg editor</p>');
 
-const formattedHtml = asyncComputed(() => format(html.value, { parser: 'html', plugins: [htmlParser] }), '');
+// Defer formatting code so the editor can render before loading its output formatter.
+const formattedHtml = asyncComputed(async () => {
+  const [{ format }, { default: htmlParser }] = await Promise.all([
+    import('prettier'),
+    import('prettier/plugins/html'),
+  ]);
+
+  return format(html.value, { parser: 'html', plugins: [htmlParser] });
+}, '');
 
 function downloadHtml() {
   const blob = new Blob([formattedHtml.value], { type: 'text/html' });
