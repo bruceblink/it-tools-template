@@ -51,6 +51,8 @@ describe('MAC address OUI lookup service', () => {
 
   it('aborts pending shard requests when the caller cancels the lookup', async () => {
     const controller = new AbortController();
+    const addAbortListener = vi.spyOn(controller.signal, 'addEventListener');
+    const removeAbortListener = vi.spyOn(controller.signal, 'removeEventListener');
     let requestSignal: AbortSignal | undefined;
     const fetchResource = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
       requestSignal = init?.signal ?? undefined;
@@ -62,6 +64,9 @@ describe('MAC address OUI lookup service', () => {
 
     await expect(request).rejects.toBeInstanceOf(OuiDataUnavailableError);
     expect(requestSignal?.aborted).toBe(true);
+    const abortRegistration = addAbortListener.mock.calls.find(([type]) => type === 'abort');
+    expect(abortRegistration?.[1]).toEqual(expect.any(Function));
+    expect(removeAbortListener).toHaveBeenCalledWith('abort', abortRegistration?.[1]);
   });
 
   it('deduplicates concurrent manifest and shard requests', async () => {

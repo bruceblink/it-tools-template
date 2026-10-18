@@ -275,6 +275,10 @@ Electron E2E 在 20 轮路由循环中执行 80 个 TOML Worker 任务，并在�
 
 Electron E2E 对 Keycode Info 页面执行 20 次进入和离开，并通过 CDP 统计 `document` 上的 `keydown` 监听器。每轮进入页面时计数从 0 增至 1，返回主页后回到 0；最大计数保持为 1。该结果证明此页面的 VueUse 监听器在路由离开时释放，未逐轮累积。测试在 Electron 44.8.0 上通过。它没有覆盖其他 `EventTarget` 类别或 Linux/macOS。
 
+### P2 第七片：结束 OUI 请求时移除 AbortSignal 监听器
+
+OUI 请求服务在调用方传入 `AbortSignal` 时注册取消监听器，并在请求结束后通过 `cleanup` 移除监听器和超时器。单测现在记录外部 signal 的监听器注册与移除调用，并确认同一个 abort 回调会被移除；取消后底层请求已中止，页面仍收到受控的 OUI 不可用错误。MAC/OUI 服务的 6 项单测和定向 lint 通过。该证据不覆盖浏览器 UI 路由或其他 `EventTarget` 类别。
+
 ### P3：让新增工具通过同一条接入路径
 
 - 在现有 `defineTool` 上渐进引入 ToolDefinition：稳定 `id`、`path`、别名、分类 ID、翻译键、懒加载入口、支持平台、数据处理策略、离线条件和所需能力。保持 117 个工具路径及收藏兼容。
