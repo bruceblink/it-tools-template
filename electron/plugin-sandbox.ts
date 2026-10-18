@@ -181,7 +181,11 @@ export async function createPluginSandboxWindow(
     }
   });
   onWebContentsCreated(window.webContents, registration.pluginId);
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (!window.isDestroyed()) {
+      window.show();
+    }
+  });
   try {
     let timeout: ReturnType<typeof setTimeout>;
     await Promise.race([

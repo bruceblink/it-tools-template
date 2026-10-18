@@ -372,7 +372,11 @@ async function createMainWindow() {
   });
 
   mainWindow = window;
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (!window.isDestroyed()) {
+      window.show();
+    }
+  });
   window.on('closed', () => {
     if (mainWindow === window) {
       mainWindow = null;
