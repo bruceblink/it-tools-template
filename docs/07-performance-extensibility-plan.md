@@ -163,6 +163,14 @@ Electron 保持 context isolation、进程 sandbox、导航限制和 IPC 来源�
 
 验收：桌面独立插件故障后宿主仍可操作并能停用插件；插件不能读取宿主存储、其他插件数据或未经授权的文件。Web 不具备的能力有清楚的降级结果；Web 独立插件隔离若未通过，继续提供构建时工具包。
 
+#### P5 第一片：Electron 沙箱渲染器原型（2026-10-18）
+
+新增 `electron/plugin-sandbox.ts`，使用 `it-plugin://<pluginId>/` 作为插件来源。每个插件 ID 使用独立、非持久 Session。插件窗口不加载 preload，并开启 `nodeIntegration: false`、`contextIsolation: true`、`sandbox: true` 和 `webSecurity: true`。插件的 CSP 默认拒绝资源，只允许同源脚本、样式、图片、字体和 Worker；`connect-src` 不允许网络请求。Session 同时拒绝 HTTP、HTTPS、WebSocket、FTP、权限请求和下载。宿主也拒绝插件窗口的新窗口与外部导航。静态文件复用已存在的真实路径、符号链接和目录越界检查；单个资源最大 16 MiB。
+
+Electron smoke 仅在非打包测试运行且显式设置 `IT_TOOLS_PLUGIN_SANDBOX_TEST=1` 时加载仓库内样例。自动化验收检查安全上下文、无 Node.js 和 preload API、插件与宿主的本地存储隔离、弹窗拒绝，以及请求到本地 HTTP 服务被阻止。单元测试覆盖插件 ID、来源、入口路径、CSP、目录绑定和文件路径边界。同一 Session 在进程内绑定一个包目录；当前没有升级流程可在运行中替换目录。该原型不安装 ZIP 包，不校验来源签名，不提供 Capability Broker，也不宣称每个插件都占用独立操作系统进程。插件清单验证和只写入暂存目录的安全安装流程仍是下一片。
+
+`pnpm check` 通过 96 个测试文件、599 项测试、类型检查、lint 和 Web/Electron 构建。`pnpm test:e2e:electron` 的 9 项回归全部通过，其中 1 项验证沙箱原型。Electron 自动化窗口验收通过；Computer Use helper 仍无法初始化，因此没有手动控制真实桌面窗口的证据。
+
 ## 性能验收与 CI 演进
 
 | 指标 | 实施目标 | 验收方式 |

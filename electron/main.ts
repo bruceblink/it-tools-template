@@ -24,6 +24,11 @@ import {
   getRequestedMediaTypes,
   type MediaDeviceType,
 } from './media-permissions';
+import {
+  createPluginSandboxWindow,
+  isPluginRendererUrl,
+  PLUGIN_SCHEME,
+} from './plugin-sandbox';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -43,6 +48,14 @@ protocol.registerSchemesAsPrivileged([{
     corsEnabled: true,
     stream: true,
   },
+}, {
+  scheme: PLUGIN_SCHEME,
+  privileges: {
+    standard: true,
+    secure: true,
+    supportFetchAPI: true,
+    stream: true,
+  },
 }]);
 
 let mainWindow: BrowserWindow | null = null;
@@ -50,6 +63,7 @@ let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
 const pendingMediaPrompts = new WeakMap<WebContents, Map<string, Promise<boolean>>>();
+const pluginRendererIds = new WeakMap<WebContents, string>();
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
@@ -73,6 +87,9 @@ else {
     installPermissionPolicy();
     installRuntimeInfoIpc();
     await createMainWindow();
+    if (!app.isPackaged && process.env.IT_TOOLS_PLUGIN_SANDBOX_TEST === '1') {
+      await openPluginSandboxProof();
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -254,6 +271,9 @@ function installRuntimeInfoIpc() {
 
 function attachWebContentsSecurity(contents: WebContents) {
   contents.setWindowOpenHandler(({ url, referrer }) => {
+    if (pluginRendererIds.has(contents)) {
+      return { action: 'deny' };
+    }
     const sourceUrl = referrer.url || contents.getURL();
     if (!isTrustedRendererUrl(sourceUrl, trustedRendererUrl)) {
       return { action: 'deny' };
@@ -279,18 +299,33 @@ function attachWebContentsSecurity(contents: WebContents) {
   });
 
   contents.on('will-navigate', (event, url) => {
-    if (!isTrustedRendererUrl(url, trustedRendererUrl)) {
+    if (!isAllowedRendererNavigation(contents, url)) {
       event.preventDefault();
     }
   });
   contents.on('will-redirect', (event, url) => {
-    if (!isTrustedRendererUrl(url, trustedRendererUrl)) {
+    if (!isAllowedRendererNavigation(contents, url)) {
       event.preventDefault();
     }
   });
   contents.on('will-attach-webview', (event) => {
     event.preventDefault();
   });
+}
+
+function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
+  const pluginId = pluginRendererIds.get(contents);
+  return pluginId
+    ? isPluginRendererUrl(url, pluginId)
+    : isTrustedRendererUrl(url, trustedRendererUrl);
+}
+
+async function openPluginSandboxProof(): Promise<void> {
+  await createPluginSandboxWindow({
+    pluginId: 'org.it-tools.sandbox-proof',
+    packageRoot: resolve(app.getAppPath(), 'electron/plugin-fixtures/sample'),
+    entrypoint: 'index.html',
+  }, (contents, pluginId) => pluginRendererIds.set(contents, pluginId));
 }
 
 async function openExternalLink(candidate: string) {
