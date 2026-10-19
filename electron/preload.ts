@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { PostgresConnectionInput } from '../src/shared/desktop-services/database';
+import type { PostgresConnectionInput, PostgresDataPageInput } from '../src/shared/desktop-services/database';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:tables', { sessionId, schema }),
   getDatabaseStructure: (sessionId: string, schema: string, table: string) =>
     ipcRenderer.invoke('desktop:database:structure', { sessionId, schema, table }),
+  getDatabaseDataPage: (sessionId: string, schema: string, table: string, page: PostgresDataPageInput) =>
+    ipcRenderer.invoke('desktop:database:data-page', { sessionId, schema, table, page }),
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
   activatePlugin: (pluginId: string, version: string, grantedCapabilities: readonly string[]) =>

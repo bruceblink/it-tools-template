@@ -1,5 +1,5 @@
-import type { DatabaseBridgeResult, PostgresConnectionInput } from '../../src/shared/desktop-services/database';
-import { isValidDatabaseIdentifier, isValidPostgresConnectionInput } from './postgres-service';
+import type { DatabaseBridgeResult, PostgresConnectionInput, PostgresDataPageInput } from '../../src/shared/desktop-services/database';
+import { isValidDatabaseIdentifier, isValidPostgresConnectionInput, isValidPostgresPageRequest } from './postgres-service';
 
 export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'connect'; sessionId: string; input: PostgresConnectionInput }
@@ -7,6 +7,7 @@ export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'list-schemas'; sessionId: string }
   | { requestId: string; operation: 'list-tables'; sessionId: string; schema: string }
   | { requestId: string; operation: 'get-structure'; sessionId: string; schema: string; table: string }
+  | { requestId: string; operation: 'get-data-page'; sessionId: string; schema: string; table: string; page: PostgresDataPageInput }
   | { requestId: string; operation: 'close' };
 
 export interface DatabaseWorkerResponse {
@@ -43,6 +44,14 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && isSessionId(value.sessionId)
     && isValidDatabaseIdentifier(value.schema)
     && isValidDatabaseIdentifier(value.table)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'get-data-page'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table', 'page'])
+    && isSessionId(value.sessionId)
+    && isValidDatabaseIdentifier(value.schema)
+    && isValidDatabaseIdentifier(value.table)
+    && isValidPostgresPageRequest(value.page)) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'close' && hasExactKeys(value, ['requestId', 'operation'])) {

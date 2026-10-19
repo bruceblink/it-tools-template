@@ -5,6 +5,9 @@ import type {
   DatabaseErrorCode,
   DatabaseTlsMode,
   PostgresColumnInfo,
+  PostgresDataCell,
+  PostgresDataPage,
+  PostgresDataPageInput,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresTableInfo,
@@ -12,13 +15,40 @@ import type {
 import {
   connectPostgres,
   disconnectDatabase,
+  getDatabaseDataPage,
   getDatabaseStructure,
   listDatabaseSchemas,
   listDatabaseTables,
   type DatabaseOperation,
 } from '@/platform-adapter/database';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+const isChineseLocale = computed(() => locale.value.toLowerCase().startsWith('zh'));
+const previewText = computed(() => isChineseLocale.value
+  ? {
+      data: '数据',
+      nullValue: 'NULL',
+      emptyValue: '空字符串',
+      noPrimaryKey: '此表没有主键。当前使用偏移分页；数据变化时，页面可能重复或遗漏行。',
+      unsupportedPrimaryKey: '此主键类型不支持稳定游标。当前使用偏移分页；数据变化时，页面可能重复或遗漏行。',
+      columnsTruncated: '此表超过 16 列。预览只显示前 16 列。',
+      limitReached: '预览已达到安全偏移上限。无法继续查看后续行。',
+      noRows: '此表没有数据行。',
+      previous: '上一页',
+      next: '下一页',
+    }
+  : {
+      data: 'Data',
+      nullValue: 'NULL',
+      emptyValue: 'Empty string',
+      noPrimaryKey: 'This table has no primary key. Pages use offset pagination and can shift while rows change.',
+      unsupportedPrimaryKey: 'This primary key type does not support a stable cursor. Pages use offset pagination and can shift while rows change.',
+      columnsTruncated: 'The table has more than 16 columns. Only the first 16 are shown in the preview.',
+      limitReached: 'The preview reached its safe offset limit. Some later rows are not available.',
+      noRows: 'This table has no rows.',
+      previous: 'Previous',
+      next: 'Next',
+    });
 const connectionForm = reactive({
   host: '127.0.0.1',
   port: 5432,
@@ -32,13 +62,25 @@ const schemas = ref<PostgresSchemaInfo[]>([]);
 const tables = ref<PostgresTableInfo[]>([]);
 const structure = ref<PostgresColumnInfo[]>([]);
 const columnsTruncated = ref(false);
+const dataPage = ref<PostgresDataPage | null>(null);
+const pageRequests = ref<PostgresDataPageInput[]>([{ cursor: null, offset: 0 }]);
+const currentPageIndex = ref(0);
+const activeTableTab = ref<'data' | 'structure'>('data');
 const selectedSchema = ref<string | null>(null);
 const selectedTable = ref<string | null>(null);
 const isConnecting = ref(false);
 const isLoadingSchemas = ref(false);
 const isLoadingTables = ref(false);
 const isLoadingStructure = ref(false);
+const isLoadingData = ref(false);
 const connectionError = ref<DatabaseErrorCode | null>(null);
+let tableRequestSequence = 0;
+let dataRequestSequence = 0;
+
+interface DatabaseDataTableRow {
+  rowId: string;
+  cells: PostgresDataCell[];
+}
 
 const schemaOptions = computed(() => schemas.value.map(({ name }) => ({ label: name, value: name })));
 const tableOptions = computed(() => tables.value.map(({ name, kind }) => ({ label: `${name} (${kind})`, value: name })));
@@ -65,12 +107,43 @@ const structureColumns = computed<DataTableColumns<PostgresColumnInfo>>(() => [
     render: row => row.primaryKey ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
   },
 ]);
+const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => (dataPage.value?.columns ?? []).map((column, index) => ({
+  title: `${column.name} · ${column.dataType}`,
+  key: `column-${index}`,
+  minWidth: 200,
+  ellipsis: { tooltip: true },
+  render: (row) => {
+    const cell = row.cells[index];
+    if (!cell) {
+      return '—';
+    }
+    if (cell.value === null) {
+      return previewText.value.nullValue;
+    }
+    if (cell.value === '') {
+      return previewText.value.emptyValue;
+    }
+    return cell.truncated ? `${cell.value}…` : cell.value;
+  },
+})));
+const dataRows = computed<DatabaseDataTableRow[]>(() => (dataPage.value?.rows ?? []).map((row, index) => ({
+  rowId: `${currentPageIndex.value}:${index}`,
+  cells: row.cells,
+})));
+const dataTableScrollWidth = computed(() => Math.max(800, (dataPage.value?.columns.length ?? 1) * 200));
+const pageLabel = computed(() => isChineseLocale.value
+  ? `第 ${currentPageIndex.value + 1} 页 · ${dataPage.value?.rows.length ?? 0} 行`
+  : `Page ${currentPageIndex.value + 1} · ${dataPage.value?.rows.length ?? 0} rows`);
 const errorMessage = computed(() => connectionError.value
   ? t(`tools.database-manager.errors.${connectionError.value}`)
   : '');
 
 function getStructureRowKey(row: PostgresColumnInfo): string {
   return row.name;
+}
+
+function getDataRowKey(row: DatabaseDataTableRow): string {
+  return row.rowId;
 }
 
 /** Send the password once, clear the visible input, and keep the session id only in page memory. */
@@ -125,10 +198,13 @@ async function refreshSchemas(sessionId: string) {
 }
 
 async function selectSchema(schema: string | null) {
+  tableRequestSequence += 1;
+  dataRequestSequence += 1;
   selectedSchema.value = schema;
   selectedTable.value = null;
   tables.value = [];
   structure.value = [];
+  dataPage.value = null;
   columnsTruncated.value = false;
   const sessionId = activeSession.value?.sessionId;
   if (!schema || !sessionId) {
@@ -155,9 +231,16 @@ async function selectSchema(schema: string | null) {
 }
 
 async function selectTable(table: string | null) {
+  const requestSequence = ++tableRequestSequence;
+  dataRequestSequence += 1;
   selectedTable.value = table;
   structure.value = [];
+  dataPage.value = null;
+  pageRequests.value = [{ cursor: null, offset: 0 }];
+  currentPageIndex.value = 0;
+  activeTableTab.value = 'data';
   columnsTruncated.value = false;
+  isLoadingData.value = false;
   const sessionId = activeSession.value?.sessionId;
   const schema = selectedSchema.value;
   if (!table || !schema || !sessionId) {
@@ -168,24 +251,92 @@ async function selectTable(table: string | null) {
   connectionError.value = null;
   try {
     const result = await getDatabaseStructure(sessionId, schema, table);
+    if (requestSequence !== tableRequestSequence) {
+      return;
+    }
     if (result.status !== 'success') {
       setOperationError(result);
       return;
     }
     structure.value = result.value.columns;
     columnsTruncated.value = result.value.columnsTruncated;
+    await loadDataPage(0, requestSequence);
   }
   finally {
     isLoadingStructure.value = false;
   }
 }
 
+/** Replace stale rows and ignore late responses after a table or page change. */
+async function loadDataPage(pageIndex: number, tableSequence: number) {
+  const sessionId = activeSession.value?.sessionId;
+  const schema = selectedSchema.value;
+  const table = selectedTable.value;
+  const page = pageRequests.value[pageIndex];
+  if (!sessionId || !schema || !table || !page) {
+    return;
+  }
+
+  const requestSequence = ++dataRequestSequence;
+  dataPage.value = null;
+  isLoadingData.value = true;
+  connectionError.value = null;
+  try {
+    const result = await getDatabaseDataPage(sessionId, schema, table, {
+      cursor: page.cursor,
+      offset: page.offset,
+    });
+    if (tableSequence !== tableRequestSequence || requestSequence !== dataRequestSequence) {
+      return;
+    }
+    if (result.status !== 'success') {
+      setOperationError(result);
+      return;
+    }
+    dataPage.value = result.value;
+  }
+  finally {
+    if (requestSequence === dataRequestSequence) {
+      isLoadingData.value = false;
+    }
+  }
+}
+
+async function previousDataPage() {
+  if (isLoadingData.value || currentPageIndex.value === 0) {
+    return;
+  }
+  currentPageIndex.value -= 1;
+  await loadDataPage(currentPageIndex.value, tableRequestSequence);
+}
+
+async function nextDataPage() {
+  if (isLoadingData.value || !dataPage.value?.hasNext) {
+    return;
+  }
+  const nextIndex = currentPageIndex.value + 1;
+  if (!pageRequests.value[nextIndex]) {
+    const nextRequest: PostgresDataPageInput | null = dataPage.value.pagingMode === 'keyset'
+      ? dataPage.value.nextCursor ? { cursor: dataPage.value.nextCursor, offset: 0 } : null
+      : dataPage.value.nextOffset !== null ? { cursor: null, offset: dataPage.value.nextOffset } : null;
+    if (!nextRequest) {
+      return;
+    }
+    pageRequests.value.splice(nextIndex, pageRequests.value.length - nextIndex, nextRequest);
+  }
+  currentPageIndex.value = nextIndex;
+  await loadDataPage(nextIndex, tableRequestSequence);
+}
+
 async function disconnect() {
+  tableRequestSequence += 1;
+  dataRequestSequence += 1;
   const sessionId = activeSession.value?.sessionId;
   activeSession.value = null;
   schemas.value = [];
   tables.value = [];
   structure.value = [];
+  dataPage.value = null;
   selectedSchema.value = null;
   selectedTable.value = null;
   connectionError.value = null;
@@ -202,6 +353,8 @@ function setOperationError(result: Exclude<DatabaseOperation<unknown>, { status:
 }
 
 onUnmounted(() => {
+  tableRequestSequence += 1;
+  dataRequestSequence += 1;
   const sessionId = activeSession.value?.sessionId;
   if (sessionId) {
     activeSession.value = null;
@@ -287,6 +440,7 @@ onUnmounted(() => {
 
         <n-card :title="$t('tools.database-manager.tables')">
           <n-select
+            data-test-id="database-table-select"
             :value="selectedTable"
             :options="tableOptions"
             :loading="isLoadingTables"
@@ -298,19 +452,58 @@ onUnmounted(() => {
         </n-card>
       </div>
 
-      <n-card v-if="selectedTable" :title="$t('tools.database-manager.structure')" mt-4>
-        <n-alert v-if="columnsTruncated" type="warning" :show-icon="false" mb-3>
-          {{ $t('tools.database-manager.columnsTruncated') }}
-        </n-alert>
-        <n-data-table
-          :columns="structureColumns"
-          :data="structure"
-          :loading="isLoadingStructure"
-          :row-key="getStructureRowKey"
-          :pagination="false"
-          :scroll-x="820"
-        />
-        <n-empty v-if="!isLoadingStructure && structure.length === 0" :description="$t('tools.database-manager.noColumns')" mt-4 />
+      <n-card v-if="selectedTable" mt-4>
+        <n-tabs v-model:value="activeTableTab" type="line">
+          <n-tab-pane name="data" :tab="previewText.data">
+            <n-alert v-if="dataPage?.pagingNotice === 'no-primary-key'" type="warning" :show-icon="false" mb-3>
+              {{ previewText.noPrimaryKey }}
+            </n-alert>
+            <n-alert v-else-if="dataPage?.pagingNotice === 'unsupported-primary-key'" type="warning" :show-icon="false" mb-3>
+              {{ previewText.unsupportedPrimaryKey }}
+            </n-alert>
+            <n-alert v-if="dataPage?.columnsTruncated" type="info" :show-icon="false" mb-3>
+              {{ previewText.columnsTruncated }}
+            </n-alert>
+            <n-alert v-if="dataPage?.limitReached" type="info" :show-icon="false" mb-3>
+              {{ previewText.limitReached }}
+            </n-alert>
+            <n-data-table
+              data-test-id="database-data-table"
+              :columns="dataColumns"
+              :data="dataRows"
+              :loading="isLoadingData"
+              :row-key="getDataRowKey"
+              :pagination="false"
+              :scroll-x="dataTableScrollWidth"
+            />
+            <n-empty v-if="!isLoadingData && dataPage?.rows.length === 0" :description="previewText.noRows" mt-4 />
+            <div class="database-page-controls">
+              <span data-test-id="database-page-summary">{{ pageLabel }}</span>
+              <div flex gap-2>
+                <n-button data-test-id="database-previous-page" :disabled="isLoadingData || currentPageIndex === 0" @click="previousDataPage">
+                  {{ previewText.previous }}
+                </n-button>
+                <n-button data-test-id="database-next-page" :disabled="isLoadingData || !dataPage?.hasNext" @click="nextDataPage">
+                  {{ previewText.next }}
+                </n-button>
+              </div>
+            </div>
+          </n-tab-pane>
+          <n-tab-pane name="structure" :tab="$t('tools.database-manager.structure')">
+            <n-alert v-if="columnsTruncated" type="warning" :show-icon="false" mb-3>
+              {{ $t('tools.database-manager.columnsTruncated') }}
+            </n-alert>
+            <n-data-table
+              :columns="structureColumns"
+              :data="structure"
+              :loading="isLoadingStructure"
+              :row-key="getStructureRowKey"
+              :pagination="false"
+              :scroll-x="820"
+            />
+            <n-empty v-if="!isLoadingStructure && structure.length === 0" :description="$t('tools.database-manager.noColumns')" mt-4 />
+          </n-tab-pane>
+        </n-tabs>
       </n-card>
     </div>
   </section>
@@ -341,6 +534,14 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.database-page-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .database-engine-list {
   display: flex;
   flex-wrap: wrap;
@@ -361,6 +562,11 @@ onUnmounted(() => {
   .database-manager-grid,
   .connection-form {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .database-page-controls {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

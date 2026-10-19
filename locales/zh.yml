@@ -86,7 +86,7 @@ tools:
   database-manager:
     title: 数据库管理器
     description: 在桌面应用中浏览 PostgreSQL、MySQL 和 SQLite 数据库。
-    stageNotice: PostgreSQL schema 和表结构浏览已可用。分页数据预览和已保存连接将在后续阶段加入。
+    stageNotice: PostgreSQL 浏览功能已可用。后续将支持更多数据库和已保存连接。
     connections: 数据库连接
     noConnections: 还没有数据库连接。
     supportedEngines: 支持的数据库

@@ -3,6 +3,8 @@ import type {
   DatabaseBridgeResult,
   PostgresColumnInfo,
   PostgresConnectionInput,
+  PostgresDataPage,
+  PostgresDataPageInput,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresStructureInfo,
@@ -13,6 +15,24 @@ const MAX_POSTGRES_SESSIONS = 4;
 const MAX_SCHEMAS = 100;
 const MAX_TABLES_PER_SCHEMA = 500;
 const MAX_COLUMNS_PER_TABLE = 256;
+const MAX_PREVIEW_COLUMNS = 16;
+const MAX_PREVIEW_ROWS = 25;
+const MAX_CELL_CHARACTERS = 256;
+const MAX_PAGE_OFFSET = 1_000_000;
+const MAX_CURSOR_CHARACTERS = 4_096;
+const MAX_PRIMARY_KEY_COLUMNS = 32;
+const KEYSET_PRIMARY_KEY_TYPES = new Set([
+  'smallint',
+  'integer',
+  'bigint',
+  'uuid',
+  'boolean',
+  'date',
+  'time without time zone',
+  'time with time zone',
+  'timestamp without time zone',
+  'timestamp with time zone',
+]);
 const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /** Owns only PostgreSQL clients and metadata queries inside the isolated database utility process. */
@@ -148,7 +168,7 @@ export class PostgresDatabaseService {
         data_type: string;
         nullable: boolean;
         default_value: string | null;
-        primary_key: boolean;
+        primary_key_position: number | null;
         ordinal_position: number;
       }>(
         `SELECT column_info.column_name,
@@ -156,8 +176,8 @@ export class PostgresDatabaseService {
                 column_info.is_nullable = 'YES' AS nullable,
                 left(column_info.column_default, 512) AS default_value,
                 column_info.ordinal_position::integer AS ordinal_position,
-                EXISTS (
-                  SELECT 1
+                (
+                  SELECT key_column.ordinal_position::integer
                   FROM information_schema.table_constraints AS constraint_info
                   JOIN information_schema.key_column_usage AS key_column
                     ON key_column.constraint_catalog = constraint_info.constraint_catalog
@@ -169,7 +189,9 @@ export class PostgresDatabaseService {
                     AND constraint_info.table_schema = column_info.table_schema
                     AND constraint_info.table_name = column_info.table_name
                     AND key_column.column_name = column_info.column_name
-                ) AS primary_key
+                  ORDER BY key_column.ordinal_position
+                  LIMIT 1
+                ) AS primary_key_position
          FROM information_schema.columns AS column_info
          WHERE column_info.table_schema = $1 AND column_info.table_name = $2
          ORDER BY column_info.ordinal_position
@@ -181,7 +203,8 @@ export class PostgresDatabaseService {
         dataType: row.data_type,
         nullable: row.nullable,
         defaultValue: row.default_value,
-        primaryKey: row.primary_key,
+        primaryKey: row.primary_key_position !== null,
+        primaryKeyPosition: row.primary_key_position,
         ordinalPosition: row.ordinal_position,
       }));
       if (columns.length === 0) {
@@ -190,6 +213,139 @@ export class PostgresDatabaseService {
       return {
         ok: true,
         value: { columns, columnsTruncated: result.rows.length > MAX_COLUMNS_PER_TABLE },
+      };
+    }
+    catch (error) {
+      return { ok: false, error: classifyPostgresError(error, 'query-failed') };
+    }
+  }
+
+  /** Return a read-only preview with bounded columns, rows and text per cell. */
+  async getDataPage(
+    sessionId: string,
+    schema: string,
+    table: string,
+    page: PostgresDataPageInput,
+  ): Promise<DatabaseBridgeResult<PostgresDataPage>> {
+    const client = this.clients.get(sessionId);
+    if (!client) {
+      return { ok: false, error: 'not-connected' };
+    }
+    if (!isValidDatabaseIdentifier(schema)
+      || !isValidDatabaseIdentifier(table)
+      || !isValidPostgresPageRequest(page)) {
+      return { ok: false, error: 'invalid-request' };
+    }
+
+    try {
+      const [columnResult, primaryKeyResult] = await Promise.all([
+        client.query<{ column_name: string; data_type: string }>(
+          `SELECT column_name, data_type
+           FROM information_schema.columns
+           WHERE table_schema = $1 AND table_name = $2
+           ORDER BY ordinal_position
+           LIMIT $3`,
+          [schema, table, MAX_PREVIEW_COLUMNS + 1],
+        ),
+        client.query<{ column_name: string; data_type: string; key_position: number }>(
+          `SELECT column_info.column_name,
+                  column_info.data_type,
+                  key_column.ordinal_position::integer AS key_position
+           FROM information_schema.table_constraints AS constraint_info
+           JOIN information_schema.key_column_usage AS key_column
+             ON key_column.constraint_catalog = constraint_info.constraint_catalog
+            AND key_column.constraint_schema = constraint_info.constraint_schema
+            AND key_column.constraint_name = constraint_info.constraint_name
+            AND key_column.table_schema = constraint_info.table_schema
+            AND key_column.table_name = constraint_info.table_name
+           JOIN information_schema.columns AS column_info
+             ON column_info.table_schema = key_column.table_schema
+            AND column_info.table_name = key_column.table_name
+            AND column_info.column_name = key_column.column_name
+           WHERE constraint_info.constraint_type = 'PRIMARY KEY'
+             AND constraint_info.table_schema = $1
+             AND constraint_info.table_name = $2
+           ORDER BY key_column.ordinal_position
+           LIMIT $3`,
+          [schema, table, MAX_PRIMARY_KEY_COLUMNS + 1],
+        ),
+      ]);
+      const columns = columnResult.rows.slice(0, MAX_PREVIEW_COLUMNS);
+      if (columns.length === 0) {
+        return { ok: false, error: 'query-failed' };
+      }
+
+      const primaryKeys = primaryKeyResult.rows;
+      const pagingMode: PostgresDataPage['pagingMode'] = isKeysetSupported(primaryKeys) ? 'keyset' : 'offset';
+      const pagingNotice: PostgresDataPage['pagingNotice'] = primaryKeys.length === 0
+        ? 'no-primary-key'
+        : pagingMode === 'offset' ? 'unsupported-primary-key' : null;
+      if ((pagingMode === 'keyset' && (page.offset !== 0
+        || (page.cursor !== null && !isValidKeysetCursor(page.cursor, primaryKeys.map(key => key.column_name)))))
+        || (pagingMode === 'offset' && page.cursor !== null)) {
+        return { ok: false, error: 'invalid-request' };
+      }
+
+      const quotedRelation = `${quotePostgresIdentifier(schema)}.${quotePostgresIdentifier(table)}`;
+      const rowAlias = 'preview_row';
+      const selectedCells = columns.map((column, index) =>
+        `left(${rowAlias}.${quotePostgresIdentifier(column.column_name)}::text, ${MAX_CELL_CHARACTERS + 1}) AS ${quotePostgresIdentifier(`cell_${index}`)}`,
+      );
+      const primaryKeyExpressions = primaryKeys.map(key => `${rowAlias}.${quotePostgresIdentifier(key.column_name)}`);
+      const keysetSelect = pagingMode === 'keyset'
+        ? `, json_build_object(${primaryKeys.map((key, index) => `${quotePostgresString(key.column_name)}, ${primaryKeyExpressions[index]}`).join(', ')})::text AS "__cursor"`
+        : '';
+      const keysetJoin = page.cursor === null
+        ? ''
+        : `CROSS JOIN LATERAL json_populate_record(NULL::${quotedRelation}, $1::json) AS cursor_row`;
+      const keysetWhere = page.cursor === null
+        ? ''
+        : `WHERE ROW(${primaryKeyExpressions.join(', ')}) > ROW(${primaryKeys.map(key => `cursor_row.${quotePostgresIdentifier(key.column_name)}`).join(', ')})`;
+      const orderBy = pagingMode === 'keyset'
+        ? `ORDER BY ${primaryKeyExpressions.join(', ')}`
+        : '';
+      const limitParameter = page.cursor === null ? '$1' : '$2';
+      const pagination = pagingMode === 'keyset'
+        ? `LIMIT ${limitParameter}`
+        : 'LIMIT $2 OFFSET $1';
+      const sql = `SELECT ${selectedCells.join(', ')}${keysetSelect}
+                   FROM ${quotedRelation} AS ${rowAlias}
+                   ${keysetJoin}
+                   ${keysetWhere}
+                   ${orderBy}
+                   ${pagination}`;
+      const parameters = pagingMode === 'keyset'
+        ? page.cursor === null ? [MAX_PREVIEW_ROWS + 1] : [page.cursor, MAX_PREVIEW_ROWS + 1]
+        : [page.offset, MAX_PREVIEW_ROWS + 1];
+      const result = await client.query<Record<string, unknown>>(sql, parameters);
+      const pageRows = result.rows.slice(0, MAX_PREVIEW_ROWS);
+      const hasMoreRows = result.rows.length > MAX_PREVIEW_ROWS;
+      const nextOffset = pagingMode === 'offset' && hasMoreRows && page.offset + MAX_PREVIEW_ROWS <= MAX_PAGE_OFFSET
+        ? page.offset + MAX_PREVIEW_ROWS
+        : null;
+      const limitReached = pagingMode === 'offset' && hasMoreRows && nextOffset === null;
+      const hasNext = pagingMode === 'keyset' ? hasMoreRows : nextOffset !== null;
+      const cursorValue = pageRows.at(-1)?.__cursor;
+      const nextCursor = pagingMode === 'keyset' && hasNext && typeof cursorValue === 'string' ? cursorValue : null;
+      if (pagingMode === 'keyset' && hasNext && (!nextCursor || !isValidKeysetCursor(nextCursor, primaryKeys.map(key => key.column_name)))) {
+        return { ok: false, error: 'query-failed' };
+      }
+
+      return {
+        ok: true,
+        value: {
+          columns: columns.map(({ column_name, data_type }) => ({ name: column_name, dataType: data_type })),
+          rows: pageRows.map(row => ({
+            cells: columns.map((_column, index) => toBoundedCell(row[`cell_${index}`])),
+          })),
+          columnsTruncated: columnResult.rows.length > MAX_PREVIEW_COLUMNS,
+          pagingMode,
+          pagingNotice,
+          hasNext,
+          nextCursor,
+          nextOffset,
+          limitReached,
+        },
       };
     }
     catch (error) {
@@ -248,6 +404,31 @@ export function isValidDatabaseIdentifier(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 63 && !value.includes('\u0000');
 }
 
+/** Reject oversized offsets and malformed cursors before they reach the database driver. */
+export function isValidPostgresPageRequest(value: unknown): value is PostgresDataPageInput {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['cursor', 'offset'])
+    || !Number.isInteger(value.offset)
+    || (value.offset as number) < 0
+    || (value.offset as number) > MAX_PAGE_OFFSET
+    || (value.offset as number) % MAX_PREVIEW_ROWS !== 0) {
+    return false;
+  }
+  if (value.cursor === null) {
+    return true;
+  }
+  return value.offset === 0 && typeof value.cursor === 'string' && isValidKeysetCursor(value.cursor);
+}
+
+/** Quote catalog identifiers as SQL names; row values remain bound parameters. */
+export function quotePostgresIdentifier(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function quotePostgresString(value: string): string {
+  return `'${value.replaceAll("'", "''")}'`;
+}
+
 function classifyPostgresError(error: unknown, fallback: 'connection-failed' | 'query-failed') {
   if (typeof error === 'object' && error !== null && 'code' in error) {
     if (error.code === '57014' || error.code === 'ETIMEDOUT') {
@@ -255,6 +436,53 @@ function classifyPostgresError(error: unknown, fallback: 'connection-failed' | '
     }
   }
   return fallback;
+}
+
+function isValidKeysetCursor(cursor: string, expectedKeyNames?: readonly string[]): boolean {
+  if (cursor.length === 0 || cursor.length > MAX_CURSOR_CHARACTERS) {
+    return false;
+  }
+  try {
+    const value: unknown = JSON.parse(cursor);
+    if (!isRecord(value)) {
+      return false;
+    }
+    const keys = Object.keys(value);
+    if (keys.length === 0 || keys.length > MAX_PRIMARY_KEY_COLUMNS
+      || (expectedKeyNames !== undefined && keys.length !== expectedKeyNames.length)) {
+      return false;
+    }
+    return keys.every((key, index) => {
+      const item = value[key];
+      return isValidDatabaseIdentifier(key)
+        && (expectedKeyNames === undefined || key === expectedKeyNames[index])
+        && item !== null
+        && (typeof item === 'string' ? item.length <= 128 : typeof item === 'boolean' || (typeof item === 'number' && Number.isFinite(item)));
+    });
+  }
+  catch {
+    return false;
+  }
+}
+
+function isKeysetSupported(primaryKeys: readonly { data_type: string }[]): boolean {
+  return primaryKeys.length > 0
+    && primaryKeys.length <= MAX_PRIMARY_KEY_COLUMNS
+    && primaryKeys.every(key => KEYSET_PRIMARY_KEY_TYPES.has(key.data_type));
+}
+
+function toBoundedCell(value: unknown): { value: string | null; truncated: boolean } {
+  if (value === null || value === undefined) {
+    return { value: null, truncated: false };
+  }
+  if (typeof value !== 'string') {
+    throw new TypeError('The PostgreSQL preview returned a non-text cell.');
+  }
+  const characters = Array.from(value);
+  return {
+    value: characters.slice(0, MAX_CELL_CHARACTERS).join(''),
+    truncated: characters.length > MAX_CELL_CHARACTERS,
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

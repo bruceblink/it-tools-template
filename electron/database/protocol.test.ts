@@ -44,4 +44,22 @@ describe('database utility process protocol', () => {
     })).toBeNull();
     expect(parseDatabaseWorkerCommand({ requestId: randomUUID(), operation: 'execute-sql', sql: 'SELECT 1' })).toBeNull();
   });
+
+  it('accepts only bounded row preview operations and page cursors', () => {
+    const command = {
+      requestId: randomUUID(),
+      operation: 'get-data-page',
+      sessionId: randomUUID(),
+      schema: 'public',
+      table: 'records',
+      page: { cursor: null, offset: 0 },
+    };
+    expect(parseDatabaseWorkerCommand(command)).toEqual(command);
+    expect(parseDatabaseWorkerCommand({ ...command, page: { cursor: null, offset: 1 } })).toBeNull();
+    expect(parseDatabaseWorkerCommand({ ...command, sql: 'SELECT * FROM records' })).toBeNull();
+    expect(parseDatabaseWorkerCommand({
+      ...command,
+      page: { cursor: '{"k0":null}', offset: 0 },
+    })).toBeNull();
+  });
 });

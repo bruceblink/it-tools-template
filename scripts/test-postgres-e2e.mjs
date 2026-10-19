@@ -38,8 +38,16 @@ try {
 
   await run('docker', [
     'exec', containerId, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'postgres', '-c',
-    'CREATE TABLE public.s2a_structure_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL DEFAULT \'fixture\'); INSERT INTO public.s2a_structure_probe (probe_id, probe_value) VALUES (1, \'structure test\')',
+    'CREATE TABLE public.s2a_structure_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL DEFAULT \'fixture\'); INSERT INTO public.s2a_structure_probe (probe_id, probe_value) VALUES (1, \'structure test\'); CREATE TABLE public.s2b_keyset_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL, nullable_value text); INSERT INTO public.s2b_keyset_probe (probe_id, probe_value, nullable_value) SELECT value, CASE WHEN value = 1 THEN repeat(\'x\', 10000) ELSE \'row \' || value END, NULL FROM generate_series(1, 56) AS series(value); CREATE TABLE public.s2b_offset_probe (probe_value text NOT NULL); INSERT INTO public.s2b_offset_probe (probe_value) SELECT \'row \' || value FROM generate_series(1, 30) AS series(value)',
   ]);
+
+  const serviceTestExitCode = await runPnpm(
+    ['exec', 'vitest', 'run', 'electron/database/postgres-service.integration.test.ts', '--environment', 'jsdom'],
+    { ...process.env, IT_TOOLS_TEST_POSTGRES_PORT: String(mappedPort) },
+  );
+  if (serviceTestExitCode !== 0) {
+    throw new Error(`PostgreSQL row preview integration exited with code ${serviceTestExitCode}.`);
+  }
 
   const exitCode = await runPlaywright(mappedPort);
   if (exitCode !== 0) {
@@ -87,11 +95,11 @@ async function run(command, args) {
   return stdout;
 }
 
-function runPnpm(args) {
+function runPnpm(args, environment = process.env) {
   const executable = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
-      env: process.env,
+      env: environment,
       stdio: 'inherit',
       windowsHide: true,
       shell: process.platform === 'win32',
@@ -133,7 +141,7 @@ function runPlaywright(port) {
     const child = spawn(executable, [
       'test:e2e:electron',
       '--grep',
-      'connects over an explicitly unencrypted local socket and reads table structure',
+      'connects over a trusted local socket and browses bounded keyset and offset pages',
     ], {
       env: { ...process.env, IT_TOOLS_TEST_POSTGRES_PORT: String(port) },
       stdio: 'inherit',
@@ -147,6 +155,9 @@ function runPlaywright(port) {
 
 function getSafeErrorMessage(error) {
   if (error instanceof Error && error.message.startsWith('Electron PostgreSQL metadata E2E exited')) {
+    return error.message;
+  }
+  if (error instanceof Error && error.message.startsWith('PostgreSQL row preview integration exited')) {
     return error.message;
   }
   if (error instanceof Error && error.message.startsWith('PostgreSQL baseline')) {

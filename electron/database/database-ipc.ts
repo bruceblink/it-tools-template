@@ -4,6 +4,8 @@ import type {
   DatabaseBridgeResult,
   DatabaseErrorCode,
   PostgresConnectionInput,
+  PostgresDataPage,
+  PostgresDataPageInput,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresStructureInfo,
@@ -17,6 +19,7 @@ const DISCONNECT_CHANNEL = 'desktop:database:disconnect';
 const SCHEMAS_CHANNEL = 'desktop:database:schemas';
 const TABLES_CHANNEL = 'desktop:database:tables';
 const STRUCTURE_CHANNEL = 'desktop:database:structure';
+const DATA_PAGE_CHANNEL = 'desktop:database:data-page';
 
 interface DatabaseIpcDependencies {
   trustedRendererUrl: () => string;
@@ -121,6 +124,27 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     });
   });
 
+  ipcMain.handle(DATA_PAGE_CHANNEL, async (event, value: unknown) => {
+    const request = parseDataPageRequest(value);
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!request) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!ownsSession(event.sender.id, request.sessionId)) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    return serviceHost.request<PostgresDataPage>({
+      operation: 'get-data-page',
+      sessionId: request.sessionId,
+      schema: request.schema,
+      table: request.table,
+      page: request.page,
+    });
+  });
+
   async function disconnectRendererSession(rendererId: number): Promise<void> {
     const sessionId = rendererSessions.get(rendererId);
     if (sessionId) {
@@ -154,6 +178,7 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       ipcMain.removeHandler(SCHEMAS_CHANNEL);
       ipcMain.removeHandler(TABLES_CHANNEL);
       ipcMain.removeHandler(STRUCTURE_CHANNEL);
+      ipcMain.removeHandler(DATA_PAGE_CHANNEL);
     },
   };
 }
@@ -218,6 +243,55 @@ function parseTableRequest(value: unknown): { sessionId: string; schema: string;
   }
   const sessionId = parseSessionRequest({ sessionId: value.sessionId });
   return sessionId ? { sessionId, schema: value.schema, table: value.table } : null;
+}
+
+function parseDataPageRequest(
+  value: unknown,
+): { sessionId: string; schema: string; table: string; page: PostgresDataPageInput } | null {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['sessionId', 'schema', 'table', 'page'])
+    || typeof value.schema !== 'string'
+    || !isDatabaseIdentifier(value.schema)
+    || typeof value.table !== 'string'
+    || !isDatabaseIdentifier(value.table)
+    || !isBoundedPageInput(value.page)) {
+    return null;
+  }
+  const sessionId = parseSessionRequest({ sessionId: value.sessionId });
+  return sessionId ? { sessionId, schema: value.schema, table: value.table, page: value.page } : null;
+}
+
+function isBoundedPageInput(value: unknown): value is PostgresDataPageInput {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['cursor', 'offset'])
+    || !Number.isInteger(value.offset)
+    || (value.offset as number) < 0
+    || (value.offset as number) > 1_000_000
+    || (value.offset as number) % 25 !== 0) {
+    return false;
+  }
+  if (value.cursor === null) {
+    return true;
+  }
+  if (typeof value.cursor !== 'string' || value.cursor.length === 0 || value.cursor.length > 4_096 || value.offset !== 0) {
+    return false;
+  }
+  try {
+    const cursor: unknown = JSON.parse(value.cursor);
+    return isRecord(cursor)
+      && Object.keys(cursor).length > 0
+      && Object.keys(cursor).length <= 32
+      && Object.entries(cursor).every(([key, item]) => key.length > 0
+        && key.length <= 63
+        && !key.includes('\u0000')
+        && item !== null
+        && (typeof item === 'boolean'
+          || (typeof item === 'string' && item.length <= 128)
+          || (typeof item === 'number' && Number.isFinite(item))));
+  }
+  catch {
+    return false;
+  }
 }
 
 function isSessionId(value: string): boolean {

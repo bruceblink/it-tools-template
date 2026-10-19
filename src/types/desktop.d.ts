@@ -1,6 +1,8 @@
 import type {
   DatabaseBridgeResult,
   PostgresConnectionInput,
+  PostgresDataPage,
+  PostgresDataPageInput,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresStructureInfo,
@@ -52,6 +54,12 @@ declare global {
         schema: string,
         table: string,
       ): Promise<DatabaseBridgeResult<PostgresStructureInfo>>;
+      getDatabaseDataPage?(
+        sessionId: string,
+        schema: string,
+        table: string,
+        page: PostgresDataPageInput,
+      ): Promise<DatabaseBridgeResult<PostgresDataPage>>;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       activatePlugin?(

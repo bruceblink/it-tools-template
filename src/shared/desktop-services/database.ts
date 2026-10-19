@@ -44,10 +44,33 @@ export interface PostgresColumnInfo {
   nullable: boolean;
   defaultValue: string | null;
   primaryKey: boolean;
+  primaryKeyPosition: number | null;
   ordinalPosition: number;
 }
 
 export interface PostgresStructureInfo {
   columns: PostgresColumnInfo[];
   columnsTruncated: boolean;
+}
+
+export interface PostgresDataPageInput {
+  cursor: string | null;
+  offset: number;
+}
+
+export interface PostgresDataCell {
+  value: string | null;
+  truncated: boolean;
+}
+
+export interface PostgresDataPage {
+  columns: Array<{ name: string; dataType: string }>;
+  rows: Array<{ cells: PostgresDataCell[] }>;
+  columnsTruncated: boolean;
+  pagingMode: 'keyset' | 'offset';
+  pagingNotice: 'no-primary-key' | 'unsupported-primary-key' | null;
+  hasNext: boolean;
+  nextCursor: string | null;
+  nextOffset: number | null;
+  limitReached: boolean;
 }

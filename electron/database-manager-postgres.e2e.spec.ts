@@ -9,7 +9,7 @@ let electronApp: ElectronApplication;
 let page: Page;
 let userDataDirectory: string;
 
-test.describe('Database manager - PostgreSQL metadata browsing', () => {
+test.describe('Database manager - PostgreSQL browsing', () => {
   test.skip(!Number.isInteger(postgresPort) || postgresPort < 1 || postgresPort > 65_535, 'Requires an isolated local PostgreSQL test container.');
 
   test.beforeAll(async () => {
@@ -34,7 +34,7 @@ test.describe('Database manager - PostgreSQL metadata browsing', () => {
     }
   });
 
-  test('connects over an explicitly unencrypted local socket and reads table structure', async () => {
+  test('connects over a trusted local socket and browses bounded keyset and offset pages', async () => {
     await page.getByRole('link', { name: 'Database manager', exact: true }).click();
     await expect(page.locator('[data-test-id="database-manager-workspace"]')).toBeVisible();
     await page.locator('[data-test-id="postgres-port-field"] input').fill(String(postgresPort));
@@ -44,8 +44,27 @@ test.describe('Database manager - PostgreSQL metadata browsing', () => {
 
     await expect(page.getByText(/Connected to PostgreSQL/)).toBeVisible();
     await expect(page.getByText('s2a_structure_probe (table)', { exact: true })).toBeVisible();
-    await expect(page.getByText('probe_id', { exact: true })).toBeVisible();
-    await expect(page.getByText('probe_value', { exact: true })).toBeVisible();
+    await expect(page.locator('.database-manager-browser .n-data-table').getByText('structure test', { exact: true })).toBeVisible();
+
+    await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
+    await page.getByText('s2b_keyset_probe (table)', { exact: true }).click();
+    await expect(page.getByText('Page 1 · 25 rows', { exact: true })).toBeVisible();
+    const dataTable = page.locator('.database-manager-browser .n-data-table');
+    await expect(dataTable.locator('tbody tr').first()).toContainText('1');
+    const truncatedCell = await dataTable.locator('tbody tr').first().locator('td').nth(1).innerText();
+    expect(Array.from(truncatedCell.replace(/…$/, '')).length).toBeLessThanOrEqual(256);
+
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('Page 2 · 25 rows', { exact: true })).toBeVisible();
+    await expect(dataTable.locator('tbody tr').first()).toContainText('26');
+    await page.getByRole('button', { name: 'Previous', exact: true }).click();
+    await expect(page.getByText('Page 1 · 25 rows', { exact: true })).toBeVisible();
+
+    await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
+    await page.getByText('s2b_offset_probe (table)', { exact: true }).click();
+    await expect(page.getByText(/no primary key/i)).toBeVisible();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(page.getByText('Page 2 · 5 rows', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();

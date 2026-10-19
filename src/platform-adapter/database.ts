@@ -2,6 +2,8 @@ import type {
   DatabaseBridgeResult,
   DatabaseErrorCode,
   PostgresConnectionInput,
+  PostgresDataPage,
+  PostgresDataPageInput,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresStructureInfo,
@@ -56,4 +58,13 @@ export function getDatabaseStructure(
   table: string,
 ): Promise<DatabaseOperation<PostgresStructureInfo>> {
   return callDesktopDatabase(bridge => bridge.getDatabaseStructure?.(sessionId, schema, table));
+}
+
+export function getDatabaseDataPage(
+  sessionId: string,
+  schema: string,
+  table: string,
+  page: PostgresDataPageInput,
+): Promise<DatabaseOperation<PostgresDataPage>> {
+  return callDesktopDatabase(bridge => bridge.getDatabaseDataPage?.(sessionId, schema, table, page));
 }

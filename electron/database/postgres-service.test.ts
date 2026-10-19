@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isValidDatabaseIdentifier, isValidPostgresConnectionInput } from './postgres-service';
+import {
+  isValidDatabaseIdentifier,
+  isValidPostgresConnectionInput,
+  isValidPostgresPageRequest,
+  quotePostgresIdentifier,
+} from './postgres-service';
 
 describe('PostgreSQL database service input bounds', () => {
   const validInput = {
@@ -29,5 +34,22 @@ describe('PostgreSQL database service input bounds', () => {
     expect(isValidDatabaseIdentifier('x'.repeat(64))).toBe(false);
     expect(isValidDatabaseIdentifier('')).toBe(false);
     expect(isValidDatabaseIdentifier('unsafe\u0000name')).toBe(false);
+  });
+
+  it('accepts only bounded page requests and generated scalar keyset cursors', () => {
+    expect(isValidPostgresPageRequest({ cursor: null, offset: 0 })).toBe(true);
+    expect(isValidPostgresPageRequest({ cursor: null, offset: 25 })).toBe(true);
+    expect(isValidPostgresPageRequest({ cursor: '{"k0":42,"k1":"00000000-0000-0000-0000-000000000001"}', offset: 0 })).toBe(true);
+    expect(isValidPostgresPageRequest({ cursor: '{"k0":null}', offset: 0 })).toBe(false);
+    expect(isValidPostgresPageRequest({ cursor: '[42]', offset: 0 })).toBe(false);
+    expect(isValidPostgresPageRequest({ cursor: '{"k0":42}', offset: 25 })).toBe(false);
+    expect(isValidPostgresPageRequest({ cursor: null, offset: 1 })).toBe(false);
+    expect(isValidPostgresPageRequest({ cursor: null, offset: 1_000_025 })).toBe(false);
+    expect(isValidPostgresPageRequest({ cursor: 'x'.repeat(4097), offset: 0 })).toBe(false);
+    expect(isValidPostgresPageRequest({ cursor: null, offset: 0, unexpected: true })).toBe(false);
+  });
+
+  it('quotes SQL identifiers without changing their contents', () => {
+    expect(quotePostgresIdentifier('odd"table')).toBe('"odd""table"');
   });
 });

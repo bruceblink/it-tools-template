@@ -86,7 +86,7 @@ tools:
   database-manager:
     title: Database manager
     description: Browse PostgreSQL, MySQL, and SQLite databases from the desktop app.
-    stageNotice: PostgreSQL schema and structure browsing are available. Paginated row previews and saved connections are next.
+    stageNotice: PostgreSQL browsing is available. More engines and saved connections are planned.
     connections: Connections
     noConnections: No database connections yet.
     supportedEngines: Supported database engines
