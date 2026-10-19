@@ -1,6 +1,6 @@
 # 数据库管理工具与系统监视器开发计划
 
-制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0 服务原型、S1 桌面入口与宽工作区、S2a PostgreSQL 临时连接和元数据浏览已完成。S2 仍在实施；分页数据浏览、持久化连接、MySQL、SQLite 与实时指标仍待实施。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
+制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0 服务原型、S1 桌面入口与宽工作区、S2a PostgreSQL 临时连接和元数据浏览、S2b 受限分页预览已完成。S2 仍在实施；已保存连接、查询取消、更多结构信息、MySQL、SQLite 与实时指标仍待实施。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
 
 ## 目标与默认范围
 
@@ -34,7 +34,7 @@
 - [插件能力代理](../electron/plugin-capability-broker.ts)的来源校验和限额思路，以及现有插件生命周期中的清理经验。
 - SQL Formatter 的本地格式化能力。格式化器没有数据库连接或 SQL 执行能力。
 
-当前已有按平台范围过滤工具、桌面路由和宽工作区页面。S2a 已加入页面内临时 PostgreSQL 连接、数据库 utility process、schema/table 列表和表结构读取。这不是分页数据浏览，也没有持久化连接。MySQL、SQLite、查询服务和主机指标采集仍待实现。现有插件能力只有 `runtime.info` 与 `clipboard.write`，不包含数据库和主机监控权限。
+当前已有按平台范围过滤工具、桌面路由和宽工作区页面。S2a 已加入页面内临时 PostgreSQL 连接、数据库 utility process、schema/table 列表和表结构读取。S2b 已增加只读分页预览。每页最多读取 25 行、展示 16 列，每个单元格最多向界面传回 256 个字符。常见有界主键使用游标分页；无主键或不支持该游标的主键使用偏移分页并显示并发变更提示。偏移分页最多读取到 1,000,000 行。当前仍没有已保存连接、查询取消、MySQL、SQLite、任意 SQL 或主机指标采集。现有插件能力只有 `runtime.info` 与 `clipboard.write`，不包含数据库和主机监控权限。
 
 S1 已让工具的 `platforms` 元数据控制工具注册、首页、导航、搜索和路由。验收需保持 Electron-only 工具在 Web/PWA/Docker Web 中不可发现且不可访问，同时保留双端工具；后续构建继续检查桌面驱动和本机代码不进入 Web 产物。
 
@@ -65,7 +65,7 @@ S1 已让工具的 `platforms` 元数据控制工具注册、首页、导航、�
 
 ## 技术结构与数据边界
 
-下表列出当前已建立和后续计划使用的目录。`src/tools/database-manager/`、`src/platform-adapter/database.ts`、`src/shared/desktop-services/` 和 `electron/database/` 已用于 S2a；系统采集服务和其余数据库适配器仍待建立。
+下表列出当前已建立和后续计划使用的目录。`src/tools/database-manager/`、`src/platform-adapter/database.ts`、`src/shared/desktop-services/` 和 `electron/database/` 已用于 S2a/S2b；系统采集服务和其余数据库适配器仍待建立。
 
 | 层 | 拟新增位置 | 责任 |
 | --- | --- | --- |
@@ -152,7 +152,7 @@ S0 原型和 S1 入口与页面骨架已完成。两个产品模块仍缺少实�
 | --- | --- | --- | --- |
 | S0 | 桌面服务原型与范围冻结（已完成） | PostgreSQL、MySQL 和 Electron 内置 SQLite 的驱动与基础行为；游标、取消、只读模式、字段长度和锁竞争的可行性；`utilityProcess` 消息往返；冻结资源边界、错误与清理模型 | 3–5 人日 |
 | S1 | 桌面工具入口与宽工作区（已完成） | Electron 首页、导航、搜索和路由启用两工具；Web/PWA 构建无卡片、搜索项或可进入路由；中英文、深浅主题、键盘焦点、滚动边界和窄屏样式通过 | 2–3 人日 |
-| S2（进行中；S2a 已完成） | PostgreSQL 连接与只读浏览 | 配置增删改、TLS 连接、可选加密保存、对象树、数据与结构页；分页、超时、取消和脱敏通过本地 Docker PostgreSQL 17+ 验证 | 5–7 人日 |
+| S2（进行中；S2a/S2b 已完成） | PostgreSQL 连接、结构和受限分页预览 | 已交付临时 TLS 连接、schema/table 浏览、基础结构页和最多 25 行、16 列、256 字符/单元格的只读预览；继续实现已保存连接、取消、索引信息与边界验收，使用本地 Docker PostgreSQL 17+ | 5–7 人日 |
 | S3 | MySQL 与 SQLite 只读适配 | MySQL 8.4+ 和用户选定 SQLite 文件的连接、对象与结构浏览；类型转换、只读模式、锁竞争和文件关闭通过验收 | 4–6 人日 |
 | S4 | 三引擎受限查询 | 三种 SQL 方言的参数化查询、分页、筛选排序、列管理和受限导出。只有三种引擎均通过单字段大小硬限制后，才开放自由 SQL 编辑器 | 5–8 人日 |
 | S5 | 系统监视器首个可用版本 | 本机 CPU/内存、应用进程指标、曲线、周期、暂停恢复、断档和离开清理；Windows 真窗口验收 | 3–4 人日 |
@@ -220,3 +220,5 @@ S8 之后按实际使用反馈排序：
 2026-10-19：确认两个模块只在 Electron 桌面版提供。Web/PWA/Docker 构建不得显示入口或注册路由。S0 原型已完成本机数据库和 Electron 服务接口验证，完整模块仍待开发。PostgreSQL 使用 `postgres:17-alpine`，image id 为 `sha256:d5daad18926b71c3d663f358af0aea798670cb79fb550c106d19662a9d1627ef`，随机映射端口为 `127.0.0.1:10012`。游标以批量 64 读取 10,000 行。独立取消连接返回 `57014`，取消后原客户端可继续查询。单个 2 MiB `TEXT` 字段仍完整进入 JavaScript；因此自由 SQL 尚未满足硬内存上限门槛。MySQL 使用 `mysql:8.4`，image id 为 `sha256:6e54d72c66fb55fa2bba384cba8c7c0ea9d629fb4d2af613b0eef98d19c6df15`，实际服务版本为 8.4.9，随机映射端口为 `127.0.0.1:12489`。参数化 Unicode 与 JSON 读写通过；对持久 InnoDB 表的只读事务阻止了 INSERT；销毁运行 `SELECT SLEEP(30)` 的连接后，服务端不再显示该查询，且新连接可用。该取消路径通过关闭连接实现，没有确认驱动错误码。SQLite 在 Electron 44.8.0 的 utility process 和 Node 24.22.0 中运行，SQLite 版本为 3.53.4。文件模式的 Unicode 与 BLOB 往返通过；只读连接阻止写入；64 KiB 长度限制阻止 70,000 字节随机 BLOB；持有独占事务时第二连接报告 `database is locked`。三个 Docker 原型容器已删除，SQLite 数据库及 WAL/SHM 文件已清理。Electron `utilityProcess` 消息往返通过；`systeminformation` 5.33.15 在当前 Windows 环境返回 CPU、内存、5 个卷、1 个网络接口和 289 个进程。其他操作系统仍待原生验收。原型未验证 MySQL 与 PostgreSQL 的大字段解码前限额；自由 SQL 继续受单字段硬上限门槛约束。
 
 2026-10-20（S2a，源码提交 `acb21ec`）：交付页面内 PostgreSQL 临时连接、schema/table 发现和结构读取。连接由 utility process 中的 `pg` 执行；默认验证 TLS；密码在提交后立即从输入框清除，不保存连接配置。`pnpm check` 通过，包含 675 项单元测试、类型检查、lint、Web 与 Electron 构建；PWA 首屏 JavaScript gzip 为 299.99 KiB，低于 300 KiB 限制。`pnpm test:e2e:postgres` 通过 1 项 Electron 集成测试，覆盖连接、表结构读取和断开。容器镜像为 `postgres:17-alpine`，image id 为 `sha256:d5daad18926b71c3d663f358af0aea798670cb79fb550c106d19662a9d1627ef`，PostgreSQL 17.10，自动化随机端口为 `127.0.0.1:1385`；容器仅使用本机 trust 认证，启动和销毁均确认。Windows 最新构建真实窗口另以同一版本容器的 `127.0.0.1:4902` 成功连接，测试界面显式选择关闭 TLS，并显示 `public` schema、测试表和两列结构后断开；该容器也已删除。此切片尚未提供分页数据、持久化连接、MySQL、SQLite 或系统指标。
+
+2026-10-20（S2b，源码提交 `8b1b4f4`）：交付 PostgreSQL 只读分页预览和“数据/结构”页签。服务按 SQL 结果限制行数、列数和单元格文本，再传回界面。常见定长主键使用类型化游标和 keyset 分页；无主键或非支持类型使用上限为 1,000,000 行的 offset 分页，并提示并发变更可能造成重复或遗漏。游标、标识符和页偏移在 IPC 与 utility process 边界校验；查询只由应用生成，标识符经过 SQL 引用，参数使用绑定值。`pnpm check` 通过，包含 678 项单元测试、类型检查、lint 和 Web/Electron 构建，Web gzip 首屏预算通过。`pnpm test:e2e:postgres` 通过 2 项直接服务集成测试和 1 项 Electron 端到端测试，覆盖 25 行分页、长文本截断、NULL、主键游标、上一页、无主键偏移分页和断开。容器镜像为 `postgres:17-alpine`，image id 为 `sha256:d5daad18926b71c3d663f358af0aea798670cb79fb550c106d19662a9d1627ef`，PostgreSQL 17.10，端口为 `127.0.0.1:8701`；启动和清理均确认。Windows 最新构建真实窗口显示连接页面；UUID 工具可选 v7，刷新后生成的值仍符合 v7 版本位。此切片没有持久连接、MySQL、SQLite、任意 SQL 或系统指标。
