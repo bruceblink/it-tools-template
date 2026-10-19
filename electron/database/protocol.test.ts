@@ -50,6 +50,7 @@ describe('database utility process protocol', () => {
       requestId: randomUUID(),
       operation: 'get-data-page',
       sessionId: randomUUID(),
+      pageRequestId: randomUUID(),
       schema: 'public',
       table: 'records',
       page: { cursor: null, offset: 0 },
@@ -61,5 +62,15 @@ describe('database utility process protocol', () => {
       ...command,
       page: { cursor: '{"k0":null}', offset: 0 },
     })).toBeNull();
+
+    const cancellation = {
+      requestId: randomUUID(),
+      operation: 'cancel-data-page',
+      sessionId: command.sessionId,
+      targetRequestId: command.pageRequestId,
+    };
+    expect(parseDatabaseWorkerCommand(cancellation)).toEqual(cancellation);
+    expect(parseDatabaseWorkerCommand({ ...cancellation, targetRequestId: 'invalid' })).toBeNull();
+    expect(parseDatabaseWorkerCommand({ ...cancellation, extra: true })).toBeNull();
   });
 });

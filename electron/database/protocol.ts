@@ -7,7 +7,8 @@ export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'list-schemas'; sessionId: string }
   | { requestId: string; operation: 'list-tables'; sessionId: string; schema: string }
   | { requestId: string; operation: 'get-structure'; sessionId: string; schema: string; table: string }
-  | { requestId: string; operation: 'get-data-page'; sessionId: string; schema: string; table: string; page: PostgresDataPageInput }
+  | { requestId: string; operation: 'get-data-page'; sessionId: string; pageRequestId: string; schema: string; table: string; page: PostgresDataPageInput }
+  | { requestId: string; operation: 'cancel-data-page'; sessionId: string; targetRequestId: string }
   | { requestId: string; operation: 'close' };
 
 export interface DatabaseWorkerResponse {
@@ -47,11 +48,20 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'get-data-page'
-    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table', 'page'])
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'pageRequestId', 'schema', 'table', 'page'])
     && isSessionId(value.sessionId)
+    && typeof value.pageRequestId === 'string'
+    && isRequestId(value.pageRequestId)
     && isValidDatabaseIdentifier(value.schema)
     && isValidDatabaseIdentifier(value.table)
     && isValidPostgresPageRequest(value.page)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'cancel-data-page'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'targetRequestId'])
+    && isSessionId(value.sessionId)
+    && typeof value.targetRequestId === 'string'
+    && isRequestId(value.targetRequestId)) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'close' && hasExactKeys(value, ['requestId', 'operation'])) {

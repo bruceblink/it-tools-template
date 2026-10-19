@@ -66,6 +66,17 @@ test.describe('Database manager - PostgreSQL browsing', () => {
     await page.getByRole('button', { name: 'Next', exact: true }).click();
     await expect(page.getByText('Page 2 · 5 rows', { exact: true })).toBeVisible();
 
+    await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
+    await page.getByText('s2d_slow_view (view)', { exact: true }).click();
+    const cancelPreview = page.locator('[data-test-id="database-cancel-page"]');
+    await expect(cancelPreview).toBeVisible();
+    await cancelPreview.click();
+    await expect(page.getByText('Preview cancelled. The connection is still available.', { exact: true })).toBeVisible();
+
+    await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
+    await page.getByText('s2b_keyset_probe (table)', { exact: true }).click();
+    await expect(page.getByText('Page 1 · 25 rows', { exact: true })).toBeVisible();
+
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
   });

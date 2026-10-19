@@ -14,8 +14,10 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:tables', { sessionId, schema }),
   getDatabaseStructure: (sessionId: string, schema: string, table: string) =>
     ipcRenderer.invoke('desktop:database:structure', { sessionId, schema, table }),
-  getDatabaseDataPage: (sessionId: string, schema: string, table: string, page: PostgresDataPageInput) =>
-    ipcRenderer.invoke('desktop:database:data-page', { sessionId, schema, table, page }),
+  getDatabaseDataPage: (sessionId: string, requestId: string, schema: string, table: string, page: PostgresDataPageInput) =>
+    ipcRenderer.invoke('desktop:database:data-page', { sessionId, requestId, schema, table, page }),
+  cancelDatabaseDataPage: (sessionId: string, requestId: string) =>
+    ipcRenderer.invoke('desktop:database:data-page:cancel', { sessionId, requestId }),
   listPostgresProfiles: () => ipcRenderer.invoke('desktop:database:postgres-profiles:list'),
   savePostgresProfile: (input: PostgresConnectionProfileInput) =>
     ipcRenderer.invoke('desktop:database:postgres-profiles:save', input),

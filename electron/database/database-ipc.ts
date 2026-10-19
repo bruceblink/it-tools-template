@@ -22,6 +22,7 @@ const SCHEMAS_CHANNEL = 'desktop:database:schemas';
 const TABLES_CHANNEL = 'desktop:database:tables';
 const STRUCTURE_CHANNEL = 'desktop:database:structure';
 const DATA_PAGE_CHANNEL = 'desktop:database:data-page';
+const CANCEL_DATA_PAGE_CHANNEL = 'desktop:database:data-page:cancel';
 const LIST_PROFILES_CHANNEL = 'desktop:database:postgres-profiles:list';
 const SAVE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:save';
 const DELETE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:delete';
@@ -37,6 +38,15 @@ interface OwnedSession {
   sessionId: string;
 }
 
+interface OwnedPageRequest {
+  rendererId: number;
+  requestId: string;
+  started: boolean;
+  cancelRequested: boolean;
+  finished: Promise<void>;
+  finish: () => void;
+}
+
 /** Expose only the operations required for PostgreSQL metadata browsing to the trusted app frame. */
 export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   const serviceHost = new DatabaseServiceHost(dependencies.workerPath);
@@ -45,6 +55,8 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   );
   const sessions = new Map<string, OwnedSession>();
   const rendererSessions = new Map<number, string>();
+  const activePageRequests = new Map<string, OwnedPageRequest>();
+  const sessionOperationTails = new Map<string, Promise<void>>();
 
   ipcMain.handle(CONNECTION_CHANNEL, async (event, value: unknown) => {
     if (!isTrustedDesktopSender(event, dependencies.trustedRendererUrl())) {
@@ -91,7 +103,8 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return serviceHost.request<PostgresSchemaInfo[]>({ operation: 'list-schemas', sessionId });
+    return runSessionOperation(sessionId, () =>
+      serviceHost.request<PostgresSchemaInfo[]>({ operation: 'list-schemas', sessionId }));
   });
 
   ipcMain.handle(TABLES_CHANNEL, async (event, value: unknown) => {
@@ -106,11 +119,12 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, request.sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return serviceHost.request<PostgresTableInfo[]>({
-      operation: 'list-tables',
-      sessionId: request.sessionId,
-      schema: request.schema,
-    });
+    return runSessionOperation(request.sessionId, () =>
+      serviceHost.request<PostgresTableInfo[]>({
+        operation: 'list-tables',
+        sessionId: request.sessionId,
+        schema: request.schema,
+      }));
   });
 
   ipcMain.handle(STRUCTURE_CHANNEL, async (event, value: unknown) => {
@@ -125,12 +139,13 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, request.sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return serviceHost.request<PostgresStructureInfo>({
-      operation: 'get-structure',
-      sessionId: request.sessionId,
-      schema: request.schema,
-      table: request.table,
-    });
+    return runSessionOperation(request.sessionId, () =>
+      serviceHost.request<PostgresStructureInfo>({
+        operation: 'get-structure',
+        sessionId: request.sessionId,
+        schema: request.schema,
+        table: request.table,
+      }));
   });
 
   ipcMain.handle(DATA_PAGE_CHANNEL, async (event, value: unknown) => {
@@ -145,13 +160,76 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, request.sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return serviceHost.request<PostgresDataPage>({
-      operation: 'get-data-page',
-      sessionId: request.sessionId,
-      schema: request.schema,
-      table: request.table,
-      page: request.page,
+    if (activePageRequests.has(request.sessionId)) {
+      return { ok: false, error: 'query-failed' } satisfies DatabaseBridgeResult<never>;
+    }
+    let finishPageRequest!: () => void;
+    const pageRequestFinished = new Promise<void>((resolveFinished) => {
+      finishPageRequest = resolveFinished;
     });
+    const activePage: OwnedPageRequest = {
+      rendererId: event.sender.id,
+      requestId: request.requestId,
+      started: false,
+      cancelRequested: false,
+      finished: pageRequestFinished,
+      finish: finishPageRequest,
+    };
+    activePageRequests.set(request.sessionId, activePage);
+    try {
+      return await runSessionOperation(request.sessionId, async () => {
+        activePage.started = true;
+        if (activePage.cancelRequested) {
+          return { ok: false, error: 'query-timeout' } satisfies DatabaseBridgeResult<never>;
+        }
+        return serviceHost.request<PostgresDataPage>({
+          operation: 'get-data-page',
+          sessionId: request.sessionId,
+          pageRequestId: request.requestId,
+          schema: request.schema,
+          table: request.table,
+          page: request.page,
+        });
+      });
+    }
+    finally {
+      if (activePageRequests.get(request.sessionId)?.requestId === request.requestId) {
+        activePageRequests.delete(request.sessionId);
+      }
+      activePage.finish();
+    }
+  });
+
+  ipcMain.handle(CANCEL_DATA_PAGE_CHANNEL, async (event, value: unknown) => {
+    const request = parseDataPageCancelRequest(value);
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!request) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!ownsSession(event.sender.id, request.sessionId)) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const activePage = activePageRequests.get(request.sessionId);
+    if (!activePage
+      || activePage.rendererId !== event.sender.id
+      || activePage.requestId !== request.requestId) {
+      return { ok: true, value: false } satisfies DatabaseBridgeResult<boolean>;
+    }
+    if (!activePage.started) {
+      activePage.cancelRequested = true;
+      await activePage.finished;
+      return { ok: true, value: true } satisfies DatabaseBridgeResult<boolean>;
+    }
+    const result = await serviceHost.request<boolean>({
+      operation: 'cancel-data-page',
+      sessionId: request.sessionId,
+      targetRequestId: request.requestId,
+    });
+    await activePage.finished;
+    return result;
   });
 
   ipcMain.handle(LIST_PROFILES_CHANNEL, async (event) => {
@@ -190,12 +268,46 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   }
 
   async function disconnectSession(sessionId: string): Promise<DatabaseBridgeResult<boolean>> {
+    const activePage = activePageRequests.get(sessionId);
+    if (activePage) {
+      if (activePage.started) {
+        await serviceHost.request<boolean>({
+          operation: 'cancel-data-page',
+          sessionId,
+          targetRequestId: activePage.requestId,
+        });
+      }
+      else {
+        activePage.cancelRequested = true;
+      }
+      await activePage.finished;
+    }
     const owner = sessions.get(sessionId);
     sessions.delete(sessionId);
     if (owner && rendererSessions.get(owner.rendererId) === sessionId) {
       rendererSessions.delete(owner.rendererId);
     }
-    return serviceHost.request<boolean>({ operation: 'disconnect', sessionId });
+    return runSessionOperation(sessionId, () => serviceHost.request<boolean>({ operation: 'disconnect', sessionId }));
+  }
+
+  async function runSessionOperation<T>(sessionId: string, operation: () => Promise<T>): Promise<T> {
+    const previous = sessionOperationTails.get(sessionId) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolveGate) => {
+      release = resolveGate;
+    });
+    const tail = previous.then(() => gate);
+    sessionOperationTails.set(sessionId, tail);
+    await previous;
+    try {
+      return await operation();
+    }
+    finally {
+      release();
+      if (sessionOperationTails.get(sessionId) === tail) {
+        sessionOperationTails.delete(sessionId);
+      }
+    }
   }
 
   function ownsSession(rendererId: number, sessionId: string): boolean {
@@ -210,12 +322,15 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       serviceHost.close();
       sessions.clear();
       rendererSessions.clear();
+      activePageRequests.clear();
+      sessionOperationTails.clear();
       ipcMain.removeHandler(CONNECTION_CHANNEL);
       ipcMain.removeHandler(DISCONNECT_CHANNEL);
       ipcMain.removeHandler(SCHEMAS_CHANNEL);
       ipcMain.removeHandler(TABLES_CHANNEL);
       ipcMain.removeHandler(STRUCTURE_CHANNEL);
       ipcMain.removeHandler(DATA_PAGE_CHANNEL);
+      ipcMain.removeHandler(CANCEL_DATA_PAGE_CHANNEL);
       ipcMain.removeHandler(LIST_PROFILES_CHANNEL);
       ipcMain.removeHandler(SAVE_PROFILE_CHANNEL);
       ipcMain.removeHandler(DELETE_PROFILE_CHANNEL);
@@ -301,9 +416,11 @@ function parseTableRequest(value: unknown): { sessionId: string; schema: string;
 
 function parseDataPageRequest(
   value: unknown,
-): { sessionId: string; schema: string; table: string; page: PostgresDataPageInput } | null {
+): { sessionId: string; requestId: string; schema: string; table: string; page: PostgresDataPageInput } | null {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['sessionId', 'schema', 'table', 'page'])
+    || !hasExactKeys(value, ['sessionId', 'requestId', 'schema', 'table', 'page'])
+    || typeof value.requestId !== 'string'
+    || !isRequestId(value.requestId)
     || typeof value.schema !== 'string'
     || !isDatabaseIdentifier(value.schema)
     || typeof value.table !== 'string'
@@ -312,7 +429,18 @@ function parseDataPageRequest(
     return null;
   }
   const sessionId = parseSessionRequest({ sessionId: value.sessionId });
-  return sessionId ? { sessionId, schema: value.schema, table: value.table, page: value.page } : null;
+  return sessionId ? { sessionId, requestId: value.requestId, schema: value.schema, table: value.table, page: value.page } : null;
+}
+
+function parseDataPageCancelRequest(value: unknown): { sessionId: string; requestId: string } | null {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['sessionId', 'requestId'])
+    || typeof value.requestId !== 'string'
+    || !isRequestId(value.requestId)) {
+    return null;
+  }
+  const sessionId = parseSessionRequest({ sessionId: value.sessionId });
+  return sessionId ? { sessionId, requestId: value.requestId } : null;
 }
 
 function isBoundedPageInput(value: unknown): value is PostgresDataPageInput {
@@ -350,6 +478,10 @@ function isBoundedPageInput(value: unknown): value is PostgresDataPageInput {
 
 function isSessionId(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function isRequestId(value: string): boolean {
+  return isSessionId(value);
 }
 
 function isDatabaseIdentifier(value: string): boolean {

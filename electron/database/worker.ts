@@ -43,7 +43,9 @@ function executeCommand(command: DatabaseWorkerCommand) {
     case 'get-structure':
       return databaseService.getStructure(command.sessionId, command.schema, command.table);
     case 'get-data-page':
-      return databaseService.getDataPage(command.sessionId, command.schema, command.table, command.page);
+      return databaseService.getDataPage(command.sessionId, command.schema, command.table, command.page, command.pageRequestId);
+    case 'cancel-data-page':
+      return databaseService.cancelDataPage(command.sessionId, command.targetRequestId);
     case 'close':
       return Promise.resolve({ ok: true, value: true } as const);
   }

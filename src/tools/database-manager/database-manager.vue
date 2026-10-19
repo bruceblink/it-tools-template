@@ -16,6 +16,7 @@ import type {
 } from '@/shared/desktop-services/database';
 import {
   connectPostgres,
+  cancelDatabaseDataPage,
   deletePostgresProfile,
   disconnectDatabase,
   getDatabaseDataPage,
@@ -41,6 +42,11 @@ const previewText = computed(() => isChineseLocale.value
       noRows: '此表没有数据行。',
       previous: '上一页',
       next: '下一页',
+      loading: '正在读取预览…',
+      cancel: '取消预览',
+      cancelling: '正在取消…',
+      cancelled: '预览已取消。连接仍可使用。',
+      finishedBeforeCancel: '当前页已完成，没有执行取消。',
     }
   : {
       data: 'Data',
@@ -53,6 +59,11 @@ const previewText = computed(() => isChineseLocale.value
       noRows: 'This table has no rows.',
       previous: 'Previous',
       next: 'Next',
+      loading: 'Loading preview…',
+      cancel: 'Cancel preview',
+      cancelling: 'Cancelling…',
+      cancelled: 'Preview cancelled. The connection is still available.',
+      finishedBeforeCancel: 'The page finished before cancellation took effect.',
     });
 const profileText = computed(() => isChineseLocale.value
   ? {
@@ -115,9 +126,14 @@ const isLoadingSchemas = ref(false);
 const isLoadingTables = ref(false);
 const isLoadingStructure = ref(false);
 const isLoadingData = ref(false);
+const isCancellingData = ref(false);
+const activePageRequestId = ref<string | null>(null);
+const dataNotice = ref<'cancelled' | 'finished-before-cancel' | null>(null);
 const connectionError = ref<DatabaseErrorCode | null>(null);
 let tableRequestSequence = 0;
 let dataRequestSequence = 0;
+const pendingPageCancellations = new Map<string, Promise<DatabaseOperation<boolean>>>();
+const confirmedCancelledPageRequests = new Set<string>();
 
 interface DatabaseDataTableRow {
   rowId: string;
@@ -350,6 +366,8 @@ async function refreshSchemas(sessionId: string) {
 }
 
 async function selectSchema(schema: string | null) {
+  const sessionId = activeSession.value?.sessionId;
+  const previousPageRequestId = activePageRequestId.value;
   tableRequestSequence += 1;
   dataRequestSequence += 1;
   selectedSchema.value = schema;
@@ -357,8 +375,14 @@ async function selectSchema(schema: string | null) {
   tables.value = [];
   structure.value = [];
   dataPage.value = null;
+  dataNotice.value = null;
+  activePageRequestId.value = null;
+  isLoadingData.value = false;
   columnsTruncated.value = false;
-  const sessionId = activeSession.value?.sessionId;
+  if (sessionId && previousPageRequestId
+    && !await cancelPageBeforeTransition(sessionId, previousPageRequestId)) {
+    return;
+  }
   if (!schema || !sessionId) {
     return;
   }
@@ -383,6 +407,8 @@ async function selectSchema(schema: string | null) {
 }
 
 async function selectTable(table: string | null) {
+  const sessionId = activeSession.value?.sessionId;
+  const previousPageRequestId = activePageRequestId.value;
   const requestSequence = ++tableRequestSequence;
   dataRequestSequence += 1;
   selectedTable.value = table;
@@ -393,7 +419,12 @@ async function selectTable(table: string | null) {
   activeTableTab.value = 'data';
   columnsTruncated.value = false;
   isLoadingData.value = false;
-  const sessionId = activeSession.value?.sessionId;
+  dataNotice.value = null;
+  activePageRequestId.value = null;
+  if (sessionId && previousPageRequestId
+    && !await cancelPageBeforeTransition(sessionId, previousPageRequestId)) {
+    return;
+  }
   const schema = selectedSchema.value;
   if (!table || !schema || !sessionId) {
     return;
@@ -430,15 +461,32 @@ async function loadDataPage(pageIndex: number, tableSequence: number) {
   }
 
   const requestSequence = ++dataRequestSequence;
+  const requestId = crypto.randomUUID();
+  activePageRequestId.value = requestId;
   dataPage.value = null;
+  dataNotice.value = null;
   isLoadingData.value = true;
+  isCancellingData.value = false;
   connectionError.value = null;
   try {
-    const result = await getDatabaseDataPage(sessionId, schema, table, {
+    const result = await getDatabaseDataPage(sessionId, requestId, schema, table, {
       cursor: page.cursor,
       offset: page.offset,
     });
+    const pendingCancellation = pendingPageCancellations.get(requestId);
+    if (pendingCancellation) {
+      const cancelResult = await pendingCancellation;
+      if (cancelResult.status === 'success' && cancelResult.value) {
+        confirmedCancelledPageRequests.add(requestId);
+      }
+    }
     if (tableSequence !== tableRequestSequence || requestSequence !== dataRequestSequence) {
+      confirmedCancelledPageRequests.delete(requestId);
+      return;
+    }
+    if (confirmedCancelledPageRequests.delete(requestId)) {
+      dataPage.value = null;
+      dataNotice.value = 'cancelled';
       return;
     }
     if (result.status !== 'success') {
@@ -449,8 +497,73 @@ async function loadDataPage(pageIndex: number, tableSequence: number) {
   }
   finally {
     if (requestSequence === dataRequestSequence) {
+      if (activePageRequestId.value === requestId) {
+        activePageRequestId.value = null;
+      }
       isLoadingData.value = false;
     }
+  }
+}
+
+function requestPageCancellation(sessionId: string, requestId: string): Promise<DatabaseOperation<boolean>> {
+  const pending = pendingPageCancellations.get(requestId);
+  if (pending) {
+    return pending;
+  }
+  const cancellation = cancelDatabaseDataPage(sessionId, requestId);
+  pendingPageCancellations.set(requestId, cancellation);
+  const clearPendingCancellation = () => {
+    if (pendingPageCancellations.get(requestId) === cancellation) {
+      pendingPageCancellations.delete(requestId);
+    }
+  };
+  void cancellation.then(clearPendingCancellation, clearPendingCancellation);
+  return cancellation;
+}
+
+async function cancelPageBeforeTransition(sessionId: string, requestId: string): Promise<boolean> {
+  const result = await requestPageCancellation(sessionId, requestId);
+  if (result.status === 'success') {
+    if (result.value) {
+      confirmedCancelledPageRequests.add(requestId);
+    }
+    return true;
+  }
+  setOperationError(result);
+  await disconnect();
+  return false;
+}
+
+async function cancelCurrentDataPage() {
+  const requestId = activePageRequestId.value;
+  const sessionId = activeSession.value?.sessionId;
+  if (!requestId
+    || !sessionId
+    || !isLoadingData.value
+    || isCancellingData.value
+    || confirmedCancelledPageRequests.has(requestId)) {
+    return;
+  }
+
+  isCancellingData.value = true;
+  try {
+    const result = await requestPageCancellation(sessionId, requestId);
+    if (result.status !== 'success') {
+      setOperationError(result);
+      void disconnect();
+      return;
+    }
+    if (result.value) {
+      confirmedCancelledPageRequests.add(requestId);
+      dataPage.value = null;
+      dataNotice.value = 'cancelled';
+    }
+    else {
+      dataNotice.value = 'finished-before-cancel';
+    }
+  }
+  finally {
+    isCancellingData.value = false;
   }
 }
 
@@ -491,6 +604,10 @@ async function disconnect() {
   dataPage.value = null;
   selectedSchema.value = null;
   selectedTable.value = null;
+  activePageRequestId.value = null;
+  isLoadingData.value = false;
+  isCancellingData.value = false;
+  dataNotice.value = null;
   connectionError.value = null;
   if (sessionId) {
     const result = await disconnectDatabase(sessionId);
@@ -644,6 +761,20 @@ onUnmounted(() => {
       </div>
 
       <n-card v-if="selectedTable" mt-4>
+        <div v-if="isLoadingData" class="database-page-loading" data-test-id="database-page-loading">
+          <span>{{ isCancellingData ? previewText.cancelling : previewText.loading }}</span>
+          <n-button
+            data-test-id="database-cancel-page"
+            :loading="isCancellingData"
+            :disabled="isCancellingData || (activePageRequestId !== null && confirmedCancelledPageRequests.has(activePageRequestId))"
+            @click="cancelCurrentDataPage"
+          >
+            {{ previewText.cancel }}
+          </n-button>
+        </div>
+        <n-alert v-if="dataNotice" type="info" :show-icon="false" mb-3 data-test-id="database-page-notice">
+          {{ dataNotice === 'cancelled' ? previewText.cancelled : previewText.finishedBeforeCancel }}
+        </n-alert>
         <n-tabs v-model:value="activeTableTab" type="line">
           <n-tab-pane name="data" :tab="previewText.data">
             <n-alert v-if="dataPage?.pagingNotice === 'no-primary-key'" type="warning" :show-icon="false" mb-3>
@@ -747,6 +878,14 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.database-page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .database-page-controls {
   display: flex;
   align-items: center;
@@ -779,6 +918,11 @@ onUnmounted(() => {
   }
 
   .database-page-controls {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .database-page-loading {
     align-items: flex-start;
     flex-direction: column;
   }

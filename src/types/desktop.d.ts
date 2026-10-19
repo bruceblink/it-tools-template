@@ -58,10 +58,12 @@ declare global {
       ): Promise<DatabaseBridgeResult<PostgresStructureInfo>>;
       getDatabaseDataPage?(
         sessionId: string,
+        requestId: string,
         schema: string,
         table: string,
         page: PostgresDataPageInput,
       ): Promise<DatabaseBridgeResult<PostgresDataPage>>;
+      cancelDatabaseDataPage?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
       listPostgresProfiles?(): Promise<DatabaseBridgeResult<PostgresConnectionProfile[]>>;
       savePostgresProfile?(
         input: PostgresConnectionProfileInput,

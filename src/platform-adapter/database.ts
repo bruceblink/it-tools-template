@@ -64,11 +64,19 @@ export function getDatabaseStructure(
 
 export function getDatabaseDataPage(
   sessionId: string,
+  requestId: string,
   schema: string,
   table: string,
   page: PostgresDataPageInput,
 ): Promise<DatabaseOperation<PostgresDataPage>> {
-  return callDesktopDatabase(bridge => bridge.getDatabaseDataPage?.(sessionId, schema, table, page));
+  return callDesktopDatabase(bridge => bridge.getDatabaseDataPage?.(sessionId, requestId, schema, table, page));
+}
+
+export function cancelDatabaseDataPage(
+  sessionId: string,
+  requestId: string,
+): Promise<DatabaseOperation<boolean>> {
+  return callDesktopDatabase(bridge => bridge.cancelDatabaseDataPage?.(sessionId, requestId));
 }
 
 export function listPostgresProfiles(): Promise<DatabaseOperation<PostgresConnectionProfile[]>> {

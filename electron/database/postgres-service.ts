@@ -34,10 +34,22 @@ const KEYSET_PRIMARY_KEY_TYPES = new Set([
   'timestamp with time zone',
 ]);
 const SESSION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const REQUEST_ID_PATTERN = SESSION_ID_PATTERN;
+
+interface ActivePostgresPageRequest {
+  requestId: string;
+  client: Client | null;
+  cancelRequested: boolean;
+  closeAfterOperation: boolean;
+  cancelPromise: Promise<DatabaseBridgeResult<boolean>> | null;
+}
 
 /** Owns only PostgreSQL clients and metadata queries inside the isolated database utility process. */
 export class PostgresDatabaseService {
   private readonly clients = new Map<string, Client>();
+  private readonly clientConfigs = new Map<string, ClientConfig>();
+  private readonly backendProcessIds = new Map<string, number>();
+  private readonly activePageRequests = new Map<string, ActivePostgresPageRequest>();
 
   async connect(sessionId: string, input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>> {
     if (!SESSION_ID_PATTERN.test(sessionId) || !isValidPostgresConnectionInput(input)) {
@@ -50,24 +62,28 @@ export class PostgresDatabaseService {
       return { ok: false, error: 'too-many-sessions' };
     }
 
-    const client = new Client(createClientConfig(input));
+    const clientConfig = createClientConfig(input);
+    const client = new Client(clientConfig);
     try {
       await client.connect();
       await client.query('SET default_transaction_read_only = on');
       await client.query("SET statement_timeout = '15000ms'");
       await client.query("SET lock_timeout = '5000ms'");
       await client.query("SET idle_in_transaction_session_timeout = '10000ms'");
-      const version = await client.query<{ server_version: string }>(
-        'SELECT current_setting(\'server_version\') AS server_version',
+      const version = await client.query<{ server_version: string; backend_pid: number }>(
+        'SELECT current_setting(\'server_version\') AS server_version, pg_backend_pid()::integer AS backend_pid',
       );
       const serverVersion = version.rows[0]?.server_version;
-      if (!serverVersion) {
+      const backendPid = version.rows[0]?.backend_pid;
+      if (!serverVersion || !Number.isInteger(backendPid) || backendPid <= 0) {
         await client.end();
         return { ok: false, error: 'connection-failed' };
       }
 
-      client.on('error', () => this.clients.delete(sessionId));
+      client.on('error', () => this.removeSessionClient(sessionId, client));
       this.clients.set(sessionId, client);
+      this.clientConfigs.set(sessionId, clientConfig);
+      this.backendProcessIds.set(sessionId, backendPid);
       return { ok: true, value: { sessionId, serverVersion } };
     }
     catch (error) {
@@ -77,12 +93,16 @@ export class PostgresDatabaseService {
   }
 
   async disconnect(sessionId: string): Promise<DatabaseBridgeResult<boolean>> {
+    const activePage = this.activePageRequests.get(sessionId);
+    if (activePage) {
+      await this.cancelDataPage(sessionId, activePage.requestId);
+    }
     const client = this.clients.get(sessionId);
     if (!client) {
       return { ok: true, value: false };
     }
 
-    this.clients.delete(sessionId);
+    this.removeSessionClient(sessionId, client);
     try {
       await client.end();
       return { ok: true, value: true };
@@ -90,6 +110,29 @@ export class PostgresDatabaseService {
     catch {
       return { ok: false, error: 'query-failed' };
     }
+  }
+
+  /** Cancel only the page request that owns this session and preserve its connection on success. */
+  async cancelDataPage(
+    sessionId: string,
+    requestId: string,
+  ): Promise<DatabaseBridgeResult<boolean>> {
+    if (!SESSION_ID_PATTERN.test(sessionId) || !REQUEST_ID_PATTERN.test(requestId)) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const activePage = this.activePageRequests.get(sessionId);
+    if (!activePage || activePage.requestId !== requestId) {
+      return { ok: true, value: false };
+    }
+
+    activePage.cancelRequested = true;
+    if (!activePage.client) {
+      return { ok: true, value: true };
+    }
+    if (!activePage.cancelPromise) {
+      activePage.cancelPromise = this.sendPageCancellation(sessionId, activePage);
+    }
+    return activePage.cancelPromise;
   }
 
   async listSchemas(sessionId: string): Promise<DatabaseBridgeResult<PostgresSchemaInfo[]>> {
@@ -226,6 +269,7 @@ export class PostgresDatabaseService {
     schema: string,
     table: string,
     page: PostgresDataPageInput,
+    requestId: string,
   ): Promise<DatabaseBridgeResult<PostgresDataPage>> {
     const client = this.clients.get(sessionId);
     if (!client) {
@@ -233,43 +277,60 @@ export class PostgresDatabaseService {
     }
     if (!isValidDatabaseIdentifier(schema)
       || !isValidDatabaseIdentifier(table)
-      || !isValidPostgresPageRequest(page)) {
+      || !isValidPostgresPageRequest(page)
+      || !REQUEST_ID_PATTERN.test(requestId)
+      || this.activePageRequests.has(sessionId)) {
       return { ok: false, error: 'invalid-request' };
     }
 
+    const activePage: ActivePostgresPageRequest = {
+      requestId,
+      client,
+      cancelRequested: false,
+      closeAfterOperation: false,
+      cancelPromise: null,
+    };
+    this.activePageRequests.set(sessionId, activePage);
     try {
-      const [columnResult, primaryKeyResult] = await Promise.all([
-        client.query<{ column_name: string; data_type: string }>(
-          `SELECT column_name, data_type
-           FROM information_schema.columns
-           WHERE table_schema = $1 AND table_name = $2
-           ORDER BY ordinal_position
-           LIMIT $3`,
-          [schema, table, MAX_PREVIEW_COLUMNS + 1],
-        ),
-        client.query<{ column_name: string; data_type: string; key_position: number }>(
-          `SELECT column_info.column_name,
-                  column_info.data_type,
-                  key_column.ordinal_position::integer AS key_position
-           FROM information_schema.table_constraints AS constraint_info
-           JOIN information_schema.key_column_usage AS key_column
-             ON key_column.constraint_catalog = constraint_info.constraint_catalog
-            AND key_column.constraint_schema = constraint_info.constraint_schema
-            AND key_column.constraint_name = constraint_info.constraint_name
-            AND key_column.table_schema = constraint_info.table_schema
-            AND key_column.table_name = constraint_info.table_name
-           JOIN information_schema.columns AS column_info
-             ON column_info.table_schema = key_column.table_schema
-            AND column_info.table_name = key_column.table_name
-            AND column_info.column_name = key_column.column_name
-           WHERE constraint_info.constraint_type = 'PRIMARY KEY'
-             AND constraint_info.table_schema = $1
-             AND constraint_info.table_name = $2
-           ORDER BY key_column.ordinal_position
-           LIMIT $3`,
-          [schema, table, MAX_PRIMARY_KEY_COLUMNS + 1],
-        ),
-      ]);
+      if (activePage.cancelRequested) {
+        return { ok: false, error: 'query-timeout' };
+      }
+      const columnResult = await client.query<{ column_name: string; data_type: string }>(
+        `SELECT column_name, data_type
+         FROM information_schema.columns
+         WHERE table_schema = $1 AND table_name = $2
+         ORDER BY ordinal_position
+         LIMIT $3`,
+        [schema, table, MAX_PREVIEW_COLUMNS + 1],
+      );
+      if (activePage.cancelRequested) {
+        return { ok: false, error: 'query-timeout' };
+      }
+      const primaryKeyResult = await client.query<{ column_name: string; data_type: string; key_position: number }>(
+        `SELECT column_info.column_name,
+                column_info.data_type,
+                key_column.ordinal_position::integer AS key_position
+         FROM information_schema.table_constraints AS constraint_info
+         JOIN information_schema.key_column_usage AS key_column
+           ON key_column.constraint_catalog = constraint_info.constraint_catalog
+          AND key_column.constraint_schema = constraint_info.constraint_schema
+          AND key_column.constraint_name = constraint_info.constraint_name
+          AND key_column.table_schema = constraint_info.table_schema
+          AND key_column.table_name = constraint_info.table_name
+         JOIN information_schema.columns AS column_info
+           ON column_info.table_schema = key_column.table_schema
+          AND column_info.table_name = key_column.table_name
+          AND column_info.column_name = key_column.column_name
+         WHERE constraint_info.constraint_type = 'PRIMARY KEY'
+           AND constraint_info.table_schema = $1
+           AND constraint_info.table_name = $2
+         ORDER BY key_column.ordinal_position
+         LIMIT $3`,
+        [schema, table, MAX_PRIMARY_KEY_COLUMNS + 1],
+      );
+      if (activePage.cancelRequested) {
+        return { ok: false, error: 'query-timeout' };
+      }
       const columns = columnResult.rows.slice(0, MAX_PREVIEW_COLUMNS);
       if (columns.length === 0) {
         return { ok: false, error: 'query-failed' };
@@ -318,6 +379,9 @@ export class PostgresDatabaseService {
         ? page.cursor === null ? [MAX_PREVIEW_ROWS + 1] : [page.cursor, MAX_PREVIEW_ROWS + 1]
         : [page.offset, MAX_PREVIEW_ROWS + 1];
       const result = await client.query<Record<string, unknown>>(sql, parameters);
+      if (activePage.cancelRequested) {
+        return { ok: false, error: 'query-timeout' };
+      }
       const pageRows = result.rows.slice(0, MAX_PREVIEW_ROWS);
       const hasMoreRows = result.rows.length > MAX_PREVIEW_ROWS;
       const nextOffset = pagingMode === 'offset' && hasMoreRows && page.offset + MAX_PREVIEW_ROWS <= MAX_PAGE_OFFSET
@@ -349,13 +413,82 @@ export class PostgresDatabaseService {
       };
     }
     catch (error) {
+      if (activePage.closeAfterOperation) {
+        return { ok: false, error: 'service-unavailable' };
+      }
       return { ok: false, error: classifyPostgresError(error, 'query-failed') };
+    }
+    finally {
+      if (activePage.cancelPromise) {
+        await activePage.cancelPromise;
+      }
+      if (this.activePageRequests.get(sessionId) === activePage) {
+        this.activePageRequests.delete(sessionId);
+      }
     }
   }
 
   async closeAll(): Promise<void> {
     const sessions = [...this.clients.keys()];
     await Promise.all(sessions.map(sessionId => this.disconnect(sessionId)));
+  }
+
+  private async sendPageCancellation(
+    sessionId: string,
+    activePage: ActivePostgresPageRequest,
+  ): Promise<DatabaseBridgeResult<boolean>> {
+    const client = activePage.client;
+    const clientConfig = this.clientConfigs.get(sessionId);
+    const backendPid = this.backendProcessIds.get(sessionId);
+    if (!client || !clientConfig || backendPid === undefined) {
+      activePage.closeAfterOperation = true;
+      if (client) {
+        this.removeSessionClient(sessionId, client);
+        void client.end().catch(() => undefined);
+      }
+      return { ok: false, error: 'service-unavailable' };
+    }
+
+    const cancelClient = new Client({
+      ...clientConfig,
+      application_name: 'IT Tools Desktop Cancel',
+      connectionTimeoutMillis: 2_000,
+      query_timeout: 2_000,
+      statement_timeout: 2_000,
+      lock_timeout: 1_000,
+    });
+    try {
+      await cancelClient.connect();
+      const result = await cancelClient.query<{ cancelled: boolean }>(
+        'SELECT pg_cancel_backend($1::integer) AS cancelled',
+        [backendPid],
+      );
+      if (result.rows[0]?.cancelled !== true) {
+        activePage.closeAfterOperation = true;
+        this.removeSessionClient(sessionId, client);
+        void client.end().catch(() => undefined);
+        return { ok: false, error: 'service-unavailable' };
+      }
+      return { ok: true, value: true };
+    }
+    catch {
+      activePage.closeAfterOperation = true;
+      this.removeSessionClient(sessionId, client);
+      void client.end().catch(() => undefined);
+      return { ok: false, error: 'service-unavailable' };
+    }
+    finally {
+      await cancelClient.end().catch(() => undefined);
+    }
+  }
+
+  private removeSessionClient(sessionId: string, client: Client): void {
+    if (this.clients.get(sessionId) !== client) {
+      return;
+    }
+    this.clients.delete(sessionId);
+    this.clientConfigs.delete(sessionId);
+    this.backendProcessIds.delete(sessionId);
   }
 }
 

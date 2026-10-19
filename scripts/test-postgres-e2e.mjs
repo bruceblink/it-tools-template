@@ -38,7 +38,14 @@ try {
 
   await run('docker', [
     'exec', containerId, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', 'postgres', '-c',
-    'CREATE TABLE public.s2a_structure_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL DEFAULT \'fixture\'); INSERT INTO public.s2a_structure_probe (probe_id, probe_value) VALUES (1, \'structure test\'); CREATE TABLE public.s2b_keyset_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL, nullable_value text); INSERT INTO public.s2b_keyset_probe (probe_id, probe_value, nullable_value) SELECT value, CASE WHEN value = 1 THEN repeat(\'x\', 10000) ELSE \'row \' || value END, NULL FROM generate_series(1, 56) AS series(value); CREATE TABLE public.s2b_offset_probe (probe_value text NOT NULL); INSERT INTO public.s2b_offset_probe (probe_value) SELECT \'row \' || value FROM generate_series(1, 30) AS series(value)',
+    `CREATE TABLE public.s2a_structure_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL DEFAULT 'fixture');
+     INSERT INTO public.s2a_structure_probe (probe_id, probe_value) VALUES (1, 'structure test');
+     CREATE TABLE public.s2b_keyset_probe (probe_id integer PRIMARY KEY, probe_value text NOT NULL, nullable_value text);
+     INSERT INTO public.s2b_keyset_probe (probe_id, probe_value, nullable_value) SELECT value, CASE WHEN value = 1 THEN repeat('x', 10000) ELSE 'row ' || value END, NULL FROM generate_series(1, 56) AS series(value);
+     CREATE TABLE public.s2b_offset_probe (probe_value text NOT NULL);
+     INSERT INTO public.s2b_offset_probe (probe_value) SELECT 'row ' || value FROM generate_series(1, 30) AS series(value);
+     CREATE FUNCTION public.s2d_slow_text() RETURNS text LANGUAGE plpgsql VOLATILE AS $$ BEGIN PERFORM pg_sleep(30); RETURN 'slow'; END $$;
+     CREATE VIEW public.s2d_slow_view AS SELECT value AS id, public.s2d_slow_text() AS delayed_value FROM generate_series(1, 1) AS series(value)`,
   ]);
 
   const serviceTestExitCode = await runPnpm(
