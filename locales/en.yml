@@ -85,11 +85,11 @@ tools:
 
   database-manager:
     title: Database manager
-    description: Browse PostgreSQL, MySQL, and SQLite databases from the desktop app.
-    stageNotice: PostgreSQL browsing is available. More engines and saved connections are planned.
+    description: PostgreSQL desktop browser; MySQL/SQLite planned.
+    stageNotice: PostgreSQL and saved profiles work; MySQL/SQLite planned.
     connections: Connections
     noConnections: No database connections yet.
-    supportedEngines: Supported database engines
+    availableEngines: Available engine
     connectPostgres: Connect to PostgreSQL
     host: Host
     port: Port

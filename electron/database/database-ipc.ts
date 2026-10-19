@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { resolve } from 'node:path';
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import type {
   DatabaseBridgeResult,
@@ -13,6 +14,7 @@ import type {
 } from '../../src/shared/desktop-services/database';
 import { isTrustedDesktopSender } from '../plugin-ipc-security';
 import { DatabaseServiceHost } from './database-service-host';
+import { PostgresConnectionProfileStore } from './postgres-connection-profile-store';
 
 const CONNECTION_CHANNEL = 'desktop:database:postgres:connect';
 const DISCONNECT_CHANNEL = 'desktop:database:disconnect';
@@ -20,10 +22,14 @@ const SCHEMAS_CHANNEL = 'desktop:database:schemas';
 const TABLES_CHANNEL = 'desktop:database:tables';
 const STRUCTURE_CHANNEL = 'desktop:database:structure';
 const DATA_PAGE_CHANNEL = 'desktop:database:data-page';
+const LIST_PROFILES_CHANNEL = 'desktop:database:postgres-profiles:list';
+const SAVE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:save';
+const DELETE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:delete';
 
 interface DatabaseIpcDependencies {
   trustedRendererUrl: () => string;
   workerPath: string;
+  userDataRoot: string;
 }
 
 interface OwnedSession {
@@ -34,6 +40,9 @@ interface OwnedSession {
 /** Expose only the operations required for PostgreSQL metadata browsing to the trusted app frame. */
 export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   const serviceHost = new DatabaseServiceHost(dependencies.workerPath);
+  const profileStore = new PostgresConnectionProfileStore(
+    resolve(dependencies.userDataRoot, 'database-manager', 'postgres-profiles.json'),
+  );
   const sessions = new Map<string, OwnedSession>();
   const rendererSessions = new Map<number, string>();
 
@@ -145,6 +154,34 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     });
   });
 
+  ipcMain.handle(LIST_PROFILES_CHANNEL, async (event) => {
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    return profileStore.list();
+  });
+
+  ipcMain.handle(SAVE_PROFILE_CHANNEL, async (event, value: unknown) => {
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    return profileStore.save(value);
+  });
+
+  ipcMain.handle(DELETE_PROFILE_CHANNEL, async (event, value: unknown) => {
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    const profileId = parseProfileDeleteRequest(value);
+    if (!profileId) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    return profileStore.delete(profileId);
+  });
+
   async function disconnectRendererSession(rendererId: number): Promise<void> {
     const sessionId = rendererSessions.get(rendererId);
     if (sessionId) {
@@ -179,8 +216,25 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       ipcMain.removeHandler(TABLES_CHANNEL);
       ipcMain.removeHandler(STRUCTURE_CHANNEL);
       ipcMain.removeHandler(DATA_PAGE_CHANNEL);
+      ipcMain.removeHandler(LIST_PROFILES_CHANNEL);
+      ipcMain.removeHandler(SAVE_PROFILE_CHANNEL);
+      ipcMain.removeHandler(DELETE_PROFILE_CHANNEL);
     },
   };
+}
+
+function parseProfileDeleteRequest(value: unknown): string | null {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['profileId'])
+    || typeof value.profileId !== 'string'
+    || !isProfileId(value.profileId)) {
+    return null;
+  }
+  return value.profileId;
+}
+
+function isProfileId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function getTrustedSenderError(event: IpcMainInvokeEvent, trustedRendererUrl: string): DatabaseErrorCode | null {

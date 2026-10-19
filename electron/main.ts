@@ -95,6 +95,7 @@ else {
     databaseIpc = registerDatabaseIpc({
       trustedRendererUrl: () => trustedRendererUrl,
       workerPath: resolve(app.getAppPath(), 'out/main/database-worker.cjs'),
+      userDataRoot: app.getPath('userData'),
     });
     await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),

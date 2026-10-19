@@ -150,7 +150,9 @@ function isDatabaseErrorCode(value: unknown): value is DatabaseErrorCode {
     || value === 'too-many-sessions'
     || value === 'not-connected'
     || value === 'query-failed'
-    || value === 'query-timeout';
+    || value === 'query-timeout'
+    || value === 'profile-storage-failed'
+    || value === 'profile-limit-reached';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

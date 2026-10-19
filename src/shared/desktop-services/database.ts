@@ -10,6 +10,28 @@ export interface PostgresConnectionInput {
   tlsMode: DatabaseTlsMode;
 }
 
+/** A saved profile contains connection metadata only. It never contains a password. */
+export interface PostgresConnectionProfile {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  tlsMode: DatabaseTlsMode;
+}
+
+/** Renderer input for creating or updating a password-free connection profile. */
+export interface PostgresConnectionProfileInput {
+  id?: string;
+  name: string;
+  host: string;
+  port: number;
+  database: string;
+  username: string;
+  tlsMode: DatabaseTlsMode;
+}
+
 export type DatabaseErrorCode =
   | 'invalid-request'
   | 'untrusted-renderer'
@@ -18,7 +40,9 @@ export type DatabaseErrorCode =
   | 'too-many-sessions'
   | 'not-connected'
   | 'query-failed'
-  | 'query-timeout';
+  | 'query-timeout'
+  | 'profile-storage-failed'
+  | 'profile-limit-reached';
 
 export type DatabaseBridgeResult<T> =
   | { ok: true; value: T }

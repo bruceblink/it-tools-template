@@ -85,11 +85,11 @@ tools:
 
   database-manager:
     title: 数据库管理器
-    description: 在桌面应用中浏览 PostgreSQL、MySQL 和 SQLite 数据库。
-    stageNotice: PostgreSQL 浏览功能已可用。后续将支持更多数据库和已保存连接。
+    description: 桌面版 PostgreSQL 浏览器；计划支持 MySQL/SQLite。
+    stageNotice: PostgreSQL 浏览和连接资料可用；MySQL/SQLite 计划中。
     connections: 数据库连接
     noConnections: 还没有数据库连接。
-    supportedEngines: 支持的数据库
+    availableEngines: 可用引擎
     connectPostgres: 连接 PostgreSQL
     host: 主机
     port: 端口

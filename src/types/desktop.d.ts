@@ -1,6 +1,8 @@
 import type {
   DatabaseBridgeResult,
   PostgresConnectionInput,
+  PostgresConnectionProfile,
+  PostgresConnectionProfileInput,
   PostgresDataPage,
   PostgresDataPageInput,
   PostgresSchemaInfo,
@@ -60,6 +62,11 @@ declare global {
         table: string,
         page: PostgresDataPageInput,
       ): Promise<DatabaseBridgeResult<PostgresDataPage>>;
+      listPostgresProfiles?(): Promise<DatabaseBridgeResult<PostgresConnectionProfile[]>>;
+      savePostgresProfile?(
+        input: PostgresConnectionProfileInput,
+      ): Promise<DatabaseBridgeResult<PostgresConnectionProfile>>;
+      deletePostgresProfile?(profileId: string): Promise<DatabaseBridgeResult<boolean>>;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       activatePlugin?(

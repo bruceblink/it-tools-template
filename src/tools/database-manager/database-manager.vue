@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { DataTableColumns } from 'naive-ui';
-import { onUnmounted, reactive, ref } from 'vue';
+import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import type {
   DatabaseErrorCode,
   DatabaseTlsMode,
@@ -8,17 +8,22 @@ import type {
   PostgresDataCell,
   PostgresDataPage,
   PostgresDataPageInput,
+  PostgresConnectionProfile,
+  PostgresConnectionProfileInput,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresTableInfo,
 } from '@/shared/desktop-services/database';
 import {
   connectPostgres,
+  deletePostgresProfile,
   disconnectDatabase,
   getDatabaseDataPage,
   getDatabaseStructure,
+  listPostgresProfiles,
   listDatabaseSchemas,
   listDatabaseTables,
+  savePostgresProfile,
   type DatabaseOperation,
 } from '@/platform-adapter/database';
 
@@ -49,6 +54,35 @@ const previewText = computed(() => isChineseLocale.value
       previous: 'Previous',
       next: 'Next',
     });
+const profileText = computed(() => isChineseLocale.value
+  ? {
+      title: '已保存的连接',
+      select: '选择连接资料',
+      noSavedProfiles: '还没有已保存的连接资料。',
+      name: '连接名称',
+      namePlaceholder: '例如：本机开发数据库',
+      passwordNotSaved: '连接资料不会保存密码。每次连接时都需要输入密码。',
+      save: '保存资料',
+      delete: '删除资料',
+      saved: '连接资料已保存。',
+      deleted: '连接资料已删除。',
+      storageError: '无法读取或保存连接资料。请检查应用数据目录后重试。',
+      limitError: '最多保存 20 个连接资料。请先删除一个资料。',
+    }
+  : {
+      title: 'Saved connections',
+      select: 'Choose a connection profile',
+      noSavedProfiles: 'No connection profiles have been saved.',
+      name: 'Profile name',
+      namePlaceholder: 'For example: Local development database',
+      passwordNotSaved: 'Connection profiles never save passwords. Enter the password each time you connect.',
+      save: 'Save profile',
+      delete: 'Delete profile',
+      saved: 'Connection profile saved.',
+      deleted: 'Connection profile deleted.',
+      storageError: 'Could not read or save connection profiles. Check the application data directory and try again.',
+      limitError: 'You can save up to 20 connection profiles. Delete one profile before adding another.',
+    });
 const connectionForm = reactive({
   host: '127.0.0.1',
   port: 5432,
@@ -57,6 +91,14 @@ const connectionForm = reactive({
   password: '',
   tlsMode: 'verify' as DatabaseTlsMode,
 });
+const savedProfiles = ref<PostgresConnectionProfile[]>([]);
+const selectedProfileId = ref<string | null>(null);
+const profileName = ref('');
+const profileError = ref<DatabaseErrorCode | null>(null);
+const profileNotice = ref<'saved' | 'deleted' | null>(null);
+const isLoadingProfiles = ref(false);
+const isSavingProfile = ref(false);
+const isDeletingProfile = ref(false);
 const activeSession = ref<PostgresSessionInfo | null>(null);
 const schemas = ref<PostgresSchemaInfo[]>([]);
 const tables = ref<PostgresTableInfo[]>([]);
@@ -88,6 +130,10 @@ const tlsOptions = computed(() => [
   { label: t('tools.database-manager.verifyTls'), value: 'verify' },
   { label: t('tools.database-manager.disableTls'), value: 'disable' },
 ]);
+const savedProfileOptions = computed(() => savedProfiles.value.map(profile => ({
+  label: `${profile.name} · ${profile.host}/${profile.database}`,
+  value: profile.id,
+})));
 const structureColumns = computed<DataTableColumns<PostgresColumnInfo>>(() => [
   { title: t('tools.database-manager.columnName'), key: 'name', minWidth: 180 },
   { title: t('tools.database-manager.dataType'), key: 'dataType', minWidth: 140 },
@@ -137,6 +183,18 @@ const pageLabel = computed(() => isChineseLocale.value
 const errorMessage = computed(() => connectionError.value
   ? t(`tools.database-manager.errors.${connectionError.value}`)
   : '');
+const profileErrorMessage = computed(() => {
+  if (profileError.value === 'profile-storage-failed') {
+    return profileText.value.storageError;
+  }
+  if (profileError.value === 'profile-limit-reached') {
+    return profileText.value.limitError;
+  }
+  return profileError.value ? t(`tools.database-manager.errors.${profileError.value}`) : '';
+});
+const profileNoticeMessage = computed(() => profileNotice.value === 'saved'
+  ? profileText.value.saved
+  : profileNotice.value === 'deleted' ? profileText.value.deleted : '');
 
 function getStructureRowKey(row: PostgresColumnInfo): string {
   return row.name;
@@ -144,6 +202,100 @@ function getStructureRowKey(row: PostgresColumnInfo): string {
 
 function getDataRowKey(row: DatabaseDataTableRow): string {
   return row.rowId;
+}
+
+async function refreshSavedProfiles() {
+  isLoadingProfiles.value = true;
+  profileError.value = null;
+  try {
+    const result = await listPostgresProfiles();
+    if (result.status !== 'success') {
+      profileError.value = result.status === 'failed' ? result.error : 'service-unavailable';
+      return;
+    }
+    savedProfiles.value = result.value;
+  }
+  finally {
+    isLoadingProfiles.value = false;
+  }
+}
+
+function selectSavedProfile(profileId: string | null) {
+  selectedProfileId.value = profileId;
+  profileError.value = null;
+  profileNotice.value = null;
+  if (!profileId) {
+    profileName.value = '';
+    return;
+  }
+
+  const profile = savedProfiles.value.find(item => item.id === profileId);
+  if (!profile) {
+    return;
+  }
+  profileName.value = profile.name;
+  connectionForm.host = profile.host;
+  connectionForm.port = profile.port;
+  connectionForm.database = profile.database;
+  connectionForm.username = profile.username;
+  connectionForm.tlsMode = profile.tlsMode;
+  connectionForm.password = '';
+}
+
+async function saveCurrentProfile() {
+  if (isSavingProfile.value) {
+    return;
+  }
+  isSavingProfile.value = true;
+  profileError.value = null;
+  profileNotice.value = null;
+  const input: PostgresConnectionProfileInput = {
+    ...(selectedProfileId.value ? { id: selectedProfileId.value } : {}),
+    name: profileName.value.trim(),
+    host: connectionForm.host,
+    port: connectionForm.port,
+    database: connectionForm.database,
+    username: connectionForm.username,
+    tlsMode: connectionForm.tlsMode,
+  };
+  try {
+    const result = await savePostgresProfile(input);
+    if (result.status !== 'success') {
+      profileError.value = result.status === 'failed' ? result.error : 'service-unavailable';
+      return;
+    }
+    selectedProfileId.value = result.value.id;
+    profileName.value = result.value.name;
+    await refreshSavedProfiles();
+    profileNotice.value = 'saved';
+  }
+  finally {
+    isSavingProfile.value = false;
+  }
+}
+
+async function deleteSelectedProfile() {
+  const profileId = selectedProfileId.value;
+  if (!profileId || isDeletingProfile.value) {
+    return;
+  }
+  isDeletingProfile.value = true;
+  profileError.value = null;
+  profileNotice.value = null;
+  try {
+    const result = await deletePostgresProfile(profileId);
+    if (result.status !== 'success') {
+      profileError.value = result.status === 'failed' ? result.error : 'service-unavailable';
+      return;
+    }
+    selectedProfileId.value = null;
+    profileName.value = '';
+    await refreshSavedProfiles();
+    profileNotice.value = 'deleted';
+  }
+  finally {
+    isDeletingProfile.value = false;
+  }
 }
 
 /** Send the password once, clear the visible input, and keep the session id only in page memory. */
@@ -352,6 +504,10 @@ function setOperationError(result: Exclude<DatabaseOperation<unknown>, { status:
   connectionError.value = result.status === 'failed' ? result.error : 'service-unavailable';
 }
 
+onMounted(() => {
+  void refreshSavedProfiles();
+});
+
 onUnmounted(() => {
   tableRequestSequence += 1;
   dataRequestSequence += 1;
@@ -375,6 +531,43 @@ onUnmounted(() => {
 
     <div v-if="!activeSession" class="database-manager-grid">
       <n-card :title="$t('tools.database-manager.connectPostgres')">
+        <div class="saved-profile-section" data-test-id="postgres-profile-section">
+          <strong>{{ profileText.title }}</strong>
+          <n-alert type="info" :show-icon="false">
+            {{ profileText.passwordNotSaved }}
+          </n-alert>
+          <n-alert v-if="profileErrorMessage" type="error" :show-icon="false" role="alert">
+            {{ profileErrorMessage }}
+          </n-alert>
+          <n-alert v-if="profileNoticeMessage" type="success" :show-icon="false">
+            {{ profileNoticeMessage }}
+          </n-alert>
+          <n-form-item data-test-id="postgres-profile-select-field" :label="profileText.select">
+            <n-select
+              class="profile-select"
+              :value="selectedProfileId"
+              :options="savedProfileOptions"
+              :loading="isLoadingProfiles"
+              :placeholder="profileText.noSavedProfiles"
+              clearable
+              @update:value="selectSavedProfile"
+            />
+          </n-form-item>
+          <div class="profile-form-grid">
+            <n-form-item data-test-id="postgres-profile-name-field" :label="profileText.name">
+              <n-input v-model:value="profileName" :placeholder="profileText.namePlaceholder" maxlength="80" autocomplete="off" />
+            </n-form-item>
+            <div class="profile-actions">
+              <n-button type="primary" :loading="isSavingProfile" :disabled="isLoadingProfiles" @click="saveCurrentProfile">
+                {{ profileText.save }}
+              </n-button>
+              <n-button :loading="isDeletingProfile" :disabled="!selectedProfileId || isLoadingProfiles" @click="deleteSelectedProfile">
+                {{ profileText.delete }}
+              </n-button>
+            </div>
+          </div>
+        </div>
+
         <div class="connection-form">
           <n-form-item data-test-id="postgres-host-field" :label="$t('tools.database-manager.host')">
             <n-input v-model:value="connectionForm.host" autocomplete="off" />
@@ -407,11 +600,9 @@ onUnmounted(() => {
         </div>
       </n-card>
 
-      <n-card :title="$t('tools.database-manager.supportedEngines')">
+      <n-card :title="$t('tools.database-manager.availableEngines')">
         <div class="database-engine-list">
           <span>PostgreSQL</span>
-          <span>MySQL</span>
-          <span>SQLite</span>
         </div>
       </n-card>
     </div>
@@ -527,6 +718,28 @@ onUnmounted(() => {
   gap: 0 16px;
 }
 
+.saved-profile-section {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.profile-form-grid {
+  display: grid;
+  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 16px;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-bottom: 24px;
+}
+
 .connection-summary {
   display: flex;
   align-items: center;
@@ -560,13 +773,19 @@ onUnmounted(() => {
 
 @media (max-width: 760px) {
   .database-manager-grid,
-  .connection-form {
+  .connection-form,
+  .profile-form-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .database-page-controls {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .profile-actions {
+    justify-content: flex-start;
+    padding-bottom: 0;
   }
 }
 </style>
