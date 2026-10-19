@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { RandomSource } from '@/utils/random';
-import { generateUuidV1, generateUuidV4 } from './uuid-generator.service';
+import { generateUuidV1, generateUuidV4, generateUuidV7 } from './uuid-generator.service';
 
 function createConstantSource(byte: number): RandomSource {
   return bytes => bytes.fill(byte);
@@ -38,11 +38,38 @@ describe('UUID generator service', () => {
     expect(requestedBytes).toBe(16);
   });
 
+  it('generates UUID v7 with the supplied Unix millisecond timestamp', () => {
+    const now = 0x1234_5678_9abc;
+    let requestedBytes = 0;
+    const source: RandomSource = (bytes) => {
+      requestedBytes += bytes.byteLength;
+      bytes.fill(0);
+    };
+    const uuid = generateUuidV7({ now }, source);
+
+    expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(BigInt(`0x${uuid.replaceAll('-', '').slice(0, 12)}`)).toBe(BigInt(now));
+    expect(requestedBytes).toBe(16);
+  });
+
+  it('accepts UUID v7 timestamp bounds and rejects invalid timestamps', () => {
+    const source = createConstantSource(0);
+    const maxTime = 0xffff_ffff_ffff;
+
+    expect(generateUuidV7({ now: 0 }, source).startsWith('00000000-0000-7')).toBe(true);
+    expect(generateUuidV7({ now: maxTime }, source).startsWith('ffffffff-ffff-7')).toBe(true);
+    expect(() => generateUuidV7({ now: -1 }, source)).toThrow(RangeError);
+    expect(() => generateUuidV7({ now: maxTime + 1 }, source)).toThrow(RangeError);
+    expect(() => generateUuidV7({ now: Number.NaN }, source)).toThrow(RangeError);
+    expect(() => generateUuidV7({ now: Number.POSITIVE_INFINITY }, source)).toThrow(RangeError);
+  });
+
   it('propagates UUID random-source failures', () => {
     const source = () => {
       throw new Error('test UUID source failed');
     };
 
     expect(() => generateUuidV4(source)).toThrow('test UUID source failed');
+    expect(() => generateUuidV7({ now: 1_700_000_000_000 }, source)).toThrow('test UUID source failed');
   });
 });

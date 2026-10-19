@@ -475,7 +475,7 @@ tools:
 
   uuid-generator:
     title: UUIDs 生成器
-    description: 通用唯一标识符（UUID）是一个128位数字，用于标识计算机系统中的信息。可能的UUID数量为16^32，即2^128或约3.4x10^38（这是一个很大的数字！）。
+    description: 生成 NIL、v1、v3、v4、v5 及按时间排序的 v7 UUID。
 
   ipv4-address-converter:
     title: Ipv4地址转换器
