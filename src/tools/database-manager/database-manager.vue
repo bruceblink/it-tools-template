@@ -10,6 +10,7 @@ import type {
   PostgresDataPageInput,
   PostgresConnectionProfile,
   PostgresConnectionProfileInput,
+  PostgresIndexInfo,
   PostgresSchemaInfo,
   PostgresSessionInfo,
   PostgresTableInfo,
@@ -94,6 +95,28 @@ const profileText = computed(() => isChineseLocale.value
       storageError: 'Could not read or save connection profiles. Check the application data directory and try again.',
       limitError: 'You can save up to 20 connection profiles. Delete one profile before adding another.',
     });
+// Keep index labels inside this lazy desktop page so they do not increase the Web application shell.
+const indexText = computed(() => isChineseLocale.value
+  ? {
+      title: '索引',
+      name: '名称',
+      primary: '主键',
+      unique: '唯一',
+      method: '方法',
+      valid: '有效',
+      definition: '定义',
+      truncated: '索引超过 64 个，仅显示前 64 个。',
+    }
+  : {
+      title: 'Indexes',
+      name: 'Name',
+      primary: 'Primary',
+      unique: 'Unique',
+      method: 'Method',
+      valid: 'Valid',
+      definition: 'Definition',
+      truncated: '64+ indexes; showing 64.',
+    });
 const connectionForm = reactive({
   host: '127.0.0.1',
   port: 5432,
@@ -115,6 +138,8 @@ const schemas = ref<PostgresSchemaInfo[]>([]);
 const tables = ref<PostgresTableInfo[]>([]);
 const structure = ref<PostgresColumnInfo[]>([]);
 const columnsTruncated = ref(false);
+const indexes = ref<PostgresIndexInfo[]>([]);
+const indexesTruncated = ref(false);
 const dataPage = ref<PostgresDataPage | null>(null);
 const pageRequests = ref<PostgresDataPageInput[]>([{ cursor: null, offset: 0 }]);
 const currentPageIndex = ref(0);
@@ -169,6 +194,32 @@ const structureColumns = computed<DataTableColumns<PostgresColumnInfo>>(() => [
     render: row => row.primaryKey ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
   },
 ]);
+const indexColumns = computed<DataTableColumns<PostgresIndexInfo>>(() => [
+  { title: indexText.value.name, key: 'name', minWidth: 180 },
+  {
+    title: indexText.value.primary,
+    key: 'primary',
+    render: row => row.primary ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
+  },
+  {
+    title: indexText.value.unique,
+    key: 'unique',
+    render: row => row.unique ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
+  },
+  { title: indexText.value.method, key: 'method', minWidth: 100 },
+  {
+    title: indexText.value.valid,
+    key: 'valid',
+    render: row => row.valid ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
+  },
+  {
+    title: indexText.value.definition,
+    key: 'definition',
+    minWidth: 480,
+    ellipsis: { tooltip: true },
+    render: row => row.definitionTruncated ? `${row.definition}…` : row.definition,
+  },
+]);
 const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => (dataPage.value?.columns ?? []).map((column, index) => ({
   title: `${column.name} · ${column.dataType}`,
   key: `column-${index}`,
@@ -213,6 +264,10 @@ const profileNoticeMessage = computed(() => profileNotice.value === 'saved'
   : profileNotice.value === 'deleted' ? profileText.value.deleted : '');
 
 function getStructureRowKey(row: PostgresColumnInfo): string {
+  return row.name;
+}
+
+function getIndexRowKey(row: PostgresIndexInfo): string {
   return row.name;
 }
 
@@ -346,6 +401,8 @@ async function refreshSchemas(sessionId: string) {
   schemas.value = [];
   tables.value = [];
   structure.value = [];
+  indexes.value = [];
+  indexesTruncated.value = false;
   selectedSchema.value = null;
   selectedTable.value = null;
   try {
@@ -374,6 +431,8 @@ async function selectSchema(schema: string | null) {
   selectedTable.value = null;
   tables.value = [];
   structure.value = [];
+  indexes.value = [];
+  indexesTruncated.value = false;
   dataPage.value = null;
   dataNotice.value = null;
   activePageRequestId.value = null;
@@ -413,6 +472,8 @@ async function selectTable(table: string | null) {
   dataRequestSequence += 1;
   selectedTable.value = table;
   structure.value = [];
+  indexes.value = [];
+  indexesTruncated.value = false;
   dataPage.value = null;
   pageRequests.value = [{ cursor: null, offset: 0 }];
   currentPageIndex.value = 0;
@@ -443,6 +504,8 @@ async function selectTable(table: string | null) {
     }
     structure.value = result.value.columns;
     columnsTruncated.value = result.value.columnsTruncated;
+    indexes.value = result.value.indexes;
+    indexesTruncated.value = result.value.indexesTruncated;
     await loadDataPage(0, requestSequence);
   }
   finally {
@@ -601,6 +664,8 @@ async function disconnect() {
   schemas.value = [];
   tables.value = [];
   structure.value = [];
+  indexes.value = [];
+  indexesTruncated.value = false;
   dataPage.value = null;
   selectedSchema.value = null;
   selectedTable.value = null;
@@ -824,6 +889,21 @@ onUnmounted(() => {
               :scroll-x="820"
             />
             <n-empty v-if="!isLoadingStructure && structure.length === 0" :description="$t('tools.database-manager.noColumns')" mt-4 />
+            <h3 class="database-structure-heading database-index-heading">
+              {{ indexText.title }}
+            </h3>
+            <n-alert v-if="indexesTruncated" type="warning" :show-icon="false" mb-3>
+              {{ indexText.truncated }}
+            </n-alert>
+            <n-data-table
+              data-test-id="database-index-table"
+              :columns="indexColumns"
+              :data="indexes"
+              :loading="isLoadingStructure"
+              :row-key="getIndexRowKey"
+              :pagination="false"
+              :scroll-x="1250"
+            />
           </n-tab-pane>
         </n-tabs>
       </n-card>
@@ -841,6 +921,16 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+}
+
+.database-structure-heading {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.database-index-heading {
+  margin-top: 24px;
 }
 
 .connection-form {

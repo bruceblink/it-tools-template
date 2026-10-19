@@ -15,6 +15,8 @@ const MAX_POSTGRES_SESSIONS = 4;
 const MAX_SCHEMAS = 100;
 const MAX_TABLES_PER_SCHEMA = 500;
 const MAX_COLUMNS_PER_TABLE = 256;
+const MAX_INDEXES_PER_TABLE = 64;
+const MAX_INDEX_DEFINITION_CHARACTERS = 2_048;
 const MAX_PREVIEW_COLUMNS = 16;
 const MAX_PREVIEW_ROWS = 25;
 const MAX_CELL_CHARACTERS = 256;
@@ -253,9 +255,60 @@ export class PostgresDatabaseService {
       if (columns.length === 0) {
         return { ok: false, error: 'query-failed' };
       }
+
+      const indexResult = await client.query<{
+        index_name: string;
+        is_unique: boolean;
+        is_primary: boolean;
+        method: string;
+        is_valid: boolean;
+        definition: string;
+        definition_truncated: boolean;
+      }>(
+        `SELECT index_class.relname AS index_name,
+                index_info.indisunique AS is_unique,
+                index_info.indisprimary AS is_primary,
+                access_method.amname AS method,
+                index_info.indisvalid AS is_valid,
+                left(index_text.definition, $4::integer) AS definition,
+                char_length(index_text.definition) > $4::integer AS definition_truncated
+         FROM pg_catalog.pg_index AS index_info
+         JOIN pg_catalog.pg_class AS table_class
+           ON table_class.oid = index_info.indrelid
+         JOIN pg_catalog.pg_namespace AS table_namespace
+           ON table_namespace.oid = table_class.relnamespace
+         JOIN pg_catalog.pg_class AS index_class
+           ON index_class.oid = index_info.indexrelid
+         JOIN pg_catalog.pg_am AS access_method
+           ON access_method.oid = index_class.relam
+         CROSS JOIN LATERAL (
+           SELECT pg_catalog.pg_get_indexdef(index_info.indexrelid) AS definition
+         ) AS index_text
+         WHERE table_namespace.nspname = $1
+           AND table_class.relname = $2
+           AND index_info.indislive
+         ORDER BY index_info.indisprimary DESC, index_class.relname
+         LIMIT $3::integer`,
+        [schema, table, MAX_INDEXES_PER_TABLE + 1, MAX_INDEX_DEFINITION_CHARACTERS],
+      );
+      const indexes = indexResult.rows.slice(0, MAX_INDEXES_PER_TABLE).map(row => ({
+        name: row.index_name,
+        unique: row.is_unique,
+        primary: row.is_primary,
+        method: row.method,
+        valid: row.is_valid,
+        definition: row.definition,
+        definitionTruncated: row.definition_truncated,
+      }));
+
       return {
         ok: true,
-        value: { columns, columnsTruncated: result.rows.length > MAX_COLUMNS_PER_TABLE },
+        value: {
+          columns,
+          columnsTruncated: result.rows.length > MAX_COLUMNS_PER_TABLE,
+          indexes,
+          indexesTruncated: indexResult.rows.length > MAX_INDEXES_PER_TABLE,
+        },
       };
     }
     catch (error) {

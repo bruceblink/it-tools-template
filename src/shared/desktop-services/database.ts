@@ -72,9 +72,21 @@ export interface PostgresColumnInfo {
   ordinalPosition: number;
 }
 
+export interface PostgresIndexInfo {
+  name: string;
+  unique: boolean;
+  primary: boolean;
+  method: string;
+  valid: boolean;
+  definition: string;
+  definitionTruncated: boolean;
+}
+
 export interface PostgresStructureInfo {
   columns: PostgresColumnInfo[];
   columnsTruncated: boolean;
+  indexes: PostgresIndexInfo[];
+  indexesTruncated: boolean;
 }
 
 export interface PostgresDataPageInput {

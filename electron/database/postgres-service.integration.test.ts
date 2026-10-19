@@ -75,6 +75,39 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
     }
   });
 
+  it('returns bounded index metadata for primary, included, expression, and partial indexes', async () => {
+    const result = await service.getStructure(sessionId, 'public', 's2e_index_probe');
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const primaryIndex = result.value.indexes.find(index => index.name === 's2e_index_probe_pkey');
+    expect(primaryIndex).toMatchObject({ primary: true, unique: true, method: 'btree', valid: true });
+
+    const includedIndex = result.value.indexes.find(index => index.name === 's2e_index_probe_key_idx');
+    expect(includedIndex).toMatchObject({ primary: false, unique: true, method: 'btree', valid: true });
+    expect(includedIndex?.definition).toContain('INCLUDE (include_value)');
+
+    const expressionIndex = result.value.indexes.find(index => index.name === 's2e_index_probe_active_expr_idx');
+    expect(expressionIndex?.definition).toContain('lower(key_value)');
+    expect(expressionIndex?.definition).toContain('WHERE active');
+
+    const longDefinition = result.value.indexes.find(index => index.name === 's2e_index_probe_long_predicate_idx');
+    expect(longDefinition?.definition).toHaveLength(2_048);
+    expect(longDefinition?.definitionTruncated).toBe(true);
+    expect(result.value.indexesTruncated).toBe(false);
+  });
+
+  it('returns a bounded index list and marks when more indexes exist', async () => {
+    const result = await service.getStructure(sessionId, 'public', 's2e_many_index_probe');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.indexes).toHaveLength(64);
+      expect(result.value.indexesTruncated).toBe(true);
+    }
+  });
+
   it('cancels only the matching preview request and keeps the session usable', async () => {
     const observer = new Client({
       host: '127.0.0.1',

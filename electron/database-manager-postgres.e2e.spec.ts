@@ -47,6 +47,21 @@ test.describe('Database manager - PostgreSQL browsing', () => {
     await expect(page.locator('.database-manager-browser .n-data-table').getByText('structure test', { exact: true })).toBeVisible();
 
     await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
+    await page.getByText('s2e_index_probe (table)', { exact: true }).click();
+    await page.getByText('Structure', { exact: true }).click();
+    const indexTable = page.locator('[data-test-id="database-index-table"]');
+    await expect(indexTable).toContainText('s2e_index_probe_pkey');
+    await expect(indexTable).toContainText('INCLUDE (include_value)');
+    await expect(indexTable).toContainText('lower(key_value)');
+    await expect(indexTable.locator('tbody tr').filter({ hasText: 's2e_index_probe_long_predicate_idx' }).locator('td').nth(5)).toContainText('…');
+
+    await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
+    await page.getByText('s2e_many_index_probe (table)', { exact: true }).click();
+    await page.getByText('Structure', { exact: true }).click();
+    await expect(page.getByText('64+ indexes; showing 64.', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-test-id="database-index-table"] tbody tr')).toHaveCount(64);
+
+    await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
     await page.getByText('s2b_keyset_probe (table)', { exact: true }).click();
     await expect(page.getByText('Page 1 · 25 rows', { exact: true })).toBeVisible();
     const dataTable = page.locator('.database-manager-browser .n-data-table');

@@ -44,6 +44,12 @@ try {
      INSERT INTO public.s2b_keyset_probe (probe_id, probe_value, nullable_value) SELECT value, CASE WHEN value = 1 THEN repeat('x', 10000) ELSE 'row ' || value END, NULL FROM generate_series(1, 56) AS series(value);
      CREATE TABLE public.s2b_offset_probe (probe_value text NOT NULL);
      INSERT INTO public.s2b_offset_probe (probe_value) SELECT 'row ' || value FROM generate_series(1, 30) AS series(value);
+     CREATE TABLE public.s2e_index_probe (probe_id integer PRIMARY KEY, key_value text NOT NULL, include_value text, active boolean NOT NULL);
+     CREATE UNIQUE INDEX s2e_index_probe_key_idx ON public.s2e_index_probe USING btree (key_value) INCLUDE (include_value);
+     CREATE INDEX s2e_index_probe_active_expr_idx ON public.s2e_index_probe USING btree (lower(key_value)) WHERE active;
+     DO $$ DECLARE values_text text; BEGIN SELECT string_agg(value::text, ',') INTO values_text FROM generate_series(1, 1000) AS series(value); EXECUTE 'CREATE INDEX s2e_index_probe_long_predicate_idx ON public.s2e_index_probe (key_value) WHERE probe_id IN (' || values_text || ')'; END $$;
+     CREATE TABLE public.s2e_many_index_probe (probe_id integer);
+     DO $$ BEGIN FOR index_number IN 1..65 LOOP EXECUTE format('CREATE INDEX s2e_many_index_probe_idx_%s ON public.s2e_many_index_probe (probe_id)', index_number); END LOOP; END $$;
      CREATE FUNCTION public.s2d_slow_text() RETURNS text LANGUAGE plpgsql VOLATILE AS $$ BEGIN PERFORM pg_sleep(30); RETURN 'slow'; END $$;
      CREATE VIEW public.s2d_slow_view AS SELECT value AS id, public.s2d_slow_text() AS delayed_value FROM generate_series(1, 1) AS series(value)`,
   ]);
