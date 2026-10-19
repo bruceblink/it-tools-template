@@ -86,10 +86,47 @@ tools:
   database-manager:
     title: 数据库管理器
     description: 在桌面应用中浏览 PostgreSQL、MySQL 和 SQLite 数据库。
-    stageNotice: 工作区已就绪。下一阶段将接入数据库连接和表格浏览。
+    stageNotice: PostgreSQL schema 和表结构浏览已可用。分页数据预览和已保存连接将在后续阶段加入。
     connections: 数据库连接
     noConnections: 还没有数据库连接。
     supportedEngines: 支持的数据库
+    connectPostgres: 连接 PostgreSQL
+    host: 主机
+    port: 端口
+    database: 数据库
+    username: 用户名
+    password: 密码
+    tlsMode: TLS 模式
+    verifyTls: 验证服务器证书
+    disableTls: 对可信本地连接停用 TLS
+    disableTlsWarning: 当前已停用 TLS。只应在可信的本地网络中使用此模式。
+    connect: 连接
+    connecting: 正在连接…
+    disconnect: 断开连接
+    activeConnection: 已连接 PostgreSQL {version}
+    schemas: Schema
+    tables: 表和视图
+    structure: 结构
+    columnName: 列
+    dataType: 数据类型
+    nullable: 可为空
+    defaultValue: 默认值
+    primaryKey: 主键
+    yes: 是
+    no: 否
+    noSchemas: 没有可用的用户 schema。
+    noTables: 此 schema 中没有可用的表或视图。
+    noColumns: 选择表或视图以查看结构。
+    columnsTruncated: 此表的列数超过当前显示上限。这里只显示前 256 列。
+    errors:
+      invalid-request: 请求无效。
+      untrusted-renderer: 数据库请求来自不受信任的窗口。
+      service-unavailable: 数据库服务不可用。请重新连接后重试。
+      connection-failed: 连接失败。请检查主机、凭据、数据库和 TLS 设置。
+      too-many-sessions: 打开的数据库会话过多。请先关闭一个会话。
+      not-connected: 数据库会话已失效。请重新连接。
+      query-failed: 数据库无法返回此元数据。
+      query-timeout: 数据库请求超时。请检查连接后重试。
 
   system-monitor:
     title: 系统监视器

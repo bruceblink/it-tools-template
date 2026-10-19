@@ -86,10 +86,47 @@ tools:
   database-manager:
     title: Database manager
     description: Browse PostgreSQL, MySQL, and SQLite databases from the desktop app.
-    stageNotice: The workspace is ready. Database connections and table browsing are being added next.
+    stageNotice: PostgreSQL schema and structure browsing are available. Paginated row previews and saved connections are next.
     connections: Connections
     noConnections: No database connections yet.
     supportedEngines: Supported database engines
+    connectPostgres: Connect to PostgreSQL
+    host: Host
+    port: Port
+    database: Database
+    username: Username
+    password: Password
+    tlsMode: TLS mode
+    verifyTls: Verify server certificate
+    disableTls: Disable TLS for a trusted local connection
+    disableTlsWarning: TLS is disabled. Use this mode only for a trusted local or private network.
+    connect: Connect
+    connecting: Connecting…
+    disconnect: Disconnect
+    activeConnection: Connected to PostgreSQL {version}
+    schemas: Schemas
+    tables: Tables and views
+    structure: Structure
+    columnName: Column
+    dataType: Data type
+    nullable: Nullable
+    defaultValue: Default
+    primaryKey: Primary key
+    yes: Yes
+    no: No
+    noSchemas: No user schemas are available.
+    noTables: No tables or views are available in this schema.
+    noColumns: Select a table or view to inspect its structure.
+    columnsTruncated: The table has more columns than this view can show. The first 256 columns are shown.
+    errors:
+      invalid-request: The request is invalid.
+      untrusted-renderer: The database request came from an untrusted window.
+      service-unavailable: The database service is unavailable. Reconnect and try again.
+      connection-failed: Could not connect. Check the host, credentials, database, and TLS settings.
+      too-many-sessions: Too many database sessions are open. Close one session and try again.
+      not-connected: This database session is no longer active. Reconnect and try again.
+      query-failed: The database could not return this metadata.
+      query-timeout: The database request timed out. Try again after checking the connection.
 
   system-monitor:
     title: System monitor

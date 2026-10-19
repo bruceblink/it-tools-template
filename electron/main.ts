@@ -31,6 +31,7 @@ import {
   PLUGIN_SCHEME,
 } from './plugin-sandbox';
 import { registerPluginLifecycleIpc } from './plugin-ipc';
+import { registerDatabaseIpc } from './database/database-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -61,6 +62,7 @@ protocol.registerSchemesAsPrivileged([{
 }]);
 
 let mainWindow: BrowserWindow | null = null;
+let databaseIpc: ReturnType<typeof registerDatabaseIpc> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -90,6 +92,10 @@ else {
     await installAppProtocol();
     installPermissionPolicy();
     installRuntimeInfoIpc();
+    databaseIpc = registerDatabaseIpc({
+      trustedRendererUrl: () => trustedRendererUrl,
+      workerPath: resolve(app.getAppPath(), 'out/main/database-worker.cjs'),
+    });
     await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
@@ -115,6 +121,11 @@ else {
     if (process.platform !== 'darwin') {
       app.quit();
     }
+  });
+
+  app.on('before-quit', () => {
+    databaseIpc?.shutdown();
+    databaseIpc = null;
   });
 }
 
@@ -382,12 +393,14 @@ async function createMainWindow() {
   });
 
   mainWindow = window;
+  const rendererId = window.webContents.id;
   window.once('ready-to-show', () => {
     if (!window.isDestroyed()) {
       window.show();
     }
   });
   window.on('closed', () => {
+    databaseIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
     }

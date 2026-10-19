@@ -1,3 +1,12 @@
+import type {
+  DatabaseBridgeResult,
+  PostgresConnectionInput,
+  PostgresSchemaInfo,
+  PostgresSessionInfo,
+  PostgresStructureInfo,
+  PostgresTableInfo,
+} from '../shared/desktop-services/database';
+
 export {};
 
 declare global {
@@ -34,6 +43,15 @@ declare global {
         platform: string;
         version: string;
       }>;
+      connectPostgres?(input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>>;
+      disconnectDatabase?(sessionId: string): Promise<DatabaseBridgeResult<boolean>>;
+      listDatabaseSchemas?(sessionId: string): Promise<DatabaseBridgeResult<PostgresSchemaInfo[]>>;
+      listDatabaseTables?(sessionId: string, schema: string): Promise<DatabaseBridgeResult<PostgresTableInfo[]>>;
+      getDatabaseStructure?(
+        sessionId: string,
+        schema: string,
+        table: string,
+      ): Promise<DatabaseBridgeResult<PostgresStructureInfo>>;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       activatePlugin?(

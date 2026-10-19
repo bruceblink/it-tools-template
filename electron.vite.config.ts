@@ -15,9 +15,11 @@ export default defineConfig({
     build: {
       outDir: resolve(projectRoot, 'out/main'),
       lib: {
-        entry: resolve(projectRoot, 'electron/main.ts'),
+        entry: {
+          main: resolve(projectRoot, 'electron/main.ts'),
+          'database-worker': resolve(projectRoot, 'electron/database/worker.ts'),
+        },
         formats: ['cjs'],
-        fileName: 'index.cjs',
       },
     },
   },
