@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { CurlCodeGeneratorError, formatCurlCode, generateCurlCode, parseCurlCommand } from './curl-code-generator.service';
+import {
+  CURL_CODE_GENERATOR_LIMITS,
+  CurlCodeGeneratorError,
+  formatCurlCode,
+  formatCurlRequest,
+  generateCurlCode,
+  parseCurlCommand,
+} from './curl-code-generator.service';
 
 describe('curl-code-generator service', () => {
   it('parses a JSON POST cURL command', () => {
@@ -138,5 +145,36 @@ describe('curl-code-generator service', () => {
     expect(formatCurlCode('curl https://example.com', 'fetch')).toContain('fetch("https://example.com"');
     expect(formatCurlCode('curl https://example.com', 'axios')).toContain('axios({');
     expect(formatCurlCode('curl https://example.com', 'httpie')).toBe('http \\\n  GET \\\n  \'https://example.com\'');
+  });
+
+  it('accepts a command at the UTF-8 input byte limit', () => {
+    const prefix = 'curl https://example.com/';
+    const command = `${prefix}${'a'.repeat(CURL_CODE_GENERATOR_LIMITS.inputBytes - prefix.length)}`;
+
+    expect(parseCurlCommand(command).url).toBe(`https://example.com/${'a'.repeat(CURL_CODE_GENERATOR_LIMITS.inputBytes - prefix.length)}`);
+  });
+
+  it('rejects commands above the UTF-8 input byte limit', () => {
+    const prefix = 'curl https://example.com/';
+    const overLimitCommand = `${prefix}${'a'.repeat(CURL_CODE_GENERATOR_LIMITS.inputBytes - prefix.length + 1)}`;
+    const multibyteCommand = `curl https://example.com/ ${'é'.repeat(Math.floor((CURL_CODE_GENERATOR_LIMITS.inputBytes - prefix.length) / 2) + 1)}`;
+
+    expect(() => parseCurlCommand(overLimitCommand)).toThrow('cURL command exceeds 256 KiB.');
+    expect(multibyteCommand.length).toBeLessThan(CURL_CODE_GENERATOR_LIMITS.inputBytes);
+    expect(() => parseCurlCommand(multibyteCommand)).toThrow('cURL command exceeds 256 KiB.');
+  });
+
+  it('rejects token counts above the parser limit', () => {
+    const command = `curl https://example.com ${'--location '.repeat(CURL_CODE_GENERATOR_LIMITS.tokenCount)}`;
+
+    expect(command.length).toBeLessThan(CURL_CODE_GENERATOR_LIMITS.inputBytes);
+    expect(() => parseCurlCommand(command)).toThrow('cURL command contains more than 16,000 tokens.');
+  });
+
+  it('rejects selected output above the output byte limit', () => {
+    const request = parseCurlCommand('curl https://example.com');
+    request.data = 'a'.repeat(CURL_CODE_GENERATOR_LIMITS.outputBytes);
+
+    expect(() => formatCurlRequest(request, 'fetch')).toThrow('Generated cURL code exceeds 2 MiB.');
   });
 });

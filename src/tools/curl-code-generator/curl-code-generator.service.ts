@@ -29,6 +29,12 @@ export interface CurlCodeGeneration {
   }
 }
 
+export const CURL_CODE_GENERATOR_LIMITS = Object.freeze({
+  inputBytes: 256 * 1024,
+  outputBytes: 2 * 1024 * 1024,
+  tokenCount: 16_000,
+});
+
 export class CurlCodeGeneratorError extends Error {
   constructor(message: string) {
     super(message);
@@ -82,6 +88,14 @@ function tokenizeShell(input: string): string[] {
   let quote: '"' | '\'' | undefined;
   let escaped = false;
 
+  function pushToken() {
+    tokens.push(current);
+    current = '';
+    if (tokens.length > CURL_CODE_GENERATOR_LIMITS.tokenCount) {
+      throw new CurlCodeGeneratorError('cURL command contains more than 16,000 tokens.');
+    }
+  }
+
   for (const character of input.replace(/\\\r?\n/g, ' ')) {
     if (escaped) {
       current += character;
@@ -111,8 +125,7 @@ function tokenizeShell(input: string): string[] {
 
     if (/\s/.test(character)) {
       if (current !== '') {
-        tokens.push(current);
-        current = '';
+        pushToken();
       }
       continue;
     }
@@ -129,7 +142,7 @@ function tokenizeShell(input: string): string[] {
   }
 
   if (current !== '') {
-    tokens.push(current);
+    pushToken();
   }
 
   return tokens;
@@ -161,6 +174,37 @@ function parseHeader(value: string): CurlHeader {
 
 function jsonString(value: string) {
   return JSON.stringify(value);
+}
+
+/** Count UTF-8 bytes without allocating a second buffer, and stop after the limit is exceeded. */
+function countUtf8Bytes(value: string, limit: number): number {
+  let byteLength = 0;
+  for (const character of value) {
+    const codePoint = character.codePointAt(0)!;
+    byteLength += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+    if (byteLength > limit) {
+      return byteLength;
+    }
+  }
+  return byteLength;
+}
+
+function assertInputLimit(input: string) {
+  const limit = CURL_CODE_GENERATOR_LIMITS.inputBytes;
+  if (input.length > limit || countUtf8Bytes(input, limit) > limit) {
+    throw new CurlCodeGeneratorError('cURL command exceeds 256 KiB.');
+  }
+}
+
+function assertOutputLimit(outputs: string[]) {
+  const limit = CURL_CODE_GENERATOR_LIMITS.outputBytes;
+  let byteLength = 0;
+  for (const output of outputs) {
+    byteLength += countUtf8Bytes(output, limit - byteLength);
+    if (byteLength > limit) {
+      throw new CurlCodeGeneratorError('Generated cURL code exceeds 2 MiB.');
+    }
+  }
 }
 
 function indent(value: string, spaces = 2) {
@@ -290,6 +334,7 @@ function addBasicAuthHeader(headers: CurlHeader[], credentials: string) {
 }
 
 export function parseCurlCommand(input: string): CurlRequest {
+  assertInputLimit(input);
   const tokens = tokenizeShell(input.trim());
   if (tokens.length === 0) {
     throw new CurlCodeGeneratorError('Paste a cURL command.');
@@ -440,12 +485,16 @@ export function parseCurlCommand(input: string): CurlRequest {
 
 export function generateCurlCode(input: string): CurlCodeGeneration {
   const request = parseCurlCommand(input);
+  const fetch = createFetchCode(request);
+  const axios = createAxiosCode(request);
+  const httpie = createHttpieCode(request);
+  assertOutputLimit([fetch, axios, httpie]);
 
   return {
     request,
-    fetch: createFetchCode(request),
-    axios: createAxiosCode(request),
-    httpie: createHttpieCode(request),
+    fetch,
+    axios,
+    httpie,
     summary: {
       method: request.method,
       headerCount: request.headers.length,
@@ -455,16 +504,23 @@ export function generateCurlCode(input: string): CurlCodeGeneration {
   };
 }
 
-export function formatCurlCode(input: string, output: CurlCodeOutput): string {
-  const generation = generateCurlCode(input);
-
+/** Generate and bound only the selected output so a format change does not repeat parsing or other formats. */
+export function formatCurlRequest(request: CurlRequest, output: CurlCodeOutput): string {
+  let generated: string;
   if (output === 'axios') {
-    return generation.axios;
+    generated = createAxiosCode(request);
+  }
+  else if (output === 'httpie') {
+    generated = createHttpieCode(request);
+  }
+  else {
+    generated = createFetchCode(request);
   }
 
-  if (output === 'httpie') {
-    return generation.httpie;
-  }
+  assertOutputLimit([generated]);
+  return generated;
+}
 
-  return generation.fetch;
+export function formatCurlCode(input: string, output: CurlCodeOutput): string {
+  return formatCurlRequest(parseCurlCommand(input), output);
 }
