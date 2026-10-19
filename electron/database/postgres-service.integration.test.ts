@@ -75,6 +75,35 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
     }
   });
 
+  it('caps multi-megabyte text, JSON, and binary cells before returning a page', async () => {
+    const result = await service.getDataPage(
+      sessionId,
+      'public',
+      's2b_large_cell_probe',
+      { cursor: null, offset: 0 },
+      randomUUID(),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+
+    const cells = result.value.rows[0]?.cells;
+    expect(result.value.rows).toHaveLength(1);
+    expect(result.value.columns.map(column => column.name)).toEqual([
+      'probe_id',
+      'large_text',
+      'large_json',
+      'large_binary',
+    ]);
+    expect(cells?.[1]).toEqual({ value: 'x'.repeat(256), truncated: true });
+    expect(cells?.[2]?.value).toHaveLength(256);
+    expect(cells?.[2]?.truncated).toBe(true);
+    expect(cells?.[3]?.value).toHaveLength(256);
+    expect(cells?.[3]?.truncated).toBe(true);
+    expect(new TextEncoder().encode(JSON.stringify(result.value)).byteLength).toBeLessThan(16 * 1024);
+  });
+
   it('returns bounded index metadata for primary, included, expression, and partial indexes', async () => {
     const result = await service.getStructure(sessionId, 'public', 's2e_index_probe');
     expect(result.ok).toBe(true);

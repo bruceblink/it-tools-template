@@ -44,6 +44,9 @@ try {
      INSERT INTO public.s2b_keyset_probe (probe_id, probe_value, nullable_value) SELECT value, CASE WHEN value = 1 THEN repeat('x', 10000) ELSE 'row ' || value END, NULL FROM generate_series(1, 56) AS series(value);
      CREATE TABLE public.s2b_offset_probe (probe_value text NOT NULL);
      INSERT INTO public.s2b_offset_probe (probe_value) SELECT 'row ' || value FROM generate_series(1, 30) AS series(value);
+     CREATE TABLE public.s2b_large_cell_probe (probe_id integer PRIMARY KEY, large_text text NOT NULL, large_json jsonb NOT NULL, large_binary bytea NOT NULL);
+     INSERT INTO public.s2b_large_cell_probe (probe_id, large_text, large_json, large_binary)
+       VALUES (1, repeat('x', 2097152), jsonb_build_object('payload', repeat('j', 2097152)), decode(repeat('ab', 2097152), 'hex'));
      CREATE TABLE public.s2e_index_probe (probe_id integer PRIMARY KEY, key_value text NOT NULL, include_value text, active boolean NOT NULL);
      CREATE UNIQUE INDEX s2e_index_probe_key_idx ON public.s2e_index_probe USING btree (key_value) INCLUDE (include_value);
      CREATE INDEX s2e_index_probe_active_expr_idx ON public.s2e_index_probe USING btree (lower(key_value)) WHERE active;
