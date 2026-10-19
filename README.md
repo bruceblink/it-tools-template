@@ -112,6 +112,8 @@ pnpm validate
 
 The current roadmap is in [Development Plan](docs/01-development-plan.md). Performance and tool-registration foundations and the internal first-party extension SDK are implemented. The Electron plugin pilot includes signed package installation, capability approval, version fallback, and signer revocation; cross-platform and native-window acceptance is still in progress. Scope and isolation requirements are in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-plan.md), and the current interface boundaries are in [First-Party Extension SDK v0](docs/extension-sdk-v0.md). Earlier quality work is recorded in [Quality Baseline](docs/02-quality-baseline.md).
 
+The planned Electron database manager and local system monitor are described in [Database Manager and System Monitor Plan](docs/13-database-system-monitor-plan.md). The plan starts with PostgreSQL browsing and read-only queries, followed by controlled record editing and local resource monitoring. These modules are not implemented yet.
+
 Electron plugin developers can use the signed package CLI and maintained [Capability demo](plugins/capability-demo/). See [Electron Plugin MVP Quickstart](docs/11-electron-plugin-mvp-quickstart.md) for key storage, package creation, trust, and install steps. External plugins remain Electron-only.
 
 The two security tasks and their acceptance results are in [Random Sources and Sensitive Inputs](docs/03-security-inputs-plan.md).
