@@ -9,7 +9,7 @@ interface WorkerScope {
 const workerScope = self as unknown as WorkerScope;
 
 // Parse, preflight, and evaluate math expressions outside the renderer thread.
-workerScope.onmessage = ({ data }) => {
+workerScope.onmessage = async ({ data }) => {
   const task = data.task;
   if (task.kind !== 'math-evaluate') {
     workerScope.postMessage({ id: data.id, inputVersion: data.inputVersion, ok: false, code: 'error' });
@@ -21,7 +21,7 @@ workerScope.onmessage = ({ data }) => {
     const mathResult = {
       kind: 'math-evaluate' as const,
       valid: true,
-      output: evaluateMathExpression(task.value),
+      output: await evaluateMathExpression(task.value),
     };
     const outputBytes = new TextEncoder().encode(JSON.stringify(mathResult)).byteLength;
     result = outputBytes > data.maxOutputBytes

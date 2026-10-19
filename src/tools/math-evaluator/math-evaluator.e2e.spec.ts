@@ -9,6 +9,9 @@ test.describe('Tool - math evaluator', () => {
     await input.fill('2 * sqrt(6)');
     await expect(output).toHaveText('4.898979485566356');
 
+    await input.fill('2 cm to mm');
+    await expect(output).toHaveText('20 mm');
+
     await input.fill('sum(ones(1000, 1000))');
     await expect(page.getByText('This expression exceeds the calculation limits. Use a smaller matrix or range.')).toBeVisible();
     await expect(output).toHaveCount(0);

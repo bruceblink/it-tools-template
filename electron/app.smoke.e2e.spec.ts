@@ -68,6 +68,15 @@ test('serves a shared tool route after a direct deep-link load', async () => {
   await expect(page.locator('#app')).not.toBeEmpty();
 });
 
+test('loads advanced Math.js functions lazily from the app protocol', async () => {
+  await page.goto('app://bundle/math-evaluator');
+
+  const input = page.getByTestId('math-expression');
+  const output = page.getByTestId('math-result');
+  await input.fill('2 cm to mm');
+  await expect(output).toHaveText('20 mm');
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 

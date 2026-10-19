@@ -59,6 +59,7 @@ export default defineConfig({
     },
   },
   define: createRendererDefines(),
+  worker: { format: 'es' },
   test: {
     exclude: [...configDefaults.exclude, '**/*.e2e.spec.ts', 'scripts/**/*.test.mjs'],
     server: { deps: { inline: ['iarna-toml-esm'] } },

@@ -1,4 +1,5 @@
-import { parse, type MathNode } from 'mathjs';
+import type { MathNode } from 'mathjs';
+import { mathInstance } from './math-instance';
 
 const maxExpressionNodes = 4_096;
 const maxExpressionDepth = 2_048;
@@ -24,6 +25,25 @@ export class MathExpressionLimitError extends Error {
     super('Expression exceeds the calculation limits.');
     this.name = 'MathExpressionLimitError';
   }
+}
+
+function parseWithLimits(expression: string, parseExpression: (value: string) => MathNode): MathNode {
+  let root: MathNode;
+  try {
+    root = parseExpression(expression);
+  }
+  catch (error) {
+    if (error instanceof RangeError) { throw new MathExpressionLimitError(); }
+    throw error;
+  }
+
+  assertExpressionResources(root);
+  return root;
+}
+
+function needsFullMathJs(error: unknown): boolean {
+  if (!(error instanceof Error)) { return false; }
+  return /Undefined (?:function|symbol)|missing in provided namespace/.test(error.message);
 }
 
 function nodeShape(node: unknown): MathNodeShape {
@@ -249,24 +269,27 @@ function assertExpressionResources(root: MathNode): void {
   }
 }
 
-export function evaluateMathExpression(expression: string): string {
-  let root: MathNode;
-  try {
-    root = parse(expression);
-  }
-  catch (error) {
-    if (error instanceof RangeError) { throw new MathExpressionLimitError(); }
-    throw error;
-  }
-
-  assertExpressionResources(root);
+export async function evaluateMathExpression(expression: string): Promise<string> {
+  const root = parseWithLimits(expression, value => mathInstance.parse(value));
   let result: unknown;
   try {
     result = root.evaluate();
   }
   catch (error) {
-    if (error instanceof RangeError) { throw new MathExpressionLimitError(); }
-    throw error;
+    if (error instanceof MathExpressionLimitError || error instanceof RangeError) { throw new MathExpressionLimitError(); }
+    if (!needsFullMathJs(error)) { throw error; }
+
+    // Less common Math.js built-ins (for example, unit conversion) stay available
+    // without adding their implementation to the eagerly loaded calculator Worker.
+    const { parse } = await import('mathjs');
+    const fullMathRoot = parseWithLimits(expression, value => parse(value));
+    try {
+      result = fullMathRoot.evaluate();
+    }
+    catch (fallbackError) {
+      if (fallbackError instanceof RangeError) { throw new MathExpressionLimitError(); }
+      throw fallbackError;
+    }
   }
   return result === undefined || result === null ? '' : String(result);
 }

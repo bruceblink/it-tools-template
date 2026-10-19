@@ -36,6 +36,7 @@ export default defineConfig({
     envDir: projectRoot,
     publicDir: resolve(projectRoot, 'public'),
     base: '/',
+    worker: { format: 'es' },
     resolve: {
       alias: {
         '@': resolve(projectRoot, 'src'),
