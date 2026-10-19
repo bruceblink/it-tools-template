@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { firstPartyExtensionToolCategories } from '@/extensions/samples/tool-definitions';
 import { toolDefinitions, tools, toolsByCategory, toolsWithCategory } from './index';
+import { filterToolCategoriesForPlatform } from './platform-filter';
 import type { Tool } from './tools.types';
 
 type LocaleMessages = {
@@ -18,7 +19,8 @@ const locales = {
   zh: parse(readFileSync(new URL('../../locales/zh.yml', import.meta.url), 'utf8')) as LocaleMessages,
 };
 
-const registeredTools = toolsByCategory.flatMap(({ components }) => components);
+const indexedTools = Object.values(import.meta.glob<Tool>('./*/index.ts', { eager: true, import: 'tool' }));
+const registeredTools = indexedTools;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0;
@@ -27,8 +29,6 @@ function isNonEmptyString(value: unknown): value is string {
 function normalizeRoute(path: string): string {
   return path.trim().replace(/\/+$/, '').toLowerCase() || '/';
 }
-
-const indexedTools = Object.values(import.meta.glob<Tool>('./*/index.ts', { eager: true, import: 'tool' }));
 
 describe('tool registry integrity', () => {
   it('defines non-empty unique categories with at least one tool each', () => {
@@ -59,22 +59,25 @@ describe('tool registry integrity', () => {
     const generatedRedirects = tools.flatMap(({ path, aliases, redirectFrom }) =>
       (aliases ?? redirectFrom ?? []).map(alias => ({ path: alias, redirect: path })),
     );
-    const declaredRedirects = registeredTools.flatMap(({ path, aliases, redirectFrom }) =>
+    const declaredRedirects = registeredTools
+      .filter(({ platforms }) => !platforms || platforms.includes('web'))
+      .flatMap(({ path, aliases, redirectFrom }) =>
       (aliases ?? redirectFrom ?? []).map(alias => ({ path: alias, redirect: path })),
-    );
+      );
 
     expect(routes.every(path => isNonEmptyString(path) && path.startsWith('/'))).toBe(true);
     expect(new Set(normalizedRoutes).size).toBe(normalizedRoutes.length);
     expect(normalizedRoutes).not.toContain('/');
     expect(normalizedRoutes).not.toContain('/about');
-    expect(generatedRedirects).toEqual(declaredRedirects);
+    expect(generatedRedirects.sort((left, right) => left.path.localeCompare(right.path)))
+      .toEqual(declaredRedirects.sort((left, right) => left.path.localeCompare(right.path)));
   });
 
   it('registers every tool directory that defines an index.ts entry', () => {
     const indexedPaths = indexedTools.map(({ path }) => normalizeRoute(path)).sort();
     const registeredPaths = registeredTools.map(({ path }) => normalizeRoute(path)).sort();
 
-    expect(registeredTools).toHaveLength(117);
+    expect(registeredTools).toHaveLength(119);
     expect(new Set(indexedPaths).size).toBe(indexedPaths.length);
     expect(registeredPaths).toEqual(indexedPaths);
     const registeredExtensionTools = registeredTools.filter(({ extensionOwned }) => extensionOwned);
@@ -89,8 +92,18 @@ describe('tool registry integrity', () => {
     const toolPaths = tools.map(({ path }) => normalizeRoute(path)).sort();
     const toolTranslationKeys = tools.map(({ translationKey }) => translationKey).sort();
     const navigationPaths = toolsWithCategory.map(({ path }) => normalizeRoute(path)).sort();
-    const indexedRegistryPaths = registeredTools.map(({ path }) => normalizeRoute(path)).sort();
-    const indexedTranslationKeys = registeredTools.map(({ translationKey }) => translationKey).sort();
+    const indexedRegistryPaths = filterToolCategoriesForPlatform(
+      [{ id: 'all-tools', name: 'All tools', components: registeredTools }],
+      'web',
+    )
+      .flatMap(({ components }) => components.map(({ path }) => normalizeRoute(path)))
+      .sort();
+    const indexedTranslationKeys = filterToolCategoriesForPlatform(
+      [{ id: 'all-tools', name: 'All tools', components: registeredTools }],
+      'web',
+    )
+      .flatMap(({ components }) => components.map(({ translationKey }) => translationKey))
+      .sort();
 
     expect(navigationPaths).toEqual(toolPaths);
     expect(indexedRegistryPaths).toEqual(toolPaths);
@@ -113,6 +126,12 @@ describe('tool registry integrity', () => {
       expect(definition?.dataProcessing, id).toBeDefined();
       expect(definition?.offline, id).toBeDefined();
       expect(definition?.capabilities, id).toBeDefined();
+    }
+
+    for (const path of ['/database-manager', '/system-monitor']) {
+      const definition = registeredTools.find(tool => tool.path === path);
+      expect(definition?.platforms, path).toEqual(['electron']);
+      expect(definition?.contentWidth, path).toBe('wide');
     }
   });
 

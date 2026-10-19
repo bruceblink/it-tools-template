@@ -64,6 +64,7 @@ export function createRendererPlugins() {
 
 export function createRendererDefines({ desktop = false }: { desktop?: boolean } = {}) {
   return {
+    'import.meta.env.ELECTRON': JSON.stringify(desktop),
     'import.meta.env.PACKAGE_VERSION': JSON.stringify(pkg.version),
     'import.meta.env.AUTHOR_URL': JSON.stringify(pkg.authorUrl),
     'import.meta.env.SPONSORING_URL': JSON.stringify(pkg.sponsoringUrl),

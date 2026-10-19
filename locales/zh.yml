@@ -83,6 +83,25 @@ tools:
     text: '文本'
     data: '数据'
 
+  database-manager:
+    title: 数据库管理器
+    description: 在桌面应用中浏览 PostgreSQL、MySQL 和 SQLite 数据库。
+    stageNotice: 工作区已就绪。下一阶段将接入数据库连接和表格浏览。
+    connections: 数据库连接
+    noConnections: 还没有数据库连接。
+    supportedEngines: 支持的数据库
+
+  system-monitor:
+    title: 系统监视器
+    description: 查看本机 CPU、内存、磁盘、网络和进程活动。
+    stageNotice: 工作区已就绪。下一阶段将接入实时系统采样。
+    waitingForSampler: 正在等待系统采集器。
+    metrics:
+      cpu: CPU
+      memory: 内存
+      disk: 磁盘
+      network: 网络
+
   password-strength-analyser:
     title: 密码强度分析仪
     description: 使用此密码强度分析器和破解时间估计工具来发现密码的强度。

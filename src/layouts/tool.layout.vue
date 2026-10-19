@@ -40,7 +40,7 @@ watch(() => route.path, (toolPath) => {
 
 <template>
   <BaseLayout>
-    <div class="tool-layout">
+    <div class="tool-layout" :class="{ 'tool-layout--wide': route.meta.contentWidth === 'wide' }">
       <div class="tool-header">
         <div flex flex-nowrap items-center justify-between>
           <n-h1>
@@ -73,7 +73,7 @@ watch(() => route.path, (toolPath) => {
       </div>
     </div>
 
-    <div class="tool-content">
+    <div class="tool-content" :class="{ 'tool-content--wide': route.meta.contentWidth === 'wide' }">
       <slot />
     </div>
   </BaseLayout>
@@ -124,6 +124,33 @@ watch(() => route.path, (toolPath) => {
 
       opacity: 0.7;
     }
+  }
+}
+
+.tool-layout--wide {
+  width: min(1400px, calc(100% - 48px));
+  max-width: none;
+
+  .tool-header {
+    padding: 28px 0 20px;
+  }
+}
+
+.tool-content--wide {
+  width: min(1400px, calc(100% - 48px));
+  margin: 0 auto;
+
+  ::v-deep(& > *) {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .tool-layout--wide,
+  .tool-content--wide {
+    width: calc(100% - 24px);
   }
 }
 </style>

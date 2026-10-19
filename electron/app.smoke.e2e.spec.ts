@@ -68,6 +68,22 @@ test('serves a shared tool route after a direct deep-link load', async () => {
   await expect(page.locator('#app')).not.toBeEmpty();
 });
 
+test('shows Electron-only database and system workspaces in the desktop app', async () => {
+  await page.goto('app://bundle/');
+  await expect(page.locator('a[href="/database-manager"]').first()).toBeVisible();
+  await expect(page.locator('a[href="/system-monitor"]').first()).toBeVisible();
+
+  await page.goto('app://bundle/database-manager');
+  await expect(page.getByRole('heading', { name: 'Database manager' })).toBeVisible();
+  await expect(page.locator('[data-test-id="database-manager-workspace"]')).toBeVisible();
+  await expect(page.locator('.tool-layout')).toHaveClass(/tool-layout--wide/);
+
+  await page.goto('app://bundle/system-monitor');
+  await expect(page.getByRole('heading', { name: 'System monitor' })).toBeVisible();
+  await expect(page.locator('[data-test-id="system-monitor-workspace"]')).toBeVisible();
+  await expect(page.locator('.tool-layout')).toHaveClass(/tool-layout--wide/);
+});
+
 test('loads advanced Math.js functions lazily from the app protocol', async () => {
   await page.goto('app://bundle/math-evaluator');
 

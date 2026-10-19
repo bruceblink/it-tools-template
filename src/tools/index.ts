@@ -119,6 +119,9 @@ import { tool as macAddressLookup } from './mac-address-lookup';
 import { tool as xmlFormatter } from './xml-formatter';
 import { tool as yamlViewer } from './yaml-viewer';
 import { validateToolRegistry } from './tool-registry';
+import { filterToolCategoriesForPlatform } from './platform-filter';
+import { tool as databaseManager } from './database-manager';
+import { tool as systemMonitor } from './system-monitor';
 
 type DeclaredToolCategory = ToolCategory & { id: string };
 
@@ -213,6 +216,7 @@ const declaredToolCategories: DeclaredToolCategory[] = [
       csvToJson,
       csvToMarkdownTable,
       sqlPrettify,
+      ...(import.meta.env.ELECTRON ? [databaseManager, systemMonitor] : []),
       chmodCalculator,
       dockerRunToDockerComposeConverter,
       xmlFormatter,
@@ -265,9 +269,12 @@ if (import.meta.env.DEV) {
 /** Full definitions remain available for governance checks and extension tooling. */
 export const toolDefinitions = declaredToolCategories;
 
+const runtimePlatform = typeof window !== 'undefined' && window.itToolsDesktop ? 'electron' : 'web';
+const runtimeToolCategories = filterToolCategoriesForPlatform(declaredToolCategories, runtimePlatform);
+
 /** Keep extension-only governance metadata out of route and navigation payloads. */
 function projectRuntimeTool(tool: Tool): Tool {
-  const { name, path, aliases, translationKey, description, keywords, component, icon, redirectFrom, isNew } = tool;
+  const { name, path, aliases, translationKey, description, keywords, component, icon, redirectFrom, contentWidth, isNew } = tool;
   const runtimeTool: Tool = {
     name,
     path,
@@ -278,6 +285,7 @@ function projectRuntimeTool(tool: Tool): Tool {
     component,
     icon,
     redirectFrom,
+    ...(contentWidth ? { contentWidth } : {}),
     isNew,
   };
   if (tool.extensionOwned) {
@@ -286,7 +294,7 @@ function projectRuntimeTool(tool: Tool): Tool {
   return runtimeTool;
 }
 
-export const toolsByCategory: DeclaredToolCategory[] = declaredToolCategories.map(({ id, name, components }) => ({
+export const toolsByCategory: DeclaredToolCategory[] = runtimeToolCategories.map(({ id, name, components }) => ({
   id,
   name,
   components: components.map(projectRuntimeTool),

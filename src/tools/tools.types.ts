@@ -6,6 +6,8 @@ export type ToolDataProcessing = 'memory-only' | 'local-data' | 'user-selected-f
 
 export type ToolOfflineSupport = 'available' | 'requires-network' | 'conditional' | 'unknown';
 
+export type ToolContentWidth = 'standard' | 'wide';
+
 export type ToolCapability = 'clipboard.write' | 'file.read' | 'file.save' | 'device.camera' | 'runtime.info' | 'data.oui';
 
 export interface Tool {
@@ -24,6 +26,7 @@ export interface Tool {
   dataProcessing?: ToolDataProcessing
   offline?: ToolOfflineSupport
   capabilities?: ToolCapability[]
+  contentWidth?: ToolContentWidth
   extensionOwned?: boolean
   isNew: boolean
   createdAt?: Date
@@ -33,8 +36,8 @@ export type ToolDefinition = Tool & Required<Pick<Tool, 'id' | 'categoryId' | 't
 
 export type ToolReference = Pick<Tool, 'name' | 'path'>;
 
-export type ToolConfig = Omit<Tool, 'id' | 'categoryId' | 'aliases' | 'translationKey' | 'platforms' | 'dataProcessing' | 'offline' | 'capabilities' | 'isNew'>
-  & Partial<Pick<Tool, 'id' | 'categoryId' | 'aliases' | 'translationKey' | 'platforms' | 'dataProcessing' | 'offline' | 'capabilities' | 'isNew'>>;
+export type ToolConfig = Omit<Tool, 'id' | 'categoryId' | 'aliases' | 'translationKey' | 'platforms' | 'dataProcessing' | 'offline' | 'capabilities' | 'contentWidth' | 'isNew'>
+  & Partial<Pick<Tool, 'id' | 'categoryId' | 'aliases' | 'translationKey' | 'platforms' | 'dataProcessing' | 'offline' | 'capabilities' | 'contentWidth' | 'isNew'>>;
 
 export interface ToolCategory {
   id?: string

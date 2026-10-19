@@ -6,7 +6,7 @@ import { config } from './config';
 import { routes as demoRoutes } from './ui/demo/demo.routes';
 import { layouts } from '@/layouts';
 
-const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, extensionOwned }) => ({
+const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, contentWidth, extensionOwned }) => ({
   path,
   name,
   component,
@@ -17,6 +17,7 @@ const toolsRoutes = tools.map(({ path, name, component, translationKey, descript
     translationKey,
     description,
     keywords,
+    ...(contentWidth ? { contentWidth } : {}),
     ...(extensionOwned ? { extensionOwned: true } : {}),
   },
 }));

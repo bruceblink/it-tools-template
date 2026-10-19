@@ -1,3 +1,7 @@
+interface ImportMetaEnv {
+  readonly ELECTRON: boolean
+}
+
 declare module '*.yml' {
   import type { LocaleMessageValue, VueMessageType } from 'vue-i18n';
 

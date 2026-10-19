@@ -21,6 +21,8 @@ export function defineTool(tool: ToolConfig): Tool {
     component: tool.component,
     icon: tool.icon,
     redirectFrom: tool.redirectFrom,
+    ...(tool.platforms?.length === 1 ? { platforms: tool.platforms } : {}),
+    ...(tool.contentWidth ? { contentWidth: tool.contentWidth } : {}),
     ...(tool.extensionOwned ? { extensionOwned: true } : {}),
     isNew,
   };
