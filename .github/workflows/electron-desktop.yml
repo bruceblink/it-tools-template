@@ -77,6 +77,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes xvfb xauth x11-utils
 
+      - name: Test MySQL 8.4 metadata browsing on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e:mysql
+
+      - name: Test SQLite metadata browsing on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e:sqlite
+
       - name: Run Electron smoke tests on Linux
         if: matrix.platform == 'linux'
         run: xvfb-run --auto-servernum pnpm test:e2e:electron

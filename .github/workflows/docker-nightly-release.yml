@@ -45,6 +45,81 @@ jobs:
       - name: Validate project
         run: pnpm check
 
+  electron-desktop:
+    name: ${{ matrix.platform }} nightly desktop
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    needs: ci
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            package-script: electron:package:linux
+          - os: macos-latest
+            platform: macos
+            package-script: electron:package:mac
+          - os: windows-latest
+            platform: windows
+            package-script: electron:package:win
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Enable pnpm
+        run: corepack enable
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Electron runtime
+        run: pnpm exec install-electron
+
+      - name: Build desktop package
+        run: pnpm ${{ matrix.package-script }}
+
+      - name: Install Linux display dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes xvfb xauth x11-utils
+
+      - name: Test MySQL 8.4 metadata browsing on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e:mysql
+
+      - name: Test SQLite metadata browsing on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e:sqlite
+
+      - name: Test Electron app on Linux
+        if: matrix.platform == 'linux'
+        run: xvfb-run --auto-servernum pnpm test:e2e:electron
+
+      - name: Test Electron app
+        if: matrix.platform != 'linux'
+        run: pnpm test:e2e:electron
+
+      - name: Upload desktop package
+        uses: actions/upload-artifact@v4
+        with:
+          name: it-tools-nightly-${{ matrix.platform }}-${{ runner.arch }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
   build:
     runs-on: ubuntu-latest
     needs:

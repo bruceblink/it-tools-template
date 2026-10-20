@@ -7,6 +7,9 @@ export default defineConfig({
   workers: 1,
   reporter: 'line',
   timeout: 30_000,
+  use: {
+    testIdAttribute: 'data-test-id',
+  },
   // Plugin entrypoints may take up to 15 seconds to load before lifecycle management fails them.
   expect: { timeout: 20_000 },
 });
