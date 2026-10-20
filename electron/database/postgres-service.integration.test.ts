@@ -104,6 +104,43 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
     expect(new TextEncoder().encode(JSON.stringify(result.value)).byteLength).toBeLessThan(16 * 1024);
   });
 
+  it('runs single read-only SELECT queries, pages rows, and caps large values before returning them', async () => {
+    const pagedQuery = 'SELECT value FROM generate_series(1, 26) AS series(value) ORDER BY value';
+    const firstPage = await service.executeReadOnlyQuery(sessionId, pagedQuery, 0);
+    expect(firstPage.ok).toBe(true);
+    if (!firstPage.ok) {
+      return;
+    }
+    expect(firstPage.value.rows).toHaveLength(25);
+    expect(firstPage.value.rows[0]?.cells[0]).toEqual({ value: '1', truncated: false });
+    expect(firstPage.value.hasNext).toBe(true);
+    expect(firstPage.value.nextOffset).toBe(25);
+
+    const secondPage = await service.executeReadOnlyQuery(sessionId, pagedQuery, 25);
+    expect(secondPage.ok && secondPage.value.rows[0]?.cells[0]).toEqual({ value: '26', truncated: false });
+
+    const largeCells = await service.executeReadOnlyQuery(
+      sessionId,
+      "SELECT repeat('x', 2097152) AS large_text, NULL::text AS null_value",
+      0,
+    );
+    expect(largeCells.ok).toBe(true);
+    if (largeCells.ok) {
+      expect(largeCells.value.rows[0]?.cells[0]).toEqual({ value: 'x'.repeat(256), truncated: true });
+      expect(largeCells.value.rows[0]?.cells[1]).toEqual({ value: null, truncated: false });
+      expect(new TextEncoder().encode(JSON.stringify(largeCells.value)).byteLength).toBeLessThan(16 * 1024);
+    }
+
+    expect(await service.executeReadOnlyQuery(sessionId, 'DELETE FROM s2b_keyset_probe', 0)).toEqual({
+      ok: false,
+      error: 'invalid-request',
+    });
+    expect(await service.executeReadOnlyQuery(sessionId, 'SELECT 1; SELECT 2', 0)).toEqual({
+      ok: false,
+      error: 'invalid-request',
+    });
+  });
+
   it('returns bounded index metadata for primary, included, expression, and partial indexes', async () => {
     const result = await service.getStructure(sessionId, 'public', 's2e_index_probe');
     expect(result.ok).toBe(true);

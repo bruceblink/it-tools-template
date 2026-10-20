@@ -27,7 +27,7 @@ test.describe('Database manager - saved PostgreSQL profiles', () => {
 
   test('saves only connection metadata and reloads it without a password', async () => {
     await openDatabaseManager();
-    await page.locator('[data-test-id="postgres-host-field"] input').fill('db.example.test');
+    await page.locator('[data-test-id="database-host-field"] input').fill('db.example.test');
     await page.locator('[data-test-id="postgres-profile-name-field"] input').fill('E2E Local');
     await page.getByRole('button', { name: 'Save profile', exact: true }).click();
     await expect(page.getByText('Connection profile saved.', { exact: true })).toBeVisible();
@@ -54,8 +54,8 @@ test.describe('Database manager - saved PostgreSQL profiles', () => {
     await openDatabaseManager();
     await page.locator('.saved-profile-section .n-base-selection').click();
     await page.getByText('E2E Local · db.example.test/postgres', { exact: true }).click();
-    await expect(page.locator('[data-test-id="postgres-host-field"] input')).toHaveValue('db.example.test');
-    await expect(page.locator('[data-test-id="postgres-password-field"] input')).toHaveValue('');
+    await expect(page.locator('[data-test-id="database-host-field"] input')).toHaveValue('db.example.test');
+    await expect(page.locator('[data-test-id="database-password-field"] input')).toHaveValue('');
 
     await page.getByRole('button', { name: 'Delete profile', exact: true }).click();
     await expect(page.getByText('Connection profile deleted.', { exact: true })).toBeVisible();

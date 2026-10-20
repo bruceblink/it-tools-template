@@ -1,9 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
-import { ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import type {
   DatabaseBridgeResult,
+  DatabaseEngine,
   DatabaseErrorCode,
+  DatabaseQueryPage,
+  DatabaseSchemaInfo,
+  DatabaseStructureInfo,
+  DatabaseTableInfo,
+  MySqlConnectionInput,
+  MySqlSessionInfo,
   PostgresConnectionInput,
   PostgresDataPage,
   PostgresDataPageInput,
@@ -11,17 +18,24 @@ import type {
   PostgresSessionInfo,
   PostgresStructureInfo,
   PostgresTableInfo,
+  SQLiteSessionInfo,
 } from '../../src/shared/desktop-services/database';
 import { isTrustedDesktopSender } from '../plugin-ipc-security';
 import { DatabaseServiceHost } from './database-service-host';
 import { PostgresConnectionProfileStore } from './postgres-connection-profile-store';
+import { isValidSQLiteFilePath } from './sqlite-service';
+import { MAX_QUERY_OFFSET } from './query-results';
+import { normalizeReadOnlySelectQuery } from './sql-query';
 
 const CONNECTION_CHANNEL = 'desktop:database:postgres:connect';
+const MYSQL_CONNECTION_CHANNEL = 'desktop:database:mysql:connect';
+const SQLITE_CONNECTION_CHANNEL = 'desktop:database:sqlite:connect';
 const DISCONNECT_CHANNEL = 'desktop:database:disconnect';
 const SCHEMAS_CHANNEL = 'desktop:database:schemas';
 const TABLES_CHANNEL = 'desktop:database:tables';
 const STRUCTURE_CHANNEL = 'desktop:database:structure';
 const DATA_PAGE_CHANNEL = 'desktop:database:data-page';
+const QUERY_CHANNEL = 'desktop:database:query';
 const CANCEL_DATA_PAGE_CHANNEL = 'desktop:database:data-page:cancel';
 const LIST_PROFILES_CHANNEL = 'desktop:database:postgres-profiles:list';
 const SAVE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:save';
@@ -36,6 +50,7 @@ interface DatabaseIpcDependencies {
 interface OwnedSession {
   rendererId: number;
   sessionId: string;
+  engine: DatabaseEngine;
 }
 
 interface OwnedPageRequest {
@@ -47,7 +62,7 @@ interface OwnedPageRequest {
   finish: () => void;
 }
 
-/** Expose only the operations required for PostgreSQL metadata browsing to the trusted app frame. */
+/** Expose only bounded metadata and read-only query operations to the trusted app frame. */
 export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   const serviceHost = new DatabaseServiceHost(dependencies.workerPath);
   const profileStore = new PostgresConnectionProfileStore(
@@ -71,7 +86,67 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     const sessionId = randomUUID();
     const result = await serviceHost.request<PostgresSessionInfo>({ operation: 'connect', sessionId, input });
     if (result.ok) {
-      sessions.set(sessionId, { rendererId: event.sender.id, sessionId });
+      sessions.set(sessionId, { rendererId: event.sender.id, sessionId, engine: 'postgres' });
+      rendererSessions.set(event.sender.id, sessionId);
+    }
+    return result;
+  });
+
+  ipcMain.handle(MYSQL_CONNECTION_CHANNEL, async (event, value: unknown) => {
+    if (!isTrustedDesktopSender(event, dependencies.trustedRendererUrl())) {
+      return { ok: false, error: 'untrusted-renderer' } satisfies DatabaseBridgeResult<never>;
+    }
+    const input = parseMySqlConnectionRequest(value);
+    if (!input) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+
+    await disconnectRendererSession(event.sender.id);
+    const sessionId = randomUUID();
+    const result = await serviceHost.request<MySqlSessionInfo>({ operation: 'connect-mysql', sessionId, input });
+    if (result.ok) {
+      sessions.set(sessionId, { rendererId: event.sender.id, sessionId, engine: 'mysql' });
+      rendererSessions.set(event.sender.id, sessionId);
+    }
+    return result;
+  });
+
+  ipcMain.handle(SQLITE_CONNECTION_CHANNEL, async (event) => {
+    if (!isTrustedDesktopSender(event, dependencies.trustedRendererUrl())) {
+      return { ok: false, error: 'untrusted-renderer' } satisfies DatabaseBridgeResult<never>;
+    }
+
+    let selection: Electron.OpenDialogReturnValue;
+    try {
+      const options: Electron.OpenDialogOptions = {
+        title: 'Open SQLite database',
+        properties: ['openFile'],
+        filters: [
+          { name: 'SQLite databases', extensions: ['db', 'sqlite', 'sqlite3'] },
+          { name: 'All files', extensions: ['*'] },
+        ],
+      };
+      const parentWindow = BrowserWindow.fromWebContents(event.sender);
+      selection = parentWindow
+        ? await dialog.showOpenDialog(parentWindow, options)
+        : await dialog.showOpenDialog(options);
+    }
+    catch {
+      return { ok: false, error: 'connection-failed' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (selection.canceled) {
+      return { ok: true, value: null } satisfies DatabaseBridgeResult<SQLiteSessionInfo | null>;
+    }
+    const filePath = selection.filePaths[0];
+    if (!isValidSQLiteFilePath(filePath)) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+
+    await disconnectRendererSession(event.sender.id);
+    const sessionId = randomUUID();
+    const result = await serviceHost.request<SQLiteSessionInfo>({ operation: 'connect-sqlite', sessionId, filePath });
+    if (result.ok) {
+      sessions.set(sessionId, { rendererId: event.sender.id, sessionId, engine: 'sqlite' });
       rendererSessions.set(event.sender.id, sessionId);
     }
     return result;
@@ -103,8 +178,12 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return runSessionOperation(sessionId, () =>
-      serviceHost.request<PostgresSchemaInfo[]>({ operation: 'list-schemas', sessionId }));
+    const engine = sessions.get(sessionId)?.engine;
+    return runSessionOperation(sessionId, () => engine === 'mysql'
+      ? serviceHost.request<DatabaseSchemaInfo[]>({ operation: 'list-mysql-schemas', sessionId })
+      : engine === 'sqlite'
+        ? serviceHost.request<DatabaseSchemaInfo[]>({ operation: 'list-sqlite-schemas', sessionId })
+        : serviceHost.request<PostgresSchemaInfo[]>({ operation: 'list-schemas', sessionId }));
   });
 
   ipcMain.handle(TABLES_CHANNEL, async (event, value: unknown) => {
@@ -119,12 +198,24 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, request.sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return runSessionOperation(request.sessionId, () =>
-      serviceHost.request<PostgresTableInfo[]>({
-        operation: 'list-tables',
-        sessionId: request.sessionId,
-        schema: request.schema,
-      }));
+    const engine = sessions.get(request.sessionId)?.engine;
+    return runSessionOperation(request.sessionId, () => engine === 'mysql'
+      ? serviceHost.request<DatabaseTableInfo[]>({
+          operation: 'list-mysql-tables',
+          sessionId: request.sessionId,
+          schema: request.schema,
+        })
+      : engine === 'sqlite'
+        ? serviceHost.request<DatabaseTableInfo[]>({
+            operation: 'list-sqlite-tables',
+            sessionId: request.sessionId,
+            schema: request.schema,
+          })
+        : serviceHost.request<PostgresTableInfo[]>({
+            operation: 'list-tables',
+            sessionId: request.sessionId,
+            schema: request.schema,
+          }));
   });
 
   ipcMain.handle(STRUCTURE_CHANNEL, async (event, value: unknown) => {
@@ -139,13 +230,27 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (!ownsSession(event.sender.id, request.sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
     }
-    return runSessionOperation(request.sessionId, () =>
-      serviceHost.request<PostgresStructureInfo>({
-        operation: 'get-structure',
-        sessionId: request.sessionId,
-        schema: request.schema,
-        table: request.table,
-      }));
+    const engine = sessions.get(request.sessionId)?.engine;
+    return runSessionOperation(request.sessionId, () => engine === 'mysql'
+      ? serviceHost.request<DatabaseStructureInfo>({
+          operation: 'get-mysql-structure',
+          sessionId: request.sessionId,
+          schema: request.schema,
+          table: request.table,
+        })
+      : engine === 'sqlite'
+        ? serviceHost.request<DatabaseStructureInfo>({
+            operation: 'get-sqlite-structure',
+            sessionId: request.sessionId,
+            schema: request.schema,
+            table: request.table,
+          })
+        : serviceHost.request<PostgresStructureInfo>({
+            operation: 'get-structure',
+            sessionId: request.sessionId,
+            schema: request.schema,
+            table: request.table,
+          }));
   });
 
   ipcMain.handle(DATA_PAGE_CHANNEL, async (event, value: unknown) => {
@@ -159,6 +264,9 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     }
     if (!ownsSession(event.sender.id, request.sessionId)) {
       return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (sessions.get(request.sessionId)?.engine !== 'postgres') {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
     }
     if (activePageRequests.has(request.sessionId)) {
       return { ok: false, error: 'query-failed' } satisfies DatabaseBridgeResult<never>;
@@ -198,6 +306,35 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       }
       activePage.finish();
     }
+  });
+
+  ipcMain.handle(QUERY_CHANNEL, async (event, value: unknown) => {
+    const request = parseDatabaseQueryRequest(value);
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!request) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!ownsSession(event.sender.id, request.sessionId)) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const engine = sessions.get(request.sessionId)?.engine;
+    if (!engine) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const sql = normalizeReadOnlySelectQuery(request.sql, engine);
+    if (!sql) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    return runSessionOperation(request.sessionId, () => serviceHost.request<DatabaseQueryPage>({
+      operation: 'execute-read-only-query',
+      sessionId: request.sessionId,
+      engine,
+      sql,
+      offset: request.offset,
+    }));
   });
 
   ipcMain.handle(CANCEL_DATA_PAGE_CHANNEL, async (event, value: unknown) => {
@@ -287,7 +424,12 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (owner && rendererSessions.get(owner.rendererId) === sessionId) {
       rendererSessions.delete(owner.rendererId);
     }
-    return runSessionOperation(sessionId, () => serviceHost.request<boolean>({ operation: 'disconnect', sessionId }));
+    const operation = owner?.engine === 'mysql'
+      ? 'disconnect-mysql'
+      : owner?.engine === 'sqlite'
+        ? 'disconnect-sqlite'
+        : 'disconnect';
+    return runSessionOperation(sessionId, () => serviceHost.request<boolean>({ operation, sessionId }));
   }
 
   async function runSessionOperation<T>(sessionId: string, operation: () => Promise<T>): Promise<T> {
@@ -325,11 +467,14 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       activePageRequests.clear();
       sessionOperationTails.clear();
       ipcMain.removeHandler(CONNECTION_CHANNEL);
+      ipcMain.removeHandler(MYSQL_CONNECTION_CHANNEL);
+      ipcMain.removeHandler(SQLITE_CONNECTION_CHANNEL);
       ipcMain.removeHandler(DISCONNECT_CHANNEL);
       ipcMain.removeHandler(SCHEMAS_CHANNEL);
       ipcMain.removeHandler(TABLES_CHANNEL);
       ipcMain.removeHandler(STRUCTURE_CHANNEL);
       ipcMain.removeHandler(DATA_PAGE_CHANNEL);
+      ipcMain.removeHandler(QUERY_CHANNEL);
       ipcMain.removeHandler(CANCEL_DATA_PAGE_CHANNEL);
       ipcMain.removeHandler(LIST_PROFILES_CHANNEL);
       ipcMain.removeHandler(SAVE_PROFILE_CHANNEL);
@@ -378,6 +523,29 @@ function parsePostgresConnectionRequest(value: unknown): PostgresConnectionInput
     return null;
   }
   return value as unknown as PostgresConnectionInput;
+}
+
+function parseMySqlConnectionRequest(value: unknown): MySqlConnectionInput | null {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['host', 'port', 'database', 'username', 'password', 'tlsMode'])
+    || typeof value.host !== 'string'
+    || value.host.trim().length === 0
+    || value.host.length > 253
+    || typeof value.port !== 'number'
+    || !Number.isInteger(value.port)
+    || value.port < 1
+    || value.port > 65_535
+    || typeof value.database !== 'string'
+    || !isMySqlIdentifier(value.database)
+    || typeof value.username !== 'string'
+    || value.username.length === 0
+    || value.username.length > 128
+    || typeof value.password !== 'string'
+    || value.password.length > 4_096
+    || (value.tlsMode !== 'verify' && value.tlsMode !== 'disable')) {
+    return null;
+  }
+  return value as unknown as MySqlConnectionInput;
 }
 
 function parseSessionRequest(value: unknown): string | null {
@@ -430,6 +598,21 @@ function parseDataPageRequest(
   }
   const sessionId = parseSessionRequest({ sessionId: value.sessionId });
   return sessionId ? { sessionId, requestId: value.requestId, schema: value.schema, table: value.table, page: value.page } : null;
+}
+
+function parseDatabaseQueryRequest(
+  value: unknown,
+): { sessionId: string; sql: string; offset: number } | null {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['sessionId', 'sql', 'offset'])
+    || typeof value.sql !== 'string'
+    || !Number.isInteger(value.offset)
+    || (value.offset as number) < 0
+    || (value.offset as number) > MAX_QUERY_OFFSET) {
+    return null;
+  }
+  const sessionId = parseSessionRequest({ sessionId: value.sessionId });
+  return sessionId ? { sessionId, sql: value.sql, offset: value.offset as number } : null;
 }
 
 function parseDataPageCancelRequest(value: unknown): { sessionId: string; requestId: string } | null {
@@ -486,6 +669,10 @@ function isRequestId(value: string): boolean {
 
 function isDatabaseIdentifier(value: string): boolean {
   return value.length > 0 && value.length <= 63 && !value.includes('\u0000');
+}
+
+function isMySqlIdentifier(value: string): boolean {
+  return value.length > 0 && value.length <= 64 && !value.includes('\u0000');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

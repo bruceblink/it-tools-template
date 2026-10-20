@@ -1,6 +1,7 @@
 import { Client, type ClientConfig } from 'pg';
 import type {
   DatabaseBridgeResult,
+  DatabaseQueryPage,
   PostgresColumnInfo,
   PostgresConnectionInput,
   PostgresDataPage,
@@ -10,6 +11,8 @@ import type {
   PostgresStructureInfo,
   PostgresTableInfo,
 } from '../../src/shared/desktop-services/database';
+import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_OFFSET } from './query-results';
+import { normalizeReadOnlySelectQuery } from './sql-query';
 
 const MAX_POSTGRES_SESSIONS = 4;
 const MAX_SCHEMAS = 100;
@@ -478,6 +481,45 @@ export class PostgresDatabaseService {
       if (this.activePageRequests.get(sessionId) === activePage) {
         this.activePageRequests.delete(sessionId);
       }
+    }
+  }
+
+  /** Execute one SELECT inside the read-only session and bound returned columns, rows, and cells in SQL. */
+  async executeReadOnlyQuery(
+    sessionId: string,
+    sql: string,
+    offset: number,
+  ): Promise<DatabaseBridgeResult<DatabaseQueryPage>> {
+    const client = this.clients.get(sessionId);
+    const query = normalizeReadOnlySelectQuery(sql, 'postgres');
+    if (!client) {
+      return { ok: false, error: 'not-connected' };
+    }
+    if (!query || !Number.isInteger(offset) || offset < 0 || offset > MAX_QUERY_OFFSET) {
+      return { ok: false, error: 'invalid-request' };
+    }
+
+    const startedAt = Date.now();
+    try {
+      const metadata = await client.query({
+        text: `SELECT * FROM (\n${query}\n) AS "__it_tools_metadata" LIMIT 0`,
+      });
+      const fieldNames = metadata.fields.map(field => field.name);
+      if (!areValidQueryFieldNames(fieldNames, 'postgres')) {
+        return { ok: false, error: 'query-failed' };
+      }
+
+      const result = await client.query<unknown[]>({
+        text: createBoundedQuerySql('postgres', query, fieldNames, offset),
+        rowMode: 'array',
+      });
+      return {
+        ok: true,
+        value: createDatabaseQueryPage(fieldNames, result.rows, offset, startedAt),
+      };
+    }
+    catch (error) {
+      return { ok: false, error: classifyPostgresError(error, 'query-failed') };
     }
   }
 

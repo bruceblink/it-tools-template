@@ -2,20 +2,24 @@
 import type { DataTableColumns } from 'naive-ui';
 import { onMounted, onUnmounted, reactive, ref } from 'vue';
 import type {
+  DatabaseColumnInfo,
+  DatabaseEngine,
   DatabaseErrorCode,
+  DatabaseIndexInfo,
+  DatabaseSchemaInfo,
+  DatabaseSessionInfo,
+  DatabaseQueryPage,
+  DatabaseTableInfo,
   DatabaseTlsMode,
-  PostgresColumnInfo,
   PostgresDataCell,
   PostgresDataPage,
   PostgresDataPageInput,
   PostgresConnectionProfile,
   PostgresConnectionProfileInput,
-  PostgresIndexInfo,
-  PostgresSchemaInfo,
-  PostgresSessionInfo,
-  PostgresTableInfo,
 } from '@/shared/desktop-services/database';
 import {
+  connectMySql,
+  connectSQLite,
   connectPostgres,
   cancelDatabaseDataPage,
   deletePostgresProfile,
@@ -25,12 +29,33 @@ import {
   listPostgresProfiles,
   listDatabaseSchemas,
   listDatabaseTables,
+  runDatabaseQuery,
   savePostgresProfile,
   type DatabaseOperation,
 } from '@/platform-adapter/database';
 
 const { t, locale } = useI18n();
 const isChineseLocale = computed(() => locale.value.toLowerCase().startsWith('zh'));
+const sqlEditorTitle = computed(() => isChineseLocale.value ? 'SQL 编辑器' : 'SQL editor');
+const sqlRunLabel = computed(() => isChineseLocale.value ? '运行查询' : 'Run query');
+const sqlReadOnlyNotice = computed(() => isChineseLocale.value
+  ? '只允许运行一条 SELECT 查询。系统会拒绝写入、多条语句、参数占位符以及文件或锁操作。结果最多显示 25 行、16 列；每个单元格最多显示 256 个字符。请添加 ORDER BY，确保分页顺序稳定。'
+  : 'Run one SELECT statement. Writes, multiple statements, parameters, file access, and lock commands are rejected. Results show at most 25 rows, 16 columns, and 256 characters per cell. Add ORDER BY for stable paging.');
+const sqlColumnsTruncatedNotice = computed(() => isChineseLocale.value
+  ? '查询返回的列超过 16 列。这里只显示前 16 列。'
+  : 'The query returned more than 16 columns. Only the first 16 are shown.');
+const sqlLimitReachedNotice = computed(() => isChineseLocale.value
+  ? '查询结果达到安全分页上限，无法继续查看后续行。'
+  : 'The query reached its safe paging limit. Later rows are not available.');
+const sqlNoRowsNotice = computed(() => isChineseLocale.value ? '查询没有返回数据行。' : 'The query returned no rows.');
+const stageNotice = computed(() => isChineseLocale.value
+  ? '可浏览 PostgreSQL 和 MySQL 元数据，也可用只读模式打开本地 SQLite 文件。'
+  : 'Browse PostgreSQL and MySQL metadata, or open a local SQLite file in read-only mode.');
+const engineHeading = computed(() => isChineseLocale.value ? '数据库引擎' : 'Database engine');
+const connectDatabaseLabel = computed(() => isChineseLocale.value ? '连接数据库' : 'Connect to a database');
+const mysqlNotice = computed(() => isChineseLocale.value
+  ? '密码仅用于当前连接，不会保存。'
+  : 'The password is used only for this connection and is never saved.');
 const previewText = computed(() => isChineseLocale.value
   ? {
       data: '数据',
@@ -125,6 +150,8 @@ const connectionForm = reactive({
   password: '',
   tlsMode: 'verify' as DatabaseTlsMode,
 });
+const selectedEngine = ref<DatabaseEngine>('postgres');
+const lastNetworkEngine = ref<'postgres' | 'mysql'>('postgres');
 const savedProfiles = ref<PostgresConnectionProfile[]>([]);
 const selectedProfileId = ref<string | null>(null);
 const profileName = ref('');
@@ -133,14 +160,20 @@ const profileNotice = ref<'saved' | 'deleted' | null>(null);
 const isLoadingProfiles = ref(false);
 const isSavingProfile = ref(false);
 const isDeletingProfile = ref(false);
-const activeSession = ref<PostgresSessionInfo | null>(null);
-const schemas = ref<PostgresSchemaInfo[]>([]);
-const tables = ref<PostgresTableInfo[]>([]);
-const structure = ref<PostgresColumnInfo[]>([]);
+const activeSession = ref<DatabaseSessionInfo | null>(null);
+const activeEngine = ref<DatabaseEngine | null>(null);
+const schemas = ref<DatabaseSchemaInfo[]>([]);
+const tables = ref<DatabaseTableInfo[]>([]);
+const structure = ref<DatabaseColumnInfo[]>([]);
 const columnsTruncated = ref(false);
-const indexes = ref<PostgresIndexInfo[]>([]);
+const indexes = ref<DatabaseIndexInfo[]>([]);
 const indexesTruncated = ref(false);
 const dataPage = ref<PostgresDataPage | null>(null);
+const sqlText = ref('SELECT 1');
+const sqlPage = ref<DatabaseQueryPage | null>(null);
+const sqlPageOffset = ref(0);
+const isRunningSql = ref(false);
+const sqlError = ref<DatabaseErrorCode | null>(null);
 const pageRequests = ref<PostgresDataPageInput[]>([{ cursor: null, offset: 0 }]);
 const currentPageIndex = ref(0);
 const activeTableTab = ref<'data' | 'structure'>('data');
@@ -157,6 +190,7 @@ const dataNotice = ref<'cancelled' | 'finished-before-cancel' | null>(null);
 const connectionError = ref<DatabaseErrorCode | null>(null);
 let tableRequestSequence = 0;
 let dataRequestSequence = 0;
+let sqlRequestSequence = 0;
 const pendingPageCancellations = new Map<string, Promise<DatabaseOperation<boolean>>>();
 const confirmedCancelledPageRequests = new Set<string>();
 
@@ -167,6 +201,33 @@ interface DatabaseDataTableRow {
 
 const schemaOptions = computed(() => schemas.value.map(({ name }) => ({ label: name, value: name })));
 const tableOptions = computed(() => tables.value.map(({ name, kind }) => ({ label: `${name} (${kind})`, value: name })));
+const engineOptions = computed(() => [
+  { label: 'PostgreSQL', value: 'postgres' as const },
+  { label: 'MySQL', value: 'mysql' as const },
+  { label: 'SQLite', value: 'sqlite' as const },
+]);
+const activeEngineName = computed(() => activeEngine.value === 'mysql'
+  ? 'MySQL'
+  : activeEngine.value === 'sqlite'
+    ? 'SQLite'
+    : 'PostgreSQL');
+const activeConnectionLabel = computed(() => {
+  const session = activeSession.value;
+  if (!session || !activeEngine.value) {
+    return '';
+  }
+  if (activeEngine.value === 'sqlite' && 'fileName' in session) {
+    return isChineseLocale.value
+      ? `已连接 SQLite ${session.serverVersion} · ${session.fileName}`
+      : `Connected to SQLite ${session.serverVersion} · ${session.fileName}`;
+  }
+  return isChineseLocale.value
+    ? `已连接 ${activeEngineName.value} ${session.serverVersion}`
+    : `Connected to ${activeEngineName.value} ${session.serverVersion}`;
+});
+const sqliteNotice = computed(() => isChineseLocale.value
+  ? '所选 SQLite 文件以只读模式打开。应用不会保存密码，也不会修改数据库文件。'
+  : 'The selected SQLite file is opened in read-only mode. This app does not save a password or change the database file.');
 const tlsOptions = computed(() => [
   { label: t('tools.database-manager.verifyTls'), value: 'verify' },
   { label: t('tools.database-manager.disableTls'), value: 'disable' },
@@ -175,7 +236,7 @@ const savedProfileOptions = computed(() => savedProfiles.value.map(profile => ({
   label: `${profile.name} · ${profile.host}/${profile.database}`,
   value: profile.id,
 })));
-const structureColumns = computed<DataTableColumns<PostgresColumnInfo>>(() => [
+const structureColumns = computed<DataTableColumns<DatabaseColumnInfo>>(() => [
   { title: t('tools.database-manager.columnName'), key: 'name', minWidth: 180 },
   { title: t('tools.database-manager.dataType'), key: 'dataType', minWidth: 140 },
   {
@@ -194,7 +255,7 @@ const structureColumns = computed<DataTableColumns<PostgresColumnInfo>>(() => [
     render: row => row.primaryKey ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
   },
 ]);
-const indexColumns = computed<DataTableColumns<PostgresIndexInfo>>(() => [
+const indexColumns = computed<DataTableColumns<DatabaseIndexInfo>>(() => [
   { title: indexText.value.name, key: 'name', minWidth: 180 },
   {
     title: indexText.value.primary,
@@ -210,7 +271,7 @@ const indexColumns = computed<DataTableColumns<PostgresIndexInfo>>(() => [
   {
     title: indexText.value.valid,
     key: 'valid',
-    render: row => row.valid ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
+    render: row => row.valid === null ? '—' : row.valid ? t('tools.database-manager.yes') : t('tools.database-manager.no'),
   },
   {
     title: indexText.value.definition,
@@ -243,6 +304,28 @@ const dataRows = computed<DatabaseDataTableRow[]>(() => (dataPage.value?.rows ??
   rowId: `${currentPageIndex.value}:${index}`,
   cells: row.cells,
 })));
+const sqlResultColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => (sqlPage.value?.columns ?? []).map((column, index) => ({
+  title: `${column.name} · ${column.dataType}`,
+  key: `column-${index}`,
+  minWidth: 200,
+  ellipsis: { tooltip: true },
+  render: row => row.cells[index]?.value === null
+    ? previewText.value.nullValue
+    : row.cells[index]?.truncated
+      ? `${row.cells[index]?.value ?? ''}…`
+      : row.cells[index]?.value ?? '—',
+})));
+const sqlResultRows = computed<DatabaseDataTableRow[]>(() => (sqlPage.value?.rows ?? []).map((row, index) => ({
+  rowId: `${sqlPageOffset.value}:${index}`,
+  cells: row.cells,
+})));
+const sqlPageSummary = computed(() => isChineseLocale.value
+  ? `第 ${Math.floor(sqlPageOffset.value / 25) + 1} 页 · ${sqlPage.value?.rows.length ?? 0} 行 · ${sqlPage.value?.elapsedMilliseconds ?? 0} 毫秒`
+  : `Page ${Math.floor(sqlPageOffset.value / 25) + 1} · ${sqlPage.value?.rows.length ?? 0} ${sqlPage.value?.rows.length === 1 ? 'row' : 'rows'} · ${sqlPage.value?.elapsedMilliseconds ?? 0} ms`);
+const sqlResultScrollWidth = computed(() => Math.max(800, (sqlPage.value?.columns.length ?? 1) * 200));
+const sqlErrorMessage = computed(() => sqlError.value
+  ? t(`tools.database-manager.errors.${sqlError.value}`)
+  : '');
 const dataTableScrollWidth = computed(() => Math.max(800, (dataPage.value?.columns.length ?? 1) * 200));
 const pageLabel = computed(() => isChineseLocale.value
   ? `第 ${currentPageIndex.value + 1} 页 · ${dataPage.value?.rows.length ?? 0} 行`
@@ -263,11 +346,11 @@ const profileNoticeMessage = computed(() => profileNotice.value === 'saved'
   ? profileText.value.saved
   : profileNotice.value === 'deleted' ? profileText.value.deleted : '');
 
-function getStructureRowKey(row: PostgresColumnInfo): string {
+function getStructureRowKey(row: DatabaseColumnInfo): string {
   return row.name;
 }
 
-function getIndexRowKey(row: PostgresIndexInfo): string {
+function getIndexRowKey(row: DatabaseIndexInfo): string {
   return row.name;
 }
 
@@ -311,6 +394,49 @@ function selectSavedProfile(profileId: string | null) {
   connectionForm.username = profile.username;
   connectionForm.tlsMode = profile.tlsMode;
   connectionForm.password = '';
+}
+
+/** Change only untouched network defaults and clear PostgreSQL profile state for non-PostgreSQL engines. */
+function selectEngine(engine: DatabaseEngine) {
+  const previousEngine = selectedEngine.value;
+  if (engine === previousEngine) {
+    return;
+  }
+  selectedEngine.value = engine;
+  const previousNetworkEngine = previousEngine === 'sqlite' ? lastNetworkEngine.value : previousEngine;
+  if (engine !== 'sqlite' && previousNetworkEngine !== engine) {
+    const previousDefaultPort = previousNetworkEngine === 'mysql' ? 3306 : 5432;
+    if (connectionForm.port === previousDefaultPort) {
+      connectionForm.port = engine === 'mysql' ? 3306 : 5432;
+    }
+  }
+  if (engine !== 'sqlite') {
+    lastNetworkEngine.value = engine;
+  }
+  if (engine !== 'postgres') {
+    selectedProfileId.value = null;
+    profileName.value = '';
+  }
+  if (engine === 'mysql') {
+    if (connectionForm.database === 'postgres') {
+      connectionForm.database = '';
+    }
+    if (connectionForm.username === 'postgres') {
+      connectionForm.username = '';
+    }
+  }
+  else if (engine === 'postgres') {
+    if (!connectionForm.database) {
+      connectionForm.database = 'postgres';
+    }
+    if (!connectionForm.username) {
+      connectionForm.username = 'postgres';
+    }
+  }
+  connectionForm.password = '';
+  profileError.value = null;
+  profileNotice.value = null;
+  connectionError.value = null;
 }
 
 async function saveCurrentProfile() {
@@ -369,25 +495,46 @@ async function deleteSelectedProfile() {
   }
 }
 
-/** Send the password once, clear the visible input, and keep the session id only in page memory. */
+/** Send the password only for the current connection, clear the field, and retain the session id in page memory. */
 async function connect() {
   if (isConnecting.value) {
     return;
   }
 
   connectionError.value = null;
+  sqlRequestSequence += 1;
+  sqlPage.value = null;
+  sqlPageOffset.value = 0;
+  sqlError.value = null;
   isConnecting.value = true;
-  const input = { ...connectionForm };
-  const connection = connectPostgres(input);
-  input.password = '';
-  connectionForm.password = '';
   try {
-    const result = await connection;
+    if (selectedEngine.value === 'sqlite') {
+      const result = await connectSQLite();
+      if (result.status !== 'success') {
+        setOperationError(result);
+        return;
+      }
+      if (!result.value) {
+        return;
+      }
+      activeSession.value = result.value;
+      activeEngine.value = 'sqlite';
+      await refreshSchemas(result.value.sessionId);
+      return;
+    }
+
+    const input = { ...connectionForm };
+    const result = selectedEngine.value === 'mysql'
+      ? await connectMySql(input)
+      : await connectPostgres(input);
+    input.password = '';
+    connectionForm.password = '';
     if (result.status !== 'success') {
       setOperationError(result);
       return;
     }
     activeSession.value = result.value;
+    activeEngine.value = selectedEngine.value;
     await refreshSchemas(result.value.sessionId);
   }
   finally {
@@ -477,7 +624,7 @@ async function selectTable(table: string | null) {
   dataPage.value = null;
   pageRequests.value = [{ cursor: null, offset: 0 }];
   currentPageIndex.value = 0;
-  activeTableTab.value = 'data';
+  activeTableTab.value = activeEngine.value === 'postgres' ? 'data' : 'structure';
   columnsTruncated.value = false;
   isLoadingData.value = false;
   dataNotice.value = null;
@@ -506,7 +653,9 @@ async function selectTable(table: string | null) {
     columnsTruncated.value = result.value.columnsTruncated;
     indexes.value = result.value.indexes;
     indexesTruncated.value = result.value.indexesTruncated;
-    await loadDataPage(0, requestSequence);
+    if (activeEngine.value === 'postgres') {
+      await loadDataPage(0, requestSequence);
+    }
   }
   finally {
     isLoadingStructure.value = false;
@@ -515,6 +664,9 @@ async function selectTable(table: string | null) {
 
 /** Replace stale rows and ignore late responses after a table or page change. */
 async function loadDataPage(pageIndex: number, tableSequence: number) {
+  if (activeEngine.value !== 'postgres') {
+    return;
+  }
   const sessionId = activeSession.value?.sessionId;
   const schema = selectedSchema.value;
   const table = selectedTable.value;
@@ -565,6 +717,41 @@ async function loadDataPage(pageIndex: number, tableSequence: number) {
       }
       isLoadingData.value = false;
     }
+  }
+}
+
+function updateSqlText(value: string) {
+  sqlText.value = value;
+  sqlRequestSequence += 1;
+  sqlPage.value = null;
+  sqlError.value = null;
+}
+
+/** Run one bounded SELECT and ignore results from edits or later runs. */
+async function runSqlQuery(offset = 0) {
+  const sessionId = activeSession.value?.sessionId;
+  if (!sessionId || isRunningSql.value) {
+    return;
+  }
+
+  const requestSequence = ++sqlRequestSequence;
+  sqlPage.value = null;
+  sqlError.value = null;
+  isRunningSql.value = true;
+  try {
+    const result = await runDatabaseQuery(sessionId, sqlText.value, offset);
+    if (requestSequence !== sqlRequestSequence) {
+      return;
+    }
+    if (result.status !== 'success') {
+      sqlError.value = result.status === 'failed' ? result.error : 'service-unavailable';
+      return;
+    }
+    sqlPage.value = result.value;
+    sqlPageOffset.value = offset;
+  }
+  finally {
+    isRunningSql.value = false;
   }
 }
 
@@ -661,6 +848,7 @@ async function disconnect() {
   dataRequestSequence += 1;
   const sessionId = activeSession.value?.sessionId;
   activeSession.value = null;
+  activeEngine.value = null;
   schemas.value = [];
   tables.value = [];
   structure.value = [];
@@ -693,6 +881,7 @@ onMounted(() => {
 onUnmounted(() => {
   tableRequestSequence += 1;
   dataRequestSequence += 1;
+  sqlRequestSequence += 1;
   const sessionId = activeSession.value?.sessionId;
   if (sessionId) {
     activeSession.value = null;
@@ -704,7 +893,7 @@ onUnmounted(() => {
 <template>
   <section class="database-manager-workspace" data-test-id="database-manager-workspace">
     <n-alert type="info" :show-icon="false" mb-4>
-      {{ $t('tools.database-manager.stageNotice') }}
+      {{ stageNotice }}
     </n-alert>
 
     <n-alert v-if="errorMessage" type="error" :show-icon="false" mb-4 role="alert">
@@ -712,8 +901,17 @@ onUnmounted(() => {
     </n-alert>
 
     <div v-if="!activeSession" class="database-manager-grid">
-      <n-card :title="$t('tools.database-manager.connectPostgres')">
-        <div class="saved-profile-section" data-test-id="postgres-profile-section">
+      <n-card :title="connectDatabaseLabel">
+        <n-form-item data-test-id="database-engine-field" :label="engineHeading">
+          <n-select
+            data-test-id="database-engine-select"
+            :value="selectedEngine"
+            :options="engineOptions"
+            @update:value="selectEngine"
+          />
+        </n-form-item>
+
+        <div v-if="selectedEngine === 'postgres'" class="saved-profile-section" data-test-id="postgres-profile-section">
           <strong>{{ profileText.title }}</strong>
           <n-alert type="info" :show-icon="false">
             {{ profileText.passwordNotSaved }}
@@ -750,28 +948,36 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <div class="connection-form">
-          <n-form-item data-test-id="postgres-host-field" :label="$t('tools.database-manager.host')">
+        <n-alert v-if="selectedEngine === 'mysql'" type="info" :show-icon="false" mb-3>
+          {{ mysqlNotice }}
+        </n-alert>
+
+        <n-alert v-if="selectedEngine === 'sqlite'" type="info" :show-icon="false" mb-3 data-test-id="sqlite-read-only-notice">
+          {{ sqliteNotice }}
+        </n-alert>
+
+        <div v-if="selectedEngine !== 'sqlite'" class="connection-form">
+          <n-form-item data-test-id="database-host-field" :label="$t('tools.database-manager.host')">
             <n-input v-model:value="connectionForm.host" autocomplete="off" />
           </n-form-item>
-          <n-form-item data-test-id="postgres-port-field" :label="$t('tools.database-manager.port')">
+          <n-form-item data-test-id="database-port-field" :label="$t('tools.database-manager.port')">
             <n-input-number v-model:value="connectionForm.port" :min="1" :max="65535" class="full-width" />
           </n-form-item>
-          <n-form-item data-test-id="postgres-database-field" :label="$t('tools.database-manager.database')">
+          <n-form-item data-test-id="database-database-field" :label="$t('tools.database-manager.database')">
             <n-input v-model:value="connectionForm.database" autocomplete="off" />
           </n-form-item>
-          <n-form-item data-test-id="postgres-username-field" :label="$t('tools.database-manager.username')">
+          <n-form-item data-test-id="database-username-field" :label="$t('tools.database-manager.username')">
             <n-input v-model:value="connectionForm.username" autocomplete="off" />
           </n-form-item>
-          <n-form-item data-test-id="postgres-password-field" :label="$t('tools.database-manager.password')">
+          <n-form-item data-test-id="database-password-field" :label="$t('tools.database-manager.password')">
             <n-input v-model:value="connectionForm.password" type="password" show-password-on="click" autocomplete="new-password" />
           </n-form-item>
           <n-form-item :label="$t('tools.database-manager.tlsMode')">
-            <n-select data-test-id="postgres-tls-mode" v-model:value="connectionForm.tlsMode" :options="tlsOptions" />
+            <n-select data-test-id="database-tls-mode" v-model:value="connectionForm.tlsMode" :options="tlsOptions" />
           </n-form-item>
         </div>
 
-        <n-alert v-if="connectionForm.tlsMode === 'disable'" type="warning" :show-icon="false" mb-3>
+        <n-alert v-if="selectedEngine !== 'sqlite' && connectionForm.tlsMode === 'disable'" type="warning" :show-icon="false" mb-3>
           {{ $t('tools.database-manager.disableTlsWarning') }}
         </n-alert>
 
@@ -782,9 +988,11 @@ onUnmounted(() => {
         </div>
       </n-card>
 
-      <n-card :title="$t('tools.database-manager.availableEngines')">
+      <n-card :title="engineHeading">
         <div class="database-engine-list">
           <span>PostgreSQL</span>
+          <span>MySQL</span>
+          <span>SQLite</span>
         </div>
       </n-card>
     </div>
@@ -792,7 +1000,7 @@ onUnmounted(() => {
     <div v-else class="database-manager-browser">
       <n-card mb-4>
         <div class="connection-summary">
-          <span>{{ $t('tools.database-manager.activeConnection', { version: activeSession.serverVersion }) }}</span>
+          <span>{{ activeConnectionLabel }}</span>
           <n-button size="small" @click="disconnect">
             {{ $t('tools.database-manager.disconnect') }}
           </n-button>
@@ -841,7 +1049,7 @@ onUnmounted(() => {
           {{ dataNotice === 'cancelled' ? previewText.cancelled : previewText.finishedBeforeCancel }}
         </n-alert>
         <n-tabs v-model:value="activeTableTab" type="line">
-          <n-tab-pane name="data" :tab="previewText.data">
+          <n-tab-pane v-if="activeEngine === 'postgres'" name="data" :tab="previewText.data">
             <n-alert v-if="dataPage?.pagingNotice === 'no-primary-key'" type="warning" :show-icon="false" mb-3>
               {{ previewText.noPrimaryKey }}
             </n-alert>
@@ -906,6 +1114,72 @@ onUnmounted(() => {
             />
           </n-tab-pane>
         </n-tabs>
+      </n-card>
+
+      <n-card v-if="activeSession" mt-4 :title="sqlEditorTitle" data-test-id="database-sql-editor-card">
+        <n-alert type="info" :show-icon="false" mb-3 data-test-id="database-sql-read-only-notice">
+          {{ sqlReadOnlyNotice }}
+        </n-alert>
+        <n-input
+          data-test-id="database-sql-editor"
+          :value="sqlText"
+          type="textarea"
+          :autosize="{ minRows: 6, maxRows: 16 }"
+          spellcheck="false"
+          @update:value="updateSqlText"
+          @keydown.ctrl.enter.prevent="runSqlQuery(0)"
+        />
+        <div class="database-page-controls">
+          <span>{{ isChineseLocale ? 'Ctrl + Enter 运行' : 'Ctrl + Enter to run' }}</span>
+          <n-button
+            data-test-id="database-run-query"
+            type="primary"
+            :loading="isRunningSql"
+            @click="runSqlQuery(0)"
+          >
+            {{ isRunningSql ? previewText.loading : sqlRunLabel }}
+          </n-button>
+        </div>
+        <n-alert v-if="sqlErrorMessage" type="error" :show-icon="false" mt-3 role="alert" data-test-id="database-sql-error">
+          {{ sqlErrorMessage }}
+        </n-alert>
+        <div v-if="sqlPage" mt-4 data-test-id="database-sql-output">
+          <n-alert v-if="sqlPage.columnsTruncated" type="warning" :show-icon="false" mb-3>
+            {{ sqlColumnsTruncatedNotice }}
+          </n-alert>
+          <n-alert v-if="sqlPage.limitReached" type="warning" :show-icon="false" mb-3>
+            {{ sqlLimitReachedNotice }}
+          </n-alert>
+          <n-data-table
+            data-test-id="database-sql-results"
+            :columns="sqlResultColumns"
+            :data="sqlResultRows"
+            :loading="isRunningSql"
+            :row-key="getDataRowKey"
+            :pagination="false"
+            :scroll-x="sqlResultScrollWidth"
+          />
+          <n-empty v-if="sqlPage.rows.length === 0" :description="sqlNoRowsNotice" mt-4 />
+          <div class="database-page-controls">
+            <span data-test-id="database-sql-page-summary">{{ sqlPageSummary }}</span>
+            <div flex gap-2>
+              <n-button
+                data-test-id="database-sql-previous-page"
+                :disabled="isRunningSql || sqlPageOffset === 0"
+                @click="runSqlQuery(Math.max(0, sqlPageOffset - 25))"
+              >
+                {{ previewText.previous }}
+              </n-button>
+              <n-button
+                data-test-id="database-sql-next-page"
+                :disabled="isRunningSql || !sqlPage.hasNext || sqlPage.nextOffset === null"
+                @click="runSqlQuery(sqlPage.nextOffset ?? 0)"
+              >
+                {{ previewText.next }}
+              </n-button>
+            </div>
+          </div>
+        </div>
       </n-card>
     </div>
   </section>

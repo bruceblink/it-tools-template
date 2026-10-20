@@ -39,6 +39,8 @@
     "test:e2e:dev": "cross-env BASE_URL=http://localhost:5173 NO_WEB_SERVER=true playwright test",
     "test:e2e:electron": "playwright test --config=playwright.electron.config.ts",
     "test:e2e:postgres": "node scripts/test-postgres-e2e.mjs",
+    "test:e2e:mysql": "node scripts/test-mysql-e2e.mjs",
+    "test:e2e:sqlite": "node scripts/test-sqlite-e2e.mjs",
     "electron:dev": "pnpm generate:oui && electron-vite dev",
     "electron:build": "pnpm generate:oui && cross-env NODE_OPTIONS=--max_old_space_size=4096 electron-vite build",
     "electron:preview": "electron-vite preview",

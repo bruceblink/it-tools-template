@@ -37,8 +37,8 @@ test.describe('Database manager - PostgreSQL browsing', () => {
   test('connects over a trusted local socket and browses bounded keyset and offset pages', async () => {
     await page.getByRole('link', { name: 'Database manager', exact: true }).click();
     await expect(page.locator('[data-test-id="database-manager-workspace"]')).toBeVisible();
-    await page.locator('[data-test-id="postgres-port-field"] input').fill(String(postgresPort));
-    await page.locator('[data-test-id="postgres-tls-mode"] .n-base-selection').click();
+    await page.locator('[data-test-id="database-port-field"] input').fill(String(postgresPort));
+    await page.locator('[data-test-id="database-tls-mode"] .n-base-selection').click();
     await page.getByText('Disable TLS for a trusted local connection', { exact: true }).click();
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
 
@@ -91,6 +91,11 @@ test.describe('Database manager - PostgreSQL browsing', () => {
     await page.locator('.database-manager-browser .n-base-selection').nth(1).click();
     await page.getByText('s2b_keyset_probe (table)', { exact: true }).click();
     await expect(page.getByText('Page 1 · 25 rows', { exact: true })).toBeVisible();
+
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill('SELECT 1 AS value');
+    await page.getByRole('button', { name: 'Run query', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('1');
+    await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('1 row');
 
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();

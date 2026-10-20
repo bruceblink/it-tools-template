@@ -85,8 +85,7 @@ tools:
 
   database-manager:
     title: Database manager
-    description: PostgreSQL desktop browser; MySQL/SQLite planned.
-    stageNotice: PostgreSQL and saved profiles work; MySQL/SQLite planned.
+    description: PostgreSQL, MySQL, SQLite browser.
     connections: Connections
     noConnections: No database connections yet.
     availableEngines: Available engine

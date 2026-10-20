@@ -85,8 +85,7 @@ tools:
 
   database-manager:
     title: 数据库管理器
-    description: 桌面版 PostgreSQL 浏览器；计划支持 MySQL/SQLite。
-    stageNotice: PostgreSQL 浏览和连接资料可用；MySQL/SQLite 计划中。
+    description: PostgreSQL、MySQL、SQLite 浏览器。
     connections: 数据库连接
     noConnections: 还没有数据库连接。
     availableEngines: 可用引擎

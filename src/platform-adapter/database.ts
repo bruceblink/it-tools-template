@@ -1,15 +1,19 @@
 import type {
   DatabaseBridgeResult,
+  DatabaseQueryPage,
+  DatabaseSchemaInfo,
+  DatabaseStructureInfo,
+  DatabaseTableInfo,
   DatabaseErrorCode,
+  MySqlConnectionInput,
+  MySqlSessionInfo,
   PostgresConnectionInput,
   PostgresConnectionProfile,
   PostgresConnectionProfileInput,
   PostgresDataPage,
   PostgresDataPageInput,
-  PostgresSchemaInfo,
   PostgresSessionInfo,
-  PostgresStructureInfo,
-  PostgresTableInfo,
+  SQLiteSessionInfo,
 } from '@/shared/desktop-services/database';
 
 export type DatabaseOperation<T> =
@@ -42,15 +46,23 @@ export function connectPostgres(input: PostgresConnectionInput): Promise<Databas
   return callDesktopDatabase(bridge => bridge.connectPostgres?.(input));
 }
 
+export function connectMySql(input: MySqlConnectionInput): Promise<DatabaseOperation<MySqlSessionInfo>> {
+  return callDesktopDatabase(bridge => bridge.connectMySql?.(input));
+}
+
+export function connectSQLite(): Promise<DatabaseOperation<SQLiteSessionInfo | null>> {
+  return callDesktopDatabase(bridge => bridge.connectSQLite?.());
+}
+
 export function disconnectDatabase(sessionId: string): Promise<DatabaseOperation<boolean>> {
   return callDesktopDatabase(bridge => bridge.disconnectDatabase?.(sessionId));
 }
 
-export function listDatabaseSchemas(sessionId: string): Promise<DatabaseOperation<PostgresSchemaInfo[]>> {
+export function listDatabaseSchemas(sessionId: string): Promise<DatabaseOperation<DatabaseSchemaInfo[]>> {
   return callDesktopDatabase(bridge => bridge.listDatabaseSchemas?.(sessionId));
 }
 
-export function listDatabaseTables(sessionId: string, schema: string): Promise<DatabaseOperation<PostgresTableInfo[]>> {
+export function listDatabaseTables(sessionId: string, schema: string): Promise<DatabaseOperation<DatabaseTableInfo[]>> {
   return callDesktopDatabase(bridge => bridge.listDatabaseTables?.(sessionId, schema));
 }
 
@@ -58,7 +70,7 @@ export function getDatabaseStructure(
   sessionId: string,
   schema: string,
   table: string,
-): Promise<DatabaseOperation<PostgresStructureInfo>> {
+): Promise<DatabaseOperation<DatabaseStructureInfo>> {
   return callDesktopDatabase(bridge => bridge.getDatabaseStructure?.(sessionId, schema, table));
 }
 
@@ -70,6 +82,14 @@ export function getDatabaseDataPage(
   page: PostgresDataPageInput,
 ): Promise<DatabaseOperation<PostgresDataPage>> {
   return callDesktopDatabase(bridge => bridge.getDatabaseDataPage?.(sessionId, requestId, schema, table, page));
+}
+
+export function runDatabaseQuery(
+  sessionId: string,
+  sql: string,
+  offset: number,
+): Promise<DatabaseOperation<DatabaseQueryPage>> {
+  return callDesktopDatabase(bridge => bridge.runDatabaseQuery?.(sessionId, sql, offset));
 }
 
 export function cancelDatabaseDataPage(

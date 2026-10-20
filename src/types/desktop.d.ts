@@ -1,14 +1,18 @@
 import type {
   DatabaseBridgeResult,
+  DatabaseQueryPage,
+  DatabaseSchemaInfo,
+  DatabaseStructureInfo,
+  DatabaseTableInfo,
+  MySqlConnectionInput,
+  MySqlSessionInfo,
   PostgresConnectionInput,
   PostgresConnectionProfile,
   PostgresConnectionProfileInput,
   PostgresDataPage,
   PostgresDataPageInput,
-  PostgresSchemaInfo,
   PostgresSessionInfo,
-  PostgresStructureInfo,
-  PostgresTableInfo,
+  SQLiteSessionInfo,
 } from '../shared/desktop-services/database';
 
 export {};
@@ -48,14 +52,16 @@ declare global {
         version: string;
       }>;
       connectPostgres?(input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>>;
+      connectMySql?(input: MySqlConnectionInput): Promise<DatabaseBridgeResult<MySqlSessionInfo>>;
+      connectSQLite?(): Promise<DatabaseBridgeResult<SQLiteSessionInfo | null>>;
       disconnectDatabase?(sessionId: string): Promise<DatabaseBridgeResult<boolean>>;
-      listDatabaseSchemas?(sessionId: string): Promise<DatabaseBridgeResult<PostgresSchemaInfo[]>>;
-      listDatabaseTables?(sessionId: string, schema: string): Promise<DatabaseBridgeResult<PostgresTableInfo[]>>;
+      listDatabaseSchemas?(sessionId: string): Promise<DatabaseBridgeResult<DatabaseSchemaInfo[]>>;
+      listDatabaseTables?(sessionId: string, schema: string): Promise<DatabaseBridgeResult<DatabaseTableInfo[]>>;
       getDatabaseStructure?(
         sessionId: string,
         schema: string,
         table: string,
-      ): Promise<DatabaseBridgeResult<PostgresStructureInfo>>;
+      ): Promise<DatabaseBridgeResult<DatabaseStructureInfo>>;
       getDatabaseDataPage?(
         sessionId: string,
         requestId: string,
@@ -63,6 +69,11 @@ declare global {
         table: string,
         page: PostgresDataPageInput,
       ): Promise<DatabaseBridgeResult<PostgresDataPage>>;
+      runDatabaseQuery?(
+        sessionId: string,
+        sql: string,
+        offset: number,
+      ): Promise<DatabaseBridgeResult<DatabaseQueryPage>>;
       cancelDatabaseDataPage?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
       listPostgresProfiles?(): Promise<DatabaseBridgeResult<PostgresConnectionProfile[]>>;
       savePostgresProfile?(

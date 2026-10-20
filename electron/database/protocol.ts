@@ -1,13 +1,34 @@
-import type { DatabaseBridgeResult, PostgresConnectionInput, PostgresDataPageInput } from '../../src/shared/desktop-services/database';
+import type {
+  DatabaseBridgeResult,
+  DatabaseEngine,
+  MySqlConnectionInput,
+  PostgresConnectionInput,
+  PostgresDataPageInput,
+} from '../../src/shared/desktop-services/database';
+import { isValidMySqlConnectionInput, isValidMySqlIdentifier } from './mysql-service';
 import { isValidDatabaseIdentifier, isValidPostgresConnectionInput, isValidPostgresPageRequest } from './postgres-service';
+import { isValidSQLiteFilePath, isValidSQLiteIdentifier } from './sqlite-service';
+import { normalizeReadOnlySelectQuery } from './sql-query';
+import { MAX_QUERY_OFFSET } from './query-results';
 
 export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'connect'; sessionId: string; input: PostgresConnectionInput }
+  | { requestId: string; operation: 'connect-mysql'; sessionId: string; input: MySqlConnectionInput }
+  | { requestId: string; operation: 'connect-sqlite'; sessionId: string; filePath: string }
   | { requestId: string; operation: 'disconnect'; sessionId: string }
+  | { requestId: string; operation: 'disconnect-mysql'; sessionId: string }
+  | { requestId: string; operation: 'disconnect-sqlite'; sessionId: string }
   | { requestId: string; operation: 'list-schemas'; sessionId: string }
+  | { requestId: string; operation: 'list-mysql-schemas'; sessionId: string }
+  | { requestId: string; operation: 'list-sqlite-schemas'; sessionId: string }
   | { requestId: string; operation: 'list-tables'; sessionId: string; schema: string }
+  | { requestId: string; operation: 'list-mysql-tables'; sessionId: string; schema: string }
+  | { requestId: string; operation: 'list-sqlite-tables'; sessionId: string; schema: string }
   | { requestId: string; operation: 'get-structure'; sessionId: string; schema: string; table: string }
+  | { requestId: string; operation: 'get-mysql-structure'; sessionId: string; schema: string; table: string }
+  | { requestId: string; operation: 'get-sqlite-structure'; sessionId: string; schema: string; table: string }
   | { requestId: string; operation: 'get-data-page'; sessionId: string; pageRequestId: string; schema: string; table: string; page: PostgresDataPageInput }
+  | { requestId: string; operation: 'execute-read-only-query'; sessionId: string; engine: DatabaseEngine; sql: string; offset: number }
   | { requestId: string; operation: 'cancel-data-page'; sessionId: string; targetRequestId: string }
   | { requestId: string; operation: 'close' };
 
@@ -29,10 +50,32 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && isValidPostgresConnectionInput(value.input)) {
     return value as DatabaseWorkerCommand;
   }
+  if (operation === 'connect-mysql'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'input'])
+    && isSessionId(value.sessionId)
+    && isValidMySqlConnectionInput(value.input)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'connect-sqlite'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'filePath'])
+    && isSessionId(value.sessionId)
+    && isValidSQLiteFilePath(value.filePath)) {
+    return value as DatabaseWorkerCommand;
+  }
   if (operation === 'disconnect' || operation === 'list-schemas') {
     if (hasExactKeys(value, ['requestId', 'operation', 'sessionId']) && isSessionId(value.sessionId)) {
       return value as DatabaseWorkerCommand;
     }
+  }
+  if ((operation === 'disconnect-mysql' || operation === 'list-mysql-schemas')
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId'])
+    && isSessionId(value.sessionId)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if ((operation === 'disconnect-sqlite' || operation === 'list-sqlite-schemas')
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId'])
+    && isSessionId(value.sessionId)) {
+    return value as DatabaseWorkerCommand;
   }
   if (operation === 'list-tables'
     && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema'])
@@ -40,11 +83,37 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && isValidDatabaseIdentifier(value.schema)) {
     return value as DatabaseWorkerCommand;
   }
+  if (operation === 'list-mysql-tables'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema'])
+    && isSessionId(value.sessionId)
+    && isValidMySqlIdentifier(value.schema)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'list-sqlite-tables'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema'])
+    && isSessionId(value.sessionId)
+    && value.schema === 'main') {
+    return value as DatabaseWorkerCommand;
+  }
   if (operation === 'get-structure'
     && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table'])
     && isSessionId(value.sessionId)
     && isValidDatabaseIdentifier(value.schema)
     && isValidDatabaseIdentifier(value.table)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'get-mysql-structure'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table'])
+    && isSessionId(value.sessionId)
+    && isValidMySqlIdentifier(value.schema)
+    && isValidMySqlIdentifier(value.table)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'get-sqlite-structure'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table'])
+    && isSessionId(value.sessionId)
+    && value.schema === 'main'
+    && isValidSQLiteIdentifier(value.table)) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'get-data-page'
@@ -55,6 +124,17 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && isValidDatabaseIdentifier(value.schema)
     && isValidDatabaseIdentifier(value.table)
     && isValidPostgresPageRequest(value.page)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'execute-read-only-query'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'sql', 'offset'])
+    && isSessionId(value.sessionId)
+    && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
+    && normalizeReadOnlySelectQuery(value.sql, value.engine) !== null
+    && Number.isInteger(value.offset)
+    && typeof value.offset === 'number'
+    && value.offset >= 0
+    && value.offset <= MAX_QUERY_OFFSET) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'cancel-data-page'

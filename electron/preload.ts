@@ -1,13 +1,20 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  DatabaseBridgeResult,
+  DatabaseQueryPage,
+  MySqlConnectionInput,
   PostgresConnectionInput,
   PostgresConnectionProfileInput,
   PostgresDataPageInput,
+  SQLiteSessionInfo,
 } from '../src/shared/desktop-services/database';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
   connectPostgres: (input: PostgresConnectionInput) => ipcRenderer.invoke('desktop:database:postgres:connect', input),
+  connectMySql: (input: MySqlConnectionInput) => ipcRenderer.invoke('desktop:database:mysql:connect', input),
+  connectSQLite: (): Promise<DatabaseBridgeResult<SQLiteSessionInfo | null>> =>
+    ipcRenderer.invoke('desktop:database:sqlite:connect'),
   disconnectDatabase: (sessionId: string) => ipcRenderer.invoke('desktop:database:disconnect', { sessionId }),
   listDatabaseSchemas: (sessionId: string) => ipcRenderer.invoke('desktop:database:schemas', { sessionId }),
   listDatabaseTables: (sessionId: string, schema: string) =>
@@ -16,6 +23,8 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:structure', { sessionId, schema, table }),
   getDatabaseDataPage: (sessionId: string, requestId: string, schema: string, table: string, page: PostgresDataPageInput) =>
     ipcRenderer.invoke('desktop:database:data-page', { sessionId, requestId, schema, table, page }),
+  runDatabaseQuery: (sessionId: string, sql: string, offset: number): Promise<DatabaseBridgeResult<DatabaseQueryPage>> =>
+    ipcRenderer.invoke('desktop:database:query', { sessionId, sql, offset }),
   cancelDatabaseDataPage: (sessionId: string, requestId: string) =>
     ipcRenderer.invoke('desktop:database:data-page:cancel', { sessionId, requestId }),
   listPostgresProfiles: () => ipcRenderer.invoke('desktop:database:postgres-profiles:list'),
