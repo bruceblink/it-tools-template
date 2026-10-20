@@ -1,7 +1,11 @@
 import { Client, type ClientConfig } from 'pg';
 import type {
   DatabaseBridgeResult,
+  DatabaseAccessMode,
+  DatabaseCellUpdateInput,
+  DatabaseMutationKind,
   DatabaseQueryPage,
+  DatabaseStatementResult,
   PostgresColumnInfo,
   PostgresConnectionInput,
   PostgresDataPage,
@@ -12,7 +16,8 @@ import type {
   PostgresTableInfo,
 } from '../../src/shared/desktop-services/database';
 import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_OFFSET } from './query-results';
-import { normalizeReadOnlySelectQuery } from './sql-query';
+import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
+import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
 
 const MAX_POSTGRES_SESSIONS = 4;
 const MAX_SCHEMAS = 100;
@@ -23,6 +28,7 @@ const MAX_INDEX_DEFINITION_CHARACTERS = 2_048;
 const MAX_PREVIEW_COLUMNS = 16;
 const MAX_PREVIEW_ROWS = 25;
 const MAX_CELL_CHARACTERS = 256;
+const MAX_MUTATION_ROWS = 1_000;
 const MAX_PAGE_OFFSET = 1_000_000;
 const MAX_CURSOR_CHARACTERS = 4_096;
 const MAX_PRIMARY_KEY_COLUMNS = 32;
@@ -54,6 +60,7 @@ export class PostgresDatabaseService {
   private readonly clients = new Map<string, Client>();
   private readonly clientConfigs = new Map<string, ClientConfig>();
   private readonly backendProcessIds = new Map<string, number>();
+  private readonly accessModes = new Map<string, DatabaseAccessMode>();
   private readonly activePageRequests = new Map<string, ActivePostgresPageRequest>();
 
   async connect(sessionId: string, input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>> {
@@ -71,7 +78,8 @@ export class PostgresDatabaseService {
     const client = new Client(clientConfig);
     try {
       await client.connect();
-      await client.query('SET default_transaction_read_only = on');
+      const accessMode = input.accessMode ?? 'read-only';
+      await client.query(`SET default_transaction_read_only = ${accessMode === 'read-only' ? 'on' : 'off'}`);
       await client.query("SET statement_timeout = '15000ms'");
       await client.query("SET lock_timeout = '5000ms'");
       await client.query("SET idle_in_transaction_session_timeout = '10000ms'");
@@ -89,7 +97,8 @@ export class PostgresDatabaseService {
       this.clients.set(sessionId, client);
       this.clientConfigs.set(sessionId, clientConfig);
       this.backendProcessIds.set(sessionId, backendPid);
-      return { ok: true, value: { sessionId, serverVersion } };
+      this.accessModes.set(sessionId, accessMode);
+      return { ok: true, value: { sessionId, serverVersion, accessMode } };
     }
     catch (error) {
       await client.end().catch(() => undefined);
@@ -408,6 +417,10 @@ export class PostgresDatabaseService {
       const selectedCells = columns.map((column, index) =>
         `left(${rowAlias}.${quotePostgresIdentifier(column.column_name)}::text, ${MAX_CELL_CHARACTERS + 1}) AS ${quotePostgresIdentifier(`cell_${index}`)}`,
       );
+      const identityKeys = primaryKeys.length <= MAX_PRIMARY_KEY_COLUMNS ? primaryKeys : [];
+      const hiddenIdentity = identityKeys.map((key, index) =>
+        `left(${rowAlias}.${quotePostgresIdentifier(key.column_name)}::text, ${MAX_CELL_CHARACTERS + 1}) AS ${quotePostgresIdentifier(`__primary_key_${index}`)}`,
+      );
       const primaryKeyExpressions = primaryKeys.map(key => `${rowAlias}.${quotePostgresIdentifier(key.column_name)}`);
       const keysetSelect = pagingMode === 'keyset'
         ? `, json_build_object(${primaryKeys.map((key, index) => `${quotePostgresString(key.column_name)}, ${primaryKeyExpressions[index]}`).join(', ')})::text AS "__cursor"`
@@ -425,7 +438,8 @@ export class PostgresDatabaseService {
       const pagination = pagingMode === 'keyset'
         ? `LIMIT ${limitParameter}`
         : 'LIMIT $2 OFFSET $1';
-      const sql = `SELECT ${selectedCells.join(', ')}${keysetSelect}
+      const hiddenSelects = [...(keysetSelect ? [keysetSelect.slice(2)] : []), ...hiddenIdentity];
+      const sql = `SELECT ${selectedCells.join(', ')}${hiddenSelects.length > 0 ? `, ${hiddenSelects.join(', ')}` : ''}
                    FROM ${quotedRelation} AS ${rowAlias}
                    ${keysetJoin}
                    ${keysetWhere}
@@ -455,9 +469,21 @@ export class PostgresDatabaseService {
         ok: true,
         value: {
           columns: columns.map(({ column_name, data_type }) => ({ name: column_name, dataType: data_type })),
-          rows: pageRows.map(row => ({
-            cells: columns.map((_column, index) => toBoundedCell(row[`cell_${index}`])),
-          })),
+          rows: pageRows.map((row) => {
+            const rawPrimaryKeyValues = identityKeys.length > 0
+              ? identityKeys.map((_key, index) => typeof row[`__primary_key_${index}`] === 'string' ? row[`__primary_key_${index}`] as string : '')
+              : null;
+            const primaryKeyValuesTruncated = rawPrimaryKeyValues?.some(value => Array.from(value).length > MAX_CELL_CHARACTERS) ?? false;
+            return {
+              cells: columns.map((_column, index) => toBoundedCell(row[`cell_${index}`])),
+              primaryKeyValues: rawPrimaryKeyValues?.map(value => Array.from(value).slice(0, MAX_CELL_CHARACTERS).join('')) ?? null,
+              primaryKeyValuesTruncated,
+            };
+          }),
+          primaryKeyColumns: identityKeys.map(key => key.column_name),
+          editable: (this.accessModes.get(sessionId) ?? 'read-only') === 'read-write'
+            && identityKeys.length > 0
+            && identityKeys.every(key => isEditableDatabaseColumnType('postgres', key.data_type)),
           columnsTruncated: columnResult.rows.length > MAX_PREVIEW_COLUMNS,
           pagingMode,
           pagingNotice,
@@ -484,7 +510,150 @@ export class PostgresDatabaseService {
     }
   }
 
-  /** Execute one SELECT inside the read-only session and bound returned columns, rows, and cells in SQL. */
+  /** Update one cell only when its full primary key and original value still match. */
+  async updateCell(
+    sessionId: string,
+    input: DatabaseCellUpdateInput,
+  ): Promise<DatabaseBridgeResult<boolean>> {
+    const client = this.clients.get(sessionId);
+    if (!client) {
+      return { ok: false, error: 'not-connected' };
+    }
+    if (!isValidCellUpdateInput(input, 'postgres')) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    if ((this.accessModes.get(sessionId) ?? 'read-only') !== 'read-write') {
+      return { ok: false, error: 'write-disabled' };
+    }
+
+    const tableType = await client.query<{ table_type: string }>(
+      'SELECT table_type FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2',
+      [input.schema, input.table],
+    ).catch(() => null);
+    if (tableType?.rows[0]?.table_type !== 'BASE TABLE') {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const structure = await this.getStructure(sessionId, input.schema, input.table);
+    if (!structure.ok) {
+      return structure;
+    }
+    const primaryKeys = structure.value.columns
+      .filter(column => column.primaryKey)
+      .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
+    const targetColumn = structure.value.columns.find(column => column.name === input.column);
+    if (!targetColumn
+      || !isEditableDatabaseColumnType('postgres', targetColumn.dataType)
+      || primaryKeys.length !== input.primaryKeys.length
+      || primaryKeys.some((key, index) => key.name !== input.primaryKeys[index]?.column)) {
+      return { ok: false, error: 'invalid-request' };
+    }
+
+    let transactionStarted = false;
+    let commitStarted = false;
+    try {
+      await client.query('BEGIN');
+      transactionStarted = true;
+      const values: Array<string | null> = [input.newValue];
+      const keyPredicates = primaryKeys.map((key, index) => {
+        values.push(input.primaryKeys[index]!.value);
+        return `${quotePostgresIdentifier(key.name)} IS NOT DISTINCT FROM $${values.length}`;
+      });
+      values.push(input.originalValue);
+      const result = await client.query(
+        `UPDATE ${quotePostgresIdentifier(input.schema)}.${quotePostgresIdentifier(input.table)}
+         SET ${quotePostgresIdentifier(input.column)} = $1
+         WHERE ${keyPredicates.join(' AND ')}
+           AND ${quotePostgresIdentifier(input.column)} IS NOT DISTINCT FROM $${values.length}`,
+        values,
+      );
+      if (result.rowCount === 0) {
+        await client.query('ROLLBACK');
+        transactionStarted = false;
+        return { ok: false, error: 'write-conflict' };
+      }
+      if (result.rowCount !== 1) {
+        await client.query('ROLLBACK');
+        transactionStarted = false;
+        return { ok: false, error: 'query-failed' };
+      }
+      commitStarted = true;
+      await client.query('COMMIT');
+      transactionStarted = false;
+      return { ok: true, value: true };
+    }
+    catch (error) {
+      if (transactionStarted) {
+        await client.query('ROLLBACK').catch(() => undefined);
+      }
+      return { ok: false, error: commitStarted ? 'write-result-unknown' : classifyPostgresError(error, 'query-failed') };
+    }
+  }
+
+  /** Execute one bounded SELECT or one confirmed DML statement in a transaction. */
+  async executeStatement(
+    sessionId: string,
+    sql: string,
+    offset: number,
+  ): Promise<DatabaseBridgeResult<DatabaseStatementResult>> {
+    const client = this.clients.get(sessionId);
+    const statement = normalizeDatabaseStatement(sql, 'postgres');
+    if (!client) {
+      return { ok: false, error: 'not-connected' };
+    }
+    if (!statement || !Number.isInteger(offset) || offset < 0 || offset > MAX_QUERY_OFFSET
+      || (statement.kind !== 'select' && offset !== 0)) {
+      return { ok: false, error: 'invalid-request' };
+    }
+
+    if (statement.kind === 'select') {
+      const result = await this.executeReadOnlyQuery(sessionId, statement.sql, offset);
+      return result.ok ? { ok: true, value: { kind: 'query', page: result.value } } : result;
+    }
+    if ((this.accessModes.get(sessionId) ?? 'read-only') !== 'read-write') {
+      return { ok: false, error: 'write-disabled' };
+    }
+
+    const startedAt = Date.now();
+    let transactionStarted = false;
+    let commitStarted = false;
+    try {
+      await client.query('BEGIN');
+      transactionStarted = true;
+      const result = await client.query(statement.sql);
+      const affectedRows = result.rowCount;
+      if (!Number.isSafeInteger(affectedRows) || affectedRows! < 0) {
+        await client.query('ROLLBACK');
+        transactionStarted = false;
+        return { ok: false, error: 'query-failed' };
+      }
+      if (affectedRows! > MAX_MUTATION_ROWS) {
+        await client.query('ROLLBACK');
+        transactionStarted = false;
+        return { ok: false, error: 'write-limit-exceeded' };
+      }
+
+      commitStarted = true;
+      await client.query('COMMIT');
+      transactionStarted = false;
+      return {
+        ok: true,
+        value: {
+          kind: 'mutation',
+          statement: statement.kind as DatabaseMutationKind,
+          affectedRows: affectedRows!,
+          elapsedMilliseconds: Date.now() - startedAt,
+        },
+      };
+    }
+    catch (error) {
+      if (transactionStarted) {
+        await client.query('ROLLBACK').catch(() => undefined);
+      }
+      return { ok: false, error: commitStarted ? 'write-result-unknown' : classifyPostgresError(error, 'query-failed') };
+    }
+  }
+
+  /** Execute one read query and bound returned columns, rows, and cells in SQL. */
   async executeReadOnlyQuery(
     sessionId: string,
     sql: string,
@@ -513,14 +682,71 @@ export class PostgresDatabaseService {
         text: createBoundedQuerySql('postgres', query, fieldNames, offset),
         rowMode: 'array',
       });
+      const page = createDatabaseQueryPage(fieldNames, result.rows, offset, startedAt);
+      const editableTarget = await this.getEditableSelectTarget(sessionId, query, fieldNames);
+      if (editableTarget) {
+        page.editableTarget = editableTarget;
+      }
       return {
         ok: true,
-        value: createDatabaseQueryPage(fieldNames, result.rows, offset, startedAt),
+        value: page,
       };
     }
     catch (error) {
       return { ok: false, error: classifyPostgresError(error, 'query-failed') };
     }
+  }
+
+  private async getEditableSelectTarget(
+    sessionId: string,
+    query: string,
+    fieldNames: string[],
+  ): Promise<NonNullable<DatabaseQueryPage['editableTarget']> | undefined> {
+    if ((this.accessModes.get(sessionId) ?? 'read-only') !== 'read-write') {
+      return undefined;
+    }
+    const hint = parseEditableSelectTarget(query, 'postgres');
+    if (!hint) {
+      return undefined;
+    }
+    const client = this.clients.get(sessionId);
+    if (!client) {
+      return undefined;
+    }
+    const schema = hint.schema ?? (await client.query<{ schema_name: string }>('SELECT current_schema() AS schema_name'))
+      .rows[0]?.schema_name;
+    if (!schema) {
+      return undefined;
+    }
+    const tableType = await client.query<{ table_type: string }>(
+      'SELECT table_type FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2',
+      [schema, hint.table],
+    );
+    if (tableType.rows[0]?.table_type !== 'BASE TABLE') {
+      return undefined;
+    }
+    const structure = await this.getStructure(sessionId, schema, hint.table);
+    if (!structure.ok) {
+      return undefined;
+    }
+    const primaryKeys = structure.value.columns
+      .filter(column => column.primaryKey)
+      .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
+    const expectedColumns = hint.columns[0] === '*' ? fieldNames : hint.columns;
+    const namesMatch = expectedColumns.length === fieldNames.length
+      && expectedColumns.every((name, index) => name === fieldNames[index]);
+    const columns = structure.value.columns.filter(column => expectedColumns.includes(column.name));
+    if (!namesMatch || primaryKeys.length === 0 || primaryKeys.length > MAX_PRIMARY_KEY_COLUMNS
+      || primaryKeys.some(key => !expectedColumns.includes(key.name))
+      || primaryKeys.some(key => !isEditableDatabaseColumnType('postgres', key.dataType))) {
+      return undefined;
+    }
+    return {
+      schema,
+      table: hint.table,
+      primaryKeyColumns: primaryKeys.map(key => key.name),
+      editableColumns: columns.filter(column => isEditableDatabaseColumnType('postgres', column.dataType)).map(column => column.name),
+    };
   }
 
   async closeAll(): Promise<void> {
@@ -584,6 +810,7 @@ export class PostgresDatabaseService {
     this.clients.delete(sessionId);
     this.clientConfigs.delete(sessionId);
     this.backendProcessIds.delete(sessionId);
+    this.accessModes.delete(sessionId);
   }
 }
 
@@ -605,7 +832,9 @@ function createClientConfig(input: PostgresConnectionInput): ClientConfig {
 }
 
 export function isValidPostgresConnectionInput(value: unknown): value is PostgresConnectionInput {
-  if (!isRecord(value) || !hasExactKeys(value, ['host', 'port', 'database', 'username', 'password', 'tlsMode'])) {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['host', 'port', 'database', 'username', 'password', 'tlsMode'])
+      && !hasExactKeys(value, ['host', 'port', 'database', 'username', 'password', 'tlsMode', 'accessMode'])) {
     return false;
   }
 
@@ -625,7 +854,8 @@ export function isValidPostgresConnectionInput(value: unknown): value is Postgre
     && value.username.length <= 128
     && typeof value.password === 'string'
     && value.password.length <= 4096
-    && (value.tlsMode === 'verify' || value.tlsMode === 'disable');
+    && (value.tlsMode === 'verify' || value.tlsMode === 'disable')
+    && (value.accessMode === undefined || value.accessMode === 'read-only' || value.accessMode === 'read-write');
 }
 
 export function isValidDatabaseIdentifier(value: unknown): value is string {

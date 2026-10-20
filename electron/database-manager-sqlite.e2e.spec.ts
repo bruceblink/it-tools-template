@@ -39,7 +39,7 @@ test.describe('Database manager - SQLite browsing', () => {
     await expect(page.locator('[data-test-id="database-manager-workspace"]')).toBeVisible();
     await page.locator('[data-test-id="database-engine-select"] .n-base-selection').click();
     await page.locator('.n-base-select-option').filter({ hasText: 'SQLite' }).click();
-    await expect(page.locator('[data-test-id="sqlite-read-only-notice"]')).toBeVisible();
+    await expect(page.locator('[data-test-id="sqlite-access-notice"]')).toContainText('read-only');
     await expect(page.locator('[data-test-id="database-host-field"]')).toHaveCount(0);
 
     await setFileDialogResult({ canceled: true, filePaths: [] });
@@ -55,13 +55,15 @@ test.describe('Database manager - SQLite browsing', () => {
     await page.locator('.n-base-select-option').filter({ hasText: 's3_sqlite_probe (table)' }).click();
     const tableTabs = page.locator('.database-manager-browser .n-tabs-tab');
     await expect(tableTabs.filter({ hasText: /^Structure$/ })).toHaveCount(1);
-    await expect(tableTabs.filter({ hasText: /^Data$/ })).toHaveCount(0);
+    await expect(tableTabs.filter({ hasText: /^Data$/ })).toHaveCount(1);
+    await expect(page.locator('[data-test-id="database-data-table"]')).toContainText('sqlite-user');
+    await page.getByText('Structure', { exact: true }).click();
     const indexTable = page.locator('[data-test-id="database-index-table"]');
     await expect(indexTable).toContainText('uq_s3_sqlite_username');
     await expect(page.locator('.database-manager-browser .n-data-table').first()).toContainText('username');
 
     await page.locator('[data-test-id="database-sql-editor"] textarea').fill('SELECT 1 AS value');
-    await page.getByRole('button', { name: 'Run query', exact: true }).click();
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     const queryResults = page.locator('[data-test-id="database-sql-results"]');
     await expect(queryResults).toContainText('1');
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('1 row');
@@ -69,12 +71,68 @@ test.describe('Database manager - SQLite browsing', () => {
     await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
       'WITH RECURSIVE valueset(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM valueset WHERE value < 26) SELECT value FROM valueset ORDER BY value',
     );
-    await page.getByRole('button', { name: 'Run query', exact: true }).click();
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     await expect(queryResults.locator('tbody tr')).toHaveCount(25);
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('25 rows');
     await page.locator('[data-test-id="database-sql-next-page"]').click();
     await expect(queryResults).toContainText('26');
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('Page 2 · 1 row');
+
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      "DELETE FROM s3_sqlite_probe WHERE id = 1 AND username = 'sqlite-user'",
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-error"]')).toContainText('read-only');
+
+    await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+    await page.locator('[data-test-id="database-write-access"]').click();
+    await expect(page.locator('[data-test-id="database-write-access-warning"]')).toBeVisible();
+    await setWriteConfirmation();
+    await setFileDialogResult({ canceled: false, filePaths: [sqliteFilePath!] });
+    await page.getByRole('button', { name: 'Connect', exact: true }).click();
+    await expect(page.getByText(/read-write/)).toBeVisible();
+
+    await expect(page.locator('[data-test-id="database-table-edit-notice"]')).toBeVisible();
+    await page.getByRole('button', { name: 'local', exact: true }).click();
+    await page.locator('[data-test-id="database-cell-edit-input"] textarea').fill('table-edited');
+    await page.getByRole('button', { name: 'Save change', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-data-table"]')).toContainText('table-edited');
+
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      "SELECT id, username, nickname FROM s3_sqlite_probe WHERE id = 1 AND username = 'sqlite-user'",
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-query-edit-notice"]')).toBeVisible();
+    await page.getByRole('button', { name: 'table-edited', exact: true }).click();
+    await page.locator('[data-test-id="database-cell-edit-input"] textarea').fill('query-edited');
+    await page.getByRole('button', { name: 'Save change', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('query-edited');
+
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      "INSERT INTO s3_sqlite_probe (id, username) VALUES (99, 'crud-user')",
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-write-result"]')).toContainText('INSERT affected 1 row');
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      "UPDATE s3_sqlite_probe SET nickname = 'changed' WHERE id = 99 AND username = 'crud-user'",
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-write-result"]')).toContainText('UPDATE affected 1 row');
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      "DELETE FROM s3_sqlite_probe WHERE id = 99 AND username = 'crud-user'",
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-write-result"]')).toContainText('DELETE affected 1 row');
+    const writePromptDetails = await electronApp.evaluate(() => {
+      const state = globalThis as typeof globalThis & { __itToolsWritePrompts?: string[] };
+      return state.__itToolsWritePrompts ?? [];
+    });
+    expect(writePromptDetails).toHaveLength(5);
+    expect(writePromptDetails[0]).toContain('local → table-edited');
+    expect(writePromptDetails[1]).toContain('table-edited → query-edited');
+    expect(writePromptDetails[2]).toContain("INSERT INTO s3_sqlite_probe");
+    expect(writePromptDetails[3]).toContain("UPDATE s3_sqlite_probe");
+    expect(writePromptDetails[4]).toContain("DELETE FROM s3_sqlite_probe");
 
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
@@ -88,4 +146,19 @@ async function setFileDialogResult(result: { canceled: boolean; filePaths: strin
       value: async () => nextResult,
     });
   }, result);
+}
+
+async function setWriteConfirmation(): Promise<void> {
+  await electronApp.evaluate(({ dialog }) => {
+    const state = globalThis as typeof globalThis & { __itToolsWritePrompts?: string[] };
+    state.__itToolsWritePrompts = [];
+    Object.defineProperty(dialog, 'showMessageBox', {
+      configurable: true,
+      value: async (...args: unknown[]) => {
+        const options = args.at(-1) as { detail?: string } | undefined;
+        state.__itToolsWritePrompts?.push(options?.detail ?? '');
+        return { response: 1, checkboxChecked: false };
+      },
+    });
+  });
 }

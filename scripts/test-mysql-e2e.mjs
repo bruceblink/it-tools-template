@@ -8,6 +8,7 @@ const image = 'mysql:8.4';
 const containerName = `it-tools-mysql-e2e-${randomUUID().slice(0, 8)}`;
 const rootPassword = randomBytes(32).toString('hex');
 const readerPassword = randomBytes(32).toString('hex');
+const writerPassword = randomBytes(32).toString('hex');
 let containerId;
 let testFailure;
 let cleanupConfirmed = false;
@@ -49,15 +50,19 @@ try {
       UNIQUE KEY uq_s3_mysql_username (username),
       KEY idx_s3_mysql_created_at (created_at)
     );
+    INSERT INTO it_tools_e2e.s3_mysql_probe (id, username, optional_value) VALUES (1, 'mysql-user', 'sample');
     CREATE VIEW it_tools_e2e.s3_mysql_probe_view AS SELECT id, username FROM it_tools_e2e.s3_mysql_probe;
     CREATE USER 'it_tools_reader'@'%' IDENTIFIED BY '${readerPassword}';
     GRANT SELECT, SHOW VIEW ON it_tools_e2e.* TO 'it_tools_reader'@'%';
+    CREATE USER 'it_tools_writer'@'%' IDENTIFIED BY '${writerPassword}';
+    GRANT SELECT, INSERT, UPDATE, DELETE, SHOW VIEW ON it_tools_e2e.* TO 'it_tools_writer'@'%';
   `);
 
   const environment = {
     ...process.env,
     IT_TOOLS_TEST_MYSQL_PORT: String(mappedPort),
     IT_TOOLS_TEST_MYSQL_PASSWORD: readerPassword,
+    IT_TOOLS_TEST_MYSQL_WRITER_PASSWORD: writerPassword,
   };
   const buildExitCode = await runPnpm(['electron:build']);
   if (buildExitCode !== 0) {
@@ -75,7 +80,7 @@ try {
   const e2eExitCode = await runPnpm([
     'test:e2e:electron',
     '--grep',
-    'connects with an ephemeral password and browses MySQL structure only',
+    'connects with an ephemeral password and browses table data and structure',
   ], environment);
   if (e2eExitCode !== 0) {
     throw new Error(`Electron MySQL metadata E2E exited with code ${e2eExitCode}.`);

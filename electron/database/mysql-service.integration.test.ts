@@ -4,11 +4,13 @@ import { MySqlDatabaseService } from './mysql-service';
 
 const mysqlPort = Number(process.env.IT_TOOLS_TEST_MYSQL_PORT);
 const mysqlPassword = process.env.IT_TOOLS_TEST_MYSQL_PASSWORD ?? '';
+const mysqlWriterPassword = process.env.IT_TOOLS_TEST_MYSQL_WRITER_PASSWORD ?? '';
 const enabled = Number.isInteger(mysqlPort) && mysqlPort > 0 && mysqlPort <= 65_535 && mysqlPassword.length > 0;
 
 describe.skipIf(!enabled)('MySQL metadata browsing integration', () => {
   const service = new MySqlDatabaseService();
   const sessionId = randomUUID();
+  const writeSessionId = randomUUID();
 
   beforeAll(async () => {
     const result = await service.connect(sessionId, {
@@ -23,6 +25,21 @@ describe.skipIf(!enabled)('MySQL metadata browsing integration', () => {
       throw new Error(`Could not connect to the isolated MySQL test service: ${result.error}`);
     }
     expect(result.value.serverVersion).toMatch(/^8\./);
+    if (mysqlWriterPassword.length > 0) {
+      const writeResult = await service.connect(writeSessionId, {
+        host: '127.0.0.1',
+        port: mysqlPort,
+        database: 'it_tools_e2e',
+        username: 'it_tools_writer',
+        password: mysqlWriterPassword,
+        tlsMode: 'disable',
+        accessMode: 'read-write',
+      });
+      if (!writeResult.ok) {
+        throw new Error(`Could not connect with the isolated MySQL writer session: ${writeResult.error}`);
+      }
+      expect(writeResult.value.accessMode).toBe('read-write');
+    }
   });
 
   afterAll(async () => {
@@ -76,6 +93,44 @@ describe.skipIf(!enabled)('MySQL metadata browsing integration', () => {
       ok: false,
       error: 'invalid-request',
     });
+  });
+
+  it('loads editable table and direct query cells with optimistic conflict checks', async () => {
+    if (mysqlWriterPassword.length === 0) {
+      return;
+    }
+    const inserted = await service.executeStatement(
+      writeSessionId,
+      "INSERT INTO s3_mysql_probe (id, username, optional_value) VALUES (987654, 'cell-edit-user', 'before')",
+      0,
+    );
+    expect(inserted).toMatchObject({ ok: true, value: { kind: 'mutation', affectedRows: 1 } });
+    const page = await service.getDataPage(writeSessionId, 'it_tools_e2e', 's3_mysql_probe', { cursor: null, offset: 0 });
+    expect(page.ok && page.value).toMatchObject({ editable: true, primaryKeyColumns: ['id'] });
+    const query = await service.executeStatement(
+      writeSessionId,
+      "SELECT id, optional_value FROM it_tools_e2e.s3_mysql_probe WHERE id = 987654",
+      0,
+    );
+    expect(query.ok && query.value.kind === 'query' && query.value.page.editableTarget).toEqual({
+      schema: 'it_tools_e2e',
+      table: 's3_mysql_probe',
+      primaryKeyColumns: ['id'],
+      editableColumns: ['id', 'optional_value'],
+    });
+    const input = {
+      schema: 'it_tools_e2e',
+      table: 's3_mysql_probe',
+      column: 'optional_value',
+      primaryKeys: [{ column: 'id', value: '987654' }],
+      originalValue: 'before',
+      newValue: 'after',
+    };
+    expect(await service.updateCell(sessionId, input)).toEqual({ ok: false, error: 'write-disabled' });
+    expect(await service.updateCell(writeSessionId, input)).toEqual({ ok: true, value: true });
+    expect(await service.updateCell(writeSessionId, input)).toEqual({ ok: false, error: 'write-conflict' });
+    expect(await service.executeStatement(writeSessionId, 'DELETE FROM s3_mysql_probe WHERE id = 987654', 0))
+      .toMatchObject({ ok: true, value: { kind: 'mutation', affectedRows: 1 } });
   });
 
   it('displays paged SELECT results and bounds large cells before returning them', async () => {

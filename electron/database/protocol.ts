@@ -1,5 +1,7 @@
 import type {
   DatabaseBridgeResult,
+  DatabaseAccessMode,
+  DatabaseCellUpdateInput,
   DatabaseEngine,
   MySqlConnectionInput,
   PostgresConnectionInput,
@@ -8,13 +10,14 @@ import type {
 import { isValidMySqlConnectionInput, isValidMySqlIdentifier } from './mysql-service';
 import { isValidDatabaseIdentifier, isValidPostgresConnectionInput, isValidPostgresPageRequest } from './postgres-service';
 import { isValidSQLiteFilePath, isValidSQLiteIdentifier } from './sqlite-service';
-import { normalizeReadOnlySelectQuery } from './sql-query';
+import { normalizeDatabaseStatement } from './sql-query';
 import { MAX_QUERY_OFFSET } from './query-results';
+import { isValidCellUpdateInput } from './cell-edit';
 
 export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'connect'; sessionId: string; input: PostgresConnectionInput }
   | { requestId: string; operation: 'connect-mysql'; sessionId: string; input: MySqlConnectionInput }
-  | { requestId: string; operation: 'connect-sqlite'; sessionId: string; filePath: string }
+  | { requestId: string; operation: 'connect-sqlite'; sessionId: string; filePath: string; accessMode?: DatabaseAccessMode }
   | { requestId: string; operation: 'disconnect'; sessionId: string }
   | { requestId: string; operation: 'disconnect-mysql'; sessionId: string }
   | { requestId: string; operation: 'disconnect-sqlite'; sessionId: string }
@@ -28,7 +31,10 @@ export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'get-mysql-structure'; sessionId: string; schema: string; table: string }
   | { requestId: string; operation: 'get-sqlite-structure'; sessionId: string; schema: string; table: string }
   | { requestId: string; operation: 'get-data-page'; sessionId: string; pageRequestId: string; schema: string; table: string; page: PostgresDataPageInput }
-  | { requestId: string; operation: 'execute-read-only-query'; sessionId: string; engine: DatabaseEngine; sql: string; offset: number }
+  | { requestId: string; operation: 'get-mysql-data-page'; sessionId: string; schema: string; table: string; page: PostgresDataPageInput }
+  | { requestId: string; operation: 'get-sqlite-data-page'; sessionId: string; schema: 'main'; table: string; page: PostgresDataPageInput }
+  | { requestId: string; operation: 'update-cell'; sessionId: string; engine: DatabaseEngine; input: DatabaseCellUpdateInput }
+  | { requestId: string; operation: 'execute-sql-statement'; sessionId: string; engine: DatabaseEngine; sql: string; offset: number }
   | { requestId: string; operation: 'cancel-data-page'; sessionId: string; targetRequestId: string }
   | { requestId: string; operation: 'close' };
 
@@ -57,9 +63,11 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'connect-sqlite'
-    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'filePath'])
+    && (hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'filePath'])
+      || hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'filePath', 'accessMode']))
     && isSessionId(value.sessionId)
-    && isValidSQLiteFilePath(value.filePath)) {
+    && isValidSQLiteFilePath(value.filePath)
+    && (value.accessMode === undefined || isDatabaseAccessMode(value.accessMode))) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'disconnect' || operation === 'list-schemas') {
@@ -126,11 +134,35 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && isValidPostgresPageRequest(value.page)) {
     return value as DatabaseWorkerCommand;
   }
-  if (operation === 'execute-read-only-query'
+  if (operation === 'get-mysql-data-page'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table', 'page'])
+    && isSessionId(value.sessionId)
+    && isValidMySqlIdentifier(value.schema)
+    && isValidMySqlIdentifier(value.table)
+    && isValidOffsetPageRequest(value.page)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'get-sqlite-data-page'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'schema', 'table', 'page'])
+    && isSessionId(value.sessionId)
+    && value.schema === 'main'
+    && isValidSQLiteIdentifier(value.table)
+    && isValidOffsetPageRequest(value.page)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'update-cell'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'input'])
+    && isSessionId(value.sessionId)
+    && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
+    && isValidCellUpdateInput(value.input, value.engine)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'execute-sql-statement'
     && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'sql', 'offset'])
     && isSessionId(value.sessionId)
     && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
-    && normalizeReadOnlySelectQuery(value.sql, value.engine) !== null
+    && normalizeDatabaseStatement(value.sql, value.engine) !== null
+    && (normalizeDatabaseStatement(value.sql, value.engine)?.kind === 'select' || value.offset === 0)
     && Number.isInteger(value.offset)
     && typeof value.offset === 'number'
     && value.offset >= 0
@@ -149,6 +181,20 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
   }
 
   return null;
+}
+
+function isValidOffsetPageRequest(value: unknown): value is PostgresDataPageInput {
+  return isRecord(value)
+    && hasExactKeys(value, ['cursor', 'offset'])
+    && value.cursor === null
+    && Number.isInteger(value.offset)
+    && (value.offset as number) >= 0
+    && (value.offset as number) <= 1_000_000
+    && (value.offset as number) % 25 === 0;
+}
+
+function isDatabaseAccessMode(value: unknown): value is DatabaseAccessMode {
+  return value === 'read-only' || value === 'read-write';
 }
 
 function isRequestId(value: string): boolean {

@@ -1,6 +1,8 @@
 import type {
   DatabaseBridgeResult,
-  DatabaseQueryPage,
+  DatabaseAccessMode,
+  DatabaseCellUpdateInput,
+  DatabaseStatementResult,
   DatabaseSchemaInfo,
   DatabaseStructureInfo,
   DatabaseTableInfo,
@@ -53,7 +55,7 @@ declare global {
       }>;
       connectPostgres?(input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>>;
       connectMySql?(input: MySqlConnectionInput): Promise<DatabaseBridgeResult<MySqlSessionInfo>>;
-      connectSQLite?(): Promise<DatabaseBridgeResult<SQLiteSessionInfo | null>>;
+      connectSQLite?(accessMode: DatabaseAccessMode): Promise<DatabaseBridgeResult<SQLiteSessionInfo | null>>;
       disconnectDatabase?(sessionId: string): Promise<DatabaseBridgeResult<boolean>>;
       listDatabaseSchemas?(sessionId: string): Promise<DatabaseBridgeResult<DatabaseSchemaInfo[]>>;
       listDatabaseTables?(sessionId: string, schema: string): Promise<DatabaseBridgeResult<DatabaseTableInfo[]>>;
@@ -69,11 +71,15 @@ declare global {
         table: string,
         page: PostgresDataPageInput,
       ): Promise<DatabaseBridgeResult<PostgresDataPage>>;
+      updateDatabaseCell?(
+        sessionId: string,
+        input: DatabaseCellUpdateInput,
+      ): Promise<DatabaseBridgeResult<boolean>>;
       runDatabaseQuery?(
         sessionId: string,
         sql: string,
         offset: number,
-      ): Promise<DatabaseBridgeResult<DatabaseQueryPage>>;
+      ): Promise<DatabaseBridgeResult<DatabaseStatementResult>>;
       cancelDatabaseDataPage?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
       listPostgresProfiles?(): Promise<DatabaseBridgeResult<PostgresConnectionProfile[]>>;
       savePostgresProfile?(

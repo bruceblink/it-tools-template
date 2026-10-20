@@ -41,7 +41,7 @@ function executeCommand(command: DatabaseWorkerCommand) {
     case 'connect-mysql':
       return mysqlDatabaseService.connect(command.sessionId, command.input);
     case 'connect-sqlite':
-      return sqliteDatabaseService.connect(command.sessionId, command.filePath);
+      return sqliteDatabaseService.connect(command.sessionId, command.filePath, command.accessMode);
     case 'disconnect':
       return databaseService.disconnect(command.sessionId);
     case 'disconnect-mysql':
@@ -68,14 +68,26 @@ function executeCommand(command: DatabaseWorkerCommand) {
       return sqliteDatabaseService.getStructure(command.sessionId, command.schema, command.table);
     case 'get-data-page':
       return databaseService.getDataPage(command.sessionId, command.schema, command.table, command.page, command.pageRequestId);
-    case 'execute-read-only-query':
+    case 'get-mysql-data-page':
+      return mysqlDatabaseService.getDataPage(command.sessionId, command.schema, command.table, command.page);
+    case 'get-sqlite-data-page':
+      return sqliteDatabaseService.getDataPage(command.sessionId, command.schema, command.table, command.page);
+    case 'update-cell':
       if (command.engine === 'mysql') {
-        return mysqlDatabaseService.executeReadOnlyQuery(command.sessionId, command.sql, command.offset);
+        return mysqlDatabaseService.updateCell(command.sessionId, command.input);
       }
       if (command.engine === 'sqlite') {
-        return sqliteDatabaseService.executeReadOnlyQuery(command.sessionId, command.sql, command.offset);
+        return sqliteDatabaseService.updateCell(command.sessionId, command.input);
       }
-      return databaseService.executeReadOnlyQuery(command.sessionId, command.sql, command.offset);
+      return databaseService.updateCell(command.sessionId, command.input);
+    case 'execute-sql-statement':
+      if (command.engine === 'mysql') {
+        return mysqlDatabaseService.executeStatement(command.sessionId, command.sql, command.offset);
+      }
+      if (command.engine === 'sqlite') {
+        return sqliteDatabaseService.executeStatement(command.sessionId, command.sql, command.offset);
+      }
+      return databaseService.executeStatement(command.sessionId, command.sql, command.offset);
     case 'cancel-data-page':
       return databaseService.cancelDataPage(command.sessionId, command.targetRequestId);
     case 'close':

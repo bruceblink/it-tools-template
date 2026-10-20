@@ -18,6 +18,8 @@ describe('PostgreSQL database service input bounds', () => {
 
   it('accepts only bounded connection fields and explicit TLS modes', () => {
     expect(isValidPostgresConnectionInput(validInput)).toBe(true);
+    expect(isValidPostgresConnectionInput({ ...validInput, accessMode: 'read-write' })).toBe(true);
+    expect(isValidPostgresConnectionInput({ ...validInput, accessMode: 'unrestricted' })).toBe(false);
     expect(isValidPostgresConnectionInput({ ...validInput, tlsMode: 'disable' })).toBe(true);
     expect(isValidPostgresConnectionInput({ ...validInput, host: ' host.example' })).toBe(false);
     expect(isValidPostgresConnectionInput({ ...validInput, port: 65_536 })).toBe(false);

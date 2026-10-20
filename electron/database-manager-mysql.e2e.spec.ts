@@ -35,7 +35,7 @@ test.describe('Database manager - MySQL browsing', () => {
     }
   });
 
-  test('connects with an ephemeral password and browses MySQL structure only', async () => {
+  test('connects with an ephemeral password and browses table data and structure', async () => {
     await page.getByRole('link', { name: 'Database manager', exact: true }).click();
     await expect(page.locator('[data-test-id="database-manager-workspace"]')).toBeVisible();
     await page.locator('[data-test-id="database-engine-select"] .n-base-selection').click();
@@ -53,23 +53,24 @@ test.describe('Database manager - MySQL browsing', () => {
     await expect(page.locator('[data-test-id="database-password-field"]')).toHaveCount(0);
     await expect(page.locator('[data-test-id="database-table-select"]')).toContainText('s3_mysql_probe (table)');
     const tableTabs = page.locator('.database-manager-browser .n-tabs-tab');
-    await expect(tableTabs.filter({ hasText: /^Data$/ })).toHaveCount(0);
-    await expect(page.locator('.database-manager-browser .n-data-table').first()).toContainText('username');
+    await expect(tableTabs.filter({ hasText: /^Data$/ })).toHaveCount(1);
+    await expect(page.locator('[data-test-id="database-data-table"]')).toContainText('mysql-user');
+    await page.getByText('Structure', { exact: true }).click();
     const indexTable = page.locator('[data-test-id="database-index-table"]');
     await expect(indexTable).toContainText('uq_s3_mysql_username');
     await expect(indexTable).toContainText('idx_s3_mysql_created_at');
     await expect(indexTable.locator('tbody tr').first()).toContainText('—');
 
     await page.locator('[data-test-id="database-sql-editor"] textarea').fill('SELECT 1 AS value');
-    await page.getByRole('button', { name: 'Run query', exact: true }).click();
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     const queryResults = page.locator('[data-test-id="database-sql-results"]');
     await expect(queryResults).toContainText('value');
     await expect(queryResults).toContainText('1');
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('1 row');
 
     await page.locator('[data-test-id="database-sql-editor"] textarea').fill('DELETE FROM s3_mysql_probe');
-    await page.getByRole('button', { name: 'Run query', exact: true }).click();
-    await expect(page.locator('[data-test-id="database-sql-error"]')).toContainText('request is invalid');
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-error"]')).toContainText('read-only');
 
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();

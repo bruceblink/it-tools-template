@@ -93,7 +93,7 @@ test.describe('Database manager - PostgreSQL browsing', () => {
     await expect(page.getByText('Page 1 · 25 rows', { exact: true })).toBeVisible();
 
     await page.locator('[data-test-id="database-sql-editor"] textarea').fill('SELECT 1 AS value');
-    await page.getByRole('button', { name: 'Run query', exact: true }).click();
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('1');
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('1 row');
 

@@ -1,4 +1,5 @@
 export type DatabaseTlsMode = 'verify' | 'disable';
+export type DatabaseAccessMode = 'read-only' | 'read-write';
 
 /** Credentials cross into the database service only for the lifetime of a connection request. */
 export interface PostgresConnectionInput {
@@ -8,6 +9,7 @@ export interface PostgresConnectionInput {
   username: string;
   password: string;
   tlsMode: DatabaseTlsMode;
+  accessMode?: DatabaseAccessMode;
 }
 
 /** MySQL credentials cross into the desktop utility process only for the connection request. */
@@ -18,11 +20,13 @@ export interface MySqlConnectionInput {
   username: string;
   password: string;
   tlsMode: DatabaseTlsMode;
+  accessMode?: DatabaseAccessMode;
 }
 
 /** SQLite file paths are selected by the main-process file picker, never by renderer input. */
 export interface SQLiteConnectionInput {
   filePath: string;
+  accessMode: DatabaseAccessMode;
 }
 
 /** A saved profile contains connection metadata only. It never contains a password. */
@@ -56,6 +60,10 @@ export type DatabaseErrorCode =
   | 'not-connected'
   | 'query-failed'
   | 'query-timeout'
+  | 'write-disabled'
+  | 'write-limit-exceeded'
+  | 'write-result-unknown'
+  | 'write-conflict'
   | 'profile-storage-failed'
   | 'profile-limit-reached';
 
@@ -66,17 +74,20 @@ export type DatabaseBridgeResult<T> =
 export interface PostgresSessionInfo {
   sessionId: string;
   serverVersion: string;
+  accessMode?: DatabaseAccessMode;
 }
 
 export interface MySqlSessionInfo {
   sessionId: string;
   serverVersion: string;
+  accessMode?: DatabaseAccessMode;
 }
 
 export interface SQLiteSessionInfo {
   sessionId: string;
   serverVersion: string;
   fileName: string;
+  accessMode?: DatabaseAccessMode;
 }
 
 export interface PostgresSchemaInfo {
@@ -208,14 +219,30 @@ export interface PostgresDataCell {
 
 export interface PostgresDataPage {
   columns: Array<{ name: string; dataType: string }>;
-  rows: Array<{ cells: PostgresDataCell[] }>;
+  rows: Array<{
+    cells: PostgresDataCell[];
+    primaryKeyValues: string[] | null;
+    primaryKeyValuesTruncated: boolean;
+  }>;
+  primaryKeyColumns: string[];
+  editable: boolean;
   columnsTruncated: boolean;
   pagingMode: 'keyset' | 'offset';
-  pagingNotice: 'no-primary-key' | 'unsupported-primary-key' | null;
+  pagingNotice: 'no-primary-key' | 'unsupported-primary-key' | 'offset-paging' | null;
   hasNext: boolean;
   nextCursor: string | null;
   nextOffset: number | null;
   limitReached: boolean;
+}
+
+/** A validated, optimistic-concurrency-protected update to one table cell. */
+export interface DatabaseCellUpdateInput {
+  schema: string;
+  table: string;
+  column: string;
+  primaryKeys: Array<{ column: string; value: string }>;
+  originalValue: string | null;
+  newValue: string | null;
 }
 
 export interface DatabaseQueryPage {
@@ -226,4 +253,22 @@ export interface DatabaseQueryPage {
   nextOffset: number | null;
   limitReached: boolean;
   elapsedMilliseconds: number;
+  editableTarget?: {
+    schema: string;
+    table: string;
+    primaryKeyColumns: string[];
+    editableColumns: string[];
+  };
 }
+
+export type DatabaseMutationKind = 'insert' | 'update' | 'delete';
+
+export type DatabaseStatementResult =
+  | { kind: 'query'; page: DatabaseQueryPage }
+  | { kind: 'cancelled' }
+  | {
+      kind: 'mutation';
+      statement: DatabaseMutationKind;
+      affectedRows: number;
+      elapsedMilliseconds: number;
+    };

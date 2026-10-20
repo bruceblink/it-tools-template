@@ -40,6 +40,8 @@ describe('database utility process protocol', () => {
     };
 
     expect(isValidMySqlConnectionInput(command.input)).toBe(true);
+    expect(isValidMySqlConnectionInput({ ...command.input, accessMode: 'read-write' })).toBe(true);
+    expect(isValidMySqlConnectionInput({ ...command.input, accessMode: 'unrestricted' })).toBe(false);
     expect(parseDatabaseWorkerCommand(command)).toEqual(command);
     expect(parseDatabaseWorkerCommand({ ...command, shell: 'not allowed' })).toBeNull();
     expect(parseDatabaseWorkerCommand({
@@ -84,6 +86,9 @@ describe('database utility process protocol', () => {
     expect(isValidSQLiteFilePath('relative.sqlite')).toBe(false);
     expect(isValidSQLiteFilePath(`${filePath}\u0000unsafe`)).toBe(false);
     expect(parseDatabaseWorkerCommand(connect)).toEqual(connect);
+    const writableConnect = { ...connect, accessMode: 'read-write' };
+    expect(parseDatabaseWorkerCommand(writableConnect)).toEqual(writableConnect);
+    expect(parseDatabaseWorkerCommand({ ...connect, accessMode: 'unrestricted' })).toBeNull();
     expect(parseDatabaseWorkerCommand(listSchemas)).toEqual(listSchemas);
     expect(parseDatabaseWorkerCommand(listTables)).toEqual(listTables);
     expect(parseDatabaseWorkerCommand(getStructure)).toEqual(getStructure);
@@ -146,20 +151,54 @@ describe('database utility process protocol', () => {
     expect(parseDatabaseWorkerCommand(cancellation)).toEqual(cancellation);
     expect(parseDatabaseWorkerCommand({ ...cancellation, targetRequestId: 'invalid' })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...cancellation, extra: true })).toBeNull();
+
+    const mysqlPage = {
+      requestId: randomUUID(),
+      operation: 'get-mysql-data-page',
+      sessionId: randomUUID(),
+      schema: 'app',
+      table: 'records',
+      page: { cursor: null, offset: 25 },
+    };
+    expect(parseDatabaseWorkerCommand(mysqlPage)).toEqual(mysqlPage);
+    expect(parseDatabaseWorkerCommand({ ...mysqlPage, page: { cursor: 'bad', offset: 0 } })).toBeNull();
+    const sqlitePage = { ...mysqlPage, requestId: randomUUID(), operation: 'get-sqlite-data-page', schema: 'main' };
+    expect(parseDatabaseWorkerCommand(sqlitePage)).toEqual(sqlitePage);
+    expect(parseDatabaseWorkerCommand({ ...sqlitePage, schema: 'attached' })).toBeNull();
+
+    const updateCell = {
+      requestId: randomUUID(),
+      operation: 'update-cell',
+      sessionId: randomUUID(),
+      engine: 'postgres',
+      input: {
+        schema: 'public',
+        table: 'records',
+        column: 'value',
+        primaryKeys: [{ column: 'id', value: '1' }],
+        originalValue: 'before',
+        newValue: 'after',
+      },
+    };
+    expect(parseDatabaseWorkerCommand(updateCell)).toEqual(updateCell);
+    expect(parseDatabaseWorkerCommand({ ...updateCell, input: { ...updateCell.input, unknown: true } })).toBeNull();
   });
 
-  it('accepts a single read-only query and rejects unsupported SQL or unbounded paging', () => {
+  it('accepts one bounded SELECT or DML statement and rejects unsupported SQL or paging', () => {
     const command = {
       requestId: randomUUID(),
-      operation: 'execute-read-only-query',
+      operation: 'execute-sql-statement',
       sessionId: randomUUID(),
       engine: 'sqlite',
       sql: 'WITH records AS (SELECT 1 AS value) SELECT value FROM records',
       offset: 25,
     };
     expect(parseDatabaseWorkerCommand(command)).toEqual(command);
-    expect(parseDatabaseWorkerCommand({ ...command, sql: 'DELETE FROM records' })).toBeNull();
+    const write = { ...command, sql: 'DELETE FROM records WHERE id = 1', offset: 0 };
+    expect(parseDatabaseWorkerCommand(write)).toEqual(write);
+    expect(parseDatabaseWorkerCommand({ ...write, offset: 25 })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...command, sql: 'SELECT 1; SELECT 2' })).toBeNull();
+    expect(parseDatabaseWorkerCommand({ ...command, sql: 'DROP TABLE records' })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...command, engine: 'oracle' })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...command, offset: 1_000_001 })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...command, sql: 'SELECT 1', extra: true })).toBeNull();

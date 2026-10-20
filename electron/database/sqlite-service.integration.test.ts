@@ -7,6 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { SQLiteDatabaseService } from './sqlite-service';
 
 const sessionId = randomUUID();
+const writeSessionId = randomUUID();
 const service = new SQLiteDatabaseService();
 let databaseDirectory = '';
 let databasePath = '';
@@ -22,6 +23,11 @@ describe('SQLite metadata browsing integration', () => {
       throw new Error(`Could not open the local SQLite fixture: ${result.error}`);
     }
     expect(result.value.serverVersion).toMatch(/^3\./);
+    const writeResult = await service.connect(writeSessionId, databasePath, 'read-write');
+    if (!writeResult.ok) {
+      throw new Error(`Could not open the writable SQLite fixture: ${writeResult.error}`);
+    }
+    expect(writeResult.value.accessMode).toBe('read-write');
   });
 
   afterAll(async () => {
@@ -36,8 +42,11 @@ describe('SQLite metadata browsing integration', () => {
     expect(await service.listTables(sessionId, 'main')).toEqual({
       ok: true,
       value: [
+        { name: 's3_sqlite_crud_probe', kind: 'table' },
         { name: 's3_sqlite_long_index', kind: 'table' },
+        { name: 's3_sqlite_long_key', kind: 'table' },
         { name: 's3_sqlite_many_indexes', kind: 'table' },
+        { name: 's3_sqlite_many_rows', kind: 'table' },
         { name: 's3_sqlite_probe', kind: 'table' },
         { name: 's3_sqlite_probe_view', kind: 'view' },
         { name: 's3_sqlite_wide', kind: 'table' },
@@ -154,6 +163,8 @@ describe('SQLite metadata browsing integration', () => {
     expect(() => connection?.exec("INSERT INTO s3_sqlite_probe (id, username) VALUES (99, 'blocked')"))
       .toThrow(/readonly|read-only/i);
     expect(await service.connect(randomUUID(), 'relative.sqlite')).toEqual({ ok: false, error: 'invalid-request' });
+    expect(await service.executeStatement(sessionId, "UPDATE s3_sqlite_probe SET username = 'blocked'", 0))
+      .toEqual({ ok: false, error: 'write-disabled' });
     expect(await service.getStructure(sessionId, 'main', 'x'.repeat(257))).toEqual({
       ok: false,
       error: 'invalid-request',
@@ -162,6 +173,78 @@ describe('SQLite metadata browsing integration', () => {
       ok: false,
       error: 'query-failed',
     });
+  });
+
+  it('executes CRUD statements only in read-write mode and reports changed rows', async () => {
+    const inserted = await service.executeStatement(
+      writeSessionId,
+      "INSERT INTO s3_sqlite_crud_probe (id, value) VALUES (1, 'before')",
+      0,
+    );
+    expect(inserted).toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'insert', affectedRows: 1 } });
+
+    const updated = await service.executeStatement(
+      writeSessionId,
+      "UPDATE s3_sqlite_crud_probe SET value = 'after' WHERE id = 1",
+      0,
+    );
+    expect(updated).toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'update', affectedRows: 1 } });
+    const selected = await service.executeStatement(writeSessionId, 'SELECT value FROM s3_sqlite_crud_probe WHERE id = 1', 0);
+    expect(selected.ok && selected.value.kind === 'query' && selected.value.page.rows[0]?.cells[0])
+      .toEqual({ value: 'after', truncated: false });
+
+    const deleted = await service.executeStatement(writeSessionId, 'DELETE FROM s3_sqlite_crud_probe WHERE id = 1', 0);
+    expect(deleted).toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'delete', affectedRows: 1 } });
+  });
+
+  it('loads editable table and direct query results and rejects stale cell updates', async () => {
+    expect(await service.executeStatement(
+      writeSessionId,
+      "INSERT INTO s3_sqlite_crud_probe (id, value) VALUES (7, 'before')",
+      0,
+    )).toMatchObject({ ok: true, value: { kind: 'mutation', affectedRows: 1 } });
+
+    const readOnlyPage = await service.getDataPage(sessionId, 'main', 's3_sqlite_crud_probe', { cursor: null, offset: 0 });
+    expect(readOnlyPage.ok && readOnlyPage.value.editable).toBe(false);
+    const tablePage = await service.getDataPage(writeSessionId, 'main', 's3_sqlite_crud_probe', { cursor: null, offset: 0 });
+    expect(tablePage.ok && tablePage.value).toMatchObject({
+      editable: true,
+      primaryKeyColumns: ['id'],
+      rows: [{ cells: [{ value: '7', truncated: false }, { value: 'before', truncated: false }], primaryKeyValues: ['7'] }],
+    });
+    const query = await service.executeStatement(writeSessionId, 'SELECT id, value FROM s3_sqlite_crud_probe', 0);
+    expect(query.ok && query.value.kind === 'query' && query.value.page.editableTarget).toEqual({
+      schema: 'main',
+      table: 's3_sqlite_crud_probe',
+      primaryKeyColumns: ['id'],
+      editableColumns: ['id', 'value'],
+    });
+
+    const input = {
+      schema: 'main',
+      table: 's3_sqlite_crud_probe',
+      column: 'value',
+      primaryKeys: [{ column: 'id', value: '7' }],
+      originalValue: 'before',
+      newValue: 'after',
+    };
+    expect(await service.updateCell(sessionId, input)).toEqual({ ok: false, error: 'write-disabled' });
+    expect(await service.updateCell(writeSessionId, input)).toEqual({ ok: true, value: true });
+    expect(await service.updateCell(writeSessionId, input)).toEqual({ ok: false, error: 'write-conflict' });
+    expect(await service.executeStatement(writeSessionId, 'DELETE FROM s3_sqlite_crud_probe WHERE id = 7', 0))
+      .toMatchObject({ ok: true, value: { kind: 'mutation', affectedRows: 1 } });
+
+    const longKeyPage = await service.getDataPage(writeSessionId, 'main', 's3_sqlite_long_key', { cursor: null, offset: 0 });
+    expect(longKeyPage.ok && longKeyPage.value.rows[0]?.primaryKeyValues).toEqual(['k'.repeat(256)]);
+    expect(longKeyPage.ok && longKeyPage.value.rows[0]?.primaryKeyValuesTruncated).toBe(true);
+  });
+
+  it('rolls back mutations that exceed the 1,000-row limit', async () => {
+    expect(await service.executeStatement(writeSessionId, 'DELETE FROM s3_sqlite_many_rows', 0))
+      .toEqual({ ok: false, error: 'write-limit-exceeded' });
+    const result = await service.executeStatement(writeSessionId, 'SELECT count(*) AS row_count FROM s3_sqlite_many_rows', 0);
+    expect(result.ok && result.value.kind === 'query' && result.value.page.rows[0]?.cells[0])
+      .toEqual({ value: '1001', truncated: false });
   });
 
   it('waits for a conflicting exclusive lock and continues after the lock is released', async () => {
@@ -206,15 +289,23 @@ function createTestDatabase(filePath: string): void {
         PRIMARY KEY (id, username)
       );
       CREATE UNIQUE INDEX uq_s3_sqlite_username ON s3_sqlite_probe(username);
+      CREATE TABLE s3_sqlite_crud_probe (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE s3_sqlite_long_key (id TEXT PRIMARY KEY, value TEXT);
+      INSERT INTO s3_sqlite_long_key (id, value) VALUES ('${'k'.repeat(300)}', 'bounded');
       CREATE VIEW s3_sqlite_probe_view AS SELECT id, username FROM s3_sqlite_probe;
       INSERT INTO s3_sqlite_probe (id, username, nickname, payload) VALUES (1, 'sqlite-user', 'local', X'010203');
       CREATE TABLE s3_sqlite_many_indexes (id INTEGER PRIMARY KEY, value TEXT);
       CREATE TABLE s3_sqlite_long_index (${Array.from({ length: 192 }, (_, index) => `column_${index} TEXT`).join(', ')});
       CREATE INDEX idx_s3_sqlite_long_definition ON s3_sqlite_long_index(${Array.from({ length: 192 }, (_, index) => `column_${index}`).join(', ')});
       CREATE TABLE s3_sqlite_wide (${Array.from({ length: 257 }, (_, index) => `column_${String(index).padStart(3, '0')} TEXT`).join(', ')});
+      CREATE TABLE s3_sqlite_many_rows (id INTEGER PRIMARY KEY, value TEXT NOT NULL);
     `);
     for (let index = 0; index < 66; index += 1) {
       database.exec(`CREATE INDEX idx_s3_sqlite_many_${String(index).padStart(2, '0')} ON s3_sqlite_many_indexes(value);`);
+    }
+    const insert = database.prepare('INSERT INTO s3_sqlite_many_rows (id, value) VALUES (?, ?)');
+    for (let index = 1; index <= 1_001; index += 1) {
+      insert.run(index, `row-${index}`);
     }
   }
   finally {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeReadOnlySelectQuery } from './sql-query';
+import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
 
 describe('read-only SQL editor validation', () => {
   it('accepts a single SELECT and removes one final statement delimiter', () => {
@@ -33,9 +33,36 @@ describe('read-only SQL editor validation', () => {
       ['SELECT pg_notify(\'channel\', \'message\')', 'postgres'],
       ['SELECT pg_advisory_unlock(1)', 'postgres'],
       ['SELECT load_extension(\'extension.so\')', 'sqlite'],
+      ['SELECT "pg_read_file"(\'/etc/passwd\')', 'postgres'],
       ['ATTACH DATABASE \'other.sqlite\' AS other', 'sqlite'],
     ] as const) {
       expect(normalizeReadOnlySelectQuery(query, engine)).toBeNull();
+    }
+  });
+
+  it('accepts single INSERT, UPDATE, and DELETE statements for each supported engine', () => {
+    for (const engine of ['postgres', 'mysql', 'sqlite'] as const) {
+      expect(normalizeDatabaseStatement('INSERT INTO records (value) VALUES (\'new\');', engine))
+        .toEqual({ kind: 'insert', sql: "INSERT INTO records (value) VALUES ('new')" });
+      expect(normalizeDatabaseStatement('UPDATE records SET value = \'changed\' WHERE id = 1', engine))
+        .toEqual({ kind: 'update', sql: "UPDATE records SET value = 'changed' WHERE id = 1" });
+      expect(normalizeDatabaseStatement('DELETE FROM records WHERE id = 1', engine))
+        .toEqual({ kind: 'delete', sql: 'DELETE FROM records WHERE id = 1' });
+    }
+    expect(normalizeDatabaseStatement('INSERT INTO records(value) VALUES (1) ON CONFLICT (value) DO UPDATE SET value = 2', 'postgres')?.kind)
+      .toBe('insert');
+  });
+
+  it('rejects mutation output, hidden DML in read queries, and database-definition statements', () => {
+    for (const [query, engine] of [
+      ['DELETE FROM records RETURNING *', 'postgres'],
+      ['INSERT INTO records(value) VALUES (1) RETURNING id', 'sqlite'],
+      ['WITH changed AS (DELETE FROM records RETURNING id) SELECT * FROM changed', 'postgres'],
+      ['SELECT value INTO archive FROM records', 'mysql'],
+      ['DROP TABLE records', 'sqlite'],
+      ['UPDATE records SET value = 1; DELETE FROM records', 'postgres'],
+    ] as const) {
+      expect(normalizeDatabaseStatement(query, engine)).toBeNull();
     }
   });
 
@@ -45,5 +72,24 @@ describe('read-only SQL editor validation', () => {
     expect(normalizeReadOnlySelectQuery('SELECT ?', 'mysql')).toBeNull();
     expect(normalizeReadOnlySelectQuery('SELECT \'unfinished', 'postgres')).toBeNull();
     expect(normalizeReadOnlySelectQuery(`SELECT '${'x'.repeat(16_384)}'`, 'sqlite')).toBeNull();
+  });
+
+  it('recognizes only direct single-table projections as editable query results', () => {
+    expect(parseEditableSelectTarget('SELECT id, value FROM public.records WHERE id > 1 ORDER BY id', 'postgres'))
+      .toEqual({ schema: 'public', table: 'records', columns: ['id', 'value'] });
+    expect(parseEditableSelectTarget('SELECT * FROM `app`.`records`', 'mysql'))
+      .toEqual({ schema: 'app', table: 'records', columns: ['*'] });
+    expect(parseEditableSelectTarget('SELECT "id", "value" FROM "main"."records"', 'sqlite'))
+      .toEqual({ schema: 'main', table: 'records', columns: ['id', 'value'] });
+    for (const [query, engine] of [
+      ['SELECT count(*) FROM records', 'postgres'],
+      ['SELECT id AS key FROM records', 'postgres'],
+      ['SELECT a.id FROM records a', 'postgres'],
+      ['SELECT id FROM records JOIN other USING (id)', 'mysql'],
+      ['WITH selected AS (SELECT id FROM records) SELECT id FROM selected', 'sqlite'],
+      ['SELECT id, id FROM records', 'postgres'],
+    ] as const) {
+      expect(parseEditableSelectTarget(query, engine)).toBeNull();
+    }
   });
 });

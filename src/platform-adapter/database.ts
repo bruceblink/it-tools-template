@@ -1,6 +1,8 @@
 import type {
   DatabaseBridgeResult,
-  DatabaseQueryPage,
+  DatabaseAccessMode,
+  DatabaseCellUpdateInput,
+  DatabaseStatementResult,
   DatabaseSchemaInfo,
   DatabaseStructureInfo,
   DatabaseTableInfo,
@@ -50,8 +52,8 @@ export function connectMySql(input: MySqlConnectionInput): Promise<DatabaseOpera
   return callDesktopDatabase(bridge => bridge.connectMySql?.(input));
 }
 
-export function connectSQLite(): Promise<DatabaseOperation<SQLiteSessionInfo | null>> {
-  return callDesktopDatabase(bridge => bridge.connectSQLite?.());
+export function connectSQLite(accessMode: DatabaseAccessMode): Promise<DatabaseOperation<SQLiteSessionInfo | null>> {
+  return callDesktopDatabase(bridge => bridge.connectSQLite?.(accessMode));
 }
 
 export function disconnectDatabase(sessionId: string): Promise<DatabaseOperation<boolean>> {
@@ -84,11 +86,18 @@ export function getDatabaseDataPage(
   return callDesktopDatabase(bridge => bridge.getDatabaseDataPage?.(sessionId, requestId, schema, table, page));
 }
 
+export function updateDatabaseCell(
+  sessionId: string,
+  input: DatabaseCellUpdateInput,
+): Promise<DatabaseOperation<boolean>> {
+  return callDesktopDatabase(bridge => bridge.updateDatabaseCell?.(sessionId, input));
+}
+
 export function runDatabaseQuery(
   sessionId: string,
   sql: string,
   offset: number,
-): Promise<DatabaseOperation<DatabaseQueryPage>> {
+): Promise<DatabaseOperation<DatabaseStatementResult>> {
   return callDesktopDatabase(bridge => bridge.runDatabaseQuery?.(sessionId, sql, offset));
 }
 

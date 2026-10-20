@@ -6,6 +6,8 @@ import { PostgresDatabaseService } from './postgres-service';
 
 const postgresPort = Number(process.env.IT_TOOLS_TEST_POSTGRES_PORT);
 const enabled = Number.isInteger(postgresPort) && postgresPort > 0 && postgresPort <= 65_535;
+const writeSessionId = randomUUID();
+const mutationTable = `it_tools_s4_crud_${randomUUID().replaceAll('-', '')}`;
 
 describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
   const service = new PostgresDatabaseService();
@@ -23,10 +25,49 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
     if (!result.ok) {
       throw new Error(`Could not connect to the isolated PostgreSQL test service: ${result.error}`);
     }
+    const fixture = new Client({
+      host: '127.0.0.1',
+      port: postgresPort,
+      database: 'postgres',
+      user: 'postgres',
+      password: '',
+      ssl: false,
+      connectionTimeoutMillis: 2_000,
+    });
+    await fixture.connect();
+    try {
+      await fixture.query(`CREATE TABLE public.${mutationTable} (id integer PRIMARY KEY, value text NOT NULL)`);
+    }
+    finally {
+      await fixture.end();
+    }
+    const writeResult = await service.connect(writeSessionId, {
+      host: '127.0.0.1',
+      port: postgresPort,
+      database: 'postgres',
+      username: 'postgres',
+      password: '',
+      tlsMode: 'disable',
+      accessMode: 'read-write',
+    });
+    if (!writeResult.ok) {
+      throw new Error(`Could not connect with the isolated PostgreSQL writer session: ${writeResult.error}`);
+    }
+    expect(writeResult.value.accessMode).toBe('read-write');
   });
 
   afterAll(async () => {
     await service.closeAll();
+    if (enabled) {
+      const fixture = new Client({ host: '127.0.0.1', port: postgresPort, database: 'postgres', user: 'postgres', ssl: false });
+      await fixture.connect();
+      try {
+        await fixture.query(`DROP TABLE IF EXISTS public.${mutationTable}`);
+      }
+      finally {
+        await fixture.end();
+      }
+    }
   });
 
   it('caps row and cell output and pages a primary key with a typed cursor', async () => {
@@ -139,6 +180,56 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
       ok: false,
       error: 'invalid-request',
     });
+  });
+
+  it('runs CRUD in read-write mode and rolls back statements over the 1,000-row limit', async () => {
+    expect(await service.executeStatement(sessionId, `DELETE FROM public.${mutationTable}`, 0))
+      .toEqual({ ok: false, error: 'write-disabled' });
+    expect(await service.executeStatement(writeSessionId, `INSERT INTO public.${mutationTable} (id, value) VALUES (1, 'before')`, 0))
+      .toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'insert', affectedRows: 1 } });
+    const readOnlyPage = await service.getDataPage(sessionId, 'public', mutationTable, { cursor: null, offset: 0 }, randomUUID());
+    expect(readOnlyPage.ok && readOnlyPage.value.editable).toBe(false);
+    const writablePage = await service.getDataPage(writeSessionId, 'public', mutationTable, { cursor: null, offset: 0 }, randomUUID());
+    expect(writablePage.ok && writablePage.value).toMatchObject({
+      editable: true,
+      primaryKeyColumns: ['id'],
+      rows: [{ cells: [{ value: '1', truncated: false }, { value: 'before', truncated: false }], primaryKeyValues: ['1'] }],
+    });
+    const editableQuery = await service.executeStatement(writeSessionId, `SELECT id, value FROM public.${mutationTable}`, 0);
+    expect(editableQuery.ok && editableQuery.value.kind === 'query' && editableQuery.value.page.editableTarget).toEqual({
+      schema: 'public',
+      table: mutationTable,
+      primaryKeyColumns: ['id'],
+      editableColumns: ['id', 'value'],
+    });
+    const cellUpdate = {
+      schema: 'public',
+      table: mutationTable,
+      column: 'value',
+      primaryKeys: [{ column: 'id', value: '1' }],
+      originalValue: 'before',
+      newValue: 'cell-edit',
+    };
+    expect(await service.updateCell(sessionId, cellUpdate)).toEqual({ ok: false, error: 'write-disabled' });
+    expect(await service.updateCell(writeSessionId, cellUpdate)).toEqual({ ok: true, value: true });
+    expect(await service.updateCell(writeSessionId, cellUpdate)).toEqual({ ok: false, error: 'write-conflict' });
+    expect(await service.executeStatement(writeSessionId, `UPDATE public.${mutationTable} SET value = 'after' WHERE id = 1`, 0))
+      .toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'update', affectedRows: 1 } });
+
+    const selected = await service.executeStatement(writeSessionId, `SELECT value FROM public.${mutationTable} WHERE id = 1`, 0);
+    expect(selected.ok && selected.value.kind === 'query' && selected.value.page.rows[0]?.cells[0])
+      .toEqual({ value: 'after', truncated: false });
+    expect(await service.executeStatement(writeSessionId, `DELETE FROM public.${mutationTable} WHERE id = 1`, 0))
+      .toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'delete', affectedRows: 1 } });
+
+    expect(await service.executeStatement(
+      writeSessionId,
+      `INSERT INTO public.${mutationTable} (id, value) SELECT value, 'bulk' FROM generate_series(1, 1001) AS rows(value)`,
+      0,
+    )).toEqual({ ok: false, error: 'write-limit-exceeded' });
+    const count = await service.executeStatement(writeSessionId, `SELECT count(*) AS row_count FROM public.${mutationTable}`, 0);
+    expect(count.ok && count.value.kind === 'query' && count.value.page.rows[0]?.cells[0])
+      .toEqual({ value: '0', truncated: false });
   });
 
   it('returns bounded index metadata for primary, included, expression, and partial indexes', async () => {
