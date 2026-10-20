@@ -13,6 +13,8 @@ let testFailure;
 let cleanupConfirmed = false;
 
 try {
+  console.info(`[mysql-e2e] image=${image} action=pull`);
+  await run('docker', ['pull', image]);
   const imageId = (await run('docker', ['image', 'inspect', image, '--format', '{{.Id}}'])).trim();
   console.info(`[mysql-e2e] image=${image} id=${imageId}`);
 

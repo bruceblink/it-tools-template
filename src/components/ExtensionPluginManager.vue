@@ -508,7 +508,7 @@ onMounted(() => {
             :key="packageKey(plugin)"
             :title="plugin.name"
             class="plugin-package-card"
-            :data-testid="`plugin-package-${plugin.pluginId}-${plugin.version}`"
+            :data-test-id="`plugin-package-${plugin.pluginId}-${plugin.version}`"
           >
             <div class="plugin-package-meta">
               <n-text>{{ plugin.pluginId }} · {{ plugin.version }}</n-text>
