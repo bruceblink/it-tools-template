@@ -151,6 +151,10 @@ function isDatabaseErrorCode(value: unknown): value is DatabaseErrorCode {
     || value === 'not-connected'
     || value === 'query-failed'
     || value === 'query-timeout'
+    || value === 'write-disabled'
+    || value === 'write-limit-exceeded'
+    || value === 'write-result-unknown'
+    || value === 'write-conflict'
     || value === 'profile-storage-failed'
     || value === 'profile-limit-reached';
 }

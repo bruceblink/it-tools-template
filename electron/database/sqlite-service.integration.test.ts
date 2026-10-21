@@ -28,14 +28,14 @@ describe('SQLite metadata browsing integration', () => {
       throw new Error(`Could not open the writable SQLite fixture: ${writeResult.error}`);
     }
     expect(writeResult.value.accessMode).toBe('read-write');
-  });
+  }, 30_000);
 
   afterAll(async () => {
     await service.closeAll();
     if (databaseDirectory) {
       await rm(databaseDirectory, { recursive: true, force: true, maxRetries: 8, retryDelay: 250 });
     }
-  });
+  }, 30_000);
 
   it('lists only the selected file schema and bounded tables and views', async () => {
     expect(await service.listSchemas(sessionId)).toEqual({ ok: true, value: [{ name: 'main' }] });

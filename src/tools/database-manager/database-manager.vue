@@ -37,7 +37,9 @@ import {
   savePostgresProfile,
   type DatabaseOperation,
 } from '@/platform-adapter/database';
+import { saveFileContent } from '@/platform-adapter';
 import { normalizeDatabaseStatement } from '@/shared/desktop-services/sql-query';
+import { serializeDatabasePage, type DatabaseExportFormat } from './database-export';
 
 const { t, locale } = useI18n();
 const isChineseLocale = computed(() => locale.value.toLowerCase().startsWith('zh'));
@@ -77,6 +79,25 @@ const sqlLimitReachedNotice = computed(() => isChineseLocale.value
   ? '查询结果达到安全分页上限，无法继续查看后续行。'
   : 'The query reached its safe paging limit. Later rows are not available.');
 const sqlNoRowsNotice = computed(() => isChineseLocale.value ? '查询没有返回数据行。' : 'The query returned no rows.');
+const resultToolsText = computed(() => isChineseLocale.value
+  ? {
+      columns: '列显示',
+      exportCsv: '导出 CSV',
+      exportJsonl: '导出 JSONL',
+      currentPage: '仅导出当前页',
+      exportStarted: '导出已开始。',
+      exportUnsupported: '当前环境不支持文件保存。',
+      exportFailed: '导出失败。',
+    }
+  : {
+      columns: 'Columns',
+      exportCsv: 'Export CSV',
+      exportJsonl: 'Export JSONL',
+      currentPage: 'Current page only',
+      exportStarted: 'Export started.',
+      exportUnsupported: 'File saving is not supported in this environment.',
+      exportFailed: 'The export failed.',
+    });
 const stageNotice = computed(() => isChineseLocale.value
   ? '浏览 PostgreSQL、MySQL 和 SQLite 数据库。连接默认只读；可在连接前显式启用 SQL 写入。'
   : 'Browse PostgreSQL, MySQL, and SQLite databases. Connections are read-only by default; enable SQL writes before connecting when needed.');
@@ -248,6 +269,10 @@ const cellEditError = ref<DatabaseErrorCode | null>(null);
 const cellEditValue = ref('');
 const cellEditNull = ref(false);
 const pendingCellEdit = ref<PendingCellEdit | null>(null);
+const hiddenDataColumns = ref<number[]>([]);
+const hiddenSqlColumns = ref<number[]>([]);
+const exportStatus = ref<'started' | 'unsupported' | 'failed' | null>(null);
+const exportStatusSource = ref<'table' | 'query' | null>(null);
 
 const schemaOptions = computed(() => schemas.value.map(({ name }) => ({ label: name, value: name })));
 const tableOptions = computed(() => tables.value.map(({ name, kind }) => ({ label: `${name} (${kind})`, value: name })));
@@ -335,13 +360,35 @@ const indexColumns = computed<DataTableColumns<DatabaseIndexInfo>>(() => [
     render: row => row.definitionTruncated ? `${row.definition}…` : row.definition,
   },
 ]);
-const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => (dataPage.value?.columns ?? []).map((column, index) => ({
-  title: `${column.name} · ${column.dataType}`,
-  key: `column-${index}`,
-  minWidth: 200,
-  ellipsis: { tooltip: true },
-  render: row => renderEditableCell('table', row, index, column.name, column.dataType),
+const dataColumnOptions = computed(() => (dataPage.value?.columns ?? []).map((column, index) => ({
+  index,
+  label: `${column.name} · ${column.dataType}`,
 })));
+const sqlColumnOptions = computed(() => (sqlPage.value?.columns ?? []).map((column, index) => ({
+  index,
+  label: `${column.name} · ${column.dataType}`,
+})));
+const visibleDataColumnIndexes = computed(() => (dataPage.value?.columns ?? [])
+  .map((_, index) => index)
+  .filter(index => !hiddenDataColumns.value.includes(index)));
+const visibleSqlColumnIndexes = computed(() => (sqlPage.value?.columns ?? [])
+  .map((_, index) => index)
+  .filter(index => !hiddenSqlColumns.value.includes(index)));
+const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => visibleDataColumnIndexes.value
+  .map(index => {
+    const column = dataPage.value?.columns[index];
+    if (!column) {
+      return null;
+    }
+    return {
+    title: `${column.name} · ${column.dataType}`,
+    key: `column-${index}`,
+    minWidth: 200,
+    ellipsis: { tooltip: true },
+    render: (row: DatabaseDataTableRow) => renderEditableCell('table', row, index, column.name, column.dataType),
+    };
+  })
+  .filter((column): column is NonNullable<typeof column> => column !== null));
 const dataRows = computed<DatabaseDataTableRow[]>(() => (dataPage.value?.rows ?? []).map((row, index) => ({
   rowId: `${currentPageIndex.value}:${index}`,
   rowIndex: index,
@@ -349,13 +396,21 @@ const dataRows = computed<DatabaseDataTableRow[]>(() => (dataPage.value?.rows ??
   primaryKeyValues: row.primaryKeyValues,
   primaryKeyValuesTruncated: row.primaryKeyValuesTruncated,
 })));
-const sqlResultColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => (sqlPage.value?.columns ?? []).map((column, index) => ({
-  title: `${column.name} · ${column.dataType}`,
-  key: `column-${index}`,
-  minWidth: 200,
-  ellipsis: { tooltip: true },
-  render: row => renderEditableCell('query', row, index, column.name, column.dataType),
-})));
+const sqlResultColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => visibleSqlColumnIndexes.value
+  .map(index => {
+    const column = sqlPage.value?.columns[index];
+    if (!column) {
+      return null;
+    }
+    return {
+    title: `${column.name} · ${column.dataType}`,
+    key: `column-${index}`,
+    minWidth: 200,
+    ellipsis: { tooltip: true },
+    render: (row: DatabaseDataTableRow) => renderEditableCell('query', row, index, column.name, column.dataType),
+    };
+  })
+  .filter((column): column is NonNullable<typeof column> => column !== null));
 const sqlResultRows = computed<DatabaseDataTableRow[]>(() => (sqlPage.value?.rows ?? []).map((row, index) => ({
   rowId: `${sqlPageOffset.value}:${index}`,
   rowIndex: index,
@@ -366,17 +421,23 @@ const sqlResultRows = computed<DatabaseDataTableRow[]>(() => (sqlPage.value?.row
 const sqlPageSummary = computed(() => isChineseLocale.value
   ? `第 ${Math.floor(sqlPageOffset.value / 25) + 1} 页 · ${sqlPage.value?.rows.length ?? 0} 行 · ${sqlPage.value?.elapsedMilliseconds ?? 0} 毫秒`
   : `Page ${Math.floor(sqlPageOffset.value / 25) + 1} · ${sqlPage.value?.rows.length ?? 0} ${sqlPage.value?.rows.length === 1 ? 'row' : 'rows'} · ${sqlPage.value?.elapsedMilliseconds ?? 0} ms`);
-const sqlResultScrollWidth = computed(() => Math.max(800, (sqlPage.value?.columns.length ?? 1) * 200));
+const sqlResultScrollWidth = computed(() => Math.max(800, visibleSqlColumnIndexes.value.length * 200));
 const sqlErrorMessage = computed(() => sqlError.value
   ? databaseErrorText(sqlError.value)
   : '');
-const dataTableScrollWidth = computed(() => Math.max(800, (dataPage.value?.columns.length ?? 1) * 200));
+const dataTableScrollWidth = computed(() => Math.max(800, visibleDataColumnIndexes.value.length * 200));
 const pageLabel = computed(() => isChineseLocale.value
   ? `第 ${currentPageIndex.value + 1} 页 · ${dataPage.value?.rows.length ?? 0} 行`
   : `Page ${currentPageIndex.value + 1} · ${dataPage.value?.rows.length ?? 0} rows`);
 const errorMessage = computed(() => connectionError.value
   ? databaseErrorText(connectionError.value)
   : '');
+const exportStatusMessage = computed(() => exportStatus.value === 'started'
+  ? resultToolsText.value.exportStarted
+  : exportStatus.value === 'unsupported'
+    ? resultToolsText.value.exportUnsupported
+    : exportStatus.value === 'failed' ? resultToolsText.value.exportFailed : '');
+const exportStatusType = computed<'success' | 'error'>(() => exportStatus.value === 'started' ? 'success' : 'error');
 const profileErrorMessage = computed(() => {
   if (profileError.value === 'profile-storage-failed') {
     return profileText.value.storageError;
@@ -424,6 +485,42 @@ function getIndexRowKey(row: DatabaseIndexInfo): string {
 
 function getDataRowKey(row: DatabaseDataTableRow): string {
   return row.rowId;
+}
+
+/** Keep one visible column so the grid and export always have a usable shape. */
+function setColumnVisibility(source: 'table' | 'query', index: number, visible: boolean) {
+  const columns = source === 'table' ? dataPage.value?.columns ?? [] : sqlPage.value?.columns ?? [];
+  const hidden = source === 'table' ? hiddenDataColumns : hiddenSqlColumns;
+  if (!visible && columns.length - hidden.value.length <= 1) {
+    return;
+  }
+  hidden.value = visible
+    ? hidden.value.filter(columnIndex => columnIndex !== index)
+    : hidden.value.includes(index) ? hidden.value : [...hidden.value, index];
+}
+
+/** Export the visible columns from the currently loaded bounded page. */
+function exportCurrentPage(source: 'table' | 'query', format: DatabaseExportFormat) {
+  const page = source === 'table' ? dataPage.value : sqlPage.value;
+  if (!page || page.rows.length === 0) {
+    return;
+  }
+  const visibleIndexes = source === 'table' ? visibleDataColumnIndexes.value : visibleSqlColumnIndexes.value;
+  const columns = visibleIndexes.map(index => page.columns[index]).filter((column): column is { name: string; dataType: string } => column !== undefined);
+  const rows = page.rows.map(row => ({
+    cells: visibleIndexes.map(index => row.cells[index] ?? { value: null, truncated: false }),
+  }));
+  const content = serializeDatabasePage(columns, rows, format);
+  const scope = source === 'table'
+    ? `${selectedTable.value ?? 'table'}-page-${currentPageIndex.value + 1}`
+    : `query-page-${Math.floor(sqlPageOffset.value / 25) + 1}`;
+  const result = saveFileContent(
+    content,
+    `${scope}.${format}`,
+    format === 'csv' ? 'text/csv;charset=utf-8' : 'application/x-ndjson;charset=utf-8',
+  );
+  exportStatusSource.value = source;
+  exportStatus.value = result.status === 'denied' ? 'failed' : result.status;
 }
 
 function displayDatabaseCell(cell: PostgresDataCell | undefined): string {
@@ -558,8 +655,13 @@ async function saveCellEdit() {
   if (!sessionId || !edit || isSavingCell.value) {
     return;
   }
+  // Build a structured-clone-safe snapshot before crossing the Electron IPC boundary.
   const input: DatabaseCellUpdateInput = {
-    ...edit.input,
+    schema: edit.input.schema,
+    table: edit.input.table,
+    column: edit.input.column,
+    primaryKeys: edit.input.primaryKeys.map(key => ({ column: key.column, value: key.value })),
+    originalValue: edit.input.originalValue,
     newValue: cellEditNull.value ? null : cellEditValue.value,
   };
   isSavingCell.value = true;
@@ -864,6 +966,9 @@ async function selectTable(table: string | null) {
   indexes.value = [];
   indexesTruncated.value = false;
   dataPage.value = null;
+  hiddenDataColumns.value = [];
+  exportStatusSource.value = null;
+  exportStatus.value = null;
   pageRequests.value = [{ cursor: null, offset: 0 }];
   currentPageIndex.value = 0;
   activeTableTab.value = 'data';
@@ -994,6 +1099,11 @@ async function executeSqlStatement(sql: string, offset: number) {
   sqlPage.value = null;
   sqlMutation.value = null;
   sqlError.value = null;
+  if (offset === 0) {
+    hiddenSqlColumns.value = [];
+    exportStatusSource.value = null;
+    exportStatus.value = null;
+  }
   isRunningSql.value = true;
   try {
     const result = await runDatabaseQuery(sessionId, sql, offset);
@@ -1126,6 +1236,10 @@ async function disconnect() {
   indexes.value = [];
   indexesTruncated.value = false;
   dataPage.value = null;
+  hiddenDataColumns.value = [];
+  hiddenSqlColumns.value = [];
+  exportStatus.value = null;
+  exportStatusSource.value = null;
   sqlError.value = null;
   selectedSchema.value = null;
   selectedTable.value = null;
@@ -1350,6 +1464,31 @@ onUnmounted(() => {
             <n-alert v-if="dataPage?.limitReached" type="info" :show-icon="false" mb-3>
               {{ previewText.limitReached }}
             </n-alert>
+            <div v-if="dataPage" class="database-result-toolbar" data-test-id="database-data-tools">
+              <details class="database-column-menu" data-test-id="database-data-columns">
+                <summary>{{ resultToolsText.columns }}</summary>
+                <div class="database-column-options">
+                  <n-checkbox
+                    v-for="option in dataColumnOptions"
+                    :key="option.index"
+                    :checked="!hiddenDataColumns.includes(option.index)"
+                    @update:checked="value => setColumnVisibility('table', option.index, value)"
+                  >
+                    {{ option.label }}
+                  </n-checkbox>
+                </div>
+              </details>
+              <span class="database-export-scope">{{ resultToolsText.currentPage }}</span>
+              <n-button data-test-id="database-export-csv" size="small" @click="exportCurrentPage('table', 'csv')">
+                {{ resultToolsText.exportCsv }}
+              </n-button>
+              <n-button data-test-id="database-export-jsonl" size="small" @click="exportCurrentPage('table', 'jsonl')">
+                {{ resultToolsText.exportJsonl }}
+              </n-button>
+            </div>
+            <n-alert v-if="exportStatusSource === 'table' && exportStatusMessage" :type="exportStatusType" :show-icon="false" mb-3 data-test-id="database-export-status">
+              {{ exportStatusMessage }}
+            </n-alert>
             <n-data-table
               data-test-id="database-data-table"
               :columns="dataColumns"
@@ -1443,6 +1582,31 @@ onUnmounted(() => {
           </n-alert>
           <n-alert v-if="sqlPage.limitReached" type="warning" :show-icon="false" mb-3>
             {{ sqlLimitReachedNotice }}
+          </n-alert>
+          <div class="database-result-toolbar" data-test-id="database-sql-tools">
+            <details class="database-column-menu" data-test-id="database-sql-columns">
+              <summary>{{ resultToolsText.columns }}</summary>
+              <div class="database-column-options">
+                <n-checkbox
+                  v-for="option in sqlColumnOptions"
+                  :key="option.index"
+                  :checked="!hiddenSqlColumns.includes(option.index)"
+                  @update:checked="value => setColumnVisibility('query', option.index, value)"
+                >
+                  {{ option.label }}
+                </n-checkbox>
+              </div>
+            </details>
+            <span class="database-export-scope">{{ resultToolsText.currentPage }}</span>
+            <n-button data-test-id="database-sql-export-csv" size="small" @click="exportCurrentPage('query', 'csv')">
+              {{ resultToolsText.exportCsv }}
+            </n-button>
+            <n-button data-test-id="database-sql-export-jsonl" size="small" @click="exportCurrentPage('query', 'jsonl')">
+              {{ resultToolsText.exportJsonl }}
+            </n-button>
+          </div>
+          <n-alert v-if="exportStatusSource === 'query' && exportStatusMessage" :type="exportStatusType" :show-icon="false" mb-3 data-test-id="database-export-status">
+            {{ exportStatusMessage }}
           </n-alert>
           <n-data-table
             data-test-id="database-sql-results"
@@ -1579,6 +1743,58 @@ onUnmounted(() => {
   margin-top: 12px;
 }
 
+.database-result-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.database-column-menu {
+  position: relative;
+}
+
+.database-column-menu summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-color);
+  font-size: 0.875rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.database-column-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.database-column-options {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  display: grid;
+  min-width: 220px;
+  max-height: 280px;
+  gap: 8px;
+  padding: 10px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--card-color);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.database-export-scope {
+  margin-right: auto;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+}
+
 .database-edit-cell {
   max-width: 100%;
   padding: 2px 4px;
@@ -1636,6 +1852,14 @@ onUnmounted(() => {
   .database-page-controls {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .database-result-toolbar {
+    align-items: flex-start;
+  }
+
+  .database-export-scope {
+    width: 100%;
   }
 
   .database-page-loading {

@@ -57,6 +57,20 @@ test.describe('Database manager - SQLite browsing', () => {
     await expect(tableTabs.filter({ hasText: /^Structure$/ })).toHaveCount(1);
     await expect(tableTabs.filter({ hasText: /^Data$/ })).toHaveCount(1);
     await expect(page.locator('[data-test-id="database-data-table"]')).toContainText('sqlite-user');
+    const dataTools = page.locator('[data-test-id="database-data-tools"]');
+    await expect(dataTools.locator('[data-test-id="database-export-csv"]')).toBeVisible();
+    await expect(dataTools.locator('[data-test-id="database-export-jsonl"]')).toBeVisible();
+    await expect(dataTools.locator('[data-test-id="database-data-columns"] summary')).toBeVisible();
+    await dataTools.locator('[data-test-id="database-data-columns"] summary').click();
+    const payloadColumnToggle = dataTools.locator('[data-test-id="database-data-columns"] .n-checkbox').filter({ hasText: 'payload · BLOB' });
+    await expect(payloadColumnToggle).toBeVisible();
+    await payloadColumnToggle.click();
+    await expect(page.locator('[data-test-id="database-data-table"]')).not.toContainText('payload · BLOB');
+    await payloadColumnToggle.click();
+    await expect(page.locator('[data-test-id="database-data-table"]')).toContainText('payload · BLOB');
+    await dataTools.locator('[data-test-id="database-export-csv"]').click();
+    await expect(page.locator('[data-test-id="database-export-status"]')).toContainText('Export started.');
+    await dataTools.locator('[data-test-id="database-data-columns"] summary').click();
     await page.getByText('Structure', { exact: true }).click();
     const indexTable = page.locator('[data-test-id="database-index-table"]');
     await expect(indexTable).toContainText('uq_s3_sqlite_username');
@@ -66,6 +80,8 @@ test.describe('Database manager - SQLite browsing', () => {
     await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     const queryResults = page.locator('[data-test-id="database-sql-results"]');
     await expect(queryResults).toContainText('1');
+    await expect(page.locator('[data-test-id="database-sql-tools"] [data-test-id="database-sql-export-csv"]')).toBeVisible();
+    await expect(page.locator('[data-test-id="database-sql-tools"] [data-test-id="database-sql-export-jsonl"]')).toBeVisible();
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('1 row');
 
     await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
@@ -103,7 +119,7 @@ test.describe('Database manager - SQLite browsing', () => {
     );
     await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     await expect(page.locator('[data-test-id="database-query-edit-notice"]')).toBeVisible();
-    await page.getByRole('button', { name: 'table-edited', exact: true }).click();
+    await page.locator('[data-test-id="database-sql-results"]').getByRole('button', { name: 'table-edited', exact: true }).click();
     await page.locator('[data-test-id="database-cell-edit-input"] textarea').fill('query-edited');
     await page.getByRole('button', { name: 'Save change', exact: true }).click();
     await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('query-edited');
