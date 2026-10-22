@@ -29,6 +29,7 @@ import { isValidSQLiteFilePath } from './sqlite-service';
 import { MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement } from './sql-query';
 import { isValidCellUpdateInput } from './cell-edit';
+import { isValidTablePageRequest } from './table-page-options';
 
 const CONNECTION_CHANNEL = 'desktop:database:postgres:connect';
 const MYSQL_CONNECTION_CHANNEL = 'desktop:database:mysql:connect';
@@ -40,6 +41,7 @@ const STRUCTURE_CHANNEL = 'desktop:database:structure';
 const DATA_PAGE_CHANNEL = 'desktop:database:data-page';
 const QUERY_CHANNEL = 'desktop:database:query';
 const CANCEL_DATA_PAGE_CHANNEL = 'desktop:database:data-page:cancel';
+const CANCEL_QUERY_CHANNEL = 'desktop:database:query:cancel';
 const UPDATE_CELL_CHANNEL = 'desktop:database:cell:update';
 const LIST_PROFILES_CHANNEL = 'desktop:database:postgres-profiles:list';
 const SAVE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:save';
@@ -68,6 +70,15 @@ interface OwnedPageRequest {
   finish: () => void;
 }
 
+interface OwnedQueryRequest {
+  rendererId: number;
+  requestId: string;
+  started: boolean;
+  cancelRequested: boolean;
+  finished: Promise<void>;
+  finish: () => void;
+}
+
 /** Expose bounded metadata and allowlisted SQL operations only to the trusted app frame. */
 export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   const serviceHost = new DatabaseServiceHost(dependencies.workerPath);
@@ -77,6 +88,7 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
   const sessions = new Map<string, OwnedSession>();
   const rendererSessions = new Map<number, string>();
   const activePageRequests = new Map<string, OwnedPageRequest>();
+  const activeQueryRequests = new Map<string, OwnedQueryRequest>();
   const sessionOperationTails = new Map<string, Promise<void>>();
 
   ipcMain.handle(CONNECTION_CHANNEL, async (event, value: unknown) => {
@@ -384,19 +396,48 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     if (statement.kind !== 'select' && owner?.accessMode !== 'read-write') {
       return { ok: false, error: 'write-disabled' } satisfies DatabaseBridgeResult<never>;
     }
-    return runSessionOperation(request.sessionId, async () => {
-      if (statement.kind !== 'select'
-        && !await confirmSqlMutation(event, engine, owner?.targetLabel ?? engine, statement.kind, statement.sql)) {
-        return { ok: true, value: { kind: 'cancelled' } } satisfies DatabaseBridgeResult<DatabaseStatementResult>;
-      }
-      return serviceHost.request<DatabaseStatementResult>({
-        operation: 'execute-sql-statement',
-        sessionId: request.sessionId,
-        engine,
-        sql: statement.sql,
-        offset: request.offset,
-      });
+    if (activeQueryRequests.has(request.sessionId)) {
+      return { ok: false, error: 'query-failed' } satisfies DatabaseBridgeResult<never>;
+    }
+    let finishQueryRequest!: () => void;
+    const queryRequestFinished = new Promise<void>((resolveFinished) => {
+      finishQueryRequest = resolveFinished;
     });
+    const activeQuery: OwnedQueryRequest = {
+      rendererId: event.sender.id,
+      requestId: request.requestId,
+      started: false,
+      cancelRequested: false,
+      finished: queryRequestFinished,
+      finish: finishQueryRequest,
+    };
+    activeQueryRequests.set(request.sessionId, activeQuery);
+    try {
+      return await runSessionOperation(request.sessionId, async () => {
+        activeQuery.started = true;
+        if (activeQuery.cancelRequested) {
+          return { ok: false, error: 'query-timeout' } satisfies DatabaseBridgeResult<never>;
+        }
+        if (statement.kind !== 'select'
+          && !await confirmSqlMutation(event, engine, owner?.targetLabel ?? engine, statement.kind, statement.sql)) {
+          return { ok: true, value: { kind: 'cancelled' } } satisfies DatabaseBridgeResult<DatabaseStatementResult>;
+        }
+        return serviceHost.request<DatabaseStatementResult>({
+          operation: 'execute-sql-statement',
+          sessionId: request.sessionId,
+          engine,
+          sql: statement.sql,
+          offset: request.offset,
+          queryRequestId: request.requestId,
+        });
+      });
+    }
+    finally {
+      if (activeQueryRequests.get(request.sessionId)?.requestId === request.requestId) {
+        activeQueryRequests.delete(request.sessionId);
+      }
+      activeQuery.finish();
+    }
   });
 
   ipcMain.handle(UPDATE_CELL_CHANNEL, async (event, value: unknown) => {
@@ -467,6 +508,43 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     return result;
   });
 
+  ipcMain.handle(CANCEL_QUERY_CHANNEL, async (event, value: unknown) => {
+    const request = parseDataPageCancelRequest(value);
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!request) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!ownsSession(event.sender.id, request.sessionId)) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const activeQuery = activeQueryRequests.get(request.sessionId);
+    if (!activeQuery
+      || activeQuery.rendererId !== event.sender.id
+      || activeQuery.requestId !== request.requestId) {
+      return { ok: true, value: false } satisfies DatabaseBridgeResult<boolean>;
+    }
+    if (!activeQuery.started) {
+      activeQuery.cancelRequested = true;
+      await activeQuery.finished;
+      return { ok: true, value: true } satisfies DatabaseBridgeResult<boolean>;
+    }
+    const owner = sessions.get(request.sessionId);
+    if (!owner) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const result = await serviceHost.request<boolean>({
+      operation: 'cancel-query',
+      sessionId: request.sessionId,
+      engine: owner.engine,
+      targetRequestId: request.requestId,
+    });
+    await activeQuery.finished;
+    return result;
+  });
+
   ipcMain.handle(LIST_PROFILES_CHANNEL, async (event) => {
     const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
     if (senderError) {
@@ -518,6 +596,21 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       await activePage.finished;
     }
     const owner = sessions.get(sessionId);
+    const activeQuery = activeQueryRequests.get(sessionId);
+    if (activeQuery) {
+      if (activeQuery.started && owner) {
+        await serviceHost.request<boolean>({
+          operation: 'cancel-query',
+          sessionId,
+          engine: owner.engine,
+          targetRequestId: activeQuery.requestId,
+        });
+      }
+      else {
+        activeQuery.cancelRequested = true;
+      }
+      await activeQuery.finished;
+    }
     sessions.delete(sessionId);
     if (owner && rendererSessions.get(owner.rendererId) === sessionId) {
       rendererSessions.delete(owner.rendererId);
@@ -789,9 +882,11 @@ function isAnyDatabaseIdentifier(value: unknown): value is string {
 
 function parseDatabaseQueryRequest(
   value: unknown,
-): { sessionId: string; sql: string; offset: number } | null {
+): { sessionId: string; requestId: string; sql: string; offset: number } | null {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['sessionId', 'sql', 'offset'])
+    || !hasExactKeys(value, ['sessionId', 'requestId', 'sql', 'offset'])
+    || typeof value.requestId !== 'string'
+    || !isRequestId(value.requestId)
     || typeof value.sql !== 'string'
     || !Number.isInteger(value.offset)
     || (value.offset as number) < 0
@@ -799,7 +894,7 @@ function parseDatabaseQueryRequest(
     return null;
   }
   const sessionId = parseSessionRequest({ sessionId: value.sessionId });
-  return sessionId ? { sessionId, sql: value.sql, offset: value.offset as number } : null;
+  return sessionId ? { sessionId, requestId: value.requestId, sql: value.sql, offset: value.offset as number } : null;
 }
 
 function parseDataPageCancelRequest(value: unknown): { sessionId: string; requestId: string } | null {
@@ -814,12 +909,7 @@ function parseDataPageCancelRequest(value: unknown): { sessionId: string; reques
 }
 
 function isBoundedPageInput(value: unknown): value is PostgresDataPageInput {
-  if (!isRecord(value)
-    || !hasExactKeys(value, ['cursor', 'offset'])
-    || !Number.isInteger(value.offset)
-    || (value.offset as number) < 0
-    || (value.offset as number) > 1_000_000
-    || (value.offset as number) % 25 !== 0) {
+  if (!isValidTablePageRequest(value, isAnyDatabaseIdentifier, true)) {
     return false;
   }
   if (value.cursor === null) {

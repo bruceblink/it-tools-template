@@ -95,10 +95,11 @@ export function updateDatabaseCell(
 
 export function runDatabaseQuery(
   sessionId: string,
+  requestId: string,
   sql: string,
   offset: number,
 ): Promise<DatabaseOperation<DatabaseStatementResult>> {
-  return callDesktopDatabase(bridge => bridge.runDatabaseQuery?.(sessionId, sql, offset));
+  return callDesktopDatabase(bridge => bridge.runDatabaseQuery?.(sessionId, requestId, sql, offset));
 }
 
 export function cancelDatabaseDataPage(
@@ -106,6 +107,13 @@ export function cancelDatabaseDataPage(
   requestId: string,
 ): Promise<DatabaseOperation<boolean>> {
   return callDesktopDatabase(bridge => bridge.cancelDatabaseDataPage?.(sessionId, requestId));
+}
+
+export function cancelDatabaseQuery(
+  sessionId: string,
+  requestId: string,
+): Promise<DatabaseOperation<boolean>> {
+  return callDesktopDatabase(bridge => bridge.cancelDatabaseQuery?.(sessionId, requestId));
 }
 
 export function listPostgresProfiles(): Promise<DatabaseOperation<PostgresConnectionProfile[]>> {

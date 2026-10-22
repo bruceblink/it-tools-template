@@ -5,6 +5,9 @@ import type {
   DatabaseColumnInfo,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
+  DatabaseDataFilter,
+  DatabaseDataFilterOperator,
+  DatabaseDataSort,
   DatabaseEngine,
   DatabaseErrorCode,
   DatabaseIndexInfo,
@@ -25,6 +28,7 @@ import {
   connectSQLite,
   connectPostgres,
   cancelDatabaseDataPage,
+  cancelDatabaseQuery,
   deletePostgresProfile,
   disconnectDatabase,
   getDatabaseDataPage,
@@ -97,6 +101,74 @@ const resultToolsText = computed(() => isChineseLocale.value
       exportStarted: 'Export started.',
       exportUnsupported: 'File saving is not supported in this environment.',
       exportFailed: 'The export failed.',
+    });
+const sqlControlText = computed(() => isChineseLocale.value
+  ? {
+      cancel: '取消查询',
+      cancelling: '正在取消查询…',
+      cancelled: '查询已取消。连接仍可使用。',
+      finishedBeforeCancel: '查询已完成，没有执行取消。',
+      history: '查询历史（本次连接）',
+      noHistory: '暂无查询历史',
+    }
+  : {
+      cancel: 'Cancel query',
+      cancelling: 'Cancelling query…',
+      cancelled: 'Query cancelled. The connection is still available.',
+      finishedBeforeCancel: 'The query finished before cancellation took effect.',
+      history: 'Query history (this connection)',
+      noHistory: 'No query history',
+    });
+const dataViewText = computed(() => isChineseLocale.value
+  ? {
+      filter: '筛选',
+      filterColumn: '筛选列',
+      filterOperator: '条件',
+      filterValue: '值',
+      addFilter: '添加筛选',
+      clearFilters: '清除筛选',
+      sort: '排序',
+      sortColumn: '排序列',
+      sortDirection: '顺序',
+      applySort: '应用排序',
+      clearSort: '清除排序',
+      ascending: '升序',
+      descending: '降序',
+      equals: '等于',
+      notEquals: '不等于',
+      contains: '包含',
+      startsWith: '开头为',
+      endsWith: '结尾为',
+      isNull: '为 NULL',
+      isNotNull: '不为 NULL',
+      noFilters: '未设置筛选',
+      noSort: '未设置排序',
+      filterLimit: '最多添加 3 个筛选条件。',
+    }
+  : {
+      filter: 'Filter',
+      filterColumn: 'Filter column',
+      filterOperator: 'Condition',
+      filterValue: 'Value',
+      addFilter: 'Add filter',
+      clearFilters: 'Clear filters',
+      sort: 'Sort',
+      sortColumn: 'Sort column',
+      sortDirection: 'Direction',
+      applySort: 'Apply sort',
+      clearSort: 'Clear sort',
+      ascending: 'Ascending',
+      descending: 'Descending',
+      equals: 'Equals',
+      notEquals: 'Not equals',
+      contains: 'Contains',
+      startsWith: 'Starts with',
+      endsWith: 'Ends with',
+      isNull: 'Is NULL',
+      isNotNull: 'Is not NULL',
+      noFilters: 'No filters',
+      noSort: 'No sort',
+      filterLimit: 'You can add up to 3 filters.',
     });
 const stageNotice = computed(() => isChineseLocale.value
   ? '浏览 PostgreSQL、MySQL 和 SQLite 数据库。连接默认只读；可在连接前显式启用 SQL 写入。'
@@ -229,6 +301,11 @@ const sqlMutation = ref<Extract<DatabaseStatementResult, { kind: 'mutation' }> |
 const sqlPageOffset = ref(0);
 const isRunningSql = ref(false);
 const sqlError = ref<DatabaseErrorCode | null>(null);
+const sqlNotice = ref<'cancelled' | 'finished-before-cancel' | null>(null);
+const activeSqlRequestId = ref<string | null>(null);
+const isCancellingSql = ref(false);
+const sqlHistory = ref<Array<{ id: string; sql: string; offset: number }>>([]);
+const selectedSqlHistoryId = ref<string | null>(null);
 const pageRequests = ref<PostgresDataPageInput[]>([{ cursor: null, offset: 0 }]);
 const currentPageIndex = ref(0);
 const activeTableTab = ref<'data' | 'structure'>('data');
@@ -273,6 +350,13 @@ const hiddenDataColumns = ref<number[]>([]);
 const hiddenSqlColumns = ref<number[]>([]);
 const exportStatus = ref<'started' | 'unsupported' | 'failed' | null>(null);
 const exportStatusSource = ref<'table' | 'query' | null>(null);
+const draftDataFilterColumn = ref<string | null>(null);
+const draftDataFilterOperator = ref<DatabaseDataFilterOperator>('contains');
+const draftDataFilterValue = ref('');
+const appliedDataFilters = ref<DatabaseDataFilter[]>([]);
+const draftDataSortColumn = ref<string | null>(null);
+const draftDataSortDirection = ref<'asc' | 'desc'>('asc');
+const appliedDataSort = ref<DatabaseDataSort[]>([]);
 
 const schemaOptions = computed(() => schemas.value.map(({ name }) => ({ label: name, value: name })));
 const tableOptions = computed(() => tables.value.map(({ name, kind }) => ({ label: `${name} (${kind})`, value: name })));
@@ -368,6 +452,36 @@ const sqlColumnOptions = computed(() => (sqlPage.value?.columns ?? []).map((colu
   index,
   label: `${column.name} · ${column.dataType}`,
 })));
+const dataViewColumnOptions = computed(() => (dataPage.value?.columns ?? []).map(column => ({
+  label: `${column.name} · ${column.dataType}`,
+  value: column.name,
+})));
+const filterOperatorOptions = computed(() => [
+  { label: dataViewText.value.equals, value: 'equals' as const },
+  { label: dataViewText.value.notEquals, value: 'not-equals' as const },
+  { label: dataViewText.value.contains, value: 'contains' as const },
+  { label: dataViewText.value.startsWith, value: 'starts-with' as const },
+  { label: dataViewText.value.endsWith, value: 'ends-with' as const },
+  { label: dataViewText.value.isNull, value: 'is-null' as const },
+  { label: dataViewText.value.isNotNull, value: 'is-not-null' as const },
+]);
+const sortDirectionOptions = computed(() => [
+  { label: dataViewText.value.ascending, value: 'asc' as const },
+  { label: dataViewText.value.descending, value: 'desc' as const },
+]);
+const isNullDataFilter = computed(() => draftDataFilterOperator.value === 'is-null'
+  || draftDataFilterOperator.value === 'is-not-null');
+const dataFilterSummary = computed(() => appliedDataFilters.value.length === 0
+  ? dataViewText.value.noFilters
+  : appliedDataFilters.value.map(formatDataFilter).join(' · '));
+const dataSortSummary = computed(() => {
+  const sort = appliedDataSort.value[0];
+  if (!sort) {
+    return dataViewText.value.noSort;
+  }
+  const direction = sort.direction === 'asc' ? dataViewText.value.ascending : dataViewText.value.descending;
+  return `${sort.column} · ${direction}`;
+});
 const visibleDataColumnIndexes = computed(() => (dataPage.value?.columns ?? [])
   .map((_, index) => index)
   .filter(index => !hiddenDataColumns.value.includes(index)));
@@ -425,6 +539,13 @@ const sqlResultScrollWidth = computed(() => Math.max(800, visibleSqlColumnIndexe
 const sqlErrorMessage = computed(() => sqlError.value
   ? databaseErrorText(sqlError.value)
   : '');
+const sqlNoticeMessage = computed(() => sqlNotice.value === 'cancelled'
+  ? sqlControlText.value.cancelled
+  : sqlNotice.value === 'finished-before-cancel' ? sqlControlText.value.finishedBeforeCancel : '');
+const sqlHistoryOptions = computed(() => sqlHistory.value.map(entry => ({
+  label: `${entry.sql.slice(0, 96)}${entry.sql.length > 96 ? '…' : ''}${entry.offset > 0 ? ` · ${entry.offset}` : ''}`,
+  value: entry.id,
+})));
 const dataTableScrollWidth = computed(() => Math.max(800, visibleDataColumnIndexes.value.length * 200));
 const pageLabel = computed(() => isChineseLocale.value
   ? `第 ${currentPageIndex.value + 1} 页 · ${dataPage.value?.rows.length ?? 0} 行`
@@ -521,6 +642,111 @@ function exportCurrentPage(source: 'table' | 'query', format: DatabaseExportForm
   );
   exportStatusSource.value = source;
   exportStatus.value = result.status === 'denied' ? 'failed' : result.status;
+}
+
+function formatDataFilter(filter: DatabaseDataFilter): string {
+  const operator = filterOperatorOptions.value.find(option => option.value === filter.operator)?.label ?? filter.operator;
+  const value = filter.value === null ? '' : ` ${filter.value}`;
+  return `${filter.column} ${operator}${value}`;
+}
+
+function cloneDataFilters(filters: readonly DatabaseDataFilter[]): DatabaseDataFilter[] {
+  return filters.map(filter => ({
+    column: filter.column,
+    operator: filter.operator,
+    value: filter.value,
+  }));
+}
+
+function cloneDataSort(filters: readonly DatabaseDataSort[]): DatabaseDataSort[] {
+  return filters.map(sort => ({
+    column: sort.column,
+    direction: sort.direction,
+  }));
+}
+
+function resetDataViewOptions() {
+  draftDataFilterColumn.value = null;
+  draftDataFilterOperator.value = 'contains';
+  draftDataFilterValue.value = '';
+  appliedDataFilters.value = [];
+  draftDataSortColumn.value = null;
+  draftDataSortDirection.value = 'asc';
+  appliedDataSort.value = [];
+}
+
+/** Reload the first bounded page after changing server-side view options. */
+async function applyDataViewOptions() {
+  const sessionId = activeSession.value?.sessionId;
+  const schema = selectedSchema.value;
+  const table = selectedTable.value;
+  if (!sessionId || !schema || !table) {
+    return;
+  }
+  const previousPageRequestId = activePageRequestId.value;
+  const requestSequence = ++tableRequestSequence;
+  dataRequestSequence += 1;
+  if (previousPageRequestId && !await cancelPageBeforeTransition(sessionId, previousPageRequestId)) {
+    return;
+  }
+  const filters = cloneDataFilters(appliedDataFilters.value);
+  const sort = cloneDataSort(appliedDataSort.value);
+  pageRequests.value = [{
+    cursor: null,
+    offset: 0,
+    ...(filters.length > 0 ? { filters } : {}),
+    ...(sort.length > 0 ? { sort } : {}),
+  }];
+  currentPageIndex.value = 0;
+  dataPage.value = null;
+  dataNotice.value = null;
+  activePageRequestId.value = null;
+  isLoadingData.value = false;
+  activeTableTab.value = 'data';
+  await loadDataPage(0, requestSequence);
+}
+
+function addDataFilter() {
+  const column = draftDataFilterColumn.value;
+  if (!column || appliedDataFilters.value.length >= 3) {
+    return;
+  }
+  const value = isNullDataFilter.value ? null : draftDataFilterValue.value;
+  appliedDataFilters.value = [
+    ...appliedDataFilters.value,
+    { column, operator: draftDataFilterOperator.value, value },
+  ];
+  void applyDataViewOptions();
+}
+
+function removeDataFilter(index: number) {
+  appliedDataFilters.value = appliedDataFilters.value.filter((_filter, filterIndex) => filterIndex !== index);
+  void applyDataViewOptions();
+}
+
+function clearDataFilters() {
+  if (appliedDataFilters.value.length === 0) {
+    return;
+  }
+  appliedDataFilters.value = [];
+  void applyDataViewOptions();
+}
+
+function applyDataSort() {
+  const column = draftDataSortColumn.value;
+  if (!column) {
+    return;
+  }
+  appliedDataSort.value = [{ column, direction: draftDataSortDirection.value }];
+  void applyDataViewOptions();
+}
+
+function clearDataSort() {
+  if (appliedDataSort.value.length === 0) {
+    return;
+  }
+  appliedDataSort.value = [];
+  void applyDataViewOptions();
 }
 
 function displayDatabaseCell(cell: PostgresDataCell | undefined): string {
@@ -844,6 +1070,9 @@ async function connect() {
   sqlMutation.value = null;
   sqlPageOffset.value = 0;
   sqlError.value = null;
+  sqlNotice.value = null;
+  sqlHistory.value = [];
+  selectedSqlHistoryId.value = null;
   isConnecting.value = true;
   try {
     if (selectedEngine.value === 'sqlite') {
@@ -929,6 +1158,7 @@ async function selectSchema(schema: string | null) {
   activePageRequestId.value = null;
   isLoadingData.value = false;
   columnsTruncated.value = false;
+  resetDataViewOptions();
   if (sessionId && previousPageRequestId
     && !await cancelPageBeforeTransition(sessionId, previousPageRequestId)) {
     return;
@@ -967,6 +1197,7 @@ async function selectTable(table: string | null) {
   indexesTruncated.value = false;
   dataPage.value = null;
   hiddenDataColumns.value = [];
+  resetDataViewOptions();
   exportStatusSource.value = null;
   exportStatus.value = null;
   pageRequests.value = [{ cursor: null, offset: 0 }];
@@ -1026,9 +1257,13 @@ async function loadDataPage(pageIndex: number, tableSequence: number) {
   isCancellingData.value = false;
   connectionError.value = null;
   try {
+    const filters = page.filters ? cloneDataFilters(page.filters) : undefined;
+    const sort = page.sort ? cloneDataSort(page.sort) : undefined;
     const result = await getDatabaseDataPage(sessionId, requestId, schema, table, {
       cursor: page.cursor,
       offset: page.offset,
+      ...(filters && filters.length > 0 ? { filters } : {}),
+      ...(sort && sort.length > 0 ? { sort } : {}),
     });
     const pendingCancellation = pendingPageCancellations.get(requestId);
     if (pendingCancellation) {
@@ -1067,7 +1302,37 @@ function updateSqlText(value: string) {
   sqlRequestSequence += 1;
   sqlPage.value = null;
   sqlMutation.value = null;
+  sqlNotice.value = null;
+  sqlHistory.value = [];
+  selectedSqlHistoryId.value = null;
+  activeSqlRequestId.value = null;
+  isCancellingSql.value = false;
   sqlError.value = null;
+  sqlNotice.value = null;
+  selectedSqlHistoryId.value = null;
+}
+
+function addSqlHistory(sql: string, offset: number) {
+  const existing = sqlHistory.value.find(entry => entry.sql === sql && entry.offset === offset);
+  const entry = { id: crypto.randomUUID(), sql, offset };
+  sqlHistory.value = [
+    entry,
+    ...sqlHistory.value.filter(item => item !== existing),
+  ].slice(0, 20);
+  selectedSqlHistoryId.value = entry.id;
+}
+
+function selectSqlHistory(entryId: string | null) {
+  selectedSqlHistoryId.value = entryId;
+  const entry = sqlHistory.value.find(item => item.id === entryId);
+  if (!entry) {
+    return;
+  }
+  sqlText.value = entry.sql;
+  sqlPage.value = null;
+  sqlMutation.value = null;
+  sqlError.value = null;
+  sqlNotice.value = null;
 }
 
 /** Require an explicit second action before submitting any SQL mutation. */
@@ -1096,9 +1361,12 @@ async function executeSqlStatement(sql: string, offset: number) {
   }
 
   const requestSequence = ++sqlRequestSequence;
+  const requestId = crypto.randomUUID();
+  activeSqlRequestId.value = requestId;
   sqlPage.value = null;
   sqlMutation.value = null;
   sqlError.value = null;
+  sqlNotice.value = null;
   if (offset === 0) {
     hiddenSqlColumns.value = [];
     exportStatusSource.value = null;
@@ -1106,7 +1374,7 @@ async function executeSqlStatement(sql: string, offset: number) {
   }
   isRunningSql.value = true;
   try {
-    const result = await runDatabaseQuery(sessionId, sql, offset);
+    const result = await runDatabaseQuery(sessionId, requestId, sql, offset);
     if (requestSequence !== sqlRequestSequence) {
       return;
     }
@@ -1114,6 +1382,7 @@ async function executeSqlStatement(sql: string, offset: number) {
       sqlError.value = result.status === 'failed' ? result.error : 'service-unavailable';
       return;
     }
+    addSqlHistory(sql, offset);
     if (result.value.kind === 'query') {
       sqlPage.value = result.value.page;
       sqlPageOffset.value = offset;
@@ -1128,7 +1397,33 @@ async function executeSqlStatement(sql: string, offset: number) {
     }
   }
   finally {
+    if (activeSqlRequestId.value === requestId) {
+      activeSqlRequestId.value = null;
+    }
     isRunningSql.value = false;
+  }
+}
+
+async function cancelCurrentSqlQuery() {
+  const sessionId = activeSession.value?.sessionId;
+  const requestId = activeSqlRequestId.value;
+  if (!sessionId || !requestId || !isRunningSql.value || isCancellingSql.value || activeEngine.value !== 'postgres') {
+    return;
+  }
+
+  isCancellingSql.value = true;
+  sqlRequestSequence += 1;
+  try {
+    const result = await cancelDatabaseQuery(sessionId, requestId);
+    if (result.status !== 'success') {
+      sqlError.value = result.status === 'failed' ? result.error : 'service-unavailable';
+      void disconnect();
+      return;
+    }
+    sqlNotice.value = result.value ? 'cancelled' : 'finished-before-cancel';
+  }
+  finally {
+    isCancellingSql.value = false;
   }
 }
 
@@ -1208,9 +1503,21 @@ async function nextDataPage() {
   }
   const nextIndex = currentPageIndex.value + 1;
   if (!pageRequests.value[nextIndex]) {
+    const filters = cloneDataFilters(appliedDataFilters.value);
+    const sort = cloneDataSort(appliedDataSort.value);
     const nextRequest: PostgresDataPageInput | null = dataPage.value.pagingMode === 'keyset'
-      ? dataPage.value.nextCursor ? { cursor: dataPage.value.nextCursor, offset: 0 } : null
-      : dataPage.value.nextOffset !== null ? { cursor: null, offset: dataPage.value.nextOffset } : null;
+      ? dataPage.value.nextCursor ? {
+          cursor: dataPage.value.nextCursor,
+          offset: 0,
+          ...(filters.length > 0 ? { filters } : {}),
+          ...(sort.length > 0 ? { sort } : {}),
+        } : null
+      : dataPage.value.nextOffset !== null ? {
+          cursor: null,
+          offset: dataPage.value.nextOffset,
+          ...(filters.length > 0 ? { filters } : {}),
+          ...(sort.length > 0 ? { sort } : {}),
+        } : null;
     if (!nextRequest) {
       return;
     }
@@ -1238,6 +1545,7 @@ async function disconnect() {
   dataPage.value = null;
   hiddenDataColumns.value = [];
   hiddenSqlColumns.value = [];
+  resetDataViewOptions();
   exportStatus.value = null;
   exportStatusSource.value = null;
   sqlError.value = null;
@@ -1486,6 +1794,97 @@ onUnmounted(() => {
                 {{ resultToolsText.exportJsonl }}
               </n-button>
             </div>
+            <div v-if="dataPage" class="database-data-view-controls" data-test-id="database-data-view-controls">
+              <div class="database-data-view-row">
+                <strong>{{ dataViewText.filter }}</strong>
+                <n-select
+                  data-test-id="database-filter-column"
+                  :value="draftDataFilterColumn"
+                  :options="dataViewColumnOptions"
+                  :placeholder="dataViewText.filterColumn"
+                  clearable
+                  @update:value="value => draftDataFilterColumn = value"
+                />
+                <n-select
+                  data-test-id="database-filter-operator"
+                  :value="draftDataFilterOperator"
+                  :options="filterOperatorOptions"
+                  :placeholder="dataViewText.filterOperator"
+                  @update:value="value => draftDataFilterOperator = value"
+                />
+                <n-input
+                  v-if="!isNullDataFilter"
+                  data-test-id="database-filter-value"
+                  :value="draftDataFilterValue"
+                  :placeholder="dataViewText.filterValue"
+                  maxlength="256"
+                  @update:value="value => draftDataFilterValue = value"
+                />
+                <n-button
+                  data-test-id="database-filter-add"
+                  size="small"
+                  :disabled="!draftDataFilterColumn || appliedDataFilters.length >= 3"
+                  @click="addDataFilter"
+                >
+                  {{ dataViewText.addFilter }}
+                </n-button>
+                <n-button
+                  data-test-id="database-filter-clear"
+                  size="small"
+                  :disabled="appliedDataFilters.length === 0"
+                  @click="clearDataFilters"
+                >
+                  {{ dataViewText.clearFilters }}
+                </n-button>
+              </div>
+              <div class="database-data-view-row">
+                <strong>{{ dataViewText.sort }}</strong>
+                <n-select
+                  data-test-id="database-sort-column"
+                  :value="draftDataSortColumn"
+                  :options="dataViewColumnOptions"
+                  :placeholder="dataViewText.sortColumn"
+                  clearable
+                  @update:value="value => draftDataSortColumn = value"
+                />
+                <n-select
+                  data-test-id="database-sort-direction"
+                  :value="draftDataSortDirection"
+                  :options="sortDirectionOptions"
+                  :placeholder="dataViewText.sortDirection"
+                  @update:value="value => draftDataSortDirection = value"
+                />
+                <n-button
+                  data-test-id="database-sort-apply"
+                  size="small"
+                  :disabled="!draftDataSortColumn"
+                  @click="applyDataSort"
+                >
+                  {{ dataViewText.applySort }}
+                </n-button>
+                <n-button
+                  data-test-id="database-sort-clear"
+                  size="small"
+                  :disabled="appliedDataSort.length === 0"
+                  @click="clearDataSort"
+                >
+                  {{ dataViewText.clearSort }}
+                </n-button>
+              </div>
+              <div class="database-data-view-summary" data-test-id="database-filter-tags">
+                <span>{{ dataFilterSummary }}</span>
+                <span>{{ dataSortSummary }}</span>
+                <n-tag
+                  v-for="(filter, index) in appliedDataFilters"
+                  :key="`${filter.column}-${filter.operator}-${index}`"
+                  size="small"
+                  closable
+                  @close="removeDataFilter(index)"
+                >
+                  {{ formatDataFilter(filter) }}
+                </n-tag>
+              </div>
+            </div>
             <n-alert v-if="exportStatusSource === 'table' && exportStatusMessage" :type="exportStatusType" :show-icon="false" mb-3 data-test-id="database-export-status">
               {{ exportStatusMessage }}
             </n-alert>
@@ -1556,17 +1955,43 @@ onUnmounted(() => {
           @update:value="updateSqlText"
           @keydown.ctrl.enter.prevent="runSqlQuery(0)"
         />
+        <div class="database-sql-history-row">
+          <n-select
+            data-test-id="database-sql-history"
+            :value="selectedSqlHistoryId"
+            :options="sqlHistoryOptions"
+            :placeholder="sqlControlText.history"
+            :loading="isRunningSql"
+            clearable
+            @update:value="selectSqlHistory"
+          />
+          <span v-if="sqlHistory.length === 0" class="database-export-scope">{{ sqlControlText.noHistory }}</span>
+        </div>
         <div class="database-page-controls">
           <span>{{ isChineseLocale ? 'Ctrl + Enter 运行' : 'Ctrl + Enter to run' }}</span>
-          <n-button
-            data-test-id="database-run-query"
-            type="primary"
-            :loading="isRunningSql"
-            @click="runSqlQuery(0)"
-          >
-            {{ isRunningSql ? previewText.loading : sqlRunLabel }}
-          </n-button>
+          <div flex gap-2>
+            <n-button
+              v-if="isRunningSql && activeEngine === 'postgres'"
+              data-test-id="database-cancel-query"
+              :loading="isCancellingSql"
+              :disabled="isCancellingSql"
+              @click="cancelCurrentSqlQuery"
+            >
+              {{ isCancellingSql ? sqlControlText.cancelling : sqlControlText.cancel }}
+            </n-button>
+            <n-button
+              data-test-id="database-run-query"
+              type="primary"
+              :loading="isRunningSql"
+              @click="runSqlQuery(0)"
+            >
+              {{ isRunningSql ? previewText.loading : sqlRunLabel }}
+            </n-button>
+          </div>
         </div>
+        <n-alert v-if="sqlNoticeMessage" type="info" :show-icon="false" mt-3 data-test-id="database-sql-notice">
+          {{ sqlNoticeMessage }}
+        </n-alert>
         <n-alert v-if="sqlErrorMessage" type="error" :show-icon="false" mt-3 role="alert" data-test-id="database-sql-error">
           {{ sqlErrorMessage }}
         </n-alert>
@@ -1743,12 +2168,61 @@ onUnmounted(() => {
   margin-top: 12px;
 }
 
+.database-sql-history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.database-sql-history-row :deep(.n-select) {
+  max-width: 720px;
+  flex: 1 1 320px;
+}
+
 .database-result-toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 12px;
+}
+
+.database-data-view-controls {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.database-data-view-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.database-data-view-row :deep(.n-select),
+.database-data-view-row :deep(.n-input) {
+  min-width: 150px;
+  flex: 1 1 150px;
+}
+
+.database-data-view-row strong {
+  min-width: 48px;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.database-data-view-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
 }
 
 .database-column-menu {
@@ -1854,8 +2328,27 @@ onUnmounted(() => {
     flex-direction: column;
   }
 
+  .database-sql-history-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .database-sql-history-row :deep(.n-select) {
+    width: 100%;
+  }
+
   .database-result-toolbar {
     align-items: flex-start;
+  }
+
+  .database-data-view-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .database-data-view-row :deep(.n-select),
+  .database-data-view-row :deep(.n-input) {
+    width: 100%;
   }
 
   .database-export-scope {

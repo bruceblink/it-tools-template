@@ -27,10 +27,12 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:data-page', { sessionId, requestId, schema, table, page }),
   updateDatabaseCell: (sessionId: string, input: DatabaseCellUpdateInput): Promise<DatabaseBridgeResult<boolean>> =>
     ipcRenderer.invoke('desktop:database:cell:update', { sessionId, input }),
-  runDatabaseQuery: (sessionId: string, sql: string, offset: number): Promise<DatabaseBridgeResult<DatabaseStatementResult>> =>
-    ipcRenderer.invoke('desktop:database:query', { sessionId, sql, offset }),
+  runDatabaseQuery: (sessionId: string, requestId: string, sql: string, offset: number): Promise<DatabaseBridgeResult<DatabaseStatementResult>> =>
+    ipcRenderer.invoke('desktop:database:query', { sessionId, requestId, sql, offset }),
   cancelDatabaseDataPage: (sessionId: string, requestId: string) =>
     ipcRenderer.invoke('desktop:database:data-page:cancel', { sessionId, requestId }),
+  cancelDatabaseQuery: (sessionId: string, requestId: string) =>
+    ipcRenderer.invoke('desktop:database:query:cancel', { sessionId, requestId }),
   listPostgresProfiles: () => ipcRenderer.invoke('desktop:database:postgres-profiles:list'),
   savePostgresProfile: (input: PostgresConnectionProfileInput) =>
     ipcRenderer.invoke('desktop:database:postgres-profiles:save', input),

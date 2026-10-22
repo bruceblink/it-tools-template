@@ -19,6 +19,8 @@ import type {
 import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_COLUMNS, MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
 import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
+import { getPageFilters, getPageSort, isValidTablePageRequest as isValidGeneratedTablePageRequest } from './table-page-options';
+import { buildTablePageFilterSql, buildTablePageSortSql } from './table-page-sql';
 
 const MAX_SQLITE_SESSIONS = 4;
 const MAX_TABLES_PER_SCHEMA = 500;
@@ -260,6 +262,8 @@ export class SQLiteDatabaseService {
       const primaryKeys = structure.value.columns
         .filter(column => column.primaryKey)
         .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
+      const filters = getPageFilters(page);
+      const sorts = getPageSort(page);
       const alias = 'preview_row';
       const visibleSelects = columns.flatMap((column, index) => {
         const name = `${alias}.${quoteSQLiteIdentifier(column.name)}`;
@@ -272,14 +276,35 @@ export class SQLiteDatabaseService {
       const identitySelects = identityKeys.map((key, index) =>
         `CASE WHEN typeof(${alias}.${quoteSQLiteIdentifier(key.name)}) = 'blob' THEN printf('%0257d', 0) ELSE substr(CAST(${alias}.${quoteSQLiteIdentifier(key.name)} AS TEXT), 1, ${MAX_CELL_CHARACTERS + 1}) END AS ${quoteSQLiteIdentifier(`__primary_key_${index}`)}`,
       );
-      const orderBy = primaryKeys.length > 0
-        ? `ORDER BY ${primaryKeys.map(key => `${alias}.${quoteSQLiteIdentifier(key.name)}`).join(', ')}`
-        : '';
+      const filterSql = buildTablePageFilterSql(
+        filters,
+        structure.value.columns,
+        'sqlite',
+        alias,
+        quoteSQLiteIdentifier,
+        1,
+      );
+      const sortSql = buildTablePageSortSql(sorts, structure.value.columns, 'sqlite', alias, quoteSQLiteIdentifier);
+      if (!filterSql || sortSql === null) {
+        return { ok: false, error: 'invalid-request' };
+      }
+      const whereSql = filterSql.clauses.length > 0 ? `WHERE ${filterSql.clauses.join(' AND ')}` : '';
+      const requestedSortColumns = new Set(sorts.map(sort => sort.column));
+      const tieBreakerExpressions = primaryKeys
+        .filter(key => !requestedSortColumns.has(key.name))
+        .map(key => `${alias}.${quoteSQLiteIdentifier(key.name)}`);
+      const orderExpressions = sortSql
+        ? [sortSql, ...tieBreakerExpressions].join(', ')
+        : primaryKeys.length > 0
+          ? primaryKeys.map(key => `${alias}.${quoteSQLiteIdentifier(key.name)}`).join(', ')
+          : '';
+      const orderBy = orderExpressions.length > 0 ? `ORDER BY ${orderExpressions}` : '';
       const sql = `SELECT ${[...visibleSelects, ...identitySelects].join(', ')}
                    FROM main.${quoteSQLiteIdentifier(table)} AS ${alias}
+                   ${whereSql}
                    ${orderBy}
                    LIMIT ? OFFSET ?`;
-      const rawRows = connection.database.prepare(sql).all(MAX_PREVIEW_ROWS + 1, page.offset) as Array<Record<string, SQLOutputValue>>;
+      const rawRows = connection.database.prepare(sql).all(...filterSql.values, MAX_PREVIEW_ROWS + 1, page.offset) as Array<Record<string, SQLOutputValue>>;
       const pageRows = rawRows.slice(0, MAX_PREVIEW_ROWS);
       const hasMoreRows = rawRows.length > MAX_PREVIEW_ROWS;
       const nextOffset = hasMoreRows && page.offset + MAX_PREVIEW_ROWS <= MAX_PAGE_OFFSET
@@ -405,6 +430,7 @@ export class SQLiteDatabaseService {
     sessionId: string,
     sql: string,
     offset: number,
+    _queryRequestId?: string,
   ): Promise<DatabaseBridgeResult<DatabaseStatementResult>> {
     const connection = this.connections.get(sessionId);
     const statement = normalizeDatabaseStatement(sql, 'sqlite');
@@ -467,6 +493,14 @@ export class SQLiteDatabaseService {
       }
       return { ok: false, error: commitStarted ? 'write-result-unknown' : 'query-failed' };
     }
+  }
+
+  /** SQLite synchronous statements cannot be interrupted safely from the worker message loop. */
+  async cancelQuery(sessionId: string, _requestId: string): Promise<DatabaseBridgeResult<boolean>> {
+    if (!this.connections.has(sessionId)) {
+      return { ok: false, error: 'not-connected' };
+    }
+    return { ok: true, value: false };
   }
 
   /** Project bounded SELECT values while the SQLite handle stays inside the isolated service process. */
@@ -609,22 +643,7 @@ function quoteSQLiteIdentifier(value: string): string {
 }
 
 function isValidTablePageRequest(value: unknown): value is PostgresDataPageInput {
-  return isRecord(value)
-    && hasExactKeys(value, ['cursor', 'offset'])
-    && value.cursor === null
-    && Number.isInteger(value.offset)
-    && (value.offset as number) >= 0
-    && (value.offset as number) <= MAX_PAGE_OFFSET
-    && (value.offset as number) % MAX_PREVIEW_ROWS === 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function hasExactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
-  const keys = Object.keys(value);
-  return keys.length === expected.length && keys.every(key => expected.includes(key));
+  return isValidGeneratedTablePageRequest(value, isValidSQLiteIdentifier, false);
 }
 
 /** Validate a path that originated from the native file picker before it crosses the worker boundary. */

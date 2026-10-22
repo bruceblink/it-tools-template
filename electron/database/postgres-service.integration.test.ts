@@ -116,6 +116,26 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
     }
   });
 
+  it('applies bounded filters and stable sorts to a primary-key table', async () => {
+    const filtered = await service.getDataPage(sessionId, 'public', 's2b_keyset_probe', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'probe_value', operator: 'equals', value: 'row 56' }],
+      sort: [{ column: 'probe_id', direction: 'desc' }],
+    }, randomUUID());
+    expect(filtered.ok).toBe(true);
+    if (filtered.ok) {
+      expect(filtered.value.pagingMode).toBe('offset');
+      expect(filtered.value.pagingNotice).toBe('offset-paging');
+      expect(filtered.value.rows[0]?.cells[0]).toEqual({ value: '56', truncated: false });
+    }
+    expect(await service.getDataPage(sessionId, 'public', 's2b_keyset_probe', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'missing', operator: 'equals', value: 'x' }],
+    }, randomUUID())).toEqual({ ok: false, error: 'invalid-request' });
+  });
+
   it('caps multi-megabyte text, JSON, and binary cells before returning a page', async () => {
     const result = await service.getDataPage(
       sessionId,
@@ -300,6 +320,38 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
       await observer.end();
     }
   });
+
+  it('cancels a bounded SQL query and keeps the session usable', async () => {
+    const observer = new Client({
+      host: '127.0.0.1',
+      port: postgresPort,
+      database: 'postgres',
+      user: 'postgres',
+      password: '',
+      ssl: false,
+      connectionTimeoutMillis: 2_000,
+    });
+    await observer.connect();
+    try {
+      const requestId = randomUUID();
+      const queryPromise = service.executeStatement(
+        sessionId,
+        'SELECT * FROM public.s2d_slow_view',
+        0,
+        requestId,
+      );
+      await waitForSlowPreviewQuery(observer);
+
+      expect(await service.cancelQuery(sessionId, randomUUID())).toEqual({ ok: true, value: false });
+      expect(await service.cancelQuery(sessionId, requestId)).toEqual({ ok: true, value: true });
+      expect(await queryPromise).toEqual({ ok: false, error: 'query-timeout' });
+      await waitForNoSlowPreviewQuery(observer);
+      expect((await service.executeReadOnlyQuery(sessionId, 'SELECT 1', 0)).ok).toBe(true);
+    }
+    finally {
+      await observer.end();
+    }
+  });
 });
 
 async function waitForSlowPreviewQuery(observer: Client): Promise<void> {
@@ -311,7 +363,7 @@ async function waitForSlowPreviewQuery(observer: Client): Promise<void> {
        WHERE datname = current_database()
          AND application_name = 'IT Tools Desktop'
          AND state = 'active'
-         AND query LIKE 'SELECT left(%'`,
+         AND query ILIKE 'SELECT left(%'`,
     );
     if (result.rows.length > 0) {
       return;
@@ -330,7 +382,7 @@ async function waitForNoSlowPreviewQuery(observer: Client): Promise<void> {
        WHERE datname = current_database()
          AND application_name = 'IT Tools Desktop'
          AND state = 'active'
-         AND query LIKE 'SELECT left(%'`,
+         AND query ILIKE 'SELECT left(%'`,
     );
     if (result.rows.length === 0) {
       return;

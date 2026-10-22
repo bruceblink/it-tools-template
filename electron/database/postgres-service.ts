@@ -18,6 +18,8 @@ import type {
 import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
 import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
+import { getPageFilters, getPageSort, isValidTablePageRequest as isValidGeneratedTablePageRequest } from './table-page-options';
+import { buildTablePageFilterSql, buildTablePageSortSql } from './table-page-sql';
 
 const MAX_POSTGRES_SESSIONS = 4;
 const MAX_SCHEMAS = 100;
@@ -62,6 +64,7 @@ export class PostgresDatabaseService {
   private readonly backendProcessIds = new Map<string, number>();
   private readonly accessModes = new Map<string, DatabaseAccessMode>();
   private readonly activePageRequests = new Map<string, ActivePostgresPageRequest>();
+  private readonly activeQueryRequests = new Map<string, ActivePostgresPageRequest>();
 
   async connect(sessionId: string, input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>> {
     if (!SESSION_ID_PATTERN.test(sessionId) || !isValidPostgresConnectionInput(input)) {
@@ -111,6 +114,10 @@ export class PostgresDatabaseService {
     if (activePage) {
       await this.cancelDataPage(sessionId, activePage.requestId);
     }
+    const activeQuery = this.activeQueryRequests.get(sessionId);
+    if (activeQuery) {
+      await this.cancelQuery(sessionId, activeQuery.requestId);
+    }
     const client = this.clients.get(sessionId);
     if (!client) {
       return { ok: true, value: false };
@@ -147,6 +154,26 @@ export class PostgresDatabaseService {
       activePage.cancelPromise = this.sendPageCancellation(sessionId, activePage);
     }
     return activePage.cancelPromise;
+  }
+
+  /** Cancel one SQL request and preserve the connection when PostgreSQL confirms it. */
+  async cancelQuery(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>> {
+    if (!SESSION_ID_PATTERN.test(sessionId) || !REQUEST_ID_PATTERN.test(requestId)) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const activeQuery = this.activeQueryRequests.get(sessionId);
+    if (!activeQuery || activeQuery.requestId !== requestId) {
+      return { ok: true, value: false };
+    }
+
+    activeQuery.cancelRequested = true;
+    if (!activeQuery.client) {
+      return { ok: true, value: true };
+    }
+    if (!activeQuery.cancelPromise) {
+      activeQuery.cancelPromise = this.sendPageCancellation(sessionId, activeQuery);
+    }
+    return activeQuery.cancelPromise;
   }
 
   async listSchemas(sessionId: string): Promise<DatabaseBridgeResult<PostgresSchemaInfo[]>> {
@@ -402,10 +429,15 @@ export class PostgresDatabaseService {
       }
 
       const primaryKeys = primaryKeyResult.rows;
-      const pagingMode: PostgresDataPage['pagingMode'] = isKeysetSupported(primaryKeys) ? 'keyset' : 'offset';
+      const filters = getPageFilters(page);
+      const sorts = getPageSort(page);
+      const hasCustomPageOptions = filters.length > 0 || sorts.length > 0;
+      const pagingMode: PostgresDataPage['pagingMode'] = !hasCustomPageOptions && isKeysetSupported(primaryKeys) ? 'keyset' : 'offset';
       const pagingNotice: PostgresDataPage['pagingNotice'] = primaryKeys.length === 0
         ? 'no-primary-key'
-        : pagingMode === 'offset' ? 'unsupported-primary-key' : null;
+        : hasCustomPageOptions
+          ? 'offset-paging'
+          : pagingMode === 'offset' ? 'unsupported-primary-key' : null;
       if ((pagingMode === 'keyset' && (page.offset !== 0
         || (page.cursor !== null && !isValidKeysetCursor(page.cursor, primaryKeys.map(key => key.column_name)))))
         || (pagingMode === 'offset' && page.cursor !== null)) {
@@ -422,32 +454,52 @@ export class PostgresDatabaseService {
         `left(${rowAlias}.${quotePostgresIdentifier(key.column_name)}::text, ${MAX_CELL_CHARACTERS + 1}) AS ${quotePostgresIdentifier(`__primary_key_${index}`)}`,
       );
       const primaryKeyExpressions = primaryKeys.map(key => `${rowAlias}.${quotePostgresIdentifier(key.column_name)}`);
+      const pageColumns = columnResult.rows.map(column => ({ name: column.column_name, dataType: column.data_type }));
+      const filterSql = buildTablePageFilterSql(
+        filters,
+        pageColumns,
+        'postgres',
+        rowAlias,
+        quotePostgresIdentifier,
+        1,
+      );
+      const sortSql = buildTablePageSortSql(sorts, pageColumns, 'postgres', rowAlias, quotePostgresIdentifier);
+      if (!filterSql || sortSql === null) {
+        return { ok: false, error: 'invalid-request' };
+      }
       const keysetSelect = pagingMode === 'keyset'
         ? `, json_build_object(${primaryKeys.map((key, index) => `${quotePostgresString(key.column_name)}, ${primaryKeyExpressions[index]}`).join(', ')})::text AS "__cursor"`
         : '';
       const keysetJoin = page.cursor === null
         ? ''
         : `CROSS JOIN LATERAL json_populate_record(NULL::${quotedRelation}, $1::json) AS cursor_row`;
-      const keysetWhere = page.cursor === null
-        ? ''
-        : `WHERE ROW(${primaryKeyExpressions.join(', ')}) > ROW(${primaryKeys.map(key => `cursor_row.${quotePostgresIdentifier(key.column_name)}`).join(', ')})`;
-      const orderBy = pagingMode === 'keyset'
-        ? `ORDER BY ${primaryKeyExpressions.join(', ')}`
-        : '';
+      const whereClauses = [...filterSql.clauses];
+      if (page.cursor !== null) {
+        whereClauses.push(`ROW(${primaryKeyExpressions.join(', ')}) > ROW(${primaryKeys.map(key => `cursor_row.${quotePostgresIdentifier(key.column_name)}`).join(', ')})`);
+      }
+      const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+      const requestedSortColumns = new Set(sorts.map(sort => sort.column));
+      const tieBreakerExpressions = primaryKeys
+        .filter(key => !requestedSortColumns.has(key.column_name))
+        .map(key => `${rowAlias}.${quotePostgresIdentifier(key.column_name)}`);
+      const orderExpressions = sortSql
+        ? [sortSql, ...tieBreakerExpressions].join(', ')
+        : primaryKeys.length > 0 ? primaryKeyExpressions.join(', ') : '';
+      const orderBy = orderExpressions.length > 0 ? `ORDER BY ${orderExpressions}` : '';
       const limitParameter = page.cursor === null ? '$1' : '$2';
       const pagination = pagingMode === 'keyset'
         ? `LIMIT ${limitParameter}`
-        : 'LIMIT $2 OFFSET $1';
+        : `LIMIT $${filterSql.values.length + 1} OFFSET $${filterSql.values.length + 2}`;
       const hiddenSelects = [...(keysetSelect ? [keysetSelect.slice(2)] : []), ...hiddenIdentity];
       const sql = `SELECT ${selectedCells.join(', ')}${hiddenSelects.length > 0 ? `, ${hiddenSelects.join(', ')}` : ''}
                    FROM ${quotedRelation} AS ${rowAlias}
                    ${keysetJoin}
-                   ${keysetWhere}
+                   ${whereSql}
                    ${orderBy}
                    ${pagination}`;
       const parameters = pagingMode === 'keyset'
         ? page.cursor === null ? [MAX_PREVIEW_ROWS + 1] : [page.cursor, MAX_PREVIEW_ROWS + 1]
-        : [page.offset, MAX_PREVIEW_ROWS + 1];
+        : [...filterSql.values, MAX_PREVIEW_ROWS + 1, page.offset];
       const result = await client.query<Record<string, unknown>>(sql, parameters);
       if (activePage.cancelRequested) {
         return { ok: false, error: 'query-timeout' };
@@ -594,25 +646,31 @@ export class PostgresDatabaseService {
     sessionId: string,
     sql: string,
     offset: number,
+    queryRequestId?: string,
   ): Promise<DatabaseBridgeResult<DatabaseStatementResult>> {
     const client = this.clients.get(sessionId);
     const statement = normalizeDatabaseStatement(sql, 'postgres');
     if (!client) {
       return { ok: false, error: 'not-connected' };
     }
-    if (!statement || !Number.isInteger(offset) || offset < 0 || offset > MAX_QUERY_OFFSET
+    if ((queryRequestId !== undefined && !REQUEST_ID_PATTERN.test(queryRequestId))
+      || !statement || !Number.isInteger(offset) || offset < 0 || offset > MAX_QUERY_OFFSET
       || (statement.kind !== 'select' && offset !== 0)) {
       return { ok: false, error: 'invalid-request' };
     }
 
     if (statement.kind === 'select') {
-      const result = await this.executeReadOnlyQuery(sessionId, statement.sql, offset);
+      const result = await this.executeReadOnlyQuery(sessionId, statement.sql, offset, queryRequestId);
       return result.ok ? { ok: true, value: { kind: 'query', page: result.value } } : result;
     }
     if ((this.accessModes.get(sessionId) ?? 'read-only') !== 'read-write') {
       return { ok: false, error: 'write-disabled' };
     }
 
+    const activeQuery = queryRequestId ? this.startQueryRequest(sessionId, queryRequestId, client) : null;
+    if (queryRequestId && !activeQuery) {
+      return { ok: false, error: 'query-failed' };
+    }
     const startedAt = Date.now();
     let transactionStarted = false;
     let commitStarted = false;
@@ -649,7 +707,18 @@ export class PostgresDatabaseService {
       if (transactionStarted) {
         await client.query('ROLLBACK').catch(() => undefined);
       }
+      if (activeQuery?.closeAfterOperation) {
+        return { ok: false, error: 'service-unavailable' };
+      }
       return { ok: false, error: commitStarted ? 'write-result-unknown' : classifyPostgresError(error, 'query-failed') };
+    }
+    finally {
+      if (activeQuery?.cancelPromise) {
+        await activeQuery.cancelPromise;
+      }
+      if (activeQuery && this.activeQueryRequests.get(sessionId) === activeQuery) {
+        this.activeQueryRequests.delete(sessionId);
+      }
     }
   }
 
@@ -658,14 +727,21 @@ export class PostgresDatabaseService {
     sessionId: string,
     sql: string,
     offset: number,
+    queryRequestId?: string,
   ): Promise<DatabaseBridgeResult<DatabaseQueryPage>> {
     const client = this.clients.get(sessionId);
     const query = normalizeReadOnlySelectQuery(sql, 'postgres');
     if (!client) {
       return { ok: false, error: 'not-connected' };
     }
-    if (!query || !Number.isInteger(offset) || offset < 0 || offset > MAX_QUERY_OFFSET) {
+    if ((queryRequestId !== undefined && !REQUEST_ID_PATTERN.test(queryRequestId))
+      || !query || !Number.isInteger(offset) || offset < 0 || offset > MAX_QUERY_OFFSET) {
       return { ok: false, error: 'invalid-request' };
+    }
+
+    const activeQuery = queryRequestId ? this.startQueryRequest(sessionId, queryRequestId, client) : null;
+    if (queryRequestId && !activeQuery) {
+      return { ok: false, error: 'query-failed' };
     }
 
     const startedAt = Date.now();
@@ -693,7 +769,18 @@ export class PostgresDatabaseService {
       };
     }
     catch (error) {
+      if (activeQuery?.closeAfterOperation) {
+        return { ok: false, error: 'service-unavailable' };
+      }
       return { ok: false, error: classifyPostgresError(error, 'query-failed') };
+    }
+    finally {
+      if (activeQuery?.cancelPromise) {
+        await activeQuery.cancelPromise;
+      }
+      if (activeQuery && this.activeQueryRequests.get(sessionId) === activeQuery) {
+        this.activeQueryRequests.delete(sessionId);
+      }
     }
   }
 
@@ -803,6 +890,21 @@ export class PostgresDatabaseService {
     }
   }
 
+  private startQueryRequest(sessionId: string, requestId: string, client: Client): ActivePostgresPageRequest | null {
+    if (this.activeQueryRequests.has(sessionId)) {
+      return null;
+    }
+    const activeQuery: ActivePostgresPageRequest = {
+      requestId,
+      client,
+      cancelRequested: false,
+      closeAfterOperation: false,
+      cancelPromise: null,
+    };
+    this.activeQueryRequests.set(sessionId, activeQuery);
+    return activeQuery;
+  }
+
   private removeSessionClient(sessionId: string, client: Client): void {
     if (this.clients.get(sessionId) !== client) {
       return;
@@ -864,13 +966,13 @@ export function isValidDatabaseIdentifier(value: unknown): value is string {
 
 /** Reject oversized offsets and malformed cursors before they reach the database driver. */
 export function isValidPostgresPageRequest(value: unknown): value is PostgresDataPageInput {
-  if (!isRecord(value)
-    || !hasExactKeys(value, ['cursor', 'offset'])
-    || !Number.isInteger(value.offset)
-    || (value.offset as number) < 0
-    || (value.offset as number) > MAX_PAGE_OFFSET
-    || (value.offset as number) % MAX_PREVIEW_ROWS !== 0) {
+  if (!isValidGeneratedTablePageRequest(value, isValidDatabaseIdentifier, true)) {
     return false;
+  }
+  const filters = getPageFilters(value);
+  const sort = getPageSort(value);
+  if (filters.length > 0 || sort.length > 0) {
+    return value.cursor === null;
   }
   if (value.cursor === null) {
     return true;

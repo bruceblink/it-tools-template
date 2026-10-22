@@ -239,6 +239,34 @@ describe('SQLite metadata browsing integration', () => {
     expect(longKeyPage.ok && longKeyPage.value.rows[0]?.primaryKeyValuesTruncated).toBe(true);
   });
 
+  it('applies bounded filters and stable sorts to table pages', async () => {
+    const filtered = await service.getDataPage(writeSessionId, 'main', 's3_sqlite_many_rows', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'value', operator: 'equals', value: 'row-1001' }],
+      sort: [{ column: 'id', direction: 'desc' }],
+    });
+    expect(filtered.ok).toBe(true);
+    if (filtered.ok) {
+      expect(filtered.value.pagingMode).toBe('offset');
+      expect(filtered.value.pagingNotice).toBe('offset-paging');
+      expect(filtered.value.rows).toHaveLength(1);
+      expect(filtered.value.rows[0]?.cells[0]).toEqual({ value: '1001', truncated: false });
+    }
+
+    const sorted = await service.getDataPage(sessionId, 'main', 's3_sqlite_many_rows', {
+      cursor: null,
+      offset: 0,
+      sort: [{ column: 'id', direction: 'desc' }],
+    });
+    expect(sorted.ok && sorted.value.rows[0]?.cells[0]).toEqual({ value: '1001', truncated: false });
+    expect(await service.getDataPage(sessionId, 'main', 's3_sqlite_many_rows', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'missing', operator: 'equals', value: 'x' }],
+    })).toEqual({ ok: false, error: 'invalid-request' });
+  });
+
   it('rolls back mutations that exceed the 1,000-row limit', async () => {
     expect(await service.executeStatement(writeSessionId, 'DELETE FROM s3_sqlite_many_rows', 0))
       .toEqual({ ok: false, error: 'write-limit-exceeded' });

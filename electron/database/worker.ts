@@ -82,14 +82,22 @@ function executeCommand(command: DatabaseWorkerCommand) {
       return databaseService.updateCell(command.sessionId, command.input);
     case 'execute-sql-statement':
       if (command.engine === 'mysql') {
-        return mysqlDatabaseService.executeStatement(command.sessionId, command.sql, command.offset);
+        return mysqlDatabaseService.executeStatement(command.sessionId, command.sql, command.offset, command.queryRequestId);
       }
       if (command.engine === 'sqlite') {
-        return sqliteDatabaseService.executeStatement(command.sessionId, command.sql, command.offset);
+        return sqliteDatabaseService.executeStatement(command.sessionId, command.sql, command.offset, command.queryRequestId);
       }
-      return databaseService.executeStatement(command.sessionId, command.sql, command.offset);
+      return databaseService.executeStatement(command.sessionId, command.sql, command.offset, command.queryRequestId);
     case 'cancel-data-page':
       return databaseService.cancelDataPage(command.sessionId, command.targetRequestId);
+    case 'cancel-query':
+      if (command.engine === 'mysql') {
+        return mysqlDatabaseService.cancelQuery(command.sessionId, command.targetRequestId);
+      }
+      if (command.engine === 'sqlite') {
+        return sqliteDatabaseService.cancelQuery(command.sessionId, command.targetRequestId);
+      }
+      return databaseService.cancelQuery(command.sessionId, command.targetRequestId);
     case 'close':
       return Promise.resolve({ ok: true, value: true } as const);
   }

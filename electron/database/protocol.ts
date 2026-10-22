@@ -13,6 +13,7 @@ import { isValidSQLiteFilePath, isValidSQLiteIdentifier } from './sqlite-service
 import { normalizeDatabaseStatement } from './sql-query';
 import { MAX_QUERY_OFFSET } from './query-results';
 import { isValidCellUpdateInput } from './cell-edit';
+import { isValidTablePageRequest } from './table-page-options';
 
 export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'connect'; sessionId: string; input: PostgresConnectionInput }
@@ -34,8 +35,9 @@ export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'get-mysql-data-page'; sessionId: string; schema: string; table: string; page: PostgresDataPageInput }
   | { requestId: string; operation: 'get-sqlite-data-page'; sessionId: string; schema: 'main'; table: string; page: PostgresDataPageInput }
   | { requestId: string; operation: 'update-cell'; sessionId: string; engine: DatabaseEngine; input: DatabaseCellUpdateInput }
-  | { requestId: string; operation: 'execute-sql-statement'; sessionId: string; engine: DatabaseEngine; sql: string; offset: number }
+  | { requestId: string; operation: 'execute-sql-statement'; sessionId: string; engine: DatabaseEngine; sql: string; offset: number; queryRequestId?: string }
   | { requestId: string; operation: 'cancel-data-page'; sessionId: string; targetRequestId: string }
+  | { requestId: string; operation: 'cancel-query'; sessionId: string; engine: DatabaseEngine; targetRequestId: string }
   | { requestId: string; operation: 'close' };
 
 export interface DatabaseWorkerResponse {
@@ -158,7 +160,8 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'execute-sql-statement'
-    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'sql', 'offset'])
+    && (hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'sql', 'offset'])
+      || hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'sql', 'offset', 'queryRequestId']))
     && isSessionId(value.sessionId)
     && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
     && normalizeDatabaseStatement(value.sql, value.engine) !== null
@@ -166,12 +169,21 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && Number.isInteger(value.offset)
     && typeof value.offset === 'number'
     && value.offset >= 0
-    && value.offset <= MAX_QUERY_OFFSET) {
+    && value.offset <= MAX_QUERY_OFFSET
+    && (value.queryRequestId === undefined || (typeof value.queryRequestId === 'string' && isRequestId(value.queryRequestId)))) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'cancel-data-page'
     && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'targetRequestId'])
     && isSessionId(value.sessionId)
+    && typeof value.targetRequestId === 'string'
+    && isRequestId(value.targetRequestId)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'cancel-query'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'targetRequestId'])
+    && isSessionId(value.sessionId)
+    && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
     && typeof value.targetRequestId === 'string'
     && isRequestId(value.targetRequestId)) {
     return value as DatabaseWorkerCommand;
@@ -184,13 +196,11 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
 }
 
 function isValidOffsetPageRequest(value: unknown): value is PostgresDataPageInput {
-  return isRecord(value)
-    && hasExactKeys(value, ['cursor', 'offset'])
-    && value.cursor === null
-    && Number.isInteger(value.offset)
-    && (value.offset as number) >= 0
-    && (value.offset as number) <= 1_000_000
-    && (value.offset as number) % 25 === 0;
+  return isValidTablePageRequest(value, isAnyDatabaseIdentifier, false);
+}
+
+function isAnyDatabaseIdentifier(value: unknown): boolean {
+  return typeof value === 'string' && value.length > 0 && value.length <= 256 && !value.includes('\u0000');
 }
 
 function isDatabaseAccessMode(value: unknown): value is DatabaseAccessMode {

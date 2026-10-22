@@ -168,4 +168,24 @@ describe.skipIf(!enabled)('MySQL metadata browsing integration', () => {
       error: 'invalid-request',
     });
   });
+
+  it('applies bounded filters and stable sorts to table pages', async () => {
+    const result = await service.getDataPage(sessionId, 'it_tools_e2e', 's3_mysql_probe', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'username', operator: 'equals', value: 'mysql-user' }],
+      sort: [{ column: 'id', direction: 'desc' }],
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.pagingMode).toBe('offset');
+      expect(result.value.pagingNotice).toBe('offset-paging');
+      expect(result.value.rows[0]?.cells[0]).toEqual({ value: '1', truncated: false });
+    }
+    expect(await service.getDataPage(sessionId, 'it_tools_e2e', 's3_mysql_probe', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'missing', operator: 'equals', value: 'x' }],
+    })).toEqual({ ok: false, error: 'invalid-request' });
+  });
 });

@@ -207,9 +207,32 @@ export type DatabaseColumnInfo = PostgresColumnInfo | MySqlColumnInfo | SQLiteCo
 export type DatabaseIndexInfo = PostgresIndexInfo | MySqlIndexInfo | SQLiteIndexInfo;
 export type DatabaseStructureInfo = PostgresStructureInfo | MySqlStructureInfo | SQLiteStructureInfo;
 
+/** Operators accepted by generated table filters; values never contain SQL fragments. */
+export type DatabaseDataFilterOperator =
+  | 'equals'
+  | 'not-equals'
+  | 'contains'
+  | 'starts-with'
+  | 'ends-with'
+  | 'is-null'
+  | 'is-not-null';
+
+export interface DatabaseDataFilter {
+  column: string;
+  operator: DatabaseDataFilterOperator;
+  value: string | null;
+}
+
+export interface DatabaseDataSort {
+  column: string;
+  direction: 'asc' | 'desc';
+}
+
 export interface PostgresDataPageInput {
   cursor: string | null;
   offset: number;
+  filters?: DatabaseDataFilter[];
+  sort?: DatabaseDataSort[];
 }
 
 export interface PostgresDataCell {

@@ -19,6 +19,8 @@ import type {
 import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_COLUMNS, MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
 import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
+import { getPageFilters, getPageSort, isValidTablePageRequest as isValidGeneratedTablePageRequest } from './table-page-options';
+import { buildTablePageFilterSql, buildTablePageSortSql } from './table-page-sql';
 
 const MAX_MYSQL_SESSIONS = 4;
 const MAX_SCHEMAS = 100;
@@ -302,6 +304,8 @@ export class MySqlDatabaseService {
       const primaryKeys = structure.value.columns
         .filter(column => column.primaryKey)
         .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
+      const filters = getPageFilters(page);
+      const sorts = getPageSort(page);
       const alias = '`preview_row`';
       const visibleSelects = columns.flatMap((column, index) => {
         const name = `${alias}.${quoteMySqlIdentifier(column.name)}`;
@@ -315,14 +319,35 @@ export class MySqlDatabaseService {
       const identitySelects = identityKeys.map((key, index) =>
         `LEFT(CAST(${alias}.${quoteMySqlIdentifier(key.name)} AS CHAR), ${MAX_CELL_CHARACTERS + 1}) AS ${quoteMySqlIdentifier(`__primary_key_${index}`)}`,
       );
-      const orderBy = primaryKeys.length > 0
-        ? `ORDER BY ${primaryKeys.map(key => `${alias}.${quoteMySqlIdentifier(key.name)}`).join(', ')}`
-        : '';
+      const filterSql = buildTablePageFilterSql(
+        filters,
+        structure.value.columns,
+        'mysql',
+        alias,
+        quoteMySqlIdentifier,
+        1,
+      );
+      const sortSql = buildTablePageSortSql(sorts, structure.value.columns, 'mysql', alias, quoteMySqlIdentifier);
+      if (!filterSql || sortSql === null) {
+        return { ok: false, error: 'invalid-request' };
+      }
+      const whereSql = filterSql.clauses.length > 0 ? `WHERE ${filterSql.clauses.join(' AND ')}` : '';
+      const requestedSortColumns = new Set(sorts.map(sort => sort.column.toLowerCase()));
+      const tieBreakerExpressions = primaryKeys
+        .filter(key => !requestedSortColumns.has(key.name.toLowerCase()))
+        .map(key => `${alias}.${quoteMySqlIdentifier(key.name)}`);
+      const orderExpressions = sortSql
+        ? [sortSql, ...tieBreakerExpressions].join(', ')
+        : primaryKeys.length > 0
+          ? primaryKeys.map(key => `${alias}.${quoteMySqlIdentifier(key.name)}`).join(', ')
+          : '';
+      const orderBy = orderExpressions.length > 0 ? `ORDER BY ${orderExpressions}` : '';
       const sql = `SELECT ${[...visibleSelects, ...identitySelects].join(', ')}
                    FROM ${quoteMySqlIdentifier(schema)}.${quoteMySqlIdentifier(table)} AS ${alias}
+                   ${whereSql}
                    ${orderBy}
                    LIMIT ? OFFSET ?`;
-      const [rawRows] = await connection.execute<RowDataPacket[]>(sql, [MAX_PREVIEW_ROWS + 1, page.offset]);
+      const [rawRows] = await connection.execute<RowDataPacket[]>(sql, [...filterSql.values, MAX_PREVIEW_ROWS + 1, page.offset]);
       const pageRows = rawRows.slice(0, MAX_PREVIEW_ROWS);
       const hasMoreRows = rawRows.length > MAX_PREVIEW_ROWS;
       const nextOffset = hasMoreRows && page.offset + MAX_PREVIEW_ROWS <= MAX_PAGE_OFFSET
@@ -455,6 +480,7 @@ export class MySqlDatabaseService {
     sessionId: string,
     sql: string,
     offset: number,
+    _queryRequestId?: string,
   ): Promise<DatabaseBridgeResult<DatabaseStatementResult>> {
     const connection = this.connections.get(sessionId);
     const statement = normalizeDatabaseStatement(sql, 'mysql');
@@ -526,6 +552,14 @@ export class MySqlDatabaseService {
       }
       return { ok: false, error: commitStarted ? 'write-result-unknown' : timedOut ? 'query-timeout' : 'query-failed' };
     }
+  }
+
+  /** MySQL query cancellation is not exposed by this bounded adapter yet. */
+  async cancelQuery(sessionId: string, _requestId: string): Promise<DatabaseBridgeResult<boolean>> {
+    if (!this.connections.has(sessionId)) {
+      return { ok: false, error: 'not-connected' };
+    }
+    return { ok: true, value: false };
   }
 
   /** Bound every returned SELECT value before it reaches mysql2. */
@@ -635,13 +669,7 @@ function quoteMySqlIdentifier(value: string): string {
 }
 
 function isValidTablePageRequest(value: unknown): value is PostgresDataPageInput {
-  return isRecord(value)
-    && hasExactKeys(value, ['cursor', 'offset'])
-    && value.cursor === null
-    && Number.isInteger(value.offset)
-    && (value.offset as number) >= 0
-    && (value.offset as number) <= MAX_PAGE_OFFSET
-    && (value.offset as number) % MAX_PREVIEW_ROWS === 0;
+  return isValidGeneratedTablePageRequest(value, isValidMySqlIdentifier, false);
 }
 
 /** Validate the complete credential record before handing it to the MySQL driver. */

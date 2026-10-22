@@ -189,6 +189,7 @@ describe('database utility process protocol', () => {
       requestId: randomUUID(),
       operation: 'execute-sql-statement',
       sessionId: randomUUID(),
+      queryRequestId: randomUUID(),
       engine: 'sqlite',
       sql: 'WITH records AS (SELECT 1 AS value) SELECT value FROM records',
       offset: 25,
@@ -202,5 +203,18 @@ describe('database utility process protocol', () => {
     expect(parseDatabaseWorkerCommand({ ...command, engine: 'oracle' })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...command, offset: 1_000_001 })).toBeNull();
     expect(parseDatabaseWorkerCommand({ ...command, sql: 'SELECT 1', extra: true })).toBeNull();
+  });
+
+  it('accepts an engine-scoped query cancellation command', () => {
+    const command = {
+      requestId: randomUUID(),
+      operation: 'cancel-query',
+      sessionId: randomUUID(),
+      engine: 'postgres',
+      targetRequestId: randomUUID(),
+    } as const;
+    expect(parseDatabaseWorkerCommand(command)).toEqual(command);
+    expect(parseDatabaseWorkerCommand({ ...command, engine: 'oracle' })).toBeNull();
+    expect(parseDatabaseWorkerCommand({ ...command, extra: true })).toBeNull();
   });
 });

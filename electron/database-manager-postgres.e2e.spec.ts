@@ -96,6 +96,17 @@ test.describe('Database manager - PostgreSQL browsing', () => {
     await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
     await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('1');
     await expect(page.locator('[data-test-id="database-sql-page-summary"]')).toContainText('1 row');
+    const sqlHistory = page.locator('[data-test-id="database-sql-history"]');
+    await sqlHistory.locator('.n-base-selection').click();
+    await expect(page.locator('.n-base-select-option').filter({ hasText: 'SELECT 1 AS value' })).toHaveCount(1);
+    await page.locator('.n-base-select-option').filter({ hasText: 'SELECT 1 AS value' }).click();
+
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill('SELECT * FROM public.s2d_slow_view');
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    const cancelQuery = page.locator('[data-test-id="database-cancel-query"]');
+    await expect(cancelQuery).toBeVisible();
+    await cancelQuery.click();
+    await expect(page.locator('[data-test-id="database-sql-notice"]')).toContainText('Query cancelled.');
 
     await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();

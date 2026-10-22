@@ -77,10 +77,12 @@ declare global {
       ): Promise<DatabaseBridgeResult<boolean>>;
       runDatabaseQuery?(
         sessionId: string,
+        requestId: string,
         sql: string,
         offset: number,
       ): Promise<DatabaseBridgeResult<DatabaseStatementResult>>;
       cancelDatabaseDataPage?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
+      cancelDatabaseQuery?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
       listPostgresProfiles?(): Promise<DatabaseBridgeResult<PostgresConnectionProfile[]>>;
       savePostgresProfile?(
         input: PostgresConnectionProfileInput,
