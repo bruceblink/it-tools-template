@@ -1,6 +1,8 @@
 import { createConnection, type Connection, type ResultSetHeader, type RowDataPacket } from 'mysql2/promise';
 import type {
   DatabaseAccessMode,
+  DatabaseBatchMutationInput,
+  DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseCellUpdateInput,
   DatabaseMutationKind,
@@ -18,7 +20,11 @@ import type {
 } from '../../src/shared/desktop-services/database';
 import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_COLUMNS, MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
-import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
+import {
+  isEditableDatabaseColumnType,
+  isValidBatchMutationInput,
+  isValidCellUpdateInput,
+} from './cell-edit';
 import { getPageFilters, getPageSort, isValidTablePageRequest as isValidGeneratedTablePageRequest } from './table-page-options';
 import { buildTablePageFilterSql, buildTablePageSortSql } from './table-page-sql';
 
@@ -466,6 +472,129 @@ export class MySqlDatabaseService {
       await connection.commit();
       transactionStarted = false;
       return { ok: true, value: true };
+    }
+    catch {
+      if (transactionStarted) {
+        await connection.rollback().catch(() => undefined);
+      }
+      return { ok: false, error: commitStarted ? 'write-result-unknown' : 'query-failed' };
+    }
+  }
+
+  /** Apply bounded insert and conflict-checked delete drafts in one transaction. */
+  async applyBatchMutation(
+    sessionId: string,
+    input: DatabaseBatchMutationInput,
+  ): Promise<DatabaseBridgeResult<DatabaseBatchMutationResult>> {
+    const connection = this.connections.get(sessionId);
+    if (!connection) {
+      return { ok: false, error: 'not-connected' };
+    }
+    if (!isValidBatchMutationInput(input, 'mysql')) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    if ((this.accessModes.get(sessionId) ?? 'read-only') !== 'read-write') {
+      return { ok: false, error: 'write-disabled' };
+    }
+    let tableRows: Array<RowDataPacket & { table_type: string }>;
+    try {
+      [tableRows] = await connection.execute<(RowDataPacket & { table_type: string })[]>(
+        'SELECT TABLE_TYPE AS table_type FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?',
+        [input.schema, input.table],
+      );
+    }
+    catch {
+      return { ok: false, error: 'query-failed' };
+    }
+    if (tableRows[0]?.table_type !== 'BASE TABLE') {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const structure = await this.getStructure(sessionId, input.schema, input.table);
+    if (!structure.ok) {
+      return structure;
+    }
+    const columns = structure.value.columns;
+    const primaryKeys = columns
+      .filter(column => column.primaryKey)
+      .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
+    if (structure.value.columnsTruncated || columns.some(column => !isEditableDatabaseColumnType('mysql', column.dataType))) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    if (input.deletes.length > 0 && primaryKeys.length === 0) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const columnMap = new Map(columns.map(column => [column.name.toLowerCase(), column]));
+    for (const row of input.inserts) {
+      for (const value of row.values) {
+        const column = columnMap.get(value.column.toLowerCase());
+        if (!column || !isEditableDatabaseColumnType('mysql', column.dataType)) {
+          return { ok: false, error: 'invalid-request' };
+        }
+      }
+    }
+    for (const row of input.deletes) {
+      if (row.primaryKeys.length !== primaryKeys.length
+        || primaryKeys.some((key, index) => key.name.toLowerCase() !== row.primaryKeys[index]?.column.toLowerCase())
+        || row.originalValues.length !== columns.length
+        || columns.some((column, index) => column.name.toLowerCase() !== row.originalValues[index]?.column.toLowerCase())) {
+        return { ok: false, error: 'invalid-request' };
+      }
+    }
+
+    let transactionStarted = false;
+    let commitStarted = false;
+    const startedAt = Date.now();
+    try {
+      await connection.beginTransaction();
+      transactionStarted = true;
+      let deletedRows = 0;
+      for (const row of input.deletes) {
+        const values: Array<string | null> = [];
+        const predicates = primaryKeys.map((key, index) => {
+          values.push(row.primaryKeys[index]!.value);
+          return `${quoteMySqlIdentifier(key.name)} = ?`;
+        });
+        for (const original of row.originalValues) {
+          values.push(original.value);
+          predicates.push(`${quoteMySqlIdentifier(original.column)} <=> ?`);
+        }
+        const [result] = await connection.execute<ResultSetHeader>(
+          `DELETE FROM ${quoteMySqlIdentifier(input.schema)}.${quoteMySqlIdentifier(input.table)}
+           WHERE ${predicates.join(' AND ')}`,
+          values,
+        );
+        if (result.affectedRows !== 1) {
+          await connection.rollback();
+          transactionStarted = false;
+          return { ok: false, error: result.affectedRows === 0 ? 'write-conflict' : 'query-failed' };
+        }
+        deletedRows += 1;
+      }
+
+      let insertedRows = 0;
+      for (const row of input.inserts) {
+        const quotedTable = `${quoteMySqlIdentifier(input.schema)}.${quoteMySqlIdentifier(input.table)}`;
+        let sql: string;
+        let values: Array<string | null> = [];
+        if (row.values.length === 0) {
+          sql = `INSERT INTO ${quotedTable} () VALUES ()`;
+        }
+        else {
+          sql = `INSERT INTO ${quotedTable} (${row.values.map(value => quoteMySqlIdentifier(value.column)).join(', ')}) VALUES (${row.values.map(() => '?').join(', ')})`;
+          values = row.values.map(value => value.value);
+        }
+        const [result] = await connection.execute<ResultSetHeader>(sql, values);
+        if (result.affectedRows !== 1) {
+          await connection.rollback();
+          transactionStarted = false;
+          return { ok: false, error: 'query-failed' };
+        }
+        insertedRows += 1;
+      }
+      commitStarted = true;
+      await connection.commit();
+      transactionStarted = false;
+      return { ok: true, value: { kind: 'batch-mutation', insertedRows, deletedRows, elapsedMilliseconds: Date.now() - startedAt } };
     }
     catch {
       if (transactionStarted) {

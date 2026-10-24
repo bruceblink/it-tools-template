@@ -252,6 +252,46 @@ describe.skipIf(!enabled)('PostgreSQL row preview integration', () => {
       .toEqual({ value: '0', truncated: false });
   });
 
+  it('commits bounded insert and conflict-checked delete drafts as one transaction', async () => {
+    const insert = await service.applyBatchMutation(writeSessionId, {
+      schema: 'public',
+      table: mutationTable,
+      inserts: [
+        { values: [{ column: 'id', value: '11' }, { column: 'value', value: 'batch-a' }] },
+        { values: [{ column: 'id', value: '12' }, { column: 'value', value: 'batch-b' }] },
+      ],
+      deletes: [],
+    });
+    expect(insert).toMatchObject({ ok: true, value: { kind: 'batch-mutation', insertedRows: 2, deletedRows: 0 } });
+
+    const staleDelete = await service.applyBatchMutation(writeSessionId, {
+      schema: 'public',
+      table: mutationTable,
+      inserts: [{ values: [{ column: 'id', value: '13' }, { column: 'value', value: 'rolled-back' }] }],
+      deletes: [{
+        primaryKeys: [{ column: 'id', value: '11' }],
+        originalValues: [{ column: 'id', value: '11' }, { column: 'value', value: 'stale' }],
+      }],
+    });
+    expect(staleDelete).toEqual({ ok: false, error: 'write-conflict' });
+
+    const page = await service.getDataPage(writeSessionId, 'public', mutationTable, { cursor: null, offset: 0 }, randomUUID());
+    expect(page.ok && page.value.rows.map(row => row.cells.map(cell => cell.value))).toEqual([
+      ['11', 'batch-a'],
+      ['12', 'batch-b'],
+    ]);
+    const deleteResult = await service.applyBatchMutation(writeSessionId, {
+      schema: 'public',
+      table: mutationTable,
+      inserts: [],
+      deletes: [
+        { primaryKeys: [{ column: 'id', value: '11' }], originalValues: [{ column: 'id', value: '11' }, { column: 'value', value: 'batch-a' }] },
+        { primaryKeys: [{ column: 'id', value: '12' }], originalValues: [{ column: 'id', value: '12' }, { column: 'value', value: 'batch-b' }] },
+      ],
+    });
+    expect(deleteResult).toMatchObject({ ok: true, value: { kind: 'batch-mutation', insertedRows: 0, deletedRows: 2 } });
+  });
+
   it('returns bounded index metadata for primary, included, expression, and partial indexes', async () => {
     const result = await service.getStructure(sessionId, 'public', 's2e_index_probe');
     expect(result.ok).toBe(true);

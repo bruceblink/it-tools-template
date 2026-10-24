@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import type {
+  DatabaseBatchMutationInput,
+  DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -28,7 +30,7 @@ import { PostgresConnectionProfileStore } from './postgres-connection-profile-st
 import { isValidSQLiteFilePath } from './sqlite-service';
 import { MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement } from './sql-query';
-import { isValidCellUpdateInput } from './cell-edit';
+import { isValidBatchMutationInput, isValidCellUpdateInput } from './cell-edit';
 import { isValidTablePageRequest } from './table-page-options';
 
 const CONNECTION_CHANNEL = 'desktop:database:postgres:connect';
@@ -43,6 +45,7 @@ const QUERY_CHANNEL = 'desktop:database:query';
 const CANCEL_DATA_PAGE_CHANNEL = 'desktop:database:data-page:cancel';
 const CANCEL_QUERY_CHANNEL = 'desktop:database:query:cancel';
 const UPDATE_CELL_CHANNEL = 'desktop:database:cell:update';
+const BATCH_MUTATION_CHANNEL = 'desktop:database:batch-mutation';
 const LIST_PROFILES_CHANNEL = 'desktop:database:postgres-profiles:list';
 const SAVE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:save';
 const DELETE_PROFILE_CHANNEL = 'desktop:database:postgres-profiles:delete';
@@ -476,6 +479,42 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     });
   });
 
+  ipcMain.handle(BATCH_MUTATION_CHANNEL, async (event, value: unknown) => {
+    const request = parseBatchMutationRequest(value);
+    const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
+    if (senderError) {
+      return { ok: false, error: senderError } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!request) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (!ownsSession(event.sender.id, request.sessionId)) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const owner = sessions.get(request.sessionId);
+    if (!owner) {
+      return { ok: false, error: 'not-connected' } satisfies DatabaseBridgeResult<never>;
+    }
+    const input = request.input;
+    if (!isValidBatchMutationInput(input, owner.engine)) {
+      return { ok: false, error: 'invalid-request' } satisfies DatabaseBridgeResult<never>;
+    }
+    if (owner.accessMode !== 'read-write') {
+      return { ok: false, error: 'write-disabled' } satisfies DatabaseBridgeResult<never>;
+    }
+    return runSessionOperation(request.sessionId, async () => {
+      if (!await confirmBatchMutation(event, owner, input)) {
+        return { ok: true, value: { kind: 'cancelled' } } satisfies DatabaseBridgeResult<DatabaseStatementResult>;
+      }
+      return serviceHost.request<DatabaseBatchMutationResult>({
+        operation: 'batch-mutation',
+        sessionId: request.sessionId,
+        engine: owner.engine,
+        input,
+      });
+    });
+  });
+
   ipcMain.handle(CANCEL_DATA_PAGE_CHANNEL, async (event, value: unknown) => {
     const request = parseDataPageCancelRequest(value);
     const senderError = getTrustedSenderError(event, dependencies.trustedRendererUrl());
@@ -705,6 +744,33 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     }
   }
 
+  async function confirmBatchMutation(
+    event: IpcMainInvokeEvent,
+    owner: OwnedSession,
+    input: DatabaseBatchMutationInput,
+  ): Promise<boolean> {
+    const options: Electron.MessageBoxOptions = {
+      type: 'warning',
+      title: 'Confirm batch write / 确认批量写入',
+      message: `Apply ${input.inserts.length} insert and ${input.deletes.length} delete drafts on ${owner.engine}? / 在 ${owner.engine} 上提交 ${input.inserts.length} 条新增和 ${input.deletes.length} 条删除草稿？`,
+      detail: `Target: ${owner.targetLabel}\nThe drafts run in one transaction and are limited to 100 rows. Deletes include the loaded row values for conflict checking.\n目标：${owner.targetLabel}\n草稿在一个事务中执行，最多 100 行。删除操作包含读取时的整行值，用于并发冲突检查。`,
+      buttons: ['Cancel / 取消', 'Commit batch / 提交批量修改'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    };
+    try {
+      const parentWindow = BrowserWindow.fromWebContents(event.sender);
+      const result = parentWindow
+        ? await dialog.showMessageBox(parentWindow, options)
+        : await dialog.showMessageBox(options);
+      return result.response === 1;
+    }
+    catch {
+      return false;
+    }
+  }
+
   return {
     closeRenderer(rendererId: number): void {
       void disconnectRendererSession(rendererId);
@@ -726,6 +792,7 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
       ipcMain.removeHandler(QUERY_CHANNEL);
       ipcMain.removeHandler(CANCEL_DATA_PAGE_CHANNEL);
       ipcMain.removeHandler(UPDATE_CELL_CHANNEL);
+      ipcMain.removeHandler(BATCH_MUTATION_CHANNEL);
       ipcMain.removeHandler(LIST_PROFILES_CHANNEL);
       ipcMain.removeHandler(SAVE_PROFILE_CHANNEL);
       ipcMain.removeHandler(DELETE_PROFILE_CHANNEL);
@@ -869,6 +936,14 @@ function parseDataPageRequest(
 }
 
 function parseCellUpdateRequest(value: unknown): { sessionId: string; input: unknown } | null {
+  if (!isRecord(value) || !hasExactKeys(value, ['sessionId', 'input']) || !isRecord(value.input)) {
+    return null;
+  }
+  const sessionId = parseSessionRequest({ sessionId: value.sessionId });
+  return sessionId ? { sessionId, input: value.input } : null;
+}
+
+function parseBatchMutationRequest(value: unknown): { sessionId: string; input: unknown } | null {
   if (!isRecord(value) || !hasExactKeys(value, ['sessionId', 'input']) || !isRecord(value.input)) {
     return null;
   }

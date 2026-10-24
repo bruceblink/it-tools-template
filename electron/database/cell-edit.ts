@@ -1,7 +1,13 @@
-import type { DatabaseCellUpdateInput, DatabaseEngine } from '../../src/shared/desktop-services/database';
+import type {
+  DatabaseBatchMutationInput,
+  DatabaseCellUpdateInput,
+  DatabaseEngine,
+} from '../../src/shared/desktop-services/database';
 
 export const MAX_CELL_EDIT_CHARACTERS = 4_096;
 export const MAX_CELL_EDIT_PRIMARY_KEYS = 32;
+export const MAX_BATCH_MUTATION_ROWS = 100;
+export const MAX_BATCH_MUTATION_COLUMNS = 64;
 
 export function isValidCellUpdateInput(
   value: unknown,
@@ -19,6 +25,26 @@ export function isValidCellUpdateInput(
     || new Set(value.primaryKeys.map(key => (key as { column: string }).column)).size !== value.primaryKeys.length
     || !isCellValue(value.originalValue)
     || !isCellValue(value.newValue)) {
+    return false;
+  }
+  return true;
+}
+
+/** Validate a small, parameterized batch before it crosses the renderer or worker boundary. */
+export function isValidBatchMutationInput(
+  value: unknown,
+  engine: DatabaseEngine,
+): value is DatabaseBatchMutationInput {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['schema', 'table', 'inserts', 'deletes'])
+    || !isIdentifier(value.schema, engine)
+    || !isIdentifier(value.table, engine)
+    || !Array.isArray(value.inserts)
+    || !Array.isArray(value.deletes)
+    || value.inserts.length + value.deletes.length === 0
+    || value.inserts.length + value.deletes.length > MAX_BATCH_MUTATION_ROWS
+    || !value.inserts.every(row => isValidBatchInsertRow(row, engine))
+    || !value.deletes.every(row => isValidBatchDeleteRow(row, engine))) {
     return false;
   }
   return true;
@@ -42,6 +68,41 @@ function isValidPrimaryKey(value: unknown, engine: DatabaseEngine): boolean {
     && typeof value.value === 'string'
     && value.value.length <= MAX_CELL_EDIT_CHARACTERS
     && !value.value.includes('\u0000');
+}
+
+function isValidBatchInsertRow(value: unknown, engine: DatabaseEngine): boolean {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['values'])
+    || !Array.isArray(value.values)
+    || value.values.length > MAX_BATCH_MUTATION_COLUMNS
+    || !value.values.every(item => isValidBatchValue(item, engine))) {
+    return false;
+  }
+  return new Set(value.values.map(item => (item as { column: string }).column)).size === value.values.length;
+}
+
+function isValidBatchDeleteRow(value: unknown, engine: DatabaseEngine): boolean {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['primaryKeys', 'originalValues'])
+    || !Array.isArray(value.primaryKeys)
+    || value.primaryKeys.length === 0
+    || value.primaryKeys.length > MAX_CELL_EDIT_PRIMARY_KEYS
+    || !value.primaryKeys.every(item => isValidPrimaryKey(item, engine))
+    || new Set(value.primaryKeys.map(item => (item as { column: string }).column)).size !== value.primaryKeys.length
+    || !Array.isArray(value.originalValues)
+    || value.originalValues.length === 0
+    || value.originalValues.length > MAX_BATCH_MUTATION_COLUMNS
+    || !value.originalValues.every(item => isValidBatchValue(item, engine))) {
+    return false;
+  }
+  return new Set(value.originalValues.map(item => (item as { column: string }).column)).size === value.originalValues.length;
+}
+
+function isValidBatchValue(value: unknown, engine: DatabaseEngine): boolean {
+  return isRecord(value)
+    && hasExactKeys(value, ['column', 'value'])
+    && isIdentifier(value.column, engine)
+    && isCellValue(value.value);
 }
 
 function isCellValue(value: unknown): value is string | null {

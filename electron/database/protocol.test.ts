@@ -182,6 +182,24 @@ describe('database utility process protocol', () => {
     };
     expect(parseDatabaseWorkerCommand(updateCell)).toEqual(updateCell);
     expect(parseDatabaseWorkerCommand({ ...updateCell, input: { ...updateCell.input, unknown: true } })).toBeNull();
+
+    const batchMutation = {
+      requestId: randomUUID(),
+      operation: 'batch-mutation',
+      sessionId: randomUUID(),
+      engine: 'sqlite',
+      input: {
+        schema: 'main',
+        table: 'records',
+        inserts: [{ values: [{ column: 'id', value: '2' }, { column: 'value', value: 'new' }] }],
+        deletes: [{
+          primaryKeys: [{ column: 'id', value: '1' }],
+          originalValues: [{ column: 'id', value: '1' }, { column: 'value', value: 'old' }],
+        }],
+      },
+    };
+    expect(parseDatabaseWorkerCommand(batchMutation)).toEqual(batchMutation);
+    expect(parseDatabaseWorkerCommand({ ...batchMutation, input: { ...batchMutation.input, extra: true } })).toBeNull();
   });
 
   it('accepts one bounded SELECT or DML statement and rejects unsupported SQL or paging', () => {

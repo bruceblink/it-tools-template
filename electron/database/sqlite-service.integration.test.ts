@@ -197,6 +197,46 @@ describe('SQLite metadata browsing integration', () => {
     expect(deleted).toMatchObject({ ok: true, value: { kind: 'mutation', statement: 'delete', affectedRows: 1 } });
   });
 
+  it('commits bounded insert and delete drafts with optimistic row checks', async () => {
+    expect(await service.applyBatchMutation(writeSessionId, {
+      schema: 'main',
+      table: 's3_sqlite_crud_probe',
+      inserts: [
+        { values: [{ column: 'id', value: '21' }, { column: 'value', value: 'batch-a' }] },
+        { values: [{ column: 'id', value: '22' }, { column: 'value', value: 'batch-b' }] },
+      ],
+      deletes: [],
+    })).toMatchObject({ ok: true, value: { kind: 'batch-mutation', insertedRows: 2, deletedRows: 0 } });
+    expect(await service.applyBatchMutation(writeSessionId, {
+      schema: 'main',
+      table: 's3_sqlite_crud_probe',
+      inserts: [{ values: [{ column: 'id', value: '23' }, { column: 'value', value: 'rolled-back' }] }],
+      deletes: [{
+        primaryKeys: [{ column: 'id', value: '21' }],
+        originalValues: [{ column: 'id', value: '21' }, { column: 'value', value: 'stale' }],
+      }],
+    })).toEqual({ ok: false, error: 'write-conflict' });
+    const page = await service.getDataPage(writeSessionId, 'main', 's3_sqlite_crud_probe', {
+      cursor: null,
+      offset: 0,
+      filters: [{ column: 'id', operator: 'starts-with', value: '2' }],
+      sort: [{ column: 'id', direction: 'asc' }],
+    });
+    expect(page.ok && page.value.rows.map(row => row.cells.map(cell => cell.value))).toEqual([
+      ['21', 'batch-a'],
+      ['22', 'batch-b'],
+    ]);
+    expect(await service.applyBatchMutation(writeSessionId, {
+      schema: 'main',
+      table: 's3_sqlite_crud_probe',
+      inserts: [],
+      deletes: [
+        { primaryKeys: [{ column: 'id', value: '21' }], originalValues: [{ column: 'id', value: '21' }, { column: 'value', value: 'batch-a' }] },
+        { primaryKeys: [{ column: 'id', value: '22' }], originalValues: [{ column: 'id', value: '22' }, { column: 'value', value: 'batch-b' }] },
+      ],
+    })).toMatchObject({ ok: true, value: { kind: 'batch-mutation', insertedRows: 0, deletedRows: 2 } });
+  });
+
   it('loads editable table and direct query results and rejects stale cell updates', async () => {
     expect(await service.executeStatement(
       writeSessionId,

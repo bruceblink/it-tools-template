@@ -268,6 +268,24 @@ export interface DatabaseCellUpdateInput {
   newValue: string | null;
 }
 
+/** A bounded value set for one row in a table batch draft. An empty set uses column defaults. */
+export interface DatabaseBatchRowValues {
+  values: Array<{ column: string; value: string | null }>;
+}
+
+/** A delete draft carries the complete loaded row for optimistic conflict checking. */
+export interface DatabaseBatchDeleteRow {
+  primaryKeys: Array<{ column: string; value: string }>;
+  originalValues: Array<{ column: string; value: string | null }>;
+}
+
+export interface DatabaseBatchMutationInput {
+  schema: string;
+  table: string;
+  inserts: DatabaseBatchRowValues[];
+  deletes: DatabaseBatchDeleteRow[];
+}
+
 export interface DatabaseQueryPage {
   columns: Array<{ name: string; dataType: string }>;
   rows: Array<{ cells: PostgresDataCell[] }>;
@@ -286,6 +304,13 @@ export interface DatabaseQueryPage {
 
 export type DatabaseMutationKind = 'insert' | 'update' | 'delete';
 
+export interface DatabaseBatchMutationResult {
+  kind: 'batch-mutation';
+  insertedRows: number;
+  deletedRows: number;
+  elapsedMilliseconds: number;
+}
+
 export type DatabaseStatementResult =
   | { kind: 'query'; page: DatabaseQueryPage }
   | { kind: 'cancelled' }
@@ -294,4 +319,5 @@ export type DatabaseStatementResult =
       statement: DatabaseMutationKind;
       affectedRows: number;
       elapsedMilliseconds: number;
-    };
+    }
+  | DatabaseBatchMutationResult;

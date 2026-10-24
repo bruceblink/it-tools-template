@@ -1,4 +1,5 @@
 import type {
+  DatabaseBatchMutationInput,
   DatabaseBridgeResult,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -12,7 +13,7 @@ import { isValidDatabaseIdentifier, isValidPostgresConnectionInput, isValidPostg
 import { isValidSQLiteFilePath, isValidSQLiteIdentifier } from './sqlite-service';
 import { normalizeDatabaseStatement } from './sql-query';
 import { MAX_QUERY_OFFSET } from './query-results';
-import { isValidCellUpdateInput } from './cell-edit';
+import { isValidBatchMutationInput, isValidCellUpdateInput } from './cell-edit';
 import { isValidTablePageRequest } from './table-page-options';
 
 export type DatabaseWorkerCommand =
@@ -35,6 +36,7 @@ export type DatabaseWorkerCommand =
   | { requestId: string; operation: 'get-mysql-data-page'; sessionId: string; schema: string; table: string; page: PostgresDataPageInput }
   | { requestId: string; operation: 'get-sqlite-data-page'; sessionId: string; schema: 'main'; table: string; page: PostgresDataPageInput }
   | { requestId: string; operation: 'update-cell'; sessionId: string; engine: DatabaseEngine; input: DatabaseCellUpdateInput }
+  | { requestId: string; operation: 'batch-mutation'; sessionId: string; engine: DatabaseEngine; input: DatabaseBatchMutationInput }
   | { requestId: string; operation: 'execute-sql-statement'; sessionId: string; engine: DatabaseEngine; sql: string; offset: number; queryRequestId?: string }
   | { requestId: string; operation: 'cancel-data-page'; sessionId: string; targetRequestId: string }
   | { requestId: string; operation: 'cancel-query'; sessionId: string; engine: DatabaseEngine; targetRequestId: string }
@@ -157,6 +159,13 @@ export function parseDatabaseWorkerCommand(value: unknown): DatabaseWorkerComman
     && isSessionId(value.sessionId)
     && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
     && isValidCellUpdateInput(value.input, value.engine)) {
+    return value as DatabaseWorkerCommand;
+  }
+  if (operation === 'batch-mutation'
+    && hasExactKeys(value, ['requestId', 'operation', 'sessionId', 'engine', 'input'])
+    && isSessionId(value.sessionId)
+    && (value.engine === 'postgres' || value.engine === 'mysql' || value.engine === 'sqlite')
+    && isValidBatchMutationInput(value.input, value.engine)) {
     return value as DatabaseWorkerCommand;
   }
   if (operation === 'execute-sql-statement'

@@ -1,5 +1,7 @@
 import { Client, type ClientConfig } from 'pg';
 import type {
+  DatabaseBatchMutationInput,
+  DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -17,7 +19,11 @@ import type {
 } from '../../src/shared/desktop-services/database';
 import { areValidQueryFieldNames, createBoundedQuerySql, createDatabaseQueryPage, MAX_QUERY_OFFSET } from './query-results';
 import { normalizeDatabaseStatement, normalizeReadOnlySelectQuery, parseEditableSelectTarget } from './sql-query';
-import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
+import {
+  isEditableDatabaseColumnType,
+  isValidBatchMutationInput,
+  isValidCellUpdateInput,
+} from './cell-edit';
 import { getPageFilters, getPageSort, isValidTablePageRequest as isValidGeneratedTablePageRequest } from './table-page-options';
 import { buildTablePageFilterSql, buildTablePageSortSql } from './table-page-sql';
 
@@ -632,6 +638,124 @@ export class PostgresDatabaseService {
       await client.query('COMMIT');
       transactionStarted = false;
       return { ok: true, value: true };
+    }
+    catch (error) {
+      if (transactionStarted) {
+        await client.query('ROLLBACK').catch(() => undefined);
+      }
+      return { ok: false, error: commitStarted ? 'write-result-unknown' : classifyPostgresError(error, 'query-failed') };
+    }
+  }
+
+  /** Apply bounded insert and conflict-checked delete drafts in one transaction. */
+  async applyBatchMutation(
+    sessionId: string,
+    input: DatabaseBatchMutationInput,
+  ): Promise<DatabaseBridgeResult<DatabaseBatchMutationResult>> {
+    const client = this.clients.get(sessionId);
+    if (!client) {
+      return { ok: false, error: 'not-connected' };
+    }
+    if (!isValidBatchMutationInput(input, 'postgres')) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    if ((this.accessModes.get(sessionId) ?? 'read-only') !== 'read-write') {
+      return { ok: false, error: 'write-disabled' };
+    }
+    const tableType = await client.query<{ table_type: string }>(
+      'SELECT table_type FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2',
+      [input.schema, input.table],
+    ).catch(() => null);
+    if (tableType?.rows[0]?.table_type !== 'BASE TABLE') {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const structure = await this.getStructure(sessionId, input.schema, input.table);
+    if (!structure.ok) {
+      return structure;
+    }
+    const columns = structure.value.columns;
+    const primaryKeys = columns
+      .filter(column => column.primaryKey)
+      .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
+    if (structure.value.columnsTruncated || columns.some(column => !isEditableDatabaseColumnType('postgres', column.dataType))) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    if (input.deletes.length > 0 && primaryKeys.length === 0) {
+      return { ok: false, error: 'invalid-request' };
+    }
+    const columnMap = new Map(columns.map(column => [column.name, column]));
+    for (const row of input.inserts) {
+      for (const value of row.values) {
+        const column = columnMap.get(value.column);
+        if (!column || !isEditableDatabaseColumnType('postgres', column.dataType)) {
+          return { ok: false, error: 'invalid-request' };
+        }
+      }
+    }
+    for (const row of input.deletes) {
+      if (row.primaryKeys.length !== primaryKeys.length
+        || primaryKeys.some((key, index) => key.name !== row.primaryKeys[index]?.column)
+        || row.originalValues.length !== columns.length
+        || columns.some((column, index) => row.originalValues[index]?.column !== column.name)) {
+        return { ok: false, error: 'invalid-request' };
+      }
+    }
+
+    let transactionStarted = false;
+    let commitStarted = false;
+    const startedAt = Date.now();
+    try {
+      await client.query('BEGIN');
+      transactionStarted = true;
+      let deletedRows = 0;
+      for (const row of input.deletes) {
+        const values: Array<string | null> = [];
+        const predicates = primaryKeys.map((key, index) => {
+          values.push(row.primaryKeys[index]!.value);
+          return `${quotePostgresIdentifier(key.name)} IS NOT DISTINCT FROM $${values.length}`;
+        });
+        for (const original of row.originalValues) {
+          values.push(original.value);
+          predicates.push(`${quotePostgresIdentifier(original.column)} IS NOT DISTINCT FROM $${values.length}`);
+        }
+        const result = await client.query(
+          `DELETE FROM ${quotePostgresIdentifier(input.schema)}.${quotePostgresIdentifier(input.table)}
+           WHERE ${predicates.join(' AND ')}`,
+          values,
+        );
+        if (result.rowCount !== 1) {
+          await client.query('ROLLBACK');
+          transactionStarted = false;
+          return { ok: false, error: result.rowCount === 0 ? 'write-conflict' : 'query-failed' };
+        }
+        deletedRows += 1;
+      }
+
+      let insertedRows = 0;
+      for (const row of input.inserts) {
+        const quotedTable = `${quotePostgresIdentifier(input.schema)}.${quotePostgresIdentifier(input.table)}`;
+        let text: string;
+        let values: Array<string | null> = [];
+        if (row.values.length === 0) {
+          text = `INSERT INTO ${quotedTable} DEFAULT VALUES`;
+        }
+        else {
+          const quotedColumns = row.values.map(value => quotePostgresIdentifier(value.column)).join(', ');
+          values = row.values.map(value => value.value);
+          text = `INSERT INTO ${quotedTable} (${quotedColumns}) VALUES (${values.map((_value, index) => `$${index + 1}`).join(', ')})`;
+        }
+        const result = await client.query(text, values);
+        if (result.rowCount !== 1) {
+          await client.query('ROLLBACK');
+          transactionStarted = false;
+          return { ok: false, error: 'query-failed' };
+        }
+        insertedRows += 1;
+      }
+      commitStarted = true;
+      await client.query('COMMIT');
+      transactionStarted = false;
+      return { ok: true, value: { kind: 'batch-mutation', insertedRows, deletedRows, elapsedMilliseconds: Date.now() - startedAt } };
     }
     catch (error) {
       if (transactionStarted) {

@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  DatabaseBatchMutationInput,
+  DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -32,6 +34,11 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:data-page', { sessionId, requestId, schema, table, page }),
   updateDatabaseCell: (sessionId: string, input: DatabaseCellUpdateInput): Promise<DatabaseBridgeResult<boolean>> =>
     ipcRenderer.invoke('desktop:database:cell:update', { sessionId, input }),
+  applyDatabaseBatchMutation: (
+    sessionId: string,
+    input: DatabaseBatchMutationInput,
+  ): Promise<DatabaseBridgeResult<DatabaseBatchMutationResult>> =>
+    ipcRenderer.invoke('desktop:database:batch-mutation', { sessionId, input }),
   runDatabaseQuery: (sessionId: string, requestId: string, sql: string, offset: number): Promise<DatabaseBridgeResult<DatabaseStatementResult>> =>
     ipcRenderer.invoke('desktop:database:query', { sessionId, requestId, sql, offset }),
   cancelDatabaseDataPage: (sessionId: string, requestId: string) =>

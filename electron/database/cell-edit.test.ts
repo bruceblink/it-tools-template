@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isEditableDatabaseColumnType, isValidCellUpdateInput } from './cell-edit';
+import {
+  isEditableDatabaseColumnType,
+  isValidBatchMutationInput,
+  isValidCellUpdateInput,
+} from './cell-edit';
 
 const validUpdate = {
   schema: 'public',
@@ -15,6 +19,29 @@ describe('database cell editing boundaries', () => {
     expect(isValidCellUpdateInput(validUpdate, 'postgres')).toBe(true);
     expect(isValidCellUpdateInput({ ...validUpdate, schema: 'main' }, 'sqlite')).toBe(true);
     expect(isValidCellUpdateInput({ ...validUpdate, schema: 'app' }, 'mysql')).toBe(true);
+  });
+
+  it('accepts bounded batch drafts and rejects duplicate or oversized rows', () => {
+    const validBatch = {
+      schema: 'public',
+      table: 'records',
+      inserts: [{ values: [{ column: 'id', value: '8' }, { column: 'value', value: 'new' }] }],
+      deletes: [{
+        primaryKeys: [{ column: 'id', value: '7' }],
+        originalValues: [{ column: 'id', value: '7' }, { column: 'value', value: 'updated' }],
+      }],
+    };
+    expect(isValidBatchMutationInput(validBatch, 'postgres')).toBe(true);
+    expect(isValidBatchMutationInput({
+      ...validBatch,
+      inserts: [{ values: [{ column: 'id', value: '8' }, { column: 'id', value: '9' }] }],
+    }, 'postgres')).toBe(false);
+    expect(isValidBatchMutationInput({
+      ...validBatch,
+      inserts: Array.from({ length: 101 }, () => ({ values: [] })),
+      deletes: [],
+    }, 'postgres')).toBe(false);
+    expect(isValidBatchMutationInput({ ...validBatch, extra: true }, 'postgres')).toBe(false);
   });
 
   it('rejects oversized values, duplicate keys, and unexpected fields', () => {

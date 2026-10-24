@@ -1,4 +1,6 @@
 import type {
+  DatabaseBatchMutationInput,
+  DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -80,6 +82,10 @@ declare global {
         sessionId: string,
         input: DatabaseCellUpdateInput,
       ): Promise<DatabaseBridgeResult<boolean>>;
+      applyDatabaseBatchMutation?(
+        sessionId: string,
+        input: DatabaseBatchMutationInput,
+      ): Promise<DatabaseBridgeResult<DatabaseBatchMutationResult>>;
       runDatabaseQuery?(
         sessionId: string,
         requestId: string,

@@ -80,6 +80,14 @@ function executeCommand(command: DatabaseWorkerCommand) {
         return sqliteDatabaseService.updateCell(command.sessionId, command.input);
       }
       return databaseService.updateCell(command.sessionId, command.input);
+    case 'batch-mutation':
+      if (command.engine === 'mysql') {
+        return mysqlDatabaseService.applyBatchMutation(command.sessionId, command.input);
+      }
+      if (command.engine === 'sqlite') {
+        return sqliteDatabaseService.applyBatchMutation(command.sessionId, command.input);
+      }
+      return databaseService.applyBatchMutation(command.sessionId, command.input);
     case 'execute-sql-statement':
       if (command.engine === 'mysql') {
         return mysqlDatabaseService.executeStatement(command.sessionId, command.sql, command.offset, command.queryRequestId);

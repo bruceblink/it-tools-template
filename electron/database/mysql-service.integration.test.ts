@@ -133,6 +133,63 @@ describe.skipIf(!enabled)('MySQL metadata browsing integration', () => {
       .toMatchObject({ ok: true, value: { kind: 'mutation', affectedRows: 1 } });
   });
 
+  it('commits bounded batch drafts and rolls back every delete on a stale row', async () => {
+    if (mysqlWriterPassword.length === 0) {
+      return;
+    }
+    expect(await service.applyBatchMutation(writeSessionId, {
+      schema: 'it_tools_e2e',
+      table: 's3_mysql_probe',
+      inserts: [
+        { values: [{ column: 'id', value: '987655' }, { column: 'username', value: 'batch-a' }, { column: 'optional_value', value: 'a' }] },
+        { values: [{ column: 'id', value: '987656' }, { column: 'username', value: 'batch-b' }, { column: 'optional_value', value: 'b' }] },
+      ],
+      deletes: [],
+    })).toMatchObject({ ok: true, value: { kind: 'batch-mutation', insertedRows: 2, deletedRows: 0 } });
+
+    const readRow = async (id: string) => {
+      const result = await service.getDataPage(writeSessionId, 'it_tools_e2e', 's3_mysql_probe', {
+        cursor: null,
+        offset: 0,
+        filters: [{ column: 'id', operator: 'equals', value: id }],
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok || !result.value.rows[0]) {
+        throw new Error(`Missing MySQL batch row ${id}`);
+      }
+      return {
+        primaryKeys: [{ column: 'id', value: id }],
+        originalValues: result.value.columns.map((column, index) => ({
+          column: column.name,
+          value: result.value.rows[0]!.cells[index]?.value ?? null,
+        })),
+      };
+    };
+    const oldA = await readRow('987655');
+    const oldB = await readRow('987656');
+    expect(await service.updateCell(writeSessionId, {
+      schema: 'it_tools_e2e',
+      table: 's3_mysql_probe',
+      column: 'optional_value',
+      primaryKeys: oldA.primaryKeys,
+      originalValue: 'a',
+      newValue: 'changed',
+    })).toEqual({ ok: true, value: true });
+    expect(await service.applyBatchMutation(writeSessionId, {
+      schema: 'it_tools_e2e',
+      table: 's3_mysql_probe',
+      inserts: [],
+      deletes: [oldA, oldB],
+    })).toEqual({ ok: false, error: 'write-conflict' });
+    const newA = await readRow('987655');
+    expect(await service.applyBatchMutation(writeSessionId, {
+      schema: 'it_tools_e2e',
+      table: 's3_mysql_probe',
+      inserts: [],
+      deletes: [newA, oldB],
+    })).toMatchObject({ ok: true, value: { kind: 'batch-mutation', insertedRows: 0, deletedRows: 2 } });
+  });
+
   it('displays paged SELECT results and bounds large cells before returning them', async () => {
     const pagedQuery = 'WITH RECURSIVE valueset(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM valueset WHERE value < 26) SELECT value FROM valueset ORDER BY value';
     const firstPage = await service.executeReadOnlyQuery(sessionId, pagedQuery, 0);

@@ -1,4 +1,6 @@
 import type {
+  DatabaseBatchMutationInput,
+  DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -91,6 +93,13 @@ export function updateDatabaseCell(
   input: DatabaseCellUpdateInput,
 ): Promise<DatabaseOperation<boolean>> {
   return callDesktopDatabase(bridge => bridge.updateDatabaseCell?.(sessionId, input));
+}
+
+export function applyDatabaseBatchMutation(
+  sessionId: string,
+  input: DatabaseBatchMutationInput,
+): Promise<DatabaseOperation<DatabaseBatchMutationResult>> {
+  return callDesktopDatabase(bridge => bridge.applyDatabaseBatchMutation?.(sessionId, input));
 }
 
 export function runDatabaseQuery(
