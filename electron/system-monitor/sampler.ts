@@ -3,6 +3,7 @@ import type {
   SystemMonitorMetricStatus,
   SystemMonitorWorkerSample,
 } from '../../src/shared/desktop-services/system-monitor';
+import { SYSTEM_MONITOR_MAX_SAMPLE_GAP_MS } from '../../src/shared/desktop-services/system-monitor';
 
 export interface SystemMonitorCpuTimes {
   user: number;
@@ -28,12 +29,20 @@ interface CpuTotals {
 /** Converts cumulative OS counters into one bounded CPU percentage and memory snapshot. */
 export class SystemMonitorSampler {
   private previousCpuTotals: CpuTotals | null = null;
+  private previousMonotonicMs: number | null = null;
 
   sample(input: SystemMonitorSampleInput): SystemMonitorWorkerSample {
     const cpuTotals = sumCpuTimes(input.cpuTimes);
     let cpuPercent: number | null = null;
     let cpuStatus: SystemMonitorMetricStatus = 'sampling';
     let error: SystemMonitorErrorCode | null = null;
+    let gapBefore = this.previousMonotonicMs !== null
+      && (input.monotonicMs <= this.previousMonotonicMs
+        || input.monotonicMs - this.previousMonotonicMs > SYSTEM_MONITOR_MAX_SAMPLE_GAP_MS);
+
+    if (gapBefore) {
+      this.previousCpuTotals = null;
+    }
 
     if (this.previousCpuTotals) {
       const idleDelta = cpuTotals.idle - this.previousCpuTotals.idle;
@@ -43,12 +52,14 @@ export class SystemMonitorSampler {
         cpuStatus = 'ok';
       }
       else {
-        error = 'sampling-failed';
-        cpuStatus = 'failed';
+        gapBefore = true;
+        this.previousCpuTotals = null;
+        cpuStatus = 'sampling';
       }
     }
 
     this.previousCpuTotals = cpuTotals;
+    this.previousMonotonicMs = input.monotonicMs;
     const memoryValid = Number.isFinite(input.memoryTotalBytes)
       && input.memoryTotalBytes > 0
       && Number.isFinite(input.memoryAvailableBytes)
@@ -64,6 +75,7 @@ export class SystemMonitorSampler {
       monotonicMs: input.monotonicMs,
       cpuPercent,
       cpuStatus,
+      gapBefore,
       memoryTotalBytes: memoryValid ? input.memoryTotalBytes : null,
       memoryAvailableBytes: memoryValid ? input.memoryAvailableBytes : null,
       memoryStatus: memoryValid ? 'ok' : 'failed',
@@ -73,6 +85,7 @@ export class SystemMonitorSampler {
 
   reset(): void {
     this.previousCpuTotals = null;
+    this.previousMonotonicMs = null;
   }
 }
 

@@ -51,11 +51,12 @@ export function isSystemMonitorWorkerResponse(value: unknown): value is SystemMo
 
 function isWorkerSample(value: unknown): value is SystemMonitorWorkerSample {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['sampledAt', 'monotonicMs', 'cpuPercent', 'cpuStatus', 'memoryTotalBytes', 'memoryAvailableBytes', 'memoryStatus', 'disk', 'network', 'processes', 'error'])
+    || !hasExactKeys(value, ['sampledAt', 'monotonicMs', 'cpuPercent', 'cpuStatus', 'gapBefore', 'memoryTotalBytes', 'memoryAvailableBytes', 'memoryStatus', 'disk', 'network', 'processes', 'error'])
     || !isFiniteNumber(value.sampledAt)
     || !isFiniteNumber(value.monotonicMs)
     || !isNullableFiniteNumber(value.cpuPercent)
     || !isMetricStatus(value.cpuStatus)
+    || typeof value.gapBefore !== 'boolean'
     || !isNullableFiniteNumber(value.memoryTotalBytes)
     || !isNullableFiniteNumber(value.memoryAvailableBytes)
     || !isMetricStatus(value.memoryStatus)

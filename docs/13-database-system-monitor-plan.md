@@ -1,6 +1,6 @@
 # 数据库管理工具与系统监视器开发计划
 
-制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4、S5 和 S6 已完成，S7a、S7b 已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。S6 在此基础上增加三引擎批量新增与删除草稿、提交预览和有限事务。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理。S7a 增加磁盘容量/读写速率和网络接口速率快照；S7b 增加最多 2,000 条的进程列表、名称搜索、CPU/内存排序和分页，并保持暂停时不采样、恢复时快速建立新基线；睡眠恢复、PID 启动标识的完整验收、性能预算和三平台验收仍归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
+制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4、S5 和 S6 已完成，S7a、S7b、S7c 已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。S6 在此基础上增加三引擎批量新增与删除草稿、提交预览和有限事务。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理。S7a 增加磁盘容量/读写速率和网络接口速率快照；S7b 增加最多 2,000 条的进程列表、名称搜索、CPU/内存排序和分页；S7c 在单调时间断档、计数器重置和路由切换时重置 CPU 基线并保留断档标记，自动化验证 20 次路由切换后的订阅清理。性能预算和三平台验收仍归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
 
 ## 目标与默认范围
 
@@ -157,7 +157,7 @@ S0 原型和 S1 入口与页面骨架已完成。两个产品模块仍缺少实�
 | S4（已完成） | 三引擎受限查询与直接编辑 | 三引擎支持单条查询、受限结果和分页、CRUD、跨引擎表数据页、带主键/原值冲突检查的单元格编辑、单表直列查询结果编辑、列管理、当前页导出、服务端筛选排序；PostgreSQL 支持查询取消，连接内提供有界查询历史 | 5–8 人日 |
 | S5（已完成当前切片） | 系统监视器首个可用版本 | 本机 CPU/内存、应用进程指标、曲线、周期、暂停恢复、断档和离开清理；Windows 真窗口验收 | 3–4 人日 |
 | S6（已完成） | 三引擎批量记录操作 | 多行新增与删除草稿、提交预览和有限事务；保留 S4 单元格编辑与单行冲突保护 | 5–7 人日 |
-| S7（进行中；S7a/S7b 已完成） | 系统监视器完整 MVP | 磁盘、网络、进程列表及字段可用状态；开销、睡眠恢复、PID 重用和 20 次路由切换验证 | 4–6 人日 |
+| S7（进行中；S7a/S7b/S7c 已完成） | 系统监视器完整 MVP | 磁盘、网络、进程列表及字段可用状态；开销、睡眠恢复、PID 重用和 20 次路由切换验证 | 4–6 人日 |
 | S8 | 桌面模块发布验收 | Windows、Linux、macOS 打包与实际交互；Web/PWA/Docker 构建隔离检查；三种数据库回归；发布说明、限制和证据齐全 | 3–5 人日 |
 
 完整双模块 MVP 要求同时支持 PostgreSQL、MySQL 和 SQLite，预计 34–51 人日，约 7–11 个全职工作周。这是规划窗口，不是发布日期承诺。S4 后可交付三引擎只读预览版；S5 后可交付双模块预览版。缺少 Linux/macOS 真机证据时，不能把 Windows 验收扩大为三平台已通过。
@@ -261,3 +261,7 @@ Windows 真窗口验收使用重新打包的 x64 Electron 应用，验证时只�
 2026-10-24（S7b 进程列表切片）：系统监视器每 5 秒读取本机进程列表，只保留 PID、父 PID、名称、状态、启动时间标识、CPU 百分比和内存字段，不传命令行、路径、环境变量、终端或打开文件。进程记录最多 2,000 条，按 CPU 或内存降序排序；界面按名称过滤并每页显示 100 条。进程 key 包含 PID、启动标识和归一化序号，避免仅用 PID 作为跨采样身份。utility process 响应增加结构化字段检查，拒绝超出数组、文本和指标边界的响应。
 
 验证记录：`pnpm exec vitest run electron/system-monitor/sampler.test.ts electron/system-monitor/worker-protocol.test.ts electron/system-monitor/system-info.test.ts --environment jsdom` 通过 3 个测试文件、8 项测试；覆盖进程投影排序、启动标识、字段排除和 2,000 条上限。`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`、`pnpm electron:build` 通过；`pnpm test:e2e:electron electron/system-monitor.e2e.spec.ts` 通过 2 项 Electron 端到端测试，覆盖进程列表卡片、搜索控件、磁盘/网络卡片、暂停恢复断档、刷新和停止后的无事件行为。Computer Use 当前无法枚举可绑定的 Electron 原生窗口；本片使用自动化 Electron 窗口证据。睡眠恢复、PID 重用现场验证、采样器开销和 20 次路由切换仍待 S7c/S8。
+
+2026-10-24（S7c 断档与路由清理切片）：采样器记录上次单调时间，在时间倒退、计数器重置或超过 120 秒采样间隔时丢弃 CPU 差值，发送新的基线并标记断档；内存和扩展指标继续保留各自状态。系统监视器 Electron 流程增加 20 次“主页 → 系统监视器”切换验证，确认订阅在组件离开后释放，回到主页后不再保留监视器工作区。
+
+验证记录：`pnpm exec vitest run electron/system-monitor/sampler.test.ts electron/system-monitor/worker-protocol.test.ts electron/system-monitor/system-info.test.ts --environment jsdom` 通过 3 个测试文件、9 项测试；新增睡眠间隔后的 CPU 基线重置验证。`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`、`pnpm electron:build` 通过；`pnpm test:e2e:electron electron/system-monitor.e2e.spec.ts` 通过 3 项 Electron 端到端测试，覆盖磁盘/网络/进程卡片、暂停恢复断档、订阅停止和 20 次路由切换。Computer Use 当前无法枚举可绑定的 Electron 原生窗口；本片使用自动化 Electron 窗口证据。睡眠现场、PID 重用现场、采样器 CPU/内存开销和 Windows/Linux/macOS 原生验收仍待 S8。

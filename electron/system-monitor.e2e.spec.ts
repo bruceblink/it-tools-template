@@ -111,3 +111,14 @@ test('delivers bounded samples through the trusted bridge and releases the subsc
     expect(result.sampleCount).toBe(result.beforeStopWait);
   }
 });
+
+test('cleans subscriptions across repeated route switches', async () => {
+  test.setTimeout(60_000);
+  for (let index = 0; index < 20; index += 1) {
+    await page.goto('app://bundle/');
+    await page.goto('app://bundle/system-monitor');
+    await expect(page.locator('[data-test-id="system-monitor-workspace"]')).toBeVisible();
+  }
+  await page.goto('app://bundle/');
+  await expect(page.locator('[data-test-id="system-monitor-workspace"]')).toHaveCount(0);
+});

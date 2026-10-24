@@ -206,7 +206,7 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
       && availableMemory <= totalMemory;
     const memoryStatus = worker?.memoryStatus ?? 'failed';
     const error = workerResult.ok ? workerResult.value.error : workerResult.error;
-    const gapBefore = gapBeforeNextSample;
+    const gapBefore = gapBeforeNextSample || (worker?.gapBefore ?? false);
     gapBeforeNextSample = false;
     sequence += 1;
     return {

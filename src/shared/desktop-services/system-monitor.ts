@@ -100,6 +100,7 @@ export interface SystemMonitorWorkerSample {
   monotonicMs: number;
   cpuPercent: number | null;
   cpuStatus: SystemMonitorMetricStatus;
+  gapBefore: boolean;
   memoryTotalBytes: number | null;
   memoryAvailableBytes: number | null;
   memoryStatus: SystemMonitorMetricStatus;
@@ -123,3 +124,4 @@ export const SYSTEM_MONITOR_EXTENDED_SAMPLE_INTERVAL_MS = 5_000;
 export const SYSTEM_MONITOR_MAX_FILESYSTEMS = 64;
 export const SYSTEM_MONITOR_MAX_NETWORK_INTERFACES = 64;
 export const SYSTEM_MONITOR_MAX_PROCESSES = 2_000;
+export const SYSTEM_MONITOR_MAX_SAMPLE_GAP_MS = 120_000;
