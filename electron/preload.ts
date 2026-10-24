@@ -10,6 +10,11 @@ import type {
   PostgresDataPageInput,
   SQLiteSessionInfo,
 } from '../src/shared/desktop-services/database';
+import type {
+  SystemMonitorBridgeResult,
+  SystemMonitorSample,
+  SystemMonitorSessionInfo,
+} from '../src/shared/desktop-services/system-monitor';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
@@ -38,6 +43,19 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:postgres-profiles:save', input),
   deletePostgresProfile: (profileId: string) =>
     ipcRenderer.invoke('desktop:database:postgres-profiles:delete', { profileId }),
+  startSystemMonitor: (intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>> =>
+    ipcRenderer.invoke('desktop:system-monitor:start', intervalMs === undefined ? undefined : { intervalMs }),
+  setSystemMonitorPaused: (subscriptionId: string, paused: boolean): Promise<SystemMonitorBridgeResult<boolean>> =>
+    ipcRenderer.invoke('desktop:system-monitor:pause', { subscriptionId, paused }),
+  refreshSystemMonitor: (subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>> =>
+    ipcRenderer.invoke('desktop:system-monitor:refresh', { subscriptionId }),
+  stopSystemMonitor: (subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>> =>
+    ipcRenderer.invoke('desktop:system-monitor:stop', { subscriptionId }),
+  onSystemMonitorSample: (callback: (sample: SystemMonitorSample) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, sample: SystemMonitorSample) => callback(sample);
+    ipcRenderer.on('desktop:system-monitor:sample', listener);
+    return () => ipcRenderer.removeListener('desktop:system-monitor:sample', listener);
+  },
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
   activatePlugin: (pluginId: string, version: string, grantedCapabilities: readonly string[]) =>

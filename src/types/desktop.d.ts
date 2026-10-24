@@ -16,6 +16,11 @@ import type {
   PostgresSessionInfo,
   SQLiteSessionInfo,
 } from '../shared/desktop-services/database';
+import type {
+  SystemMonitorBridgeResult,
+  SystemMonitorSample,
+  SystemMonitorSessionInfo,
+} from '../shared/desktop-services/system-monitor';
 
 export {};
 
@@ -88,6 +93,14 @@ declare global {
         input: PostgresConnectionProfileInput,
       ): Promise<DatabaseBridgeResult<PostgresConnectionProfile>>;
       deletePostgresProfile?(profileId: string): Promise<DatabaseBridgeResult<boolean>>;
+      startSystemMonitor?(intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>>;
+      setSystemMonitorPaused?(
+        subscriptionId: string,
+        paused: boolean,
+      ): Promise<SystemMonitorBridgeResult<boolean>>;
+      refreshSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
+      stopSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
+      onSystemMonitorSample?(callback: (sample: SystemMonitorSample) => void): () => void;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       activatePlugin?(

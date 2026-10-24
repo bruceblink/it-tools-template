@@ -1,6 +1,6 @@
 # 数据库管理工具与系统监视器开发计划
 
-制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f 和 S3 已完成。S2 仍有边界验收。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。系统监视器功能仍待开发。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
+制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4 和 S5 CPU/内存首个可用版本已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理；磁盘、网络、进程列表和三平台验收归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
 
 ## 目标与默认范围
 
@@ -155,7 +155,7 @@ S0 原型和 S1 入口与页面骨架已完成。两个产品模块仍缺少实�
 | S2（进行中；S2a–S2f 已完成当前切片） | PostgreSQL 连接、结构和受限分页预览 | 已交付临时 TLS 连接、schema/table 浏览、只读分页预览、最多 20 个不含密码的本地连接资料、请求级预览取消、索引信息，以及多 MiB 文本/JSON/`bytea` 预览截断验证；继续完成其余边界验收，使用本地 Docker PostgreSQL 17+ | 5–7 人日 |
 | S3（已完成） | MySQL 与 SQLite 只读适配 | MySQL 8.4+ 和用户选定 SQLite 文件的连接、对象与结构浏览；只读模式、锁等待和断开释放通过本地服务及 Electron 端到端验收 | 4–6 人日 |
 | S4（已完成） | 三引擎受限查询与直接编辑 | 三引擎支持单条查询、受限结果和分页、CRUD、跨引擎表数据页、带主键/原值冲突检查的单元格编辑、单表直列查询结果编辑、列管理、当前页导出、服务端筛选排序；PostgreSQL 支持查询取消，连接内提供有界查询历史 | 5–8 人日 |
-| S5 | 系统监视器首个可用版本 | 本机 CPU/内存、应用进程指标、曲线、周期、暂停恢复、断档和离开清理；Windows 真窗口验收 | 3–4 人日 |
+| S5（已完成当前切片） | 系统监视器首个可用版本 | 本机 CPU/内存、应用进程指标、曲线、周期、暂停恢复、断档和离开清理；Windows 真窗口验收 | 3–4 人日 |
 | S6 | 三引擎批量记录操作 | 多行新增与删除草稿、提交预览和有限事务；保留 S4 单元格编辑与单行冲突保护 | 5–7 人日 |
 | S7 | 系统监视器完整 MVP | 磁盘、网络、进程列表及字段可用状态；开销、睡眠恢复、PID 重用和 20 次路由切换验证 | 4–6 人日 |
 | S8 | 桌面模块发布验收 | Windows、Linux、macOS 打包与实际交互；Web/PWA/Docker 构建隔离检查；三种数据库回归；发布说明、限制和证据齐全 | 3–5 人日 |
@@ -246,3 +246,6 @@ Windows 真窗口验收使用重新打包的 x64 Electron 应用，验证时只�
 2026-10-22（S4 数据视图与查询控制完成）：三引擎表数据页增加服务端筛选和排序。筛选条件限制为最多 3 个，支持等于、不等于、包含、前缀、后缀及 NULL 判断；排序字段限制为最多 3 个，并追加主键作为稳定排序条件。筛选值使用参数绑定，列名必须匹配已读取的结构元数据。数据页继续保留列显示、当前页 CSV/JSONL 导出和分页条件。PostgreSQL SQL 查询增加请求级取消，取消通过独立连接调用 `pg_cancel_backend`；MySQL 和 SQLite 保留驱动超时边界，界面只显示受支持的 PostgreSQL 取消操作。查询历史只保留在当前连接页面内，最多 20 条，不写入磁盘。
 
 验证记录：`pnpm check` 通过，包含 116 个测试文件通过、2 个跳过；726 项测试通过、16 项跳过；类型检查、lint、Web/PWA 和 Electron 构建通过，PWA 首屏 JavaScript gzip 为 299.93 KiB。`pnpm test:e2e:postgres` 在本机 Docker `postgres:17-alpine` 上通过 10 项服务测试和 1 项 PostgreSQL Electron 端到端测试；实际版本 PostgreSQL 17.10，镜像摘要 `sha256:d5daad18926b71c3d663f358af0aea798670cb79fb550c106d19662a9d1627ef`，映射端口 `127.0.0.1:7142`，容器清理已确认，服务测试覆盖 SQL 查询取消和连接复用。`pnpm test:e2e:mysql` 在本机 Docker `mysql:8.4` 上通过 6 项服务测试和 1 项 MySQL Electron 端到端测试；实际版本 MySQL 8.4.13，镜像摘要 `sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69`，映射端口 `127.0.0.1:1374`，容器清理已确认。`pnpm test:e2e:sqlite` 通过 19 项服务与协议测试和 1 项 SQLite Electron 端到端测试；Node.js SQLite 版本为 3.51.3，临时文件清理已确认。Electron 自动化回归覆盖筛选、排序、列管理、导出、编辑、查询历史和 PostgreSQL 查询取消；未扩大为独立真实窗口人工验收。
+2026-10-24（S5 CPU/内存切片）：系统监视器增加独立 utility process 采样器。采样器读取本机 CPU 累计时间和内存计数器，主进程补充 IT Tools 应用进程的 CPU 与工作集指标。采样周期在 IPC 层限制为 1–60 秒，界面提供 1、2、5 秒选项；历史点数最多保留 3,600 个。页面提供 CPU、内存、应用进程和可用内存指标卡片与有限曲线，支持刷新、暂停、恢复和断档标记。每个 renderer 只允许一个订阅；路由离开、窗口关闭和应用退出都会取消订阅并关闭采样进程。磁盘、网络、进程列表和其他操作系统仍属于 S7 或后续平台验收范围。
+
+验证记录：`pnpm exec vitest run electron/system-monitor/sampler.test.ts electron/system-monitor/worker-protocol.test.ts --environment node` 通过 2 个测试文件、4 项测试；`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`、`pnpm electron:build` 均通过；`pnpm test:e2e:electron electron/system-monitor.e2e.spec.ts` 通过 2 项 Electron 端到端测试，覆盖指标卡片、曲线、暂停恢复、断档、刷新和停止后的无事件行为。Computer Use 当前无法枚举可绑定的 Electron 原生窗口，因此没有取得独立真实窗口的手动证据；本片只报告自动化 Electron 证据。Windows 以外平台、长时间 30 分钟采样、20 次路由切换和高 DPI 交互仍待 S7/S8 验收。
