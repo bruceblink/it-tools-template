@@ -137,6 +137,32 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('runs IPv4 CIDR overlap reports in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('ipv4-cidr-overlap', 1, { kind: 'ipv4-cidr-overlap', value: 'old' }, taskLimits.ipv4CidrOverlap);
+    const latest = runner.run('ipv4-cidr-overlap', 2, { kind: 'ipv4-cidr-overlap', value: 'latest' }, taskLimits.ipv4CidrOverlap);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.inputVersion).toBe(2);
+    workers[1]?.reply({ kind: 'ipv4-cidr-overlap', valid: false, errorMessage: 'too many overlaps' });
+    await expect(latest).resolves.toMatchObject({
+      status: 'success',
+      result: { kind: 'ipv4-cidr-overlap', valid: false, errorMessage: 'too many overlaps' },
+    });
+  });
+
+  it('rejects oversized IPv4 CIDR overlap input before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('ipv4-cidr-overlap', 1, {
+      kind: 'ipv4-cidr-overlap',
+      value: 'x'.repeat(taskLimits.ipv4CidrOverlap.maxInputBytes + 1),
+    }, taskLimits.ipv4CidrOverlap);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('rejects oversized Markdown before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('markdown-to-html', 1, {

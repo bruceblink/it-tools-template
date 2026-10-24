@@ -63,6 +63,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日将 IPv4 CIDR 合并迁入专用 Worker：旧页面对每次输入同步解析两次，分别校验和生成输出。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，随机 IPv4 地址输入在 256 KiB 时双次计算中位耗时为 43.22 毫秒，1 MiB 时为 170.56 毫秒。现在只在 Worker 中解析一次，并限制输入 256 KiB、32,768 行、序列化输出 2 MiB 和运行时间 10 秒。验证与详细数据见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日将 IPv4 CIDR Overlap Checker 的解析和配对分析迁入 Worker。400 个相同 `/24` 输入的两次同步计算中位耗时为 85.07 毫秒，并产生 79,800 个重叠对。新 Worker 限制输入 256 KiB、1,000 行、500 个重叠对、2 MiB 序列化输出和 10 秒运行时间；超出重叠对上限时清除报告并显示缩小输入的提示。`pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查。Chromium 与 WebKit E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项、插件管理器与沙箱 E2E 2 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`。详细数据和验证记录见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

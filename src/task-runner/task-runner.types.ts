@@ -4,6 +4,7 @@ import type { CsvToJsonOptions } from '@/tools/csv-to-json/csv-to-json.service';
 import type { CsvToMarkdownTableOptions } from '@/tools/csv-to-markdown-table/csv-to-markdown-table.service';
 import type { JsonKeySorterOptions } from '@/tools/json-key-sorter/json-key-sorter.service';
 import type { Difference } from '@/tools/json-diff/json-diff.types';
+import type { Ipv4CidrOverlapAnalysis } from '@/tools/ipv4-cidr-overlap-checker/ipv4-cidr-overlap-checker.service';
 import type { JsonLinesConverterOptions, JsonLinesDirection, JsonLinesSummary } from '@/tools/json-lines-converter/json-lines-converter.service';
 import type { EnvOutputFormat, EnvParseResult } from '@/tools/env-vars-parser/env-vars-parser.service';
 import type { ConvertOptions } from '@/tools/list-converter/list-converter.types';
@@ -49,6 +50,7 @@ export type WorkerTask =
   | { kind: 'docker-run-to-compose'; value: string }
   | { kind: 'list-convert'; value: string; options: ConvertOptions }
   | { kind: 'ipv4-cidr-merge'; value: string }
+  | { kind: 'ipv4-cidr-overlap'; value: string }
   | { kind: 'markdown-render'; value: string };
 
 export type WorkerTaskResult =
@@ -63,6 +65,7 @@ export type WorkerTaskResult =
   | { kind: 'docker-run-to-compose'; yaml: string; messages: ComposerizeMessage[] }
   | { kind: 'list-convert'; valid: boolean; output: string }
   | { kind: 'ipv4-cidr-merge'; valid: boolean; output: string; errorMessage?: string }
+  | { kind: 'ipv4-cidr-overlap'; valid: boolean; analysis?: Ipv4CidrOverlapAnalysis; errorMessage?: string }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'markdown-render'; output: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
@@ -214,9 +217,15 @@ export const taskLimits = {
     maxOutputBytes: 2 * 1024 * 1024,
     maxLines: 32_768,
   },
+  ipv4CidrOverlap: {
+    timeoutMs: 10_000,
+    maxInputBytes: 256 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+    maxLines: 1_000,
+  },
   markdownRender: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'dockerRunToCompose' | 'listConverter' | 'ipv4CidrMerge' | 'markdownRender', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'dockerRunToCompose' | 'listConverter' | 'ipv4CidrMerge' | 'ipv4CidrOverlap' | 'markdownRender', TaskLimits>;

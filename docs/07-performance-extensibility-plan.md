@@ -225,7 +225,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML、Docker Run 转 Compose 和 List Converter 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML、Docker Run 转 Compose、List Converter、IPv4 CIDR Merge 和 IPv4 CIDR Overlap Checker 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
@@ -237,6 +237,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - Docker Run 转 Compose 使用独立 Worker；输入最多 256 KiB，结构化结果最多 2 MiB，任务最多运行 10 秒。Text Statistics 通过一次字符循环统计字符、词和行数，避免为词数和行数分配分割数组。
 - List Converter 使用独立 Worker；输入最多 1 MiB、最多 100,000 行，输出最多 2 MiB，任务最多运行 10 秒。Worker 在调用转换器前计算文本、包装选项和分隔符的输出上界；预计结果超过上限时直接返回限制状态。
 - IPv4 CIDR Merge 使用独立 Worker；输入最多 256 KiB、最多 32,768 行，序列化输出最多 2 MiB，任务最多运行 10 秒。Worker 一次完成解析、校验和合并，并逐项限制 CIDR 输出。
+- IPv4 CIDR Overlap Checker 使用独立 Worker；输入最多 256 KiB、最多 1,000 行，结果最多包含 500 个重叠对，序列化输出最多 2 MiB，任务最多运行 10 秒。超过重叠对上限时不返回部分报告。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
@@ -608,3 +609,9 @@ Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，�
 解析、验证和 CIDR 合并现由专用 Worker 一次完成。输入上限 256 KiB、最多 32,768 行、序列化输出上限 2 MiB、执行时限 10 秒。输出按 CIDR 项逐一检查 JSON 序列化预算；解析错误保留行号和原错误信息。新输入会取消旧任务，页面只显示当前输入版本结果。Web 和 Electron Worker 原始构建分别为 75.46 KiB 和 231.52 KiB；PWA 首屏 JavaScript gzip 为 299.79 KiB，低于 300 KiB 预算。
 
 最终 `pnpm check` 通过 43 项脚本测试、805 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。Chromium 与 WebKit Web E2E 各 1 项通过，隐藏 Electron `app://bundle` E2E 1 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`，没有通过记录。Playwright 检查确认页面标题和主内容正常、console 无错误；1280×850 自动化截图保存到系统临时目录。未运行前台 UI 或真实窗口交互。
+
+本轮 IPv4 CIDR Overlap Checker Worker 迁移（2026-10-25）：原页面在输入校验和报告生成时同步运行 `analyzeIpv4CidrOverlaps`，并为每个重叠对重复引用完整 CIDR 区块。基准使用 Vite SSR 调用实际 TypeScript 服务；Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，以同一 IPv4 `/24` 重复行组成输入，预热一次后每种输入测量 3 次，每次连续运行两次分析。50、100、200、400 行分别生成 1,225、4,950、19,900、79,800 个重叠对，两次分析中位耗时分别为 1.31、5.62、20.05、85.07 毫秒；最大耗时为 3.01、5.71、23.67、87.55 毫秒。这是本机合成微基准，不含浏览器表格渲染。
+
+页面现由专用 Worker 执行解析和重叠分析。输入最多 256 KiB、1,000 行；Worker 在发现第 501 个重叠对时停止，并提示用户缩小输入，不显示部分报告。重叠表格项只携带行号和标准 CIDR；完整区块列表保留一次输入引用。序列化结果最多 2 MiB，Worker 运行最多 10 秒；新输入会终止旧任务。
+
+完整 `pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。Web 首屏 JavaScript gzip 为 299.79 KiB；Web 与 Electron Worker 原始构建分别为 76.24 KiB 和 233.20 KiB。Chromium、WebKit Web E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项通过。插件管理器和沙箱 E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。1280×850 与 390×844 Playwright 检查确认默认报告、输入值可见、页面无横向溢出，浏览器 console 无错误或警告。修复移动布局前，textarea 在 390px 视口的 x 坐标为 -235px；修复后位于 x=39px、宽 320px。截图保存在系统临时目录。未运行前台 UI 或真实窗口交互。当前改动尚未推送，因此没有本轮远端三平台 CI 结果。

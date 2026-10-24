@@ -13,8 +13,8 @@ export interface Ipv4CidrBlock {
 }
 
 export interface Ipv4CidrOverlap {
-  first: Ipv4CidrBlock
-  second: Ipv4CidrBlock
+  first: Pick<Ipv4CidrBlock, 'line' | 'cidr'>
+  second: Pick<Ipv4CidrBlock, 'line' | 'cidr'>
   overlapCidr: string
   overlapStart: string
   overlapEnd: string
@@ -38,6 +38,17 @@ export class Ipv4CidrOverlapCheckerError extends Error {
     super(message);
     this.name = 'Ipv4CidrOverlapCheckerError';
   }
+}
+
+export class Ipv4CidrOverlapLimitError extends Error {
+  constructor(maximumOverlaps: number) {
+    super(`This input produces more than ${maximumOverlaps.toLocaleString()} overlapping pairs. Reduce the input to view the full report.`);
+    this.name = 'Ipv4CidrOverlapLimitError';
+  }
+}
+
+export interface Ipv4CidrOverlapAnalysisOptions {
+  maxOverlaps?: number
 }
 
 function intToIpv4(value: number) {
@@ -194,7 +205,12 @@ export function parseIpv4Cidrs(input: string): Ipv4CidrBlock[] {
     });
 }
 
-export function analyzeIpv4CidrOverlaps(input: string): Ipv4CidrOverlapAnalysis {
+export function analyzeIpv4CidrOverlaps(input: string, options: Ipv4CidrOverlapAnalysisOptions = {}): Ipv4CidrOverlapAnalysis {
+  const maximumOverlaps = options.maxOverlaps ?? Number.MAX_SAFE_INTEGER;
+  if (!Number.isSafeInteger(maximumOverlaps) || maximumOverlaps < 0) {
+    throw new RangeError('Maximum overlap count must be a non-negative safe integer.');
+  }
+
   const blocks = parseIpv4Cidrs(input).sort((left, right) => left.start - right.start || left.end - right.end || left.line - right.line);
   const overlaps: Ipv4CidrOverlap[] = [];
 
@@ -217,9 +233,13 @@ export function analyzeIpv4CidrOverlaps(input: string): Ipv4CidrOverlapAnalysis 
       const overlapStart = Math.max(first.start, second.start);
       const overlapEnd = Math.min(first.end, second.end);
       if (overlapStart <= overlapEnd) {
+        if (overlaps.length >= maximumOverlaps) {
+          throw new Ipv4CidrOverlapLimitError(maximumOverlaps);
+        }
+
         overlaps.push({
-          first,
-          second,
+          first: { line: first.line, cidr: first.cidr },
+          second: { line: second.line, cidr: second.cidr },
           overlapCidr: rangeToCidrs(overlapStart, overlapEnd).join(', '),
           overlapStart: intToIpv4(overlapStart),
           overlapEnd: intToIpv4(overlapEnd),

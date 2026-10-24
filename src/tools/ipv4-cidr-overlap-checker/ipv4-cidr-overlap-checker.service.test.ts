@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   Ipv4CidrOverlapCheckerError,
+  Ipv4CidrOverlapLimitError,
   analyzeIpv4CidrOverlaps,
   parseIpv4Cidrs,
 } from './ipv4-cidr-overlap-checker.service';
@@ -150,5 +151,19 @@ describe('ipv4-cidr-overlap-checker service', () => {
     expect(() => analyzeIpv4CidrOverlaps('10.0.0.0/24\nbad-ip')).toThrow(Ipv4CidrOverlapCheckerError);
     expect(() => analyzeIpv4CidrOverlaps('10.0.0.0/24\nbad-ip')).toThrow('Line 2: Enter CIDR notation like 192.168.0.0/24.');
     expect(() => analyzeIpv4CidrOverlaps('10.0.0.0/33')).toThrow('Line 1: CIDR prefix must be between 0 and 32.');
+  });
+
+  it('keeps overlap pair references limited to fields used by the report', () => {
+    const analysis = analyzeIpv4CidrOverlaps('10.0.0.0/24\n10.0.0.128/25');
+
+    expect(analysis.overlaps[0]?.first).toEqual({ line: 1, cidr: '10.0.0.0/24' });
+    expect(analysis.overlaps[0]?.second).toEqual({ line: 2, cidr: '10.0.0.128/25' });
+  });
+
+  it('stops once the configured overlap pair limit is exceeded', () => {
+    const duplicateBlocks = Array.from({ length: 33 }, () => '10.0.0.0/24').join('\n');
+
+    expect(() => analyzeIpv4CidrOverlaps(duplicateBlocks, { maxOverlaps: 500 })).toThrow(Ipv4CidrOverlapLimitError);
+    expect(() => analyzeIpv4CidrOverlaps(duplicateBlocks, { maxOverlaps: 500 })).toThrow('more than 500 overlapping pairs');
   });
 });
