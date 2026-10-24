@@ -93,6 +93,21 @@ test('loads advanced Math.js functions lazily from the app protocol', async () =
   await expect(output).toHaveText('20 mm');
 });
 
+test('renders Markdown in a dedicated worker on the app protocol', async () => {
+  await page.goto('app://bundle/markdown-to-html');
+
+  const input = page.getByTestId('markdown-input');
+  const output = page.getByTestId('area-content');
+  await input.fill('# Desktop\n\n**worker** <script>window.__markdownScriptExecuted=true</script>');
+  await expect(output).toContainText('<h1>Desktop</h1>');
+  await expect(output).toContainText('&lt;script&gt;window.__markdownScriptExecuted=true&lt;/script&gt;');
+  expect(await page.evaluate(() => (window as Window & { __markdownScriptExecuted?: boolean }).__markdownScriptExecuted)).toBeUndefined();
+
+  await input.fill('x'.repeat(256 * 1024 + 1));
+  await expect(page.getByRole('alert')).toHaveText('Task limits exceeded. Reduce the input.');
+  await expect(output).toHaveText('');
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 

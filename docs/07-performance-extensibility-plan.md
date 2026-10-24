@@ -576,4 +576,4 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 
 本轮 Markdown 转 HTML Worker（2026-10-25）：原页面在每次输入变化时同步创建 Markdown renderer 并解析完整文本。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先预热一次后测量 16 KiB、64 KiB 和 256 KiB 合成输入各 10 次。渲染中位数/最大值分别为 2.17/7.32、6.21/12.24 和 28.04/38.91 毫秒。这是 Node.js 微基准，不代表浏览器端到端耗时。
 
-渲染现由专用 Worker 执行，输入变化使用 150 毫秒延迟并终止旧任务。输入上限为 256 KiB，HTML 输出上限为 2 MiB，超时为 10 秒。只显示当前输入的结果；原始 HTML 继续由 markdown-it 转义，打印路径继续在写入 DOM 前使用 HTML 净化。Worker 输出大小为 Web 107.35 kB、Electron 193.31 kB。`pnpm check` 通过 42 项脚本测试、779 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。Chromium 无头 E2E 1 项通过，覆盖常规转换、旧结果替换、原始 HTML 转义和输入上限。未运行前台 UI 或真实窗口验收。
+渲染现由专用 Worker 执行，输入变化使用 150 毫秒延迟并终止旧任务。输入上限为 256 KiB，HTML 输出上限为 2 MiB，超时为 10 秒。只显示当前输入的结果；原始 HTML 继续由 markdown-it 转义，打印路径继续在写入 DOM 前使用 HTML 净化。Worker 输出大小为 Web 107.35 kB、Electron 193.31 kB。`pnpm check` 通过 42 项脚本测试、779 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。Chromium Web E2E 1 项通过，覆盖常规转换、旧结果替换、原始 HTML 转义和输入上限；隐藏 Electron `app://bundle` E2E 1 项通过，覆盖转换、HTML 转义和输入上限。未运行前台 UI 或真实窗口验收。
