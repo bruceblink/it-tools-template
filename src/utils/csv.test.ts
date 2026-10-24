@@ -45,5 +45,14 @@ describe('csv utils', () => {
         ['1', ''],
       ]);
     });
+
+    it('normalizes a row set larger than the JavaScript function argument limit', () => {
+      const rows = parseCsv('x\n'.repeat(130_000));
+      const normalized = normalizeCsvRows(rows);
+
+      expect(normalized).toHaveLength(130_000);
+      expect(normalized[0]).toEqual(['x']);
+      expect(normalized.at(-1)).toEqual(['x']);
+    });
   });
 });

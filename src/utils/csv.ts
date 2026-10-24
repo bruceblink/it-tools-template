@@ -109,6 +109,9 @@ export function parseCsv(input: string, options: CsvParseOptions = {}): string[]
 }
 
 export function normalizeCsvRows(rows: string[][]): string[][] {
-  const width = Math.max(0, ...rows.map(row => row.length));
+  let width = 0;
+  for (const row of rows) {
+    width = Math.max(width, row.length);
+  }
   return rows.map(row => Array.from({ length: width }, (_, index) => row[index] ?? ''));
 }
