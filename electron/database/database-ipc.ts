@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron';
 import type {
   DatabaseBatchMutationInput,
+  DatabaseBatchMutationResponse,
   DatabaseBatchMutationResult,
   DatabaseBridgeResult,
   DatabaseAccessMode,
@@ -504,7 +505,7 @@ export function registerDatabaseIpc(dependencies: DatabaseIpcDependencies) {
     }
     return runSessionOperation(request.sessionId, async () => {
       if (!await confirmBatchMutation(event, owner, input)) {
-        return { ok: true, value: { kind: 'cancelled' } } satisfies DatabaseBridgeResult<DatabaseStatementResult>;
+        return { ok: true, value: { kind: 'cancelled' } } satisfies DatabaseBridgeResult<DatabaseBatchMutationResponse>;
       }
       return serviceHost.request<DatabaseBatchMutationResult>({
         operation: 'batch-mutation',

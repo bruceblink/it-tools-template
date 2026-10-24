@@ -311,6 +311,10 @@ export interface DatabaseBatchMutationResult {
   elapsedMilliseconds: number;
 }
 
+export type DatabaseBatchMutationResponse =
+  | DatabaseBatchMutationResult
+  | { kind: 'cancelled' };
+
 export type DatabaseStatementResult =
   | { kind: 'query'; page: DatabaseQueryPage }
   | { kind: 'cancelled' }

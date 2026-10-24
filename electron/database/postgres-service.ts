@@ -677,7 +677,7 @@ export class PostgresDatabaseService {
     const primaryKeys = columns
       .filter(column => column.primaryKey)
       .sort((left, right) => (left.primaryKeyPosition ?? 0) - (right.primaryKeyPosition ?? 0));
-    if (structure.value.columnsTruncated || columns.some(column => !isEditableDatabaseColumnType('postgres', column.dataType))) {
+    if (structure.value.columnsTruncated) {
       return { ok: false, error: 'invalid-request' };
     }
     if (input.deletes.length > 0 && primaryKeys.length === 0) {
@@ -693,6 +693,9 @@ export class PostgresDatabaseService {
       }
     }
     for (const row of input.deletes) {
+      if (columns.some(column => !isEditableDatabaseColumnType('postgres', column.dataType))) {
+        return { ok: false, error: 'invalid-request' };
+      }
       if (row.primaryKeys.length !== primaryKeys.length
         || primaryKeys.some((key, index) => key.name !== row.primaryKeys[index]?.column)
         || row.originalValues.length !== columns.length
