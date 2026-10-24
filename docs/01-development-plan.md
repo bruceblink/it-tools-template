@@ -61,6 +61,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日将 List Converter 转为专用 Worker：排序模式下 1 MiB、2 MiB、4 MiB 合成列表的同步转换中位数分别为 31.40、62.61、126.62 毫秒。现在限制输入为 1 MiB、行数为 100,000、结果为 2 MiB、运行时间为 10 秒。完整检查通过 797 项单测（18 项跳过）；Chromium Web 的 4 项 E2E 和隐藏 Electron `app://bundle` 回归通过。详细实现与测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日将 IPv4 CIDR 合并迁入专用 Worker：旧页面对每次输入同步解析两次，分别校验和生成输出。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，随机 IPv4 地址输入在 256 KiB 时双次计算中位耗时为 43.22 毫秒，1 MiB 时为 170.56 毫秒。现在只在 Worker 中解析一次，并限制输入 256 KiB、32,768 行、序列化输出 2 MiB 和运行时间 10 秒。验证与详细数据见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

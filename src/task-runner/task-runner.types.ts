@@ -48,6 +48,7 @@ export type WorkerTask =
   | { kind: 'yaml-to-toml'; value: string }
   | { kind: 'docker-run-to-compose'; value: string }
   | { kind: 'list-convert'; value: string; options: ConvertOptions }
+  | { kind: 'ipv4-cidr-merge'; value: string }
   | { kind: 'markdown-render'; value: string };
 
 export type WorkerTaskResult =
@@ -61,6 +62,7 @@ export type WorkerTaskResult =
   | { kind: 'json-diff'; leftValid: boolean; rightValid: boolean; result?: Difference }
   | { kind: 'docker-run-to-compose'; yaml: string; messages: ComposerizeMessage[] }
   | { kind: 'list-convert'; valid: boolean; output: string }
+  | { kind: 'ipv4-cidr-merge'; valid: boolean; output: string; errorMessage?: string }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'markdown-render'; output: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
@@ -206,9 +208,15 @@ export const taskLimits = {
     maxOutputBytes: 2 * 1024 * 1024,
     maxLines: 100_000,
   },
+  ipv4CidrMerge: {
+    timeoutMs: 10_000,
+    maxInputBytes: 256 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+    maxLines: 32_768,
+  },
   markdownRender: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'dockerRunToCompose' | 'listConverter' | 'markdownRender', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'dockerRunToCompose' | 'listConverter' | 'ipv4CidrMerge' | 'markdownRender', TaskLimits>;

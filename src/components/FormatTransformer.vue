@@ -22,7 +22,7 @@ const props = withDefaults(
     inputDefault?: string
     outputLabel?: string
     outputLanguage?: string
-    workerTaskKind?: 'list-convert' | 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'toml-to-json' | 'json-to-yaml' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'
+    workerTaskKind?: 'list-convert' | 'ipv4-cidr-merge' | 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'toml-to-json' | 'json-to-yaml' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'
     workerTaskOptions?: ConvertOptions | CsvToJsonOptions | CsvToMarkdownTableOptions | JsonKeySorterOptions | JsonLinesTaskOptions | XmlFormatTaskOptions
     workerInvalidMessage?: string
   }>(),
@@ -88,6 +88,20 @@ watch([input, workerTaskKind, workerTaskOptions], () => {
       if (version !== taskVersion) { return; }
       if (outcome.status === 'success' && outcome.result.kind === 'list-convert') {
         workerOutput.value = outcome.result.output;
+        taskStatus.value = outcome.result.valid ? 'idle' : 'error';
+        return;
+      }
+      if (outcome.status === 'cancelled') { return; }
+      taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+      return;
+    }
+
+    if (kind === 'ipv4-cidr-merge') {
+      const outcome = await taskRunner.run(taskKey, version, { kind, value: input.value }, taskLimits.ipv4CidrMerge);
+      if (version !== taskVersion) { return; }
+      if (outcome.status === 'success' && outcome.result.kind === 'ipv4-cidr-merge') {
+        workerOutput.value = outcome.result.output;
+        workerErrorMessage.value = outcome.result.valid ? '' : outcome.result.errorMessage ?? '';
         taskStatus.value = outcome.result.valid ? 'idle' : 'error';
         return;
       }

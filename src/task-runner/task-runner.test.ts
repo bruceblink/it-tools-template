@@ -111,6 +111,32 @@ describe('TaskRunner', () => {
     });
   });
 
+  it('runs IPv4 CIDR merges in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('ipv4-cidr-merge', 1, { kind: 'ipv4-cidr-merge', value: 'old' }, taskLimits.ipv4CidrMerge);
+    const latest = runner.run('ipv4-cidr-merge', 2, { kind: 'ipv4-cidr-merge', value: 'latest' }, taskLimits.ipv4CidrMerge);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.inputVersion).toBe(2);
+    workers[1]?.reply({ kind: 'ipv4-cidr-merge', valid: false, output: '', errorMessage: 'Line 1: invalid' });
+    await expect(latest).resolves.toMatchObject({
+      status: 'success',
+      result: { kind: 'ipv4-cidr-merge', valid: false, errorMessage: 'Line 1: invalid' },
+    });
+  });
+
+  it('rejects oversized IPv4 CIDR input before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('ipv4-cidr-merge', 1, {
+      kind: 'ipv4-cidr-merge',
+      value: 'x'.repeat(taskLimits.ipv4CidrMerge.maxInputBytes + 1),
+    }, taskLimits.ipv4CidrMerge);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('rejects oversized Markdown before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('markdown-to-html', 1, {

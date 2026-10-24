@@ -236,6 +236,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - Bcrypt 哈希与比较使用独立 Worker；盐轮数限制为 4–16，合并输入最多 64 KiB，输出最多 4 KiB，任务最多运行 5 秒。
 - Docker Run 转 Compose 使用独立 Worker；输入最多 256 KiB，结构化结果最多 2 MiB，任务最多运行 10 秒。Text Statistics 通过一次字符循环统计字符、词和行数，避免为词数和行数分配分割数组。
 - List Converter 使用独立 Worker；输入最多 1 MiB、最多 100,000 行，输出最多 2 MiB，任务最多运行 10 秒。Worker 在调用转换器前计算文本、包装选项和分隔符的输出上界；预计结果超过上限时直接返回限制状态。
+- IPv4 CIDR Merge 使用独立 Worker；输入最多 256 KiB、最多 32,768 行，序列化输出最多 2 MiB，任务最多运行 10 秒。Worker 一次完成解析、校验和合并，并逐项限制 CIDR 输出。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
@@ -601,3 +602,9 @@ Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，�
 本轮 List Converter Worker 迁移（2026-10-25）：工具原本在每次输入或设置变化时同步执行 Lodash 去重、排序和格式化。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，排序模式的合成列表先预热一次，再测量 5 次。1 MiB、2 MiB、4 MiB 输入的中位数/最大值分别为 31.40/32.58、62.61/63.71、126.62/127.12 毫秒；对应输出大小为 1,135,951、2,271,904、4,543,823 字节。这是 Node.js 合成微基准，不含浏览器事件和渲染。
 
 转换现由独立 Worker 执行，并保留现有设置键、排序顺序、重复项处理和格式化结果。Worker 限制输入 1 MiB、最多 100,000 行、输出 2 MiB、执行时间 10 秒。转换前会计算输入文本、每项前后缀、分隔符和列表包装产生的输出上界；超出预算时不调用转换器。完整 `pnpm check` 通过 42 项脚本测试、797 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.82 KiB。Chromium Web E2E 4 项通过，覆盖旧结果、设置选项和超限输入；隐藏 Electron `app://bundle` E2E 1 项通过。未运行真实窗口交互。
+
+本轮 IPv4 CIDR 合并 Worker 迁移（2026-10-25）：原 Vue 页面在输入变更时同步运行一次完整解析作校验，随后又运行一次生成输出。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，以确定性生成的随机 IPv4 地址组成合成输入，预热一次并测量 5 次。16 KiB、64 KiB、256 KiB、1 MiB 输入的双次计算中位数/最大值分别为 2.74/3.29、10.46/11.02、43.22/48.09、170.56/188.46 毫秒；256 KiB 和 1 MiB 输出大小分别为 317,213 和 1,268,766 字节。这是 Node.js 微基准，不包含浏览器事件或渲染。
+
+解析、验证和 CIDR 合并现由专用 Worker 一次完成。输入上限 256 KiB、最多 32,768 行、序列化输出上限 2 MiB、执行时限 10 秒。输出按 CIDR 项逐一检查 JSON 序列化预算；解析错误保留行号和原错误信息。新输入会取消旧任务，页面只显示当前输入版本结果。Web 和 Electron Worker 原始构建分别为 75.46 KiB 和 231.52 KiB；PWA 首屏 JavaScript gzip 为 299.79 KiB，低于 300 KiB 预算。
+
+最终 `pnpm check` 通过 43 项脚本测试、805 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。Chromium 与 WebKit Web E2E 各 1 项通过，隐藏 Electron `app://bundle` E2E 1 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`，没有通过记录。Playwright 检查确认页面标题和主内容正常、console 无错误；1280×850 自动化截图保存到系统临时目录。未运行前台 UI 或真实窗口交互。

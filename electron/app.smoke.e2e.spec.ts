@@ -143,6 +143,18 @@ test('converts lists in a dedicated worker on the app protocol', async () => {
   await expect(page.getByTestId('area-content')).toHaveText('two, one');
 });
 
+test('merges IPv4 CIDR ranges in a dedicated worker on the app protocol', async () => {
+  await page.goto('app://bundle/ipv4-cidr-merge');
+
+  const input = page.getByTestId('input');
+  const output = page.getByTestId('area-content');
+  await expect(output).toHaveText('10.0.0.1/32\n10.0.0.2/32\n192.168.1.0/24');
+
+  await input.fill('10.0.0.1\nbad-ip');
+  await expect(page.getByTestId('format-transformer-task-status')).toHaveText('Line 2: Invalid IPv4 address "bad-ip".');
+  await expect(output).toHaveText('');
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 
