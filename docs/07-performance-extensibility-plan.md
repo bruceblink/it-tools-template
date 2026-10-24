@@ -1,18 +1,16 @@
-# IT Tools 主线路线：Web/Electron 产品承载与 Ramag 核心接入
+# IT Tools 主线路线：Web/Electron 产品承载与 Ramag 场景互补
 
 > 状态：现行路线
 > 更新日期：2026-10-24
 > 执行入口：[01-development-plan.md](01-development-plan.md)
-> 适用范围：Web/PWA、Electron、Ramag 原生核心桥接、性能和插件扩展
+> P0 边界记录：[14-cross-project-capability-matrix.md](14-cross-project-capability-matrix.md)
+> 适用范围：Web/PWA、Electron、与 Ramag 的功能边界、性能和插件扩展
 
 ## 1. 路线目标
 
-it-tools-template 是用户可见的产品所有者。它负责通用工具、Web/PWA、Electron 工作台、
-桌面分发和插件管理。ramag-platform 收缩为原生核心能力和 GPUI 客户端，不再为数据库、
-Git、API、消息、容器、对象存储、剪贴板和普通系统监控维护第二套产品界面。
-
-Electron 与 GPUI 对共享原生能力使用同一 ramag-protocol。本地接口协议必须统一参数校验、权限、
-错误、取消、分页、进度、结果上限和敏感数据处理。Web 只使用浏览器或 WASM 可用的能力。
+it-tools-template 是 Web/PWA 和 Electron 产品所有者。它负责通用工具、数据库管理器、
+系统监控、桌面工作台、桌面分发和插件管理。ramag-platform 独立负责少量需要 Rust/GPUI
+原生能力的场景。两个项目不共享进程、运行时、代码包或接口协议，只在功能边界和用户场景上互相参照。
 
 ## 2. 接收范围
 
@@ -22,16 +20,16 @@ Electron 与 GPUI 对共享原生能力使用同一 ramag-protocol。本地接�
 | P1 | API、Git、对象存储、容器 | 完成 Electron 页面、连接状态、历史和权限边界 | 仅保留迁移所需兼容期 |
 | P2 | Redis、MongoDB、Kafka、MQTT | 完成协议操作、消息/文档结果、取消和错误恢复 | 移除对应工具入口和基础设施依赖 |
 | P2 | 剪贴板、更新和普通系统能力 | 由 Electron 主进程统一管理权限、托盘和分发 | 不再维护第二套产品流程 |
-| P3 | SSH/SFTP/PTY、隧道和必要的引擎级安全存储 | 提供产品入口并调用原生桥接 | 只有 Electron 无法满足共享保护边界时才保留 ramag-engine 服务 |
-| P4 | 纯计算工具和 JSON Path | 统一 Web、Electron 和 WASM 入口及测试样例 | 不保留重复 GPUI 入口 |
+| P3 | 纯计算工具和 JSON Path | 统一 Web、Electron 和 WASM 入口及测试样例 | Ramag 可独立选择高收益工具，不建立调用关系 |
+| P4 | SSH/SFTP/PTY、隧道和 Ramag 私有安全能力 | 当前不纳入 it-tools-template 主线 | 由 Ramag 独立实现和发布 |
 
 ## 3. 接入顺序与停止条件
 
 1. 先建立功能矩阵。每项记录唯一所有者、平台、数据边界、权限、取消、资源上限、旧入口和回滚版本。
 2. 先完成 Electron 替代流程，再从 Ramag 删除导航、默认构建和专用路线。
-3. 需要原生能力时先调用 ramag-protocol；不得复制 Rust 驱动、凭据存储或 GPUI 状态模型。
-4. 替代验收通过后才删除旧实现。迁移失败时只恢复兼容入口，不恢复长期重复开发。
-5. 新增功能如果能由浏览器、Web Crypto、WASM、Electron 主进程或现有插件能力完成，不能直接新增 Ramag 工具。
+3. 能由浏览器、Web Crypto、WASM、Electron 主进程或现有插件能力完成的功能，优先留在 it-tools-template。
+4. Ramag 只在 Electron 实现成本高、收益低或原生能力明显更强时独立开发。
+5. 两个项目的功能相似时，只记录场景差异和产品所有者，不建立调用关系。
 
 以下条件会暂停下一项迁移：关键操作缺失、错误/取消/权限不一致、凭据或配置迁移风险、
 资源预算未满足，或两个仓库出现同一业务逻辑的第二份实现。
@@ -40,18 +38,17 @@ Electron 与 GPUI 对共享原生能力使用同一 ramag-protocol。本地接�
 
 | 阶段 | ID | 内容 | 验收证据 |
 |---|---|---|---|
-| A | BOUNDARY-001 | 功能矩阵和平台声明 | 两个仓库的所有者、入口、协议和回滚信息一致 |
-| B | PRODUCT-TRANSFER-001 | 数据库、系统、API、Git、对象、消息和容器接收 | Electron/Web 定向测试、真实本机 Docker 或浏览器回归 |
-| C | NATIVE-BRIDGE-001 | SSH/SFTP/PTY、隧道和必要的引擎级安全存储桥接 | Electron 与 GPUI 协议测试和权限拒绝测试 |
-| D | RETIRE-RAMAG-001 | 关闭重复入口和依赖 | 构建、注册表、配置迁移、文档引用和安装包检查 |
-| E | RELEASE-DUAL-001 | 双客户端发布 | Web/PWA、Electron 和 GPUI 核心分别有发布证据 |
+| A | BOUNDARY-001 | 功能矩阵和平台声明 | 两个仓库的所有者、入口、平台范围和回滚信息一致 |
+| B | PRODUCT-DB-SYSTEM-001 | 数据库和系统监控工作台 | Electron/Web 定向测试、真实本机 Docker 或浏览器回归 |
+| C | PRODUCT-WORKBENCH-001 | API、Git、对象、消息和容器工作台 | Electron 页面、连接、取消和错误恢复证据 |
+| D | RAMAG-BOUNDARY-ALIGN-001 | 对照 Ramag 的独立原生范围 | 只更新边界记录，不建立运行时依赖 |
+| E | RELEASE-WEB-ELECTRON-001 | Web/PWA 和 Electron 发布 | Web 部署、安装、升级、权限和回滚证据 |
 
 ## 5. 与性能和插件路线的关系
 
 原有 P0–P5 性能、任务执行器、工具定义、第一方 SDK 和 Electron 插件工作继续作为
-it-tools-template 的技术支线。它们服务于本产品的工具承载和扩展，不再推动 Ramag 扩大工具范围。
-插件只能通过声明能力访问本地服务；它不能直接加载 GPUI、访问通用 Node、读取任意文件或绕过
-ramag-protocol 的权限和资源边界。
+it-tools-template 的技术支线。它们服务于本产品的工具承载和扩展，不推动 Ramag 扩大工具范围。
+插件只能使用 it-tools-template 自己声明和授予的能力；它不能加载 GPUI 或调用 Ramag 的进程。
 
 ## 性能与插件支线：保留的技术主线
 

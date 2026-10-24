@@ -6,10 +6,13 @@
 > 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
 > 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
 
-本计划把“好钢用在刀刃上”落实为单一产品所有者。it-tools-template 负责用户可见的通用工具、
-Electron 工作台、Web/PWA 入口、桌面分发和插件产品；ramag-platform 不再为这些能力维护
-第二套 GPUI 产品界面。双方通过版本化的 ramag-engine / ramag-protocol 接入需要原生权限
-或高性能 Rust 运行时的能力。
+本计划把“好钢用在刀刃上”落实为清晰的产品所有者。it-tools-template 负责用户可见的通用工具、
+Electron 工作台、Web/PWA 入口、桌面分发和插件产品；ramag-platform 独立负责少量
+Electron 实现成本高或收益低的 Rust/GPUI 原生能力。两个项目不共享进程、运行时、代码包或接口协议。
+
+P0 的共同边界记录见
+[双项目能力归属矩阵](14-cross-project-capability-matrix.md)。两个仓库的矩阵必须保持同一
+能力 ID、所有者、平台范围和回滚条件。
 
 ## 1. 双项目职责
 
@@ -18,14 +21,14 @@ Electron 工作台、Web/PWA 入口、桌面分发和插件产品；ramag-platfo
 | Web/PWA | 完整承载可移植工具、WASM 和离线策略 | 不提供 Web UI |
 | Electron | 完整承载工具路由、数据库、API、Git、消息、容器、对象存储、剪贴板和普通系统监控 | 提供受控原生能力适配 |
 | 通用计算 | 117 个工具、格式转换、编码、数据处理和测试样例 | 不复制工具入口；必要时提供可移植核心 |
-| SSH/SFTP/PTY | 产品入口、连接状态、权限提示和用户流程 | 提供 Rust 会话、PTY、隧道和安全边界 |
-| 本地安全存储 | 负责应用配置和凭据；不暴露通用 Node 或文件接口 | 只有原生核心需要共享秘密且 Electron 无法满足保护边界时才提供引擎级服务 |
+| SSH/SFTP/PTY | 当前不纳入 it-tools-template 的统一功能范围 | 由 Ramag 独立提供 Rust 会话、PTY、隧道和安全边界 |
+| 本地安全存储 | 独立管理应用配置和凭据；不暴露通用 Node 或文件接口 | 独立管理 Ramag 的连接和会话秘密 |
 | 高精度系统诊断 | 普通 CPU、内存、磁盘、网络和进程页面 | 只在基准证明 Electron/Node 不满足时提供采集能力 |
 | GPUI | 不实现 | 只实现原生核心工作区，不恢复通用工具箱 |
 
-Electron 和 GPUI 的共同要求是能力协议一致：相同参数校验、权限、错误码、取消、
-分页、进度和数据上限。两端不要求共享 Vue 或 GPUI 组件，也不要求像素级相同。
-Web 只显示浏览器或 WASM 可用的入口；桌面专用能力必须有明确的平台标记。
+Web、Electron 和 GPUI 的平台范围必须在工具定义中明确。it-tools-template 独立维护
+Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPUI 的原生能力。
+两个项目只对照用户场景，不共享实现和运行时。
 
 ## 2. 当前主线：先接收功能，再删除重复
 
@@ -34,14 +37,14 @@ Web 只显示浏览器或 WASM 可用的入口；桌面专用能力必须有明�
 
 | 顺序 | ID | 范围 | 完成标志 |
 |---|---|---|---|
-| P0 | BOUNDARY-001 | 建立两个仓库的功能矩阵和平台声明 | 每个功能有唯一所有者、目标入口、数据边界和回滚版本 |
+| P0 | BOUNDARY-001 | 已建立能力归属矩阵，继续核对两个仓库的入口和回滚信息 | 每个功能有唯一所有者、目标入口、数据边界和回滚版本 |
 | P1 | PRODUCT-DB-SYSTEM-001 | 收口数据库管理器和普通系统监视器 | Electron 三引擎流程、分页/编辑/取消、监控采样和资源清理通过 |
 | P1 | PRODUCT-WORKBENCH-001 | 接收 API、Git、对象存储和容器工作台 | Electron 工作台覆盖关键流程，Web 显示受限或不可用状态 |
 | P2 | PRODUCT-MESSAGE-001 | 接收 Redis、MongoDB、Kafka 和 MQTT | 连接、消息/文档操作、取消、错误和权限边界有测试 |
 | P2 | PRODUCT-LOCAL-001 | 接收剪贴板、更新、设置和普通系统能力 | 主进程权限最小化，数据和凭据策略通过安全回归 |
-| P3 | NATIVE-BRIDGE-001 | 接入 ramag-engine 的 SSH/SFTP/PTY、隧道和必要的引擎级安全存储 | Electron 主进程和 GPUI 使用同一 protocol_version 和协议测试 |
-| P4 | RETIRE-RAMAG-001 | 配合 Ramag 移除重复工具 | 旧入口有迁移提示，用户配置可读，两个仓库无重复产品路线 |
-| P5 | RELEASE-DUAL-001 | 发布 Web、Electron 和 GPUI 核心版本 | 各平台安装、升级、权限拒绝、资源和回滚证据齐全 |
+| P3 | ELECTRON-WORKBENCH-001 | 完成 it-tools-template 自己的 Electron 工作台和插件能力 | Electron 页面、权限、错误恢复和资源边界通过 |
+| P4 | RAMAG-BOUNDARY-ALIGN-001 | 对照 Ramag 的功能边界，确认没有重复投入 | 只更新功能归属和场景记录，不建立跨项目依赖 |
+| P5 | RELEASE-WEB-ELECTRON-001 | 发布 Web、PWA 和 Electron 产品版本 | Web 部署、桌面安装、升级、权限拒绝和回滚证据齐全 |
 
 在 P0 完成前，it-tools-template 不把新的数据库、Git、API、消息、容器或对象存储
 能力交给另一个仓库重复实现。新功能先判断是否属于通用工具、Electron 工作台或原生核心。
