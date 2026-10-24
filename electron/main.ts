@@ -34,6 +34,7 @@ import { registerPluginLifecycleIpc } from './plugin-ipc';
 import { registerDatabaseIpc } from './database/database-ipc';
 import { registerSystemMonitorIpc } from './system-monitor/system-monitor-ipc';
 import { registerApiIpc } from './api/api-ipc';
+import { registerGitIpc } from './git/git-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -67,6 +68,7 @@ let mainWindow: BrowserWindow | null = null;
 let databaseIpc: ReturnType<typeof registerDatabaseIpc> | null = null;
 let systemMonitorIpc: ReturnType<typeof registerSystemMonitorIpc> | null = null;
 let apiIpc: ReturnType<typeof registerApiIpc> | null = null;
+let gitIpc: ReturnType<typeof registerGitIpc> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -108,6 +110,9 @@ else {
     apiIpc = registerApiIpc({
       trustedRendererUrl: () => trustedRendererUrl,
     });
+    gitIpc = registerGitIpc({
+      trustedRendererUrl: () => trustedRendererUrl,
+    });
     await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
@@ -142,6 +147,8 @@ else {
     systemMonitorIpc = null;
     apiIpc?.shutdown();
     apiIpc = null;
+    gitIpc?.shutdown();
+    gitIpc = null;
   });
 }
 
@@ -367,6 +374,7 @@ function closeRendererOwnedServices(contents: WebContents): void {
   databaseIpc?.closeRenderer(contents.id);
   systemMonitorIpc?.closeRenderer(contents.id);
   apiIpc?.closeRenderer(contents.id);
+  gitIpc?.closeRenderer(contents.id);
 }
 
 function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
@@ -438,6 +446,7 @@ async function createMainWindow() {
     databaseIpc?.closeRenderer(rendererId);
     systemMonitorIpc?.closeRenderer(rendererId);
     apiIpc?.closeRenderer(rendererId);
+    gitIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
     }

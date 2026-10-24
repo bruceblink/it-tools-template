@@ -77,7 +77,7 @@ describe('tool registry integrity', () => {
     const indexedPaths = indexedTools.map(({ path }) => normalizeRoute(path)).sort();
     const registeredPaths = registeredTools.map(({ path }) => normalizeRoute(path)).sort();
 
-    expect(registeredTools).toHaveLength(120);
+    expect(registeredTools).toHaveLength(121);
     expect(new Set(indexedPaths).size).toBe(indexedPaths.length);
     expect(registeredPaths).toEqual(indexedPaths);
     const registeredExtensionTools = registeredTools.filter(({ extensionOwned }) => extensionOwned);
@@ -128,7 +128,7 @@ describe('tool registry integrity', () => {
       expect(definition?.capabilities, id).toBeDefined();
     }
 
-    for (const path of ['/database-manager', '/system-monitor', '/api-client']) {
+    for (const path of ['/database-manager', '/system-monitor', '/api-client', '/git-workbench']) {
       const definition = registeredTools.find(tool => tool.path === path);
       expect(definition?.platforms, path).toEqual(['electron']);
       expect(definition?.contentWidth, path).toBe('wide');

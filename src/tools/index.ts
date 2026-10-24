@@ -177,6 +177,22 @@ const desktopTools = import.meta.env.ELECTRON
         capabilities: [],
         contentWidth: 'wide',
       }),
+      defineTool({
+        id: 'builtin/git-workbench',
+        categoryId: 'development',
+        translationKey: 'git-workbench',
+        name: translate('tools.git-workbench.title'),
+        path: '/git-workbench',
+        description: translate('tools.git-workbench.description'),
+        keywords: ['git'],
+        component: () => import('./git-workbench/git-workbench.vue'),
+        icon: DeviceDesktop,
+        platforms: ['electron'],
+        dataProcessing: 'local-data',
+        offline: 'available',
+        capabilities: [],
+        contentWidth: 'wide',
+      }),
     ]
   : [];
 

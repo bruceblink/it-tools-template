@@ -28,6 +28,13 @@ import type {
   ApiRequestInput,
   ApiResponse,
 } from '../shared/desktop-services/api';
+import type {
+  GitBridgeResult,
+  GitDiff,
+  GitLog,
+  GitRepositoryInfo,
+  GitStatus,
+} from '../shared/desktop-services/git';
 
 export {};
 
@@ -106,6 +113,12 @@ declare global {
       deletePostgresProfile?(profileId: string): Promise<DatabaseBridgeResult<boolean>>;
       runApiRequest?(input: ApiRequestInput): Promise<ApiBridgeResult<ApiResponse>>;
       cancelApiRequest?(requestId: string): Promise<ApiBridgeResult<boolean>>;
+      selectGitRepository?(): Promise<GitBridgeResult<GitRepositoryInfo | null>>;
+      getGitStatus?(repositoryId: string, requestId: string): Promise<GitBridgeResult<GitStatus>>;
+      getGitLog?(repositoryId: string, requestId: string): Promise<GitBridgeResult<GitLog>>;
+      getGitDiff?(repositoryId: string, requestId: string): Promise<GitBridgeResult<GitDiff>>;
+      cancelGitRequest?(requestId: string): Promise<GitBridgeResult<boolean>>;
+      closeGitRepository?(repositoryId: string): Promise<GitBridgeResult<boolean>>;
       startSystemMonitor?(intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>>;
       setSystemMonitorPaused?(
         subscriptionId: string,

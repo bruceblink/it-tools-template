@@ -99,6 +99,7 @@ declare module 'vue' {
     FormatTransformer: typeof import('./src/components/FormatTransformer.vue')['default']
     GitMemo: typeof import('./src/tools/git-memo/git-memo.vue')['default']
     'GitMemo.content': typeof import('./src/tools/git-memo/git-memo.content.md')['default']
+    GitWorkbench: typeof import('./src/tools/git-workbench/git-workbench.vue')['default']
     HashText: typeof import('./src/tools/hash-text/hash-text.vue')['default']
     HexStringConverter: typeof import('./src/tools/hex-string-converter/hex-string-converter.vue')['default']
     HmacGenerator: typeof import('./src/tools/hmac-generator/hmac-generator.vue')['default']

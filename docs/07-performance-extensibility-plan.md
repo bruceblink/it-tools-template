@@ -557,3 +557,7 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 本轮 API 工作台首片（2026-10-24）：`PRODUCT-WORKBENCH-001` 新增 Electron 专属 `/api-client` 页面和主进程 API 请求桥。页面支持 GET、POST、PUT、PATCH、DELETE、HEAD、OPTIONS，请求头 JSON、请求正文、超时、响应状态/响应头/响应正文、取消和最多 20 条会话历史。主进程只接受受信任渲染器和 HTTP/HTTPS URL，拒绝受限请求头，限制 URL 8 KiB、请求头 64 项/16 KiB、正文 256 KiB、响应正文 1 MiB，并按请求或渲染器关闭清理 AbortController。Web 构建不注册该工具，直接访问 `/api-client` 返回 404。
 
 验证：协议单测、工具注册与平台过滤单测 14 项通过；本地 HTTP fixture 的 Electron E2E 通过 GET 200、POST 201、取消慢请求和三条历史记录；Web 平台隔离检查通过；`pnpm check` 通过 120 个测试文件（2 个跳过）、742 项测试（18 项跳过）、类型检查、lint、Web 与 Electron 构建。PWA 首屏 JavaScript gzip 为 299.97 KiB。该片使用自动化 Electron 窗口，不等同于 Computer Use 真实窗口验收；OpenAPI 导入、认证配置、集合、Git、对象存储和容器工作台仍属于后续切片。
+
+本轮 Git 工作台首片（2026-10-24）：`PRODUCT-WORKBENCH-001` 新增 Electron 专属 `/git-workbench` 页面和主进程 Git 桥。用户从主进程目录选择器选择仓库；仓库路径只保存在主进程会话中。页面只读显示当前分支、上游 ahead/behind、工作树状态、最近 50 条提交和未提交差异。Git 命令不经过 shell，单次执行最多 10 秒，标准输出最多 512 KiB；渲染器关闭、切换仓库或取消操作时终止活动进程。Web 构建不注册该工具，直接访问 `/git-workbench` 返回 404。
+
+验证：Git 协议单测和工具注册单测 11 项通过；本地临时 Git 仓库 Electron E2E 通过仓库选择、`main` 分支、修改文件、未跟踪文件、提交历史和差异读取；Web 隔离门禁通过，桌面专属路径的 Chromium 和 WebKit 流程通过。Firefox 在本机启动时返回 `spawn UNKNOWN`，没有把该环境故障当作通过。Web 构建首屏 JavaScript gzip 为 299.99 KiB。提交、暂存、推送和远程操作仍属于后续切片。\n

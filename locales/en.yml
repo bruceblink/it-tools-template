@@ -140,7 +140,11 @@ tools:
 
   api-client:
     title: API client
-    description: Send HTTP requests in Electron.
+    description: Send HTTP.
+
+  git-workbench:
+    title: Git
+    description: Git.
 
   password-strength-analyser:
     title: Password strength analyser

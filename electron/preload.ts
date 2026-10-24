@@ -22,6 +22,13 @@ import type {
   ApiRequestInput,
   ApiResponse,
 } from '../src/shared/desktop-services/api';
+import type {
+  GitBridgeResult,
+  GitDiff,
+  GitLog,
+  GitRepositoryInfo,
+  GitStatus,
+} from '../src/shared/desktop-services/git';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
@@ -59,6 +66,18 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:api:request', input),
   cancelApiRequest: (requestId: string): Promise<ApiBridgeResult<boolean>> =>
     ipcRenderer.invoke('desktop:api:cancel', { requestId }),
+  selectGitRepository: (): Promise<GitBridgeResult<GitRepositoryInfo | null>> =>
+    ipcRenderer.invoke('desktop:git:select-repository'),
+  getGitStatus: (repositoryId: string, requestId: string): Promise<GitBridgeResult<GitStatus>> =>
+    ipcRenderer.invoke('desktop:git:status', { repositoryId, requestId }),
+  getGitLog: (repositoryId: string, requestId: string): Promise<GitBridgeResult<GitLog>> =>
+    ipcRenderer.invoke('desktop:git:log', { repositoryId, requestId }),
+  getGitDiff: (repositoryId: string, requestId: string): Promise<GitBridgeResult<GitDiff>> =>
+    ipcRenderer.invoke('desktop:git:diff', { repositoryId, requestId }),
+  cancelGitRequest: (requestId: string): Promise<GitBridgeResult<boolean>> =>
+    ipcRenderer.invoke('desktop:git:cancel', { requestId }),
+  closeGitRepository: (repositoryId: string): Promise<GitBridgeResult<boolean>> =>
+    ipcRenderer.invoke('desktop:git:close', { repositoryId }),
   startSystemMonitor: (intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>> =>
     ipcRenderer.invoke('desktop:system-monitor:start', intervalMs === undefined ? undefined : { intervalMs }),
   setSystemMonitorPaused: (subscriptionId: string, paused: boolean): Promise<SystemMonitorBridgeResult<boolean>> =>
