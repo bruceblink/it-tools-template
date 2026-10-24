@@ -49,7 +49,7 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 在 P0 完成前，it-tools-template 不把新的数据库、Git、API、消息、容器或对象存储
 能力交给另一个仓库重复实现。新功能先判断是否属于通用工具、Electron 工作台或原生核心。
 
-当前进度（2026-10-24）：`PRODUCT-WORKBENCH-001` 已完成 API、Git 和对象存储工作台的首片开发。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储首片计划](15-object-storage-workbench-plan.md)和[对象存储传输计划](16-object-storage-transfers-plan.md)。`pnpm check` 和本机 Docker RustFS Electron E2E 通过。无头 Electron 流程在 390×844 视口下没有横向溢出。真实窗口交互验收未完成。其他服务专用协议和容器工作台继续按本计划逐片实现。
+当前进度（2026-10-24）：`PRODUCT-WORKBENCH-001` 已完成 API、Git、对象存储传输和只读容器工作台首片。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储首片计划](15-object-storage-workbench-plan.md)和[对象存储传输计划](16-object-storage-transfers-plan.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台首片计划](17-container-workbench-plan.md)。`pnpm check`、Web 路由隔离测试和本机 Docker RustFS Electron E2E 通过。无头 Electron 流程在 390×844 视口下没有横向溢出，测试确认窗口保持隐藏。真实窗口交互验收未执行。其他服务专用协议继续按本计划逐片实现。
 
 ## 3. 当前基线
 

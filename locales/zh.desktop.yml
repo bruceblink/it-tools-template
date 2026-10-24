@@ -18,3 +18,6 @@ tools:
   object-storage:
     title: 对象存储
     description: 查看 S3 兼容 Bucket 的对象和文本预览。
+  container-workbench:
+    title: 容器工作台
+    description: 查看本机 Docker 容器。

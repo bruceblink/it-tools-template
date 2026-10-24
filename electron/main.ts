@@ -36,6 +36,7 @@ import { registerSystemMonitorIpc } from './system-monitor/system-monitor-ipc';
 import { registerApiIpc } from './api/api-ipc';
 import { registerGitIpc } from './git/git-ipc';
 import { registerStorageIpc } from './object-storage/storage-ipc';
+import { registerContainerWorkbenchIpc } from './container-workbench/container-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -71,6 +72,7 @@ let systemMonitorIpc: ReturnType<typeof registerSystemMonitorIpc> | null = null;
 let apiIpc: ReturnType<typeof registerApiIpc> | null = null;
 let gitIpc: ReturnType<typeof registerGitIpc> | null = null;
 let storageIpc: ReturnType<typeof registerStorageIpc> | null = null;
+let containerWorkbenchIpc: ReturnType<typeof registerContainerWorkbenchIpc> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -116,6 +118,7 @@ else {
       trustedRendererUrl: () => trustedRendererUrl,
     });
     storageIpc = registerStorageIpc({ trustedRendererUrl: () => trustedRendererUrl });
+    containerWorkbenchIpc = registerContainerWorkbenchIpc({ trustedRendererUrl: () => trustedRendererUrl });
     await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
@@ -153,6 +156,8 @@ else {
     gitIpc?.shutdown();
     gitIpc = null;
     storageIpc?.shutdown();
+    containerWorkbenchIpc?.shutdown();
+    containerWorkbenchIpc = null;
     storageIpc = null;
   });
 }
@@ -381,6 +386,7 @@ function closeRendererOwnedServices(contents: WebContents): void {
   apiIpc?.closeRenderer(contents.id);
   gitIpc?.closeRenderer(contents.id);
   storageIpc?.closeRenderer(contents.id);
+  containerWorkbenchIpc?.closeRenderer(contents.id);
 }
 
 function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
@@ -444,7 +450,7 @@ async function createMainWindow() {
   mainWindow = window;
   const rendererId = window.webContents.id;
   window.once('ready-to-show', () => {
-    if (!window.isDestroyed()) {
+    if (!window.isDestroyed() && process.env.IT_TOOLS_HEADLESS_E2E !== 'true') {
       window.show();
     }
   });
@@ -454,6 +460,7 @@ async function createMainWindow() {
     apiIpc?.closeRenderer(rendererId);
     gitIpc?.closeRenderer(rendererId);
     storageIpc?.closeRenderer(rendererId);
+    containerWorkbenchIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
     }

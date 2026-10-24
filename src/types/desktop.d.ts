@@ -37,6 +37,11 @@ import type {
 } from '../shared/desktop-services/git';
 
 import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult, StorageUploadInput, StorageTransferResult, StorageProgress } from '../shared/desktop-services/object-storage';
+import type {
+  ContainerListRequest,
+  ContainerWorkbenchResult,
+  DockerContainer,
+} from '../shared/desktop-services/container-workbench';
 
 export {};
 
@@ -77,6 +82,8 @@ declare global {
       downloadStorageObject?(input: StoragePreviewInput): Promise<StorageResult<StorageTransferResult | null>>;
       deleteStorageObject?(input: StoragePreviewInput): Promise<StorageResult<boolean>>;
       onStorageProgress?(callback: (progress: StorageProgress) => void): () => void;
+      listDockerContainers?(input: ContainerListRequest): Promise<ContainerWorkbenchResult<DockerContainer[]>>;
+      cancelDockerContainerRequest?(input: ContainerListRequest): Promise<ContainerWorkbenchResult<boolean>>;
       cancelStorageRequest?(requestId: string): Promise<StorageResult<boolean>>;
       disconnectStorage?(): Promise<StorageResult<boolean>>;
       getRuntimeInfo(): Promise<{

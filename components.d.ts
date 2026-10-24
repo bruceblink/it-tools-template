@@ -62,6 +62,7 @@ declare module 'vue' {
     ColoredCard: typeof import('./src/components/ColoredCard.vue')['default']
     CommandPalette: typeof import('./src/modules/command-palette/command-palette.vue')['default']
     CommandPaletteOption: typeof import('./src/modules/command-palette/components/command-palette-option.vue')['default']
+    ContainerWorkbench: typeof import('./src/tools/container-workbench/container-workbench.vue')['default']
     CookieParser: typeof import('./src/tools/cookie-parser/cookie-parser.vue')['default']
     CorsAnalyzer: typeof import('./src/tools/cors-analyzer/cors-analyzer.vue')['default']
     CrontabGenerator: typeof import('./src/tools/crontab-generator/crontab-generator.vue')['default']
