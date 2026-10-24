@@ -46,6 +46,7 @@ test('renders live CPU and memory cards and pauses/resumes with a gap marker', a
 
   await page.getByTestId('system-monitor-pause').click();
   await expect(page.getByTestId('system-monitor-status')).toContainText('Sampling paused');
+  await page.waitForTimeout(1_300);
   await page.getByTestId('system-monitor-pause').click();
   await expect(page.getByTestId('system-monitor-status')).toContainText(/Warming up|Sampling/);
   await expect(page.getByTestId('system-monitor-gap')).toBeVisible({ timeout: 6_000 });
