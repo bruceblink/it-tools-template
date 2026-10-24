@@ -17,6 +17,8 @@ test.beforeAll(async () => {
   });
   page = await electronApp.firstWindow();
   await page.waitForLoadState('load');
+  await expect(page).toHaveURL('app://bundle/', { timeout: 60_000 });
+  await expect(page.getByRole('button', { name: /Search/i })).toBeVisible({ timeout: 60_000 });
 });
 
 test.afterAll(async () => {
@@ -25,13 +27,13 @@ test.afterAll(async () => {
   }
   finally {
     if (userDataDirectory) {
-      await rm(userDataDirectory, { recursive: true, force: true });
+      await rm(userDataDirectory, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
     }
   }
 });
 
 test.beforeEach(async () => {
-  await page.goto('app://bundle/system-monitor');
+  await gotoApp('app://bundle/system-monitor');
   await expect(page.locator('[data-test-id="system-monitor-workspace"]')).toBeVisible();
 });
 
@@ -53,7 +55,7 @@ test('renders live CPU and memory cards and pauses/resumes with a gap marker', a
 });
 
 test('delivers bounded samples through the trusted bridge and releases the subscription', async () => {
-  await page.goto('app://bundle/');
+  await gotoApp('app://bundle/');
   const result = await page.evaluate(async () => {
     const bridge = window.itToolsDesktop;
     if (!bridge?.startSystemMonitor || !bridge.onSystemMonitorSample) {
@@ -116,10 +118,22 @@ test('delivers bounded samples through the trusted bridge and releases the subsc
 test('cleans subscriptions across repeated route switches', async () => {
   test.setTimeout(60_000);
   for (let index = 0; index < 20; index += 1) {
-    await page.goto('app://bundle/');
-    await page.goto('app://bundle/system-monitor');
+    await gotoApp('app://bundle/');
+    await gotoApp('app://bundle/system-monitor');
     await expect(page.locator('[data-test-id="system-monitor-workspace"]')).toBeVisible();
   }
-  await page.goto('app://bundle/');
+  await gotoApp('app://bundle/');
   await expect(page.locator('[data-test-id="system-monitor-workspace"]')).toHaveCount(0);
 });
+
+async function gotoApp(url: string): Promise<void> {
+  try {
+    await page.goto(url);
+  }
+  catch (error) {
+    if (!(error instanceof Error) || !error.message.includes('ERR_ABORTED')) {
+      throw error;
+    }
+  }
+  await expect(page).toHaveURL(url);
+}
