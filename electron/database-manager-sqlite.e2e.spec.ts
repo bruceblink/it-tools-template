@@ -122,6 +122,33 @@ test.describe('Database manager - SQLite browsing', () => {
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await expect(page.getByText(/read-write/)).toBeVisible();
 
+    const batchToolbar = page.locator('[data-test-id="database-batch-toolbar"]');
+    await expect(batchToolbar).toBeVisible();
+    await expect(page.locator('[data-test-id="database-batch-delete-notice"]')).toBeVisible();
+    await expect(page.locator('.database-batch-row-action')).toHaveCount(0);
+    await addBatchDraft({ id: '200', username: 'batch-a', nickname: 'draft-a' });
+    await addBatchDraft({ id: '201', username: 'batch-b', nickname: 'draft-b' });
+    await batchToolbar.locator('[data-test-id="database-batch-review"]').click();
+    const batchReviewModal = page.locator('[data-test-id="database-batch-review-modal"]');
+    await expect(batchReviewModal).toBeVisible();
+    await expect(batchReviewModal.locator('[data-test-id="database-batch-insert-list"]')).toContainText('batch-a');
+    await expect(batchReviewModal.locator('[data-test-id="database-batch-insert-list"]')).toContainText('batch-b');
+    await batchReviewModal.locator('[data-test-id="database-batch-commit"]').click();
+    await expect(page.locator('[data-test-id="database-batch-notice"]')).toContainText('Committed 2 inserts and 0 deletes.');
+
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      'SELECT id, username, nickname FROM s3_sqlite_probe WHERE id IN (200, 201) ORDER BY id',
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('batch-a');
+    await expect(page.locator('[data-test-id="database-sql-results"]')).toContainText('batch-b');
+    await page.locator('[data-test-id="database-sql-editor"] textarea').fill(
+      'DELETE FROM s3_sqlite_probe WHERE id IN (200, 201)',
+    );
+    await page.getByRole('button', { name: 'Run SQL', exact: true }).click();
+    await expect(page.locator('[data-test-id="database-sql-write-result"]')).toContainText('DELETE affected 2 rows');
+    await setWriteConfirmation();
+
     await expect(page.locator('[data-test-id="database-table-edit-notice"]')).toBeVisible();
     await page.getByRole('button', { name: 'local', exact: true }).click();
     await page.locator('[data-test-id="database-cell-edit-input"] textarea').fill('table-edited');
@@ -191,4 +218,15 @@ async function setWriteConfirmation(): Promise<void> {
       },
     });
   });
+}
+
+async function addBatchDraft(values: { id: string; username: string; nickname: string }): Promise<void> {
+  await page.locator('[data-test-id="database-batch-add"]').click();
+  const modal = page.locator('[data-test-id="database-batch-insert-modal"]');
+  await expect(modal).toBeVisible();
+  for (const [index, value] of Object.values(values).entries()) {
+    await modal.getByRole('textbox').nth(index).fill(value);
+  }
+  await modal.locator('[data-test-id="database-batch-add-confirm"]').click();
+  await expect(modal).toBeHidden();
 }

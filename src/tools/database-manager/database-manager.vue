@@ -2,6 +2,8 @@
 import type { DataTableColumns } from 'naive-ui';
 import { h, onMounted, onUnmounted, reactive, ref } from 'vue';
 import type {
+  DatabaseBatchDeleteRow,
+  DatabaseBatchMutationResult,
   DatabaseColumnInfo,
   DatabaseAccessMode,
   DatabaseCellUpdateInput,
@@ -27,6 +29,7 @@ import {
   connectMySql,
   connectSQLite,
   connectPostgres,
+  applyDatabaseBatchMutation,
   cancelDatabaseDataPage,
   cancelDatabaseQuery,
   deletePostgresProfile,
@@ -357,6 +360,15 @@ const appliedDataFilters = ref<DatabaseDataFilter[]>([]);
 const draftDataSortColumn = ref<string | null>(null);
 const draftDataSortDirection = ref<'asc' | 'desc'>('asc');
 const appliedDataSort = ref<DatabaseDataSort[]>([]);
+const batchInsertDrafts = ref<Array<{ id: string; values: Array<{ column: string; value: string | null }> }>>([]);
+const batchDeleteDrafts = ref<DatabaseBatchDeleteRow[]>([]);
+const isBatchInsertOpen = ref(false);
+const isBatchReviewOpen = ref(false);
+const isBatchCommitting = ref(false);
+const batchError = ref<DatabaseErrorCode | null>(null);
+const batchNotice = ref<DatabaseBatchMutationResult | null>(null);
+const batchInsertValues = reactive<Record<string, string>>({});
+const batchInsertNullColumns = ref<string[]>([]);
 
 const schemaOptions = computed(() => schemas.value.map(({ name }) => ({ label: name, value: name })));
 const tableOptions = computed(() => tables.value.map(({ name, kind }) => ({ label: `${name} (${kind})`, value: name })));
@@ -488,7 +500,44 @@ const visibleDataColumnIndexes = computed(() => (dataPage.value?.columns ?? [])
 const visibleSqlColumnIndexes = computed(() => (sqlPage.value?.columns ?? [])
   .map((_, index) => index)
   .filter(index => !hiddenSqlColumns.value.includes(index)));
-const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => visibleDataColumnIndexes.value
+const batchEditableColumns = computed(() => activeEngine.value
+  ? structure.value.filter(column => isEditableUiType(activeEngine.value!, column.dataType))
+  : []);
+const batchDeleteAvailable = computed(() => activeAccessMode.value === 'read-write'
+  && dataPage.value?.editable === true
+  && dataPage.value.columnsTruncated === false
+  && structure.value.length === (dataPage.value?.columns.length ?? 0)
+  && activeEngine.value !== null
+  && structure.value.every(column => isEditableUiType(activeEngine.value!, column.dataType)));
+const batchSummary = computed(() => {
+  const inserts = batchInsertDrafts.value.length;
+  const deletes = batchDeleteDrafts.value.length;
+  return isChineseLocale.value
+    ? `新增 ${inserts} · 删除 ${deletes}`
+    : `${inserts} inserts · ${deletes} deletes`;
+});
+const batchNoticeMessage = computed(() => {
+  const result = batchNotice.value;
+  if (!result) {
+    return '';
+  }
+  return isChineseLocale.value
+    ? `已提交 ${result.insertedRows} 条新增和 ${result.deletedRows} 条删除。`
+    : `Committed ${result.insertedRows} inserts and ${result.deletedRows} deletes.`;
+});
+const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => [
+  ...(batchDeleteAvailable.value ? [{
+    title: isChineseLocale.value ? '批量' : 'Batch',
+    key: 'batch-action',
+    width: 100,
+    render: (row: DatabaseDataTableRow) => h('button', {
+      class: 'database-batch-row-action',
+      type: 'button',
+      'data-test-id': `database-batch-delete-${row.rowId}`,
+      onClick: () => toggleBatchDelete(row),
+    }, isBatchDeleteMarked(row) ? (isChineseLocale.value ? '取消删除' : 'Undo delete') : (isChineseLocale.value ? '标记删除' : 'Mark delete')),
+  } satisfies DataTableColumns<DatabaseDataTableRow>[number]] : []),
+  ...visibleDataColumnIndexes.value
   .map(index => {
     const column = dataPage.value?.columns[index];
     if (!column) {
@@ -502,7 +551,8 @@ const dataColumns = computed<DataTableColumns<DatabaseDataTableRow>>(() => visib
     render: (row: DatabaseDataTableRow) => renderEditableCell('table', row, index, column.name, column.dataType),
     };
   })
-  .filter((column): column is NonNullable<typeof column> => column !== null));
+  .filter((column): column is NonNullable<typeof column> => column !== null)
+]);
 const dataRows = computed<DatabaseDataTableRow[]>(() => (dataPage.value?.rows ?? []).map((row, index) => ({
   rowId: `${currentPageIndex.value}:${index}`,
   rowIndex: index,
@@ -642,6 +692,135 @@ function exportCurrentPage(source: 'table' | 'query', format: DatabaseExportForm
   );
   exportStatusSource.value = source;
   exportStatus.value = result.status === 'denied' ? 'failed' : result.status;
+}
+
+function resetBatchDrafts() {
+  batchInsertDrafts.value = [];
+  batchDeleteDrafts.value = [];
+  batchError.value = null;
+  isBatchInsertOpen.value = false;
+  isBatchReviewOpen.value = false;
+  batchInsertNullColumns.value = [];
+  for (const column of Object.keys(batchInsertValues)) {
+    delete batchInsertValues[column];
+  }
+}
+
+function openBatchInsert() {
+  if (!activeSession.value || !selectedTable.value || batchEditableColumns.value.length === 0) {
+    return;
+  }
+  for (const column of batchEditableColumns.value) {
+    batchInsertValues[column.name] = '';
+  }
+  batchInsertNullColumns.value = [];
+  batchError.value = null;
+  isBatchInsertOpen.value = true;
+}
+
+function addBatchInsertDraft() {
+  if (batchEditableColumns.value.length === 0) {
+    return;
+  }
+  const values = batchEditableColumns.value.map(column => ({
+    column: column.name,
+    value: batchInsertNullColumns.value.includes(column.name) ? null : batchInsertValues[column.name] ?? '',
+  }));
+  batchInsertDrafts.value = [
+    ...batchInsertDrafts.value,
+    { id: crypto.randomUUID(), values },
+  ];
+  isBatchInsertOpen.value = false;
+}
+
+function removeBatchInsertDraft(id: string) {
+  batchInsertDrafts.value = batchInsertDrafts.value.filter(draft => draft.id !== id);
+}
+
+function isBatchDeleteMarked(row: DatabaseDataTableRow): boolean {
+  if (!row.primaryKeyValues) {
+    return false;
+  }
+  return batchDeleteDrafts.value.some(draft => draft.primaryKeys.every((key, index) => key.value === row.primaryKeyValues?.[index]));
+}
+
+function toggleBatchDelete(row: DatabaseDataTableRow) {
+  if (!batchDeleteAvailable.value
+    || !dataPage.value
+    || !row.primaryKeyValues
+    || row.primaryKeyValuesTruncated
+    || row.cells.length !== dataPage.value.columns.length
+    || row.cells.some(cell => cell.truncated)) {
+    return;
+  }
+  const existingIndex = batchDeleteDrafts.value.findIndex(draft => draft.primaryKeys.every((key, index) => key.value === row.primaryKeyValues?.[index]));
+  if (existingIndex >= 0) {
+    batchDeleteDrafts.value = batchDeleteDrafts.value.filter((_draft, index) => index !== existingIndex);
+    return;
+  }
+  batchDeleteDrafts.value = [
+    ...batchDeleteDrafts.value,
+    {
+      primaryKeys: dataPage.value.primaryKeyColumns.map((column, index) => ({
+        column,
+        value: row.primaryKeyValues![index]!,
+      })),
+      originalValues: dataPage.value.columns.map((column, index) => ({
+        column: column.name,
+        value: row.cells[index]?.value ?? null,
+      })),
+    },
+  ];
+}
+
+function removeBatchDeleteDraft(index: number) {
+  batchDeleteDrafts.value = batchDeleteDrafts.value.filter((_draft, draftIndex) => draftIndex !== index);
+}
+
+function reviewBatchDrafts() {
+  if (batchInsertDrafts.value.length === 0 && batchDeleteDrafts.value.length === 0) {
+    return;
+  }
+  batchError.value = null;
+  isBatchReviewOpen.value = true;
+}
+
+async function commitBatchDrafts() {
+  const sessionId = activeSession.value?.sessionId;
+  const schema = selectedSchema.value;
+  const table = selectedTable.value;
+  if (!sessionId || !schema || !table || (batchInsertDrafts.value.length === 0 && batchDeleteDrafts.value.length === 0) || isBatchCommitting.value) {
+    return;
+  }
+  isBatchCommitting.value = true;
+  batchError.value = null;
+  try {
+    const result = await applyDatabaseBatchMutation(sessionId, {
+      schema,
+      table,
+      inserts: batchInsertDrafts.value.map(draft => ({
+        values: draft.values.map(value => ({ column: value.column, value: value.value })),
+      })),
+      deletes: batchDeleteDrafts.value.map(draft => ({
+        primaryKeys: draft.primaryKeys.map(key => ({ column: key.column, value: key.value })),
+        originalValues: draft.originalValues.map(value => ({ column: value.column, value: value.value })),
+      })),
+    });
+    if (result.status !== 'success') {
+      batchError.value = result.status === 'failed' ? result.error : 'service-unavailable';
+      return;
+    }
+    if (result.value.kind === 'cancelled') {
+      isBatchReviewOpen.value = false;
+      return;
+    }
+    batchNotice.value = result.value;
+    resetBatchDrafts();
+    await loadDataPage(currentPageIndex.value, tableRequestSequence);
+  }
+  finally {
+    isBatchCommitting.value = false;
+  }
 }
 
 function formatDataFilter(filter: DatabaseDataFilter): string {
@@ -1123,6 +1302,8 @@ async function refreshSchemas(sessionId: string) {
   structure.value = [];
   indexes.value = [];
   indexesTruncated.value = false;
+  resetBatchDrafts();
+  batchNotice.value = null;
   selectedSchema.value = null;
   selectedTable.value = null;
   try {
@@ -1155,6 +1336,8 @@ async function selectSchema(schema: string | null) {
   indexesTruncated.value = false;
   dataPage.value = null;
   dataNotice.value = null;
+  resetBatchDrafts();
+  batchNotice.value = null;
   activePageRequestId.value = null;
   isLoadingData.value = false;
   columnsTruncated.value = false;
@@ -1196,6 +1379,8 @@ async function selectTable(table: string | null) {
   indexes.value = [];
   indexesTruncated.value = false;
   dataPage.value = null;
+  resetBatchDrafts();
+  batchNotice.value = null;
   hiddenDataColumns.value = [];
   resetDataViewOptions();
   exportStatusSource.value = null;
@@ -1543,6 +1728,8 @@ async function disconnect() {
   indexes.value = [];
   indexesTruncated.value = false;
   dataPage.value = null;
+  resetBatchDrafts();
+  batchNotice.value = null;
   hiddenDataColumns.value = [];
   hiddenSqlColumns.value = [];
   resetDataViewOptions();
@@ -1794,6 +1981,40 @@ onUnmounted(() => {
                 {{ resultToolsText.exportJsonl }}
               </n-button>
             </div>
+            <div v-if="dataPage && activeAccessMode === 'read-write'" class="database-batch-toolbar" data-test-id="database-batch-toolbar">
+              <n-button
+                data-test-id="database-batch-add"
+                size="small"
+                :disabled="batchEditableColumns.length === 0 || batchInsertDrafts.length + batchDeleteDrafts.length >= 100"
+                @click="openBatchInsert"
+              >
+                {{ isChineseLocale ? '新增草稿' : 'Add row draft' }}
+              </n-button>
+              <span class="database-export-scope">{{ batchSummary }}</span>
+              <n-button
+                data-test-id="database-batch-review"
+                size="small"
+                type="primary"
+                :disabled="batchInsertDrafts.length + batchDeleteDrafts.length === 0"
+                @click="reviewBatchDrafts"
+              >
+                {{ isChineseLocale ? '预览提交' : 'Review commit' }}
+              </n-button>
+              <n-button
+                data-test-id="database-batch-clear"
+                size="small"
+                :disabled="batchInsertDrafts.length + batchDeleteDrafts.length === 0"
+                @click="resetBatchDrafts"
+              >
+                {{ isChineseLocale ? '清空草稿' : 'Clear drafts' }}
+              </n-button>
+            </div>
+            <n-alert v-if="batchNoticeMessage" type="success" :show-icon="false" mb-3 data-test-id="database-batch-notice">
+              {{ batchNoticeMessage }}
+            </n-alert>
+            <n-alert v-if="batchDeleteAvailable === false && activeAccessMode === 'read-write'" type="info" :show-icon="false" mb-3 data-test-id="database-batch-delete-notice">
+              {{ isChineseLocale ? '当前表包含无法安全回读的列，批量删除已停用。' : 'Batch delete is unavailable because this table has columns that cannot be read back safely.' }}
+            </n-alert>
             <div v-if="dataPage" class="database-data-view-controls" data-test-id="database-data-view-controls">
               <div class="database-data-view-row">
                 <strong>{{ dataViewText.filter }}</strong>
@@ -2091,6 +2312,70 @@ onUnmounted(() => {
           </n-button>
         </div>
       </n-modal>
+
+      <n-modal v-model:show="isBatchInsertOpen" preset="card" :title="isChineseLocale ? '新增行草稿' : 'Add row draft'" style="max-width: 720px; width: calc(100vw - 32px)" data-test-id="database-batch-insert-modal">
+        <p class="database-edit-hint">
+          {{ isChineseLocale ? '空值按空字符串提交；勾选 NULL 可提交 NULL。草稿只在点击预览提交后写入数据库。' : 'Empty inputs are submitted as empty strings. Check NULL to submit NULL. Drafts are not written until you review and commit them.' }}
+        </p>
+        <div class="database-batch-form">
+          <div v-for="column in batchEditableColumns" :key="column.name" class="database-batch-field">
+            <label :for="`database-batch-${column.name}`">{{ column.name }} · {{ column.dataType }}</label>
+            <n-input
+              :id="`database-batch-${column.name}`"
+              v-model:value="batchInsertValues[column.name]"
+              :disabled="batchInsertNullColumns.includes(column.name)"
+              maxlength="4096"
+            />
+            <n-checkbox
+              :checked="batchInsertNullColumns.includes(column.name)"
+              @update:checked="checked => batchInsertNullColumns = checked
+                ? [...batchInsertNullColumns, column.name]
+                : batchInsertNullColumns.filter(name => name !== column.name)"
+            >
+              NULL
+            </n-checkbox>
+          </div>
+        </div>
+        <div class="database-edit-actions">
+          <n-button @click="isBatchInsertOpen = false">
+            {{ isChineseLocale ? '取消' : 'Cancel' }}
+          </n-button>
+          <n-button data-test-id="database-batch-add-confirm" type="primary" @click="addBatchInsertDraft">
+            {{ isChineseLocale ? '加入草稿' : 'Add draft' }}
+          </n-button>
+        </div>
+      </n-modal>
+
+      <n-modal v-model:show="isBatchReviewOpen" preset="card" :title="isChineseLocale ? '预览批量提交' : 'Review batch commit'" style="max-width: 720px; width: calc(100vw - 32px)" :mask-closable="!isBatchCommitting" :closable="!isBatchCommitting" data-test-id="database-batch-review-modal">
+        <p class="database-edit-hint">
+          {{ isChineseLocale ? `将新增 ${batchInsertDrafts.length} 行，删除 ${batchDeleteDrafts.length} 行。所有操作在一个事务中执行。` : `The commit will insert ${batchInsertDrafts.length} rows and delete ${batchDeleteDrafts.length} rows in one transaction.` }}
+        </p>
+        <div v-if="batchInsertDrafts.length > 0" class="database-batch-draft-list" data-test-id="database-batch-insert-list">
+          <strong>{{ isChineseLocale ? '新增草稿' : 'Insert drafts' }}</strong>
+          <div v-for="(draft, index) in batchInsertDrafts" :key="draft.id" class="database-batch-draft-row">
+            <span>{{ index + 1 }} · {{ draft.values.map(value => `${value.column}=${value.value === null ? 'NULL' : value.value}`).join(', ') }}</span>
+            <n-button size="small" @click="removeBatchInsertDraft(draft.id)">{{ isChineseLocale ? '移除' : 'Remove' }}</n-button>
+          </div>
+        </div>
+        <div v-if="batchDeleteDrafts.length > 0" class="database-batch-draft-list" data-test-id="database-batch-delete-list">
+          <strong>{{ isChineseLocale ? '删除草稿' : 'Delete drafts' }}</strong>
+          <div v-for="(draft, index) in batchDeleteDrafts" :key="`${draft.primaryKeys.map(key => key.value).join('|')}-${index}`" class="database-batch-draft-row">
+            <span>{{ index + 1 }} · {{ draft.primaryKeys.map(key => `${key.column}=${key.value}`).join(', ') }}</span>
+            <n-button size="small" @click="removeBatchDeleteDraft(index)">{{ isChineseLocale ? '移除' : 'Remove' }}</n-button>
+          </div>
+        </div>
+        <n-alert v-if="batchError" type="error" :show-icon="false" mt-3 role="alert" data-test-id="database-batch-error">
+          {{ databaseErrorText(batchError) }}
+        </n-alert>
+        <div class="database-edit-actions">
+          <n-button :disabled="isBatchCommitting" @click="isBatchReviewOpen = false">
+            {{ isChineseLocale ? '取消' : 'Cancel' }}
+          </n-button>
+          <n-button data-test-id="database-batch-commit" type="primary" :loading="isBatchCommitting" @click="commitBatchDrafts">
+            {{ isChineseLocale ? '确认提交' : 'Commit batch' }}
+          </n-button>
+        </div>
+      </n-modal>
     </div>
   </section>
 </template>
@@ -2186,6 +2471,74 @@ onUnmounted(() => {
   flex-wrap: wrap;
   gap: 8px;
   margin: 0 0 12px;
+}
+
+.database-batch-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.database-batch-form {
+  display: grid;
+  gap: 12px;
+}
+
+.database-batch-field {
+  display: grid;
+  gap: 6px;
+}
+
+.database-batch-field > label {
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.database-batch-draft-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.database-batch-draft-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+}
+
+.database-batch-draft-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.database-batch-row-action {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-color);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.database-batch-row-action:hover,
+.database-batch-row-action:focus-visible {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  outline: none;
 }
 
 .database-data-view-controls {
@@ -2341,6 +2694,10 @@ onUnmounted(() => {
     align-items: flex-start;
   }
 
+  .database-batch-toolbar {
+    align-items: flex-start;
+  }
+
   .database-data-view-row {
     align-items: stretch;
     flex-direction: column;
@@ -2353,6 +2710,11 @@ onUnmounted(() => {
 
   .database-export-scope {
     width: 100%;
+  }
+
+  .database-batch-draft-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .database-page-loading {
