@@ -65,6 +65,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日将 IPv4 CIDR Overlap Checker 的解析和配对分析迁入 Worker。400 个相同 `/24` 输入的两次同步计算中位耗时为 85.07 毫秒，并产生 79,800 个重叠对。新 Worker 限制输入 256 KiB、1,000 行、500 个重叠对、2 MiB 序列化输出和 10 秒运行时间；超出重叠对上限时清除报告并显示缩小输入的提示。`pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查。Chromium 与 WebKit E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项、插件管理器与沙箱 E2E 2 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`。详细数据和验证记录见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日将 IPv4 CIDR Containment Checker 的规则解析、目标分析和匹配明细生成迁入 Worker。200 条规则与 200 个目标组成的合成输入中，两次同步分析中位耗时为 39.55 毫秒，并产生 40,000 条匹配。Worker 限制两份文本合计 256 KiB、合计 1,000 行、500 条匹配、2 MiB 序列化输出和 10 秒运行时间；超出匹配上限时显示缩小输入提示。对同一密集输入，受限任务在 Vite SSR 基准中的中位耗时为 0.70 毫秒；它只生成错误提示，不生成完整 40,000 条报告，不能与旧分析耗时直接比较。`pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查；Chromium、WebKit、隐藏 Electron Worker E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。详细验证见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

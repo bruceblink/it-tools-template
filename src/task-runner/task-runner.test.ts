@@ -163,6 +163,33 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('runs IPv4 CIDR containment reports in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('ipv4-cidr-containment', 1, { kind: 'ipv4-cidr-containment', rules: 'old', targets: '' }, taskLimits.ipv4CidrContainment);
+    const latest = runner.run('ipv4-cidr-containment', 2, { kind: 'ipv4-cidr-containment', rules: 'latest', targets: 'target' }, taskLimits.ipv4CidrContainment);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.inputVersion).toBe(2);
+    workers[1]?.reply({ kind: 'ipv4-cidr-containment', valid: false, errorMessage: 'invalid target' });
+    await expect(latest).resolves.toMatchObject({
+      status: 'success',
+      result: { kind: 'ipv4-cidr-containment', valid: false, errorMessage: 'invalid target' },
+    });
+  });
+
+  it('rejects IPv4 CIDR containment inputs above the byte limit before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('ipv4-cidr-containment', 1, {
+      kind: 'ipv4-cidr-containment',
+      rules: 'x'.repeat(taskLimits.ipv4CidrContainment.maxInputBytes),
+      targets: 'y',
+    }, taskLimits.ipv4CidrContainment);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('rejects oversized Markdown before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('markdown-to-html', 1, {

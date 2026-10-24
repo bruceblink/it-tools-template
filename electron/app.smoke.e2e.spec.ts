@@ -165,6 +165,19 @@ test('analyzes IPv4 CIDR overlaps in a dedicated worker on the app protocol', as
   await expect(page.getByTestId('ipv4-cidr-overlap-task-status')).toHaveText('This input produces more than 500 overlapping pairs. Reduce the input to view the full report.');
 });
 
+test('checks IPv4 CIDR containment in a dedicated worker on the app protocol', async () => {
+  await page.goto('app://bundle/ipv4-cidr-containment-checker');
+
+  const rules = page.getByTestId('ipv4-cidr-rules-input');
+  const targets = page.getByTestId('ipv4-cidr-targets-input');
+  await expect(page.getByText('10.0.0.42/32', { exact: true }).first()).toBeVisible();
+
+  const duplicates = Array.from({ length: 23 }, () => '10.0.0.0/24').join('\n');
+  await rules.fill(duplicates);
+  await targets.fill(duplicates);
+  await expect(page.getByTestId('ipv4-cidr-containment-task-status')).toHaveText('This input produces more than 500 rule matches. Reduce the input to view the full report.');
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 

@@ -20,7 +20,7 @@ export type Ipv4CidrContainmentStatus = 'covered' | 'partial' | 'unmatched';
 export type Ipv4CidrContainmentRelationship = 'exact' | 'contains-target' | 'inside-target' | 'partial';
 
 export interface Ipv4CidrContainmentMatch {
-  rule: Ipv4CidrContainmentBlock
+  rule: Pick<Ipv4CidrContainmentBlock, 'line' | 'cidr'>
   relationship: Ipv4CidrContainmentRelationship
   overlapCidr: string
   overlapStart: string
@@ -53,6 +53,17 @@ export class Ipv4CidrContainmentCheckerError extends Error {
     super(message);
     this.name = 'Ipv4CidrContainmentCheckerError';
   }
+}
+
+export class Ipv4CidrContainmentLimitError extends Error {
+  constructor(maximumMatches: number) {
+    super(`This input produces more than ${maximumMatches.toLocaleString()} rule matches. Reduce the input to view the full report.`);
+    this.name = 'Ipv4CidrContainmentLimitError';
+  }
+}
+
+export interface Ipv4CidrContainmentAnalysisOptions {
+  maxMatches?: number
 }
 
 interface Range {
@@ -224,7 +235,7 @@ function countAddresses(ranges: Range[]) {
   return ranges.reduce((total, range) => total + range.end - range.start + 1, 0);
 }
 
-function checkTarget(rules: Ipv4CidrContainmentBlock[], target: Ipv4CidrContainmentTarget): Ipv4CidrContainmentCheck {
+function checkTarget(rules: Ipv4CidrContainmentBlock[], target: Ipv4CidrContainmentTarget, maximumMatches: number, existingMatches: number): Ipv4CidrContainmentCheck {
   const matches: Ipv4CidrContainmentMatch[] = [];
   const coveredRanges: Range[] = [];
 
@@ -236,9 +247,13 @@ function checkTarget(rules: Ipv4CidrContainmentBlock[], target: Ipv4CidrContainm
       continue;
     }
 
+    if (existingMatches + matches.length >= maximumMatches) {
+      throw new Ipv4CidrContainmentLimitError(maximumMatches);
+    }
+
     coveredRanges.push({ start: overlapStart, end: overlapEnd });
     matches.push({
-      rule,
+      rule: { line: rule.line, cidr: rule.cidr },
       relationship: getRelationship(rule, target),
       overlapCidr: rangeToCidrs(overlapStart, overlapEnd).join(', '),
       overlapStart: intToIpv4(overlapStart),
@@ -272,10 +287,20 @@ export function parseIpv4CidrTargets(input: string): Ipv4CidrContainmentTarget[]
   return parseLines(input, parseTarget);
 }
 
-export function analyzeIpv4CidrContainment(rulesInput: string, targetsInput: string): Ipv4CidrContainmentAnalysis {
+export function analyzeIpv4CidrContainment(rulesInput: string, targetsInput: string, options: Ipv4CidrContainmentAnalysisOptions = {}): Ipv4CidrContainmentAnalysis {
+  const maximumMatches = options.maxMatches ?? Number.MAX_SAFE_INTEGER;
+  if (!Number.isSafeInteger(maximumMatches) || maximumMatches < 0) {
+    throw new RangeError('Maximum containment match count must be a non-negative safe integer.');
+  }
+
   const rules = parseIpv4CidrRules(rulesInput).sort((left, right) => left.start - right.start || left.end - right.end || left.line - right.line);
-  const targets = parseIpv4CidrTargets(targetsInput)
-    .map(target => checkTarget(rules, target));
+  const targets: Ipv4CidrContainmentCheck[] = [];
+  let matchCount = 0;
+  for (const target of parseIpv4CidrTargets(targetsInput)) {
+    const check = checkTarget(rules, target, maximumMatches, matchCount);
+    matchCount += check.matches.length;
+    targets.push(check);
+  }
 
   return {
     rules,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   Ipv4CidrContainmentCheckerError,
+  Ipv4CidrContainmentLimitError,
   analyzeIpv4CidrContainment,
   parseIpv4CidrRules,
   parseIpv4CidrTargets,
@@ -132,5 +133,19 @@ describe('ipv4-cidr-containment-checker service', () => {
     expect(() => analyzeIpv4CidrContainment('10.0.0.0/24\nbad-ip', '10.0.0.1')).toThrow('Line 2: Enter CIDR notation like 192.168.0.0/24.');
     expect(() => analyzeIpv4CidrContainment('10.0.0.0/24', '10.0.0.1/33')).toThrow('Line 1: CIDR prefix must be between 0 and 32.');
     expect(() => analyzeIpv4CidrContainment('10.0.0.0/24', 'bad-ip')).toThrow('Line 1: Invalid IPv4 address "bad-ip".');
+  });
+
+  it('keeps repeated rule references limited to the fields shown in the match report', () => {
+    const analysis = analyzeIpv4CidrContainment('10.0.0.0/24', '10.0.0.0/24');
+
+    expect(analysis.targets[0]?.matches[0]?.rule).toEqual({ line: 1, cidr: '10.0.0.0/24' });
+  });
+
+  it('stops at the configured total match count across targets', () => {
+    const rules = '10.0.0.0/24\n10.0.0.0/24';
+    const targets = '10.0.0.0/24\n10.0.0.0/24';
+
+    expect(() => analyzeIpv4CidrContainment(rules, targets, { maxMatches: 3 })).toThrow(Ipv4CidrContainmentLimitError);
+    expect(() => analyzeIpv4CidrContainment(rules, targets, { maxMatches: 3 })).toThrow('more than 3 rule matches');
   });
 });

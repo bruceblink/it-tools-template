@@ -225,7 +225,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML、Docker Run 转 Compose、List Converter、IPv4 CIDR Merge 和 IPv4 CIDR Overlap Checker 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML、Docker Run 转 Compose、List Converter、IPv4 CIDR Merge、IPv4 CIDR Overlap Checker 和 IPv4 CIDR Containment Checker 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
@@ -615,3 +615,7 @@ Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，�
 页面现由专用 Worker 执行解析和重叠分析。输入最多 256 KiB、1,000 行；Worker 在发现第 501 个重叠对时停止，并提示用户缩小输入，不显示部分报告。重叠表格项只携带行号和标准 CIDR；完整区块列表保留一次输入引用。序列化结果最多 2 MiB，Worker 运行最多 10 秒；新输入会终止旧任务。
 
 完整 `pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。Web 首屏 JavaScript gzip 为 299.79 KiB；Web 与 Electron Worker 原始构建分别为 76.24 KiB 和 233.20 KiB。Chromium、WebKit Web E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项通过。插件管理器和沙箱 E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。1280×850 与 390×844 Playwright 检查确认默认报告、输入值可见、页面无横向溢出，浏览器 console 无错误或警告。修复移动布局前，textarea 在 390px 视口的 x 坐标为 -235px；修复后位于 x=39px、宽 320px。截图保存在系统临时目录。未运行前台 UI 或真实窗口交互。当前改动尚未推送，因此没有本轮远端三平台 CI 结果。
+
+本轮 IPv4 CIDR Containment Checker Worker 迁移（2026-10-25）：原页面在两份输入各自验证时重复运行 `analyzeIpv4CidrContainment`，随后再同步生成目标摘要和匹配明细。基准使用 Vite SSR 调用实际 TypeScript 服务；Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，规则与目标均由相同 `/24` 重复行组成，预热一次后每种输入测量 3 次，每次连续运行两次分析。50、100、150、200 条规则配相同数量目标时，每次分析分别生成 2,500、10,000、22,500、40,000 条匹配；两次分析中位耗时分别为 4.02、11.78、23.12、39.55 毫秒，最大耗时为 4.03、12.42、28.24、54.62 毫秒。这是本机合成微基准，不含浏览器表格渲染。迁移后的 Worker 在 200×200 密集重复输入上测 7 次，运行中位数为 0.70 毫秒、最大值为 4.43 毫秒；它在生成第 501 项时返回限制提示，因此不会产生完整的 40,000 项结果。该运行只说明停止生成超限报告的成本，不能与原来生成完整结果的计算直接比较。
+
+解析、状态分类和匹配明细现由专用 Worker 单次完成。两份输入合计最多 256 KiB、1,000 行；结果最多 500 条匹配、序列化输出最多 2 MiB，任务最多运行 10 秒。达到匹配上限时停止当前分析，不返回部分报告。匹配项只携带规则行号和标准 CIDR，不重复传递完整规则对象。新输入会取消旧 Worker，页面只显示当前版本结果。最终 `pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。PWA 首屏 JavaScript gzip 为 299.79 KiB；Web 与 Electron Worker 原始构建大小为 76.84 KiB 和 228.80 KiB。Chromium、WebKit Web E2E 与隐藏 Electron `app://bundle` E2E 各 1 项通过，覆盖默认报告、行号错误、密集匹配上限、输入上限和 Worker 加载。Firefox 启动返回 `spawn UNKNOWN`。Playwright 检查 1280×850 和 390×844 页面，确认两个输入与报告可见，页面无横向溢出，console 无错误或警告。截图保存在系统临时目录。未运行前台 UI 或真实窗口交互。
