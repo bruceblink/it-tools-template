@@ -191,6 +191,55 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('runs List Converter tasks in a replaceable worker', async () => {
+    const { runner, workers } = createHarness();
+    const options = {
+      lowerCase: false,
+      trimItems: true,
+      itemPrefix: '',
+      itemSuffix: '',
+      listPrefix: '',
+      listSuffix: '',
+      reverseList: false,
+      sortList: null,
+      removeDuplicates: true,
+      separator: ', ',
+      keepLineBreaks: false,
+    };
+    const first = runner.run('list-converter', 1, { kind: 'list-convert', value: 'old', options }, taskLimits.listConverter);
+    const latest = runner.run('list-converter', 2, { kind: 'list-convert', value: 'one\ntwo', options }, taskLimits.listConverter);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    const result: WorkerTaskResult = { kind: 'list-convert', valid: true, output: 'one, two' };
+    workers[1]?.reply(result);
+    await expect(latest).resolves.toEqual({ status: 'success', result });
+  });
+
+  it('rejects oversized List Converter input before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('list-converter', 1, {
+      kind: 'list-convert',
+      value: 'x'.repeat(taskLimits.listConverter.maxInputBytes + 1),
+      options: {
+        lowerCase: false,
+        trimItems: true,
+        itemPrefix: '',
+        itemSuffix: '',
+        listPrefix: '',
+        listSuffix: '',
+        reverseList: false,
+        sortList: null,
+        removeDuplicates: true,
+        separator: ', ',
+        keepLineBreaks: false,
+      },
+    }, taskLimits.listConverter);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('terminates a task at its deadline', async () => {
     const { runner, workers } = createHarness();
     const timed = runner.run('regex-tester', 1, { kind: 'regex', regex: 'a', text: 'a', flags: 'd' }, {

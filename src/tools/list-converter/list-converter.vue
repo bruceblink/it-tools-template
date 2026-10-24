@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
-import { convert } from './list-converter.models';
-import type { ConvertOptions } from './list-converter.types';
+import { createDefaultConvertOptions, type ConvertOptions } from './list-converter.types';
 
 const sortOrderOptions = [
   {
@@ -16,23 +15,8 @@ const sortOrderOptions = [
   },
 ];
 
-const conversionConfig = useStorage<ConvertOptions>('list-converter:conversionConfig', {
-  lowerCase: false,
-  trimItems: true,
-  removeDuplicates: true,
-  keepLineBreaks: false,
-  itemPrefix: '',
-  itemSuffix: '',
-  listPrefix: '',
-  listSuffix: '',
-  reverseList: false,
-  sortList: null,
-  separator: ', ',
-});
-
-function transformer(value: string) {
-  return convert(value, conversionConfig.value);
-}
+const conversionConfig = useStorage<ConvertOptions>('list-converter:conversionConfig', createDefaultConvertOptions());
+const workerOptions = computed(() => ({ ...conversionConfig.value }));
 </script>
 
 <template>
@@ -118,6 +102,7 @@ function transformer(value: string) {
     input-label="Your input data"
     input-placeholder="Paste your input data here..."
     output-label="Your transformed data"
-    :transformer="transformer"
+    worker-task-kind="list-convert"
+    :worker-task-options="workerOptions"
   />
 </template>

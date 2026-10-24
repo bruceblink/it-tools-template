@@ -136,6 +136,13 @@ test('converts Docker Run to Compose in a dedicated worker on the app protocol',
   await expect(page.getByText('The option "--gpus" is not yet implemented.', { exact: true })).toBeVisible();
 });
 
+test('converts lists in a dedicated worker on the app protocol', async () => {
+  await page.goto('app://bundle/list-converter');
+
+  await page.getByTestId('input').fill('two\none\ntwo');
+  await expect(page.getByTestId('area-content')).toHaveText('two, one');
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 

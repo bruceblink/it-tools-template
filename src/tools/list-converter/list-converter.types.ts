@@ -13,3 +13,19 @@ export interface ConvertOptions {
   separator: string
   keepLineBreaks: boolean
 }
+
+export function createDefaultConvertOptions(): ConvertOptions {
+  return {
+    lowerCase: false,
+    trimItems: true,
+    itemPrefix: '',
+    itemSuffix: '',
+    listPrefix: '',
+    listSuffix: '',
+    reverseList: false,
+    sortList: null,
+    removeDuplicates: true,
+    separator: ', ',
+    keepLineBreaks: false,
+  };
+}

@@ -59,6 +59,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日将 Docker Run 转 Compose 改为专用 Worker：合成 256 KiB 命令原本同步运行约 1.46 秒，现由 Worker 处理，并限制输入 256 KiB、输出 2 MiB 和执行时间 10 秒。原有转换结果和诊断消息保持不变。完整 `pnpm check` 通过 790 项单测（18 项跳过）；Chromium Web 与隐藏 Electron `app://bundle` E2E 通过。详细实现与测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日将 List Converter 转为专用 Worker：排序模式下 1 MiB、2 MiB、4 MiB 合成列表的同步转换中位数分别为 31.40、62.61、126.62 毫秒。现在限制输入为 1 MiB、行数为 100,000、结果为 2 MiB、运行时间为 10 秒。完整检查通过 797 项单测（18 项跳过）；Chromium Web 的 4 项 E2E 和隐藏 Electron `app://bundle` 回归通过。详细实现与测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

@@ -34,4 +34,11 @@ test.describe('Tool - List converter', () => {
     // Formatting updates after the input event; wait for the expected output instead of reading once.
     await expect(page.getByTestId('area-content')).toHaveText('\'1\', \'2\', \'4\', \'3\', \'5\'');
   });
+
+  test('reports inputs above the Worker byte limit', async ({ page }) => {
+    await page.getByTestId('input').fill('x'.repeat(1024 * 1024 + 1));
+
+    await expect(page.getByTestId('format-transformer-task-status')).toHaveText('Task limits exceeded. Reduce the input.');
+    await expect(page.getByTestId('area-content')).toHaveText('');
+  });
 });

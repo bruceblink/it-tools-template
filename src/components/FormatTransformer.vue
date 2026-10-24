@@ -10,6 +10,7 @@ import type { CsvToJsonOptions } from '@/tools/csv-to-json/csv-to-json.service';
 import type { CsvToMarkdownTableOptions } from '@/tools/csv-to-markdown-table/csv-to-markdown-table.service';
 import type { JsonKeySorterOptions } from '@/tools/json-key-sorter/json-key-sorter.service';
 import type { JsonLinesSummary } from '@/tools/json-lines-converter/json-lines-converter.service';
+import { createDefaultConvertOptions, type ConvertOptions } from '@/tools/list-converter/list-converter.types';
 import type { JsonLinesTaskOptions, WorkerTask, XmlFormatTaskOptions } from '@/task-runner/task-runner.types';
 
 const props = withDefaults(
@@ -21,8 +22,8 @@ const props = withDefaults(
     inputDefault?: string
     outputLabel?: string
     outputLanguage?: string
-    workerTaskKind?: 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'toml-to-json' | 'json-to-yaml' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'
-    workerTaskOptions?: CsvToJsonOptions | CsvToMarkdownTableOptions | JsonKeySorterOptions | JsonLinesTaskOptions | XmlFormatTaskOptions
+    workerTaskKind?: 'list-convert' | 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'toml-to-json' | 'json-to-yaml' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'
+    workerTaskOptions?: ConvertOptions | CsvToJsonOptions | CsvToMarkdownTableOptions | JsonKeySorterOptions | JsonLinesTaskOptions | XmlFormatTaskOptions
     workerInvalidMessage?: string
   }>(),
   {
@@ -77,6 +78,24 @@ watch([input, workerTaskKind, workerTaskOptions], () => {
   if (input.value === '') { return; }
 
   taskTimer = setTimeout(async () => {
+    if (kind === 'list-convert') {
+      const listTask = {
+        kind,
+        value: input.value,
+        options: workerTaskOptions.value as ConvertOptions | undefined ?? createDefaultConvertOptions(),
+      };
+      const outcome = await taskRunner.run(taskKey, version, listTask, taskLimits.listConverter);
+      if (version !== taskVersion) { return; }
+      if (outcome.status === 'success' && outcome.result.kind === 'list-convert') {
+        workerOutput.value = outcome.result.output;
+        taskStatus.value = outcome.result.valid ? 'idle' : 'error';
+        return;
+      }
+      if (outcome.status === 'cancelled') { return; }
+      taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+      return;
+    }
+
     const task = (() => {
       if (kind === 'json-key-sorter') {
         return { kind, value: input.value, options: workerTaskOptions.value as JsonKeySorterOptions | undefined ?? {} };
@@ -165,10 +184,10 @@ tryOnBeforeUnmount(() => {
     <div mb-5px>
       {{ outputLabel }}
     </div>
-      <div v-if="workerTaskKind && taskStatus === 'running'" mb-2 text-center op-70>
+    <div v-if="workerTaskKind && taskStatus === 'running'" mb-2 text-center op-70 data-test-id="format-transformer-task-status">
       {{ taskMessage }}
     </div>
-    <c-alert v-else-if="workerTaskKind && taskStatus !== 'idle'" mb-2>
+    <c-alert v-else-if="workerTaskKind && taskStatus !== 'idle'" mb-2 data-test-id="format-transformer-task-status">
       {{ taskMessage }}
     </c-alert>
     <textarea-copyable :value="output" :language="outputLanguage" :follow-height-of="inputElement?.inputWrapperRef" />
