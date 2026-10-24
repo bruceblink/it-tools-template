@@ -1,7 +1,7 @@
 # IT Tools 主线路线：Web/Electron 产品承载与 Ramag 场景互补
 
 > 状态：现行路线
-> 更新日期：2026-10-24
+> 更新日期：2026-10-25
 > 执行入口：[01-development-plan.md](01-development-plan.md)
 > P0 边界记录：[14-cross-project-capability-matrix.md](14-cross-project-capability-matrix.md)
 > 适用范围：Web/PWA、Electron、与 Ramag 的功能边界、性能和插件扩展
@@ -225,7 +225,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser 和 Bcrypt 哈希/比较已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较和 Markdown 转 HTML 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
@@ -497,7 +497,7 @@ ZIP 使用 `yauzl` 3.4.0 按条目顺序读取。安装器拒绝超过 64 MiB �
 
 ## 下一轮直接执行的范围
 
-P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、JSON Lines、XML、YAML 和 TOML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。摄像头工具资源回收和 Keycode Info 的 `document` 键盘监听器现在分别有单测与 Electron 自动化证据；后续仍需真实媒体硬件、更多 `EventTarget` 类别、真实窗口耗时和 Linux/macOS 基线。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
+P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、JSON Lines、XML、YAML、TOML 和 Markdown 转 HTML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。摄像头工具资源回收和 Keycode Info 的 `document` 键盘监听器现在分别有单测与 Electron 自动化证据；后续仍需真实媒体硬件、更多 `EventTarget` 类别、真实窗口耗时和 Linux/macOS 基线。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
 
 本轮状态更新（2026-10-18）：全局设置入口、语言与主题区、工具设置区和插件管理区已通过系统 Chrome E2E 与 Electron 真实窗口检查；导航顺序调整为语言、主题、设置、About、GitHub。滚动条宽度调整为 8px，轨道透明，滑块默认透明度为 36%。PDF 合成签名与篡改样例的 3 项 E2E 通过。P5 第五片已把签名密钥信任、生命周期服务和桌面管理界面接入主进程 IPC。能力授权按插件运行会话生效，撤销签名密钥会停止对应插件。下一步执行真实窗口安装、启用、拒绝授权、撤销、升级失败回退和卸载验收，再补 Linux/macOS 与资源计数证据。真实窗口耗时、PDF 外部样本和多平台隔离验收仍未完成。
 
@@ -573,3 +573,7 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 本轮只读容器工作台首片（2026-10-24）：新增 Electron 专属 `/container-workbench` 页面。主进程使用固定参数执行 `docker ps --all --last 100`，不经过 Shell。页面只显示容器 ID、名称、镜像、状态、状态说明和端口映射；每次请求最多 10 秒、512 KiB、100 条。取消请求、渲染器关闭和应用退出时，主进程终止对应子进程。Web 不打包容器工作台路由，也不暴露 Docker IPC。当前不支持容器启停、删除、日志、环境变量、标签或挂载。
 
 验证：容器协议和服务单测 8 项通过；Chromium Web 平台隔离 E2E 1 项通过；`pnpm check` 通过 42 项脚本测试、773 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。PWA 首屏 JavaScript gzip 为 307,012 字节（299.82 KiB），低于 300 KiB 预算。Electron E2E 使用固定镜像 `rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`（RustFS 1.0.1），映射端口 `127.0.0.1:8494`，1 项流程通过，容器清理已确认。自动化窗口通过 `IT_TOOLS_HEADLESS_E2E` 保持隐藏；测试确认窗口不可见，并检查 390×844 视口没有横向溢出。未运行前台 UI 或真实窗口验收。实现和回滚边界见[容器工作台首片计划](17-container-workbench-plan.md)。构建仍报告 externalized `path`/`tls`、`js-sha256` 的 `eval`、未匹配 UnoCSS utility 和大 chunk 警告；这些警告没有导致构建失败。
+
+本轮 Markdown 转 HTML Worker（2026-10-25）：原页面在每次输入变化时同步创建 Markdown renderer 并解析完整文本。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先预热一次后测量 16 KiB、64 KiB 和 256 KiB 合成输入各 10 次。渲染中位数/最大值分别为 2.17/7.32、6.21/12.24 和 28.04/38.91 毫秒。这是 Node.js 微基准，不代表浏览器端到端耗时。
+
+渲染现由专用 Worker 执行，输入变化使用 150 毫秒延迟并终止旧任务。输入上限为 256 KiB，HTML 输出上限为 2 MiB，超时为 10 秒。只显示当前输入的结果；原始 HTML 继续由 markdown-it 转义，打印路径继续在写入 DOM 前使用 HTML 净化。Worker 输出大小为 Web 107.35 kB、Electron 193.31 kB。`pnpm check` 通过 42 项脚本测试、779 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。Chromium 无头 E2E 1 项通过，覆盖常规转换、旧结果替换、原始 HTML 转义和输入上限。未运行前台 UI 或真实窗口验收。

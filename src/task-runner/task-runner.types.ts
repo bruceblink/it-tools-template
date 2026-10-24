@@ -41,7 +41,8 @@ export type WorkerTask =
   | { kind: 'toml-to-json'; value: string }
   | { kind: 'toml-to-yaml'; value: string }
   | { kind: 'json-to-toml'; value: string }
-  | { kind: 'yaml-to-toml'; value: string };
+  | { kind: 'yaml-to-toml'; value: string }
+  | { kind: 'markdown-render'; value: string };
 
 export type WorkerTaskResult =
   | { kind: 'regex'; matches: RegexMatch[]; summary: RegexMatchSummary; sample: string }
@@ -53,6 +54,7 @@ export type WorkerTaskResult =
   | { kind: 'math-evaluate'; valid: boolean; output: string; errorCode?: 'limit' | 'invalid' }
   | { kind: 'json-diff'; leftValid: boolean; rightValid: boolean; result?: Difference }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
+  | { kind: 'markdown-render'; output: string }
   | { kind: 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'; valid: boolean; output: string; errorMessage?: string };
 
 export type WorkerFailureCode = 'input-limit' | 'output-limit' | 'error';
@@ -180,4 +182,9 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion', TaskLimits>;
+  markdownRender: {
+    timeoutMs: 10_000,
+    maxInputBytes: 256 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+  },
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'markdownRender', TaskLimits>;

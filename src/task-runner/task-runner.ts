@@ -34,6 +34,9 @@ function createWorker(task: WorkerTask): TaskWorker {
   if (task.kind === 'math-evaluate') {
     return new Worker(new URL('./math-evaluator.worker.ts', import.meta.url), { type: 'module' }) as unknown as TaskWorker;
   }
+  if (task.kind === 'markdown-render') {
+    return new Worker(new URL('./markdown-render.worker.ts', import.meta.url), { type: 'module' }) as unknown as TaskWorker;
+  }
   return new Worker(new URL('./task-runner.worker.ts', import.meta.url), { type: 'module' }) as unknown as TaskWorker;
 }
 
@@ -53,6 +56,7 @@ export class TaskRunner {
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'bcrypt-hash' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'bcrypt-hash' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'bcrypt-compare' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'bcrypt-compare' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'math-evaluate' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'math-evaluate' }>>>
+  run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'markdown-render' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'markdown-render' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-diff' | 'yaml-viewer' | 'sql-format' | 'env-vars-parser' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-diff' | 'yaml-viewer' | 'sql-format' | 'env-vars-parser' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>>>
   run(taskKey: string, inputVersion: number, task: WorkerTask, limits: TaskLimits): Promise<TaskOutcome<WorkerTaskResult>> {
     this.cancel(taskKey);

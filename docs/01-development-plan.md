@@ -1,7 +1,7 @@
 # IT Tools 最新开发计划
 
 > 状态：现行计划
-> 更新日期：2026-10-24
+> 更新日期：2026-10-25
 > 当前基线：main 含未推送的工作台提交；origin/main 保持不变
 > 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
 > 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
@@ -50,6 +50,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 能力交给另一个仓库重复实现。新功能先判断是否属于通用工具、Electron 工作台或原生核心。
 
 当前进度（2026-10-24）：`PRODUCT-WORKBENCH-001` 已完成 API、Git、对象存储传输和只读容器工作台首片。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储首片计划](15-object-storage-workbench-plan.md)和[对象存储传输计划](16-object-storage-transfers-plan.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台首片计划](17-container-workbench-plan.md)。`pnpm check`、Web 路由隔离测试和本机 Docker RustFS Electron E2E 通过。无头 Electron 流程在 390×844 视口下没有横向溢出，测试确认窗口保持隐藏。真实窗口交互验收未执行。其他服务专用协议继续按本计划逐片实现。
+
+性能优化进度（2026-10-25）：P2 对 Markdown 转 HTML 的同步解析做了 256 KiB 合成输入测量。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，单次渲染中位数为 28.04 毫秒，10 次测量最大值为 38.91 毫秒。工具现用专用 Worker，并限制输入为 256 KiB、HTML 输出为 2 MiB、运行时间为 10 秒；新输入会取消旧任务。完整检查和 Chromium 无头回归通过，Web 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。详细实现与边界见[性能与插件计划](07-performance-extensibility-plan.md)。
 
 ## 3. 当前基线
 

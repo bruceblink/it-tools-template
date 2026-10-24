@@ -96,6 +96,32 @@ describe('TaskRunner', () => {
     await expect(next).resolves.toMatchObject({ status: 'success' });
   });
 
+  it('runs Markdown renders in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('markdown-to-html', 1, { kind: 'markdown-render', value: 'old' }, taskLimits.markdownRender);
+    const latest = runner.run('markdown-to-html', 2, { kind: 'markdown-render', value: 'latest' }, taskLimits.markdownRender);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.inputVersion).toBe(2);
+    workers[1]?.reply({ kind: 'markdown-render', output: '<p>latest</p>\n' });
+    await expect(latest).resolves.toMatchObject({
+      status: 'success',
+      result: { kind: 'markdown-render', output: '<p>latest</p>\n' },
+    });
+  });
+
+  it('rejects oversized Markdown before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('markdown-to-html', 1, {
+      kind: 'markdown-render',
+      value: 'x'.repeat(taskLimits.markdownRender.maxInputBytes + 1),
+    }, taskLimits.markdownRender);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('terminates a task at its deadline', async () => {
     const { runner, workers } = createHarness();
     const timed = runner.run('regex-tester', 1, { kind: 'regex', regex: 'a', text: 'a', flags: 'd' }, {
