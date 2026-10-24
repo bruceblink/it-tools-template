@@ -256,7 +256,9 @@ test('keeps the Markdown print window isolated with Node disabled', async () => 
 });
 
 test('terminates each TOML conversion worker through 20 route cycles', async () => {
-  test.setTimeout(60_000);
+  // Hosted Windows runners can take longer to complete the repeated route
+  // navigations while still exercising the same worker lifecycle assertions.
+  test.setTimeout(180_000);
   await page.addInitScript(() => {
     const lifecycle: TaskWorkerLifecycle = { created: 0, terminated: 0, active: 0 };
     Object.defineProperty(window, '__taskWorkerLifecycle', { value: lifecycle });

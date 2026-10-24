@@ -17,6 +17,7 @@ let extendedSnapshot: {
   processes: SystemMonitorProcessSnapshot;
 } | null = null;
 let extendedSampledAt = 0;
+let extendedRefresh: Promise<void> | null = null;
 
 if (!parentPort) {
   process.exit(1);
@@ -51,14 +52,13 @@ async function collectSample() {
     idle: cpu.times.idle,
     irq: cpu.times.irq,
   }));
+
+  // Keep the base CPU and memory sample below the IPC timeout. Extended OS
+  // queries can be slow on Windows, so refresh them in the background.
   if (!extendedSnapshot || monotonicMs - extendedSampledAt >= SYSTEM_MONITOR_EXTENDED_SAMPLE_INTERVAL_MS) {
-    const [storageAndNetwork, processes] = await Promise.all([
-      collectSystemMonitorDiskAndNetwork(),
-      collectSystemMonitorProcessList(),
-    ]);
-    extendedSnapshot = { ...storageAndNetwork, processes };
-    extendedSampledAt = monotonicMs;
+    refreshExtendedSnapshot(monotonicMs);
   }
+  const snapshot = extendedSnapshot;
   return {
     ok: true,
     value: {
@@ -69,9 +69,62 @@ async function collectSample() {
         memoryTotalBytes: totalmem(),
         memoryAvailableBytes: freemem(),
       }),
-      disk: extendedSnapshot.disk,
-      network: extendedSnapshot.network,
-      processes: extendedSnapshot.processes,
+      disk: snapshot?.disk ?? emptyDiskSnapshot(),
+      network: snapshot?.network ?? emptyNetworkSnapshot(),
+      processes: snapshot?.processes ?? emptyProcessSnapshot(),
     },
   } as const;
+}
+
+function refreshExtendedSnapshot(monotonicMs: number): void {
+  if (extendedRefresh) {
+    return;
+  }
+  extendedRefresh = Promise.all([
+    collectSystemMonitorDiskAndNetwork(),
+    collectSystemMonitorProcessList(),
+  ])
+    .then(([storageAndNetwork, processes]) => {
+      extendedSnapshot = { ...storageAndNetwork, processes };
+      extendedSampledAt = monotonicMs;
+    })
+    .catch(() => {
+      // Keep the last bounded snapshot when an extended query fails.
+    })
+    .finally(() => {
+      extendedRefresh = null;
+    });
+}
+
+function metric(value: number | null, unit: 'percent' | 'bytes'): { value: number | null; unit: 'percent' | 'bytes'; status: 'failed' } {
+  return { value, unit, status: 'failed' };
+}
+
+function emptyDiskSnapshot(): SystemMonitorDiskSnapshot {
+  return {
+    filesystems: [],
+    readBytesPerSecond: metric(null, 'bytes'),
+    writeBytesPerSecond: metric(null, 'bytes'),
+    status: 'failed',
+    truncated: false,
+  };
+}
+
+function emptyNetworkSnapshot(): SystemMonitorNetworkSnapshot {
+  return {
+    interfaces: [],
+    receivedBytesPerSecond: metric(null, 'bytes'),
+    transmittedBytesPerSecond: metric(null, 'bytes'),
+    status: 'failed',
+    truncated: false,
+  };
+}
+
+function emptyProcessSnapshot(): SystemMonitorProcessSnapshot {
+  return {
+    processes: [],
+    total: 0,
+    status: 'failed',
+    truncated: false,
+  };
 }
