@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult } from '../src/shared/desktop-services/object-storage';
 import type {
   DatabaseBatchMutationInput,
   DatabaseBatchMutationResponse,
@@ -32,6 +33,16 @@ import type {
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
+  connectStorage: (input: StorageConnectInput): Promise<StorageResult<StorageConnection>> =>
+    ipcRenderer.invoke('desktop:object-storage:connect', input),
+  listStorageObjects: (input: StorageListInput): Promise<StorageResult<StoragePage>> =>
+    ipcRenderer.invoke('desktop:object-storage:list', input),
+  previewStorageObject: (input: StoragePreviewInput): Promise<StorageResult<StoragePreview>> =>
+    ipcRenderer.invoke('desktop:object-storage:preview', input),
+  cancelStorageRequest: (requestId: string): Promise<StorageResult<boolean>> =>
+    ipcRenderer.invoke('desktop:object-storage:cancel', { requestId }),
+  disconnectStorage: (): Promise<StorageResult<boolean>> =>
+    ipcRenderer.invoke('desktop:object-storage:disconnect'),
   connectPostgres: (input: PostgresConnectionInput) => ipcRenderer.invoke('desktop:database:postgres:connect', input),
   connectMySql: (input: MySqlConnectionInput) => ipcRenderer.invoke('desktop:database:mysql:connect', input),
   connectSQLite: (accessMode: DatabaseAccessMode): Promise<DatabaseBridgeResult<SQLiteSessionInfo | null>> =>

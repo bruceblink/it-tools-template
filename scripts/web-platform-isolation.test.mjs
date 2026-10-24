@@ -14,6 +14,10 @@ const forbiddenMarkers = [
   'mysql2',
   'pg-query-stream',
   'node:sqlite',
+  '@aws-sdk/client-s3',
+  'desktop:object-storage:',
+  'storage-workspace',
+  'Browse S3 buckets and preview objects.',
 ];
 
 async function listFiles(directory) {

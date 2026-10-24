@@ -36,6 +36,8 @@ import type {
   GitStatus,
 } from '../shared/desktop-services/git';
 
+import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult } from '../shared/desktop-services/object-storage';
+
 export {};
 
 declare global {
@@ -68,6 +70,11 @@ declare global {
 
   interface Window {
     itToolsDesktop?: {
+      connectStorage?(input: StorageConnectInput): Promise<StorageResult<StorageConnection>>;
+      listStorageObjects?(input: StorageListInput): Promise<StorageResult<StoragePage>>;
+      previewStorageObject?(input: StoragePreviewInput): Promise<StorageResult<StoragePreview>>;
+      cancelStorageRequest?(requestId: string): Promise<StorageResult<boolean>>;
+      disconnectStorage?(): Promise<StorageResult<boolean>>;
       getRuntimeInfo(): Promise<{
         platform: string;
         version: string;

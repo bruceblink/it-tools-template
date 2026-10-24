@@ -35,6 +35,7 @@ import { registerDatabaseIpc } from './database/database-ipc';
 import { registerSystemMonitorIpc } from './system-monitor/system-monitor-ipc';
 import { registerApiIpc } from './api/api-ipc';
 import { registerGitIpc } from './git/git-ipc';
+import { registerStorageIpc } from './object-storage/storage-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -69,6 +70,7 @@ let databaseIpc: ReturnType<typeof registerDatabaseIpc> | null = null;
 let systemMonitorIpc: ReturnType<typeof registerSystemMonitorIpc> | null = null;
 let apiIpc: ReturnType<typeof registerApiIpc> | null = null;
 let gitIpc: ReturnType<typeof registerGitIpc> | null = null;
+let storageIpc: ReturnType<typeof registerStorageIpc> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -113,6 +115,7 @@ else {
     gitIpc = registerGitIpc({
       trustedRendererUrl: () => trustedRendererUrl,
     });
+    storageIpc = registerStorageIpc({ trustedRendererUrl: () => trustedRendererUrl });
     await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
@@ -149,6 +152,8 @@ else {
     apiIpc = null;
     gitIpc?.shutdown();
     gitIpc = null;
+    storageIpc?.shutdown();
+    storageIpc = null;
   });
 }
 
@@ -375,6 +380,7 @@ function closeRendererOwnedServices(contents: WebContents): void {
   systemMonitorIpc?.closeRenderer(contents.id);
   apiIpc?.closeRenderer(contents.id);
   gitIpc?.closeRenderer(contents.id);
+  storageIpc?.closeRenderer(contents.id);
 }
 
 function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
@@ -447,6 +453,7 @@ async function createMainWindow() {
     systemMonitorIpc?.closeRenderer(rendererId);
     apiIpc?.closeRenderer(rendererId);
     gitIpc?.closeRenderer(rendererId);
+    storageIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
     }

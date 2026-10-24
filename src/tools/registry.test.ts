@@ -77,7 +77,7 @@ describe('tool registry integrity', () => {
     const indexedPaths = indexedTools.map(({ path }) => normalizeRoute(path)).sort();
     const registeredPaths = registeredTools.map(({ path }) => normalizeRoute(path)).sort();
 
-    expect(registeredTools).toHaveLength(121);
+    expect(registeredTools).toHaveLength(122);
     expect(new Set(indexedPaths).size).toBe(indexedPaths.length);
     expect(registeredPaths).toEqual(indexedPaths);
     const registeredExtensionTools = registeredTools.filter(({ extensionOwned }) => extensionOwned);
@@ -128,7 +128,7 @@ describe('tool registry integrity', () => {
       expect(definition?.capabilities, id).toBeDefined();
     }
 
-    for (const path of ['/database-manager', '/system-monitor', '/api-client', '/git-workbench']) {
+    for (const path of ['/database-manager', '/system-monitor', '/api-client', '/git-workbench', '/object-storage']) {
       const definition = registeredTools.find(tool => tool.path === path);
       expect(definition?.platforms, path).toEqual(['electron']);
       expect(definition?.contentWidth, path).toBe('wide');
@@ -136,7 +136,8 @@ describe('tool registry integrity', () => {
   });
 
   it.each(['en', 'zh'] as const)('provides complete %s tool and category translations', (locale) => {
-    const messages = locales[locale].tools;
+    const desktop = parse(readFileSync(new URL(`../../locales/${locale}.desktop.yml`, import.meta.url), 'utf8')) as LocaleMessages;
+    const messages = { ...locales[locale].tools, ...desktop.tools };
 
     for (const { id } of toolsByCategory) {
       const categoryLabel = messages.categories[id];

@@ -193,6 +193,13 @@ const desktopTools = import.meta.env.ELECTRON
         capabilities: [],
         contentWidth: 'wide',
       }),
+      defineTool({
+        id: 'builtin/object-storage', categoryId: 'development', translationKey: 'object-storage',
+        name: translate('tools.object-storage.title'), path: '/object-storage',
+        description: translate('tools.object-storage.description'), keywords: ['s3', 'bucket', 'object', 'storage'],
+        component: () => import('./object-storage/object-storage.vue'), icon: DeviceDesktop, platforms: ['electron'],
+        dataProcessing: 'network', offline: 'requires-network', capabilities: [], contentWidth: 'wide',
+      }),
     ]
   : [];
 

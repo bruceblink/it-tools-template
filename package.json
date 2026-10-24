@@ -41,6 +41,7 @@
     "test:e2e:postgres": "node scripts/test-postgres-e2e.mjs",
     "test:e2e:mysql": "node scripts/test-mysql-e2e.mjs",
     "test:e2e:sqlite": "node scripts/test-sqlite-e2e.mjs",
+    "test:e2e:object-storage": "node scripts/test-object-storage-e2e.mjs",
     "electron:dev": "pnpm generate:oui && electron-vite dev",
     "electron:build": "pnpm generate:oui && cross-env NODE_OPTIONS=--max_old_space_size=4096 electron-vite build",
     "electron:preview": "electron-vite preview",
@@ -113,10 +114,12 @@
     }
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1156.0",
     "@it-tools/bip39": "^0.0.4",
     "@it-tools/oggen": "^1.3.0",
     "@regexper/render": "^1.0.0",
     "@sindresorhus/slugify": "^3.0.1",
+    "@smithy/node-http-handler": "4.12.1",
     "@tabler/icons-vue": "^3.49.0",
     "@tiptap/extension-blockquote": "3.32.0",
     "@tiptap/extension-bold": "3.32.0",

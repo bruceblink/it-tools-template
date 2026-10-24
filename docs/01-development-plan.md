@@ -49,7 +49,7 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 在 P0 完成前，it-tools-template 不把新的数据库、Git、API、消息、容器或对象存储
 能力交给另一个仓库重复实现。新功能先判断是否属于通用工具、Electron 工作台或原生核心。
 
-当前进度（2026-10-24）：`PRODUCT-WORKBENCH-001` 已完成 API 工作台首片和 Git 工作台首片。Electron 页面、主进程请求桥、取消、边界限制、会话历史、本地仓库选择、状态/历史/差异只读查看和 Web 不可用状态均已通过对应测试；对象存储和容器工作台继续按本计划逐片实现。
+当前进度（2026-10-24）：`PRODUCT-WORKBENCH-001` 已完成 API、Git 和对象存储工作台的首片开发。对象存储新增指定 S3 兼容 Bucket 的只读连接、对象分页、前缀筛选和受限文本预览；详见 [对象存储首片计划](15-object-storage-workbench-plan.md)。本机 Docker 和 Electron 自动化流程通过，Computer Use 连接与预览验收仍未完成。对象传输、其他服务专用协议和容器工作台继续按本计划逐片实现。
 
 ## 3. 当前基线
 

@@ -8,6 +8,7 @@ test('keeps shared tools on web and hides Electron-only tool routes', async ({ p
   await expect(page.locator('a[href="/system-monitor"]')).toHaveCount(0);
   await expect(page.locator('a[href="/api-client"]')).toHaveCount(0);
   await expect(page.locator('a[href="/git-workbench"]')).toHaveCount(0);
+  await expect(page.locator('a[href="/object-storage"]')).toHaveCount(0);
 
   await page.keyboard.press('Control+k');
   const search = page.getByPlaceholder('Type to search a tool or a command...');
@@ -23,6 +24,9 @@ test('keeps shared tools on web and hides Electron-only tool routes', async ({ p
   await search.fill('Git workbench');
   await expect(page.locator('a[href="/git-workbench"]')).toHaveCount(0);
   await expect(page.getByText('Git workbench', { exact: true })).toHaveCount(0);
+  await search.fill('Object storage');
+  await expect(page.locator('a[href="/object-storage"]')).toHaveCount(0);
+  await expect(page.getByText('Object storage', { exact: true })).toHaveCount(0);
 
   await page.goto('/database-manager');
   await expect(page.getByRole('heading', { name: '404 Not Found' })).toBeVisible();
@@ -31,5 +35,7 @@ test('keeps shared tools on web and hides Electron-only tool routes', async ({ p
   await page.goto('/api-client');
   await expect(page.getByRole('heading', { name: '404 Not Found' })).toBeVisible();
   await page.goto('/git-workbench');
+  await expect(page.getByRole('heading', { name: '404 Not Found' })).toBeVisible();
+  await page.goto('/object-storage');
   await expect(page.getByRole('heading', { name: '404 Not Found' })).toBeVisible();
 });

@@ -1,4 +1,5 @@
 import englishMessages from '../../locales/en.yml';
+import desktopEnglishMessages from '../../locales/en.desktop.yml';
 import { get } from '@vueuse/core';
 import type { Plugin } from 'vue';
 import { createI18n, type LocaleMessageValue, type VueMessageType } from 'vue-i18n';
@@ -6,6 +7,10 @@ import { createI18n, type LocaleMessageValue, type VueMessageType } from 'vue-i1
 export const supportedLocaleCodes = ['en', 'de', 'es', 'fr', 'no', 'pt', 'uk', 'vi', 'zh'] as const;
 export type SupportedLocale = typeof supportedLocaleCodes[number];
 type LocaleMessages = Record<string, LocaleMessageValue<VueMessageType>>;
+
+function withDesktopMessages(base: LocaleMessages, desktop: LocaleMessages): LocaleMessages {
+  return { ...base, tools: { ...(base.tools as LocaleMessages), ...(desktop.tools as LocaleMessages) } };
+}
 
 const localeLoaders: Record<Exclude<SupportedLocale, 'en'>, () => Promise<LocaleMessages>> = {
   de: async () => (await import('../../locales/de.yml')).default,
@@ -15,7 +20,14 @@ const localeLoaders: Record<Exclude<SupportedLocale, 'en'>, () => Promise<Locale
   pt: async () => (await import('../../locales/pt.yml')).default,
   uk: async () => (await import('../../locales/uk.yml')).default,
   vi: async () => (await import('../../locales/vi.yml')).default,
-  zh: async () => (await import('../../locales/zh.yml')).default,
+  zh: async () => {
+    const messages = (await import('../../locales/zh.yml')).default;
+    if (import.meta.env.ELECTRON) {
+      const desktop = (await import('../../locales/zh.desktop.yml')).default;
+      return withDesktopMessages(messages, desktop);
+    }
+    return messages;
+  },
 };
 
 const i18n = createI18n<false>({
@@ -23,7 +35,9 @@ const i18n = createI18n<false>({
   locale: 'en' as string,
   fallbackLocale: 'en',
   messages: {
-    en: englishMessages,
+    en: import.meta.env.ELECTRON
+      ? withDesktopMessages(englishMessages, desktopEnglishMessages)
+      : englishMessages,
     de: {},
     es: {},
     fr: {},

@@ -127,25 +127,6 @@ tools:
       query-failed: The database could not return this metadata.
       query-timeout: The database request timed out. Try again after checking the connection.
 
-  system-monitor:
-    title: System monitor
-    description: View CPU, memory, disk, network, and process activity on this computer.
-    stageNotice: The workspace is ready. Live system sampling is being added next.
-    waitingForSampler: Waiting for the system sampler.
-    metrics:
-      cpu: CPU
-      memory: Memory
-      disk: Disk
-      network: Network
-
-  api-client:
-    title: API client
-    description: Send HTTP.
-
-  git-workbench:
-    title: Git
-    description: Git.
-
   password-strength-analyser:
     title: Password strength analyser
     description: Discover the strength of your password with this client-side-only password strength analyser and crack time estimation tool.

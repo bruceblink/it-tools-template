@@ -560,4 +560,8 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 
 本轮 Git 工作台首片（2026-10-24）：`PRODUCT-WORKBENCH-001` 新增 Electron 专属 `/git-workbench` 页面和主进程 Git 桥。用户从主进程目录选择器选择仓库；仓库路径只保存在主进程会话中。页面只读显示当前分支、上游 ahead/behind、工作树状态、最近 50 条提交和未提交差异。Git 命令不经过 shell，单次执行最多 10 秒，标准输出最多 512 KiB；渲染器关闭、切换仓库或取消操作时终止活动进程。Web 构建不注册该工具，直接访问 `/git-workbench` 返回 404。
 
-验证：Git 协议单测和工具注册单测 11 项通过；本地临时 Git 仓库 Electron E2E 通过仓库选择、`main` 分支、修改文件、未跟踪文件、提交历史和差异读取；Web 隔离门禁通过，桌面专属路径的 Chromium 和 WebKit 流程通过。Firefox 在本机启动时返回 `spawn UNKNOWN`，没有把该环境故障当作通过。Web 构建首屏 JavaScript gzip 为 299.99 KiB。提交、暂存、推送和远程操作仍属于后续切片。\n
+验证：Git 协议单测和工具注册单测 11 项通过；本地临时 Git 仓库 Electron E2E 通过仓库选择、`main` 分支、修改文件、未跟踪文件、提交历史和差异读取；Web 隔离门禁通过，桌面专属路径的 Chromium 和 WebKit 流程通过。Firefox 在本机启动时返回 `spawn UNKNOWN`，没有把该环境故障当作通过。Web 构建首屏 JavaScript gzip 为 299.99 KiB。提交、暂存、推送和远程操作仍属于后续切片。
+
+本轮对象存储工作台首片（2026-10-24）：新增 Electron 专属 `/object-storage` 页面和受限 S3 主进程桥，包含指定 Bucket 连接、每页 100 个对象、前缀筛选、64 KiB 纯文本预览、取消和断开。凭据只保存在会话内存，单次操作最多 10 秒，列表原始响应最多 1 MiB。窗口、路由和连接替换都清理客户端及请求。桌面英文/中文文案与 Web 分离，避免新增桌面功能持续消耗 Web 首屏预算。
+
+验证：完整 `pnpm check` 通过 123 个测试文件、756 项测试（另有 2 个文件和 18 项测试跳过）；本机 Docker RustFS 1.0.1 的 Electron 集成测试通过，容器清理确认；Chromium 与 WebKit 平台隔离流程通过。Web 首屏 JavaScript gzip 为 307,012 字节（299.82 KiB），低于 300 KiB 预算。Firefox 仍返回 `spawn UNKNOWN`。自动化 Electron 页面在桌面及窄窗口布局中显示正常并通过连接释放检查；Computer Use 只取得页面和表单填值证据，连接点击因几何信息不可用而未完成，不能据此宣称完整真实窗口验收。范围、回滚和详细证据见 [对象存储首片计划](15-object-storage-workbench-plan.md)。对象上传、下载、删除、其他服务专用协议和容器工作台仍属于后续开发。
