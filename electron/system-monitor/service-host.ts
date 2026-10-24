@@ -46,6 +46,15 @@ export class SystemMonitorServiceHost {
       catch {
         // The utility process exit still releases the OS sampling resources.
       }
+      if (child.pid !== undefined) {
+        try {
+          // Electron's UtilityProcess.kill can return before a Windows utility process exits.
+          process.kill(child.pid);
+        }
+        catch {
+          // The process may have exited between the two termination requests.
+        }
+      }
     }
     this.failAll('service-unavailable');
   }

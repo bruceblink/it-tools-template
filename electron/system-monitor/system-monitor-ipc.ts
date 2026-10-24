@@ -43,6 +43,7 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
   const serviceHost = new SystemMonitorServiceHost(dependencies.workerPath);
   const subscriptions = new Map<string, OwnedSubscription>();
   const rendererSubscriptions = new Map<number, string>();
+  const rendererCleanupListeners = new WeakSet<WebContents>();
   let scheduleTimer: NodeJS.Timeout | null = null;
   let sampleInFlight = false;
   let sampleAgain = false;
@@ -69,7 +70,10 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
       paused: false,
     });
     rendererSubscriptions.set(event.sender.id, subscriptionId);
-    event.sender.once('destroyed', () => removeRendererSubscription(event.sender.id));
+    if (!rendererCleanupListeners.has(event.sender)) {
+      rendererCleanupListeners.add(event.sender);
+      event.sender.once('destroyed', () => removeRendererSubscription(event.sender.id));
+    }
     reschedule();
     void sampleNow();
     return {

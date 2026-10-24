@@ -331,16 +331,34 @@ function attachWebContentsSecurity(contents: WebContents) {
   contents.on('will-navigate', (event, url) => {
     if (!isAllowedRendererNavigation(contents, url)) {
       event.preventDefault();
+      return;
     }
+    closeRendererOwnedServices(contents);
   });
   contents.on('will-redirect', (event, url) => {
     if (!isAllowedRendererNavigation(contents, url)) {
       event.preventDefault();
+      return;
+    }
+    closeRendererOwnedServices(contents);
+  });
+  contents.on('did-start-navigation', (_event, url, isInPlace) => {
+    if (!isInPlace && isAllowedRendererNavigation(contents, url)) {
+      closeRendererOwnedServices(contents);
     }
   });
   contents.on('will-attach-webview', (event) => {
     event.preventDefault();
   });
+}
+
+/** Releases renderer-owned desktop services before a full document navigation replaces the page. */
+function closeRendererOwnedServices(contents: WebContents): void {
+  if (pluginRendererIds.has(contents)) {
+    return;
+  }
+  databaseIpc?.closeRenderer(contents.id);
+  systemMonitorIpc?.closeRenderer(contents.id);
 }
 
 function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
