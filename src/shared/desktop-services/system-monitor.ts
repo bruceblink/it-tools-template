@@ -53,6 +53,25 @@ export interface SystemMonitorNetworkSnapshot {
   truncated: boolean;
 }
 
+export interface SystemMonitorProcess {
+  key: string;
+  pid: number;
+  parentPid: number | null;
+  name: string;
+  state: string;
+  startTime: string | null;
+  cpuPercent: SystemMonitorMetric;
+  memoryBytes: SystemMonitorMetric;
+  memoryPercent: SystemMonitorMetric;
+}
+
+export interface SystemMonitorProcessSnapshot {
+  processes: SystemMonitorProcess[];
+  total: number;
+  status: SystemMonitorMetricStatus;
+  truncated: boolean;
+}
+
 export interface SystemMonitorSample {
   sampledAt: number;
   monotonicMs: number;
@@ -72,6 +91,7 @@ export interface SystemMonitorSample {
   };
   disk: SystemMonitorDiskSnapshot;
   network: SystemMonitorNetworkSnapshot;
+  processes: SystemMonitorProcessSnapshot;
 }
 
 /** A worker snapshot contains only OS values; the main process adds app metrics. */
@@ -85,6 +105,7 @@ export interface SystemMonitorWorkerSample {
   memoryStatus: SystemMonitorMetricStatus;
   disk?: SystemMonitorDiskSnapshot;
   network?: SystemMonitorNetworkSnapshot;
+  processes?: SystemMonitorProcessSnapshot;
   error: SystemMonitorErrorCode | null;
 }
 
@@ -101,3 +122,4 @@ export const SYSTEM_MONITOR_MAX_HISTORY_POINTS = 3_600;
 export const SYSTEM_MONITOR_EXTENDED_SAMPLE_INTERVAL_MS = 5_000;
 export const SYSTEM_MONITOR_MAX_FILESYSTEMS = 64;
 export const SYSTEM_MONITOR_MAX_NETWORK_INTERFACES = 64;
+export const SYSTEM_MONITOR_MAX_PROCESSES = 2_000;

@@ -38,6 +38,14 @@ const monitorMessages = {
     networkReceived: 'Received',
     networkTransmitted: 'Sent',
     networkInterfaces: (count: number) => `${count} interfaces`,
+    processes: 'Processes',
+    processSearch: 'Search process name',
+    processSort: 'Sort by',
+    processSortCpu: 'CPU',
+    processSortMemory: 'Memory',
+    processCount: (visible: number, total: number) => `${visible} shown · ${total} total`,
+    processPage: (page: number, pages: number) => `Page ${page} / ${pages}`,
+    processStarted: 'Started',
     processCpu: 'IT Tools process CPU',
     processMemory: 'IT Tools process memory',
     availableMemory: 'Available memory',
@@ -75,6 +83,14 @@ const monitorMessages = {
     networkReceived: '接收',
     networkTransmitted: '发送',
     networkInterfaces: (count: number) => `${count} 个接口`,
+    processes: '进程列表',
+    processSearch: '搜索进程名称',
+    processSort: '排序方式',
+    processSortCpu: 'CPU',
+    processSortMemory: '内存',
+    processCount: (visible: number, total: number) => `显示 ${visible} 条 · 共 ${total} 条`,
+    processPage: (page: number, pages: number) => `第 ${page} / ${pages} 页`,
+    processStarted: '启动时间',
     processCpu: 'IT Tools 进程 CPU',
     processMemory: 'IT Tools 进程内存',
     availableMemory: '可用内存',
@@ -98,12 +114,21 @@ const monitorMessages = {
 
 const { locale } = useI18n();
 const copy = computed(() => locale.value.startsWith('zh') ? monitorMessages.zh : monitorMessages.en);
+const isChineseLocale = computed(() => locale.value.startsWith('zh'));
 
 const intervalMs = ref(SYSTEM_MONITOR_DEFAULT_INTERVAL_MS);
 const state = ref<MonitorState>('starting');
 const subscriptionId = ref<string | null>(null);
 const samples = ref<SystemMonitorSample[]>([]);
 const lastError = ref<string | null>(null);
+const processFilter = ref('');
+const processSort = ref<'cpu' | 'memory'>('cpu');
+const processPage = ref(0);
+const processSortOptions = computed(() => [
+  { label: copy.value.processSortCpu, value: 'cpu' as const },
+  { label: copy.value.processSortMemory, value: 'memory' as const },
+]);
+const PROCESS_PAGE_SIZE = 100;
 const intervalOptions = [
   { label: '1 s', value: 1_000 },
   { label: '2 s', value: 2_000 },
@@ -121,6 +146,36 @@ const diskUsagePercent = computed(() => {
   const usedBytes = filesystems.reduce((total, filesystem) => total + (filesystem.usedBytes ?? 0), 0);
   return totalBytes > 0 ? Math.min(100, Math.max(0, (usedBytes / totalBytes) * 100)) : null;
 });
+const filteredProcesses = computed(() => {
+  const query = processFilter.value.trim().toLowerCase();
+  return [...(latestSample.value?.processes.processes ?? [])]
+    .filter(process => query.length === 0 || process.name.toLowerCase().includes(query))
+    .sort((left, right) => {
+      const leftValue = processSort.value === 'cpu' ? left.cpuPercent.value : left.memoryBytes.value;
+      const rightValue = processSort.value === 'cpu' ? right.cpuPercent.value : right.memoryBytes.value;
+      if (leftValue === null && rightValue === null) {
+        return left.name.localeCompare(right.name);
+      }
+      if (leftValue === null) {
+        return 1;
+      }
+      if (rightValue === null) {
+        return -1;
+      }
+      return rightValue - leftValue;
+    });
+});
+const processPageCount = computed(() => Math.max(1, Math.ceil(filteredProcesses.value.length / PROCESS_PAGE_SIZE)));
+const processPageIndex = computed(() => Math.min(processPage.value, processPageCount.value - 1));
+const visibleProcesses = computed(() => filteredProcesses.value.slice(
+  processPageIndex.value * PROCESS_PAGE_SIZE,
+  (processPageIndex.value + 1) * PROCESS_PAGE_SIZE,
+));
+const processPageLabel = computed(() => copy.value.processPage(processPageIndex.value + 1, processPageCount.value));
+const processCountLabel = computed(() => copy.value.processCount(
+  filteredProcesses.value.length,
+  latestSample.value?.processes.total ?? 0,
+));
 
 onMounted(() => {
   unsubscribe = subscribeSystemMonitor(handleSample);
@@ -217,6 +272,24 @@ function formatMetric(metric: SystemMonitorMetric | undefined): string {
 function formatRate(metric: SystemMonitorMetric | undefined): string {
   const value = formatMetric(metric);
   return value === '—' ? value : `${value}/s`;
+}
+
+function setProcessFilter(value: string): void {
+  processFilter.value = value;
+  processPage.value = 0;
+}
+
+function setProcessSort(value: 'cpu' | 'memory'): void {
+  processSort.value = value;
+  processPage.value = 0;
+}
+
+function previousProcessPage(): void {
+  processPage.value = Math.max(0, processPageIndex.value - 1);
+}
+
+function nextProcessPage(): void {
+  processPage.value = Math.min(processPageCount.value - 1, processPageIndex.value + 1);
 }
 
 function formatBytes(value: number): string {
@@ -347,6 +420,57 @@ function statusKey(): string {
         </div>
       </n-card>
     </div>
+
+    <n-card :title="copy.processes" mt-4 data-test-id="system-monitor-process-list-card">
+      <div class="process-toolbar">
+        <n-input
+          data-test-id="system-monitor-process-search"
+          :value="processFilter"
+          :placeholder="copy.processSearch"
+          clearable
+          @update:value="setProcessFilter"
+        />
+        <n-select
+          data-test-id="system-monitor-process-sort"
+          :value="processSort"
+          :options="processSortOptions"
+          :placeholder="copy.processSort"
+          @update:value="setProcessSort"
+        />
+      </div>
+      <div class="process-summary" data-test-id="system-monitor-process-summary">
+        {{ processCountLabel }} · {{ processPageLabel }}
+        <span v-if="latestSample?.processes.truncated"> · {{ isChineseLocale ? '结果已截断' : 'Results truncated' }}</span>
+      </div>
+      <div v-if="visibleProcesses.length > 0" class="process-table" role="table" data-test-id="system-monitor-process-table">
+        <div class="process-table-row process-table-heading" role="row">
+          <span role="columnheader">PID</span>
+          <span role="columnheader">{{ isChineseLocale ? '名称' : 'Name' }}</span>
+          <span role="columnheader">{{ copy.processSortCpu }}</span>
+          <span role="columnheader">{{ copy.processSortMemory }}</span>
+          <span role="columnheader">{{ copy.processStarted }}</span>
+        </div>
+        <div v-for="process in visibleProcesses" :key="process.key" class="process-table-row" role="row" data-test-id="system-monitor-process-row">
+          <span role="cell">{{ process.pid }}</span>
+          <span role="cell" class="process-name" :title="process.name">{{ process.name }}</span>
+          <span role="cell">{{ formatMetric(process.cpuPercent) }}</span>
+          <span role="cell">{{ formatMetric(process.memoryBytes) }}</span>
+          <span role="cell" class="process-started">{{ process.startTime ?? '—' }}</span>
+        </div>
+      </div>
+      <n-empty v-else :description="isChineseLocale ? '暂无进程数据' : 'No process data'" />
+      <div class="process-pagination">
+        <span>{{ processPageLabel }}</span>
+        <div flex gap-2>
+          <n-button data-test-id="system-monitor-process-previous" size="small" :disabled="processPageIndex === 0" @click="previousProcessPage">
+            {{ isChineseLocale ? '上一页' : 'Previous' }}
+          </n-button>
+          <n-button data-test-id="system-monitor-process-next" size="small" :disabled="processPageIndex >= processPageCount - 1" @click="nextProcessPage">
+            {{ isChineseLocale ? '下一页' : 'Next' }}
+          </n-button>
+        </div>
+      </div>
+    </n-card>
   </section>
 </template>
 
@@ -428,6 +552,73 @@ function statusKey(): string {
   white-space: nowrap;
 }
 
+.process-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.process-toolbar :deep(.n-input) {
+  flex: 1 1 260px;
+}
+
+.process-toolbar :deep(.n-select) {
+  flex: 0 1 160px;
+}
+
+.process-summary,
+.process-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-color-3);
+  font-size: 12px;
+}
+
+.process-summary {
+  margin-bottom: 8px;
+}
+
+.process-table {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.process-table-row {
+  display: grid;
+  grid-template-columns: 72px minmax(160px, 1.8fr) 100px 120px minmax(160px, 1.2fr);
+  min-width: 680px;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.process-table-row:last-child {
+  border-bottom: 0;
+}
+
+.process-table-heading {
+  color: var(--text-color-3);
+  font-weight: 600;
+}
+
+.process-name,
+.process-started {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.process-pagination {
+  margin-top: 12px;
+}
+
 .sparkline {
   display: flex;
   align-items: end;
@@ -458,6 +649,12 @@ function statusKey(): string {
 
   .system-monitor-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .process-summary,
+  .process-pagination {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

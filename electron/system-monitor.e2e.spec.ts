@@ -41,6 +41,8 @@ test('renders live CPU and memory cards and pauses/resumes with a gap marker', a
   await expect(page.locator('[data-test-id="system-monitor-memory-card"]')).toBeVisible();
   await expect(page.locator('[data-test-id="system-monitor-disk-card"]')).toBeVisible();
   await expect(page.locator('[data-test-id="system-monitor-network-card"]')).toBeVisible();
+  await expect(page.locator('[data-test-id="system-monitor-process-list-card"]')).toBeVisible();
+  await expect(page.locator('[data-test-id="system-monitor-process-search"]')).toBeVisible();
 
   await page.getByTestId('system-monitor-pause').click();
   await expect(page.getByTestId('system-monitor-status')).toContainText('Sampling paused');

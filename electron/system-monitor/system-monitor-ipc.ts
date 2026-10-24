@@ -6,6 +6,7 @@ import type {
   SystemMonitorErrorCode,
   SystemMonitorMetric,
   SystemMonitorNetworkSnapshot,
+  SystemMonitorProcessSnapshot,
   SystemMonitorSample,
   SystemMonitorSessionInfo,
   SystemMonitorWorkerSample,
@@ -231,6 +232,7 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
       },
       disk: worker?.disk ?? emptyDiskSnapshot(),
       network: worker?.network ?? emptyNetworkSnapshot(),
+      processes: worker?.processes ?? emptyProcessSnapshot(),
     };
   }
 
@@ -361,6 +363,15 @@ function emptyNetworkSnapshot(): SystemMonitorNetworkSnapshot {
     interfaces: [],
     receivedBytesPerSecond: metric(null, 'bytes', 'failed'),
     transmittedBytesPerSecond: metric(null, 'bytes', 'failed'),
+    status: 'failed',
+    truncated: false,
+  };
+}
+
+function emptyProcessSnapshot(): SystemMonitorProcessSnapshot {
+  return {
+    processes: [],
+    total: 0,
     status: 'failed',
     truncated: false,
   };

@@ -1,16 +1,21 @@
 import { cpus, freemem, totalmem } from 'node:os';
 import { SystemMonitorSampler, type SystemMonitorCpuTimes } from './sampler';
-import { collectSystemMonitorDiskAndNetwork } from './system-info';
+import { collectSystemMonitorDiskAndNetwork, collectSystemMonitorProcessList } from './system-info';
 import { parseSystemMonitorWorkerCommand, type SystemMonitorWorkerResponse } from './worker-protocol';
 import {
   SYSTEM_MONITOR_EXTENDED_SAMPLE_INTERVAL_MS,
   type SystemMonitorDiskSnapshot,
   type SystemMonitorNetworkSnapshot,
+  type SystemMonitorProcessSnapshot,
 } from '../../src/shared/desktop-services/system-monitor';
 
 const parentPort = process.parentPort;
 const sampler = new SystemMonitorSampler();
-let extendedSnapshot: { disk: SystemMonitorDiskSnapshot; network: SystemMonitorNetworkSnapshot } | null = null;
+let extendedSnapshot: {
+  disk: SystemMonitorDiskSnapshot;
+  network: SystemMonitorNetworkSnapshot;
+  processes: SystemMonitorProcessSnapshot;
+} | null = null;
 let extendedSampledAt = 0;
 
 if (!parentPort) {
@@ -47,7 +52,11 @@ async function collectSample() {
     irq: cpu.times.irq,
   }));
   if (!extendedSnapshot || monotonicMs - extendedSampledAt >= SYSTEM_MONITOR_EXTENDED_SAMPLE_INTERVAL_MS) {
-    extendedSnapshot = await collectSystemMonitorDiskAndNetwork();
+    const [storageAndNetwork, processes] = await Promise.all([
+      collectSystemMonitorDiskAndNetwork(),
+      collectSystemMonitorProcessList(),
+    ]);
+    extendedSnapshot = { ...storageAndNetwork, processes };
     extendedSampledAt = monotonicMs;
   }
   return {
@@ -62,6 +71,7 @@ async function collectSample() {
       }),
       disk: extendedSnapshot.disk,
       network: extendedSnapshot.network,
+      processes: extendedSnapshot.processes,
     },
   } as const;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeDiskSnapshot,
   normalizeNetworkSnapshot,
+  normalizeProcessSnapshot,
 } from './system-info';
 
 describe('system monitor storage and network normalization', () => {
@@ -67,5 +68,30 @@ describe('system monitor storage and network normalization', () => {
     expect(snapshot.receivedBytesPerSecond.value).toBeNull();
     expect(snapshot.interfaces[0]?.status).toBe('failed');
     expect(snapshot.interfaces[1]?.receivedBytesPerSecond.value).toBe(100);
+  });
+
+  it('keeps a bounded process projection without command or path fields', () => {
+    const rows = Array.from({ length: 2_001 }, (_, index) => ({
+      pid: index + 1,
+      parentPid: 1,
+      name: `process-${index}`,
+      cpu: index === 0 ? 80 : 10,
+      mem: 5,
+      memRss: index * 1024,
+      started: '2026-10-24T00:00:00.000Z',
+      state: 'running',
+    }));
+    const snapshot = normalizeProcessSnapshot(rows, 2_100);
+
+    expect(snapshot.processes).toHaveLength(2_000);
+    expect(snapshot.total).toBe(2_100);
+    expect(snapshot.truncated).toBe(true);
+    expect(snapshot.processes[0]).toMatchObject({
+      pid: 1,
+      key: '1:2026-10-24T00:00:00.000Z:0',
+      cpuPercent: { value: 80, status: 'ok' },
+    });
+    expect(snapshot.processes[0]).not.toHaveProperty('command');
+    expect(snapshot.processes[0]).not.toHaveProperty('path');
   });
 });

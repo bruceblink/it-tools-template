@@ -5,11 +5,14 @@ import type {
   SystemMonitorMetric,
   SystemMonitorNetworkInterface,
   SystemMonitorNetworkSnapshot,
+  SystemMonitorProcess,
+  SystemMonitorProcessSnapshot,
   SystemMonitorMetricStatus,
 } from '../../src/shared/desktop-services/system-monitor';
 import {
   SYSTEM_MONITOR_MAX_FILESYSTEMS,
   SYSTEM_MONITOR_MAX_NETWORK_INTERFACES,
+  SYSTEM_MONITOR_MAX_PROCESSES,
 } from '../../src/shared/desktop-services/system-monitor';
 
 const MAX_TEXT_LENGTH = 256;
@@ -38,6 +41,17 @@ export interface RawNetworkRow {
   tx_sec: number;
 }
 
+export interface RawProcessRow {
+  pid: number;
+  parentPid: number;
+  name: string;
+  cpu: number;
+  mem: number;
+  memRss: number;
+  started: string;
+  state: string;
+}
+
 /** Reads bounded storage and network snapshots outside the Electron main process. */
 export async function collectSystemMonitorDiskAndNetwork(): Promise<{
   disk: SystemMonitorDiskSnapshot;
@@ -55,6 +69,17 @@ export async function collectSystemMonitorDiskAndNetwork(): Promise<{
     ),
     network: normalizeNetworkSnapshot(networkResult.status === 'fulfilled' ? networkResult.value : null),
   };
+}
+
+/** Reads the bounded process projection without command lines, paths, or environment data. */
+export async function collectSystemMonitorProcessList(): Promise<SystemMonitorProcessSnapshot> {
+  try {
+    const result = await systemInformation.processes();
+    return normalizeProcessSnapshot(result.list, result.all);
+  }
+  catch {
+    return normalizeProcessSnapshot(null, null);
+  }
 }
 
 export function normalizeDiskSnapshot(
@@ -107,6 +132,26 @@ export function normalizeNetworkSnapshot(
   };
 }
 
+export function normalizeProcessSnapshot(
+  rows: readonly RawProcessRow[] | null,
+  reportedTotal: number | null,
+): SystemMonitorProcessSnapshot {
+  if (!rows) {
+    return { processes: [], total: 0, status: 'failed', truncated: false };
+  }
+  const normalized = rows
+    .map((row, index) => normalizeProcess(row, index))
+    .sort((left, right) => compareMetric(right.cpuPercent, left.cpuPercent)
+      || compareMetric(right.memoryBytes, left.memoryBytes));
+  const truncated = normalized.length > SYSTEM_MONITOR_MAX_PROCESSES;
+  return {
+    processes: normalized.slice(0, SYSTEM_MONITOR_MAX_PROCESSES),
+    total: Math.max(rows.length, finiteInteger(reportedTotal) ?? 0),
+    status: rows.length === 0 ? 'unsupported' : 'ok',
+    truncated,
+  };
+}
+
 function normalizeFilesystem(row: RawFilesystemRow, index: number): SystemMonitorFilesystem {
   const sizeBytes = finiteNonNegative(row.size);
   const usedBytes = finiteNonNegative(row.used);
@@ -152,6 +197,39 @@ function normalizeNetworkInterface(row: RawNetworkRow, index: number): SystemMon
   };
 }
 
+function normalizeProcess(row: RawProcessRow, index: number): SystemMonitorProcess {
+  const pid = finiteInteger(row.pid) ?? 0;
+  const parentPid = finiteInteger(row.parentPid);
+  const cpuPercent = finitePercent(row.cpu);
+  const memoryBytes = finiteNonNegative(row.memRss);
+  const memoryPercent = finitePercent(row.mem);
+  const startTime = sanitizeText(row.started, '');
+  return {
+    key: `${pid}:${startTime || 'unknown'}:${index}`,
+    pid,
+    parentPid,
+    name: sanitizeText(row.name, 'unknown'),
+    state: sanitizeText(row.state, 'unknown'),
+    startTime: startTime || null,
+    cpuPercent: metric(cpuPercent, cpuPercent === null ? 'failed' : 'ok', 'percent'),
+    memoryBytes: metric(memoryBytes, memoryBytes === null ? 'failed' : 'ok'),
+    memoryPercent: metric(memoryPercent, memoryPercent === null ? 'failed' : 'ok', 'percent'),
+  };
+}
+
+function compareMetric(left: SystemMonitorMetric, right: SystemMonitorMetric): number {
+  if (left.value === null && right.value === null) {
+    return 0;
+  }
+  if (left.value === null) {
+    return 1;
+  }
+  if (right.value === null) {
+    return -1;
+  }
+  return left.value - right.value;
+}
+
 function metric(
   value: number | null,
   status: SystemMonitorMetricStatus,
@@ -177,6 +255,14 @@ function finiteNonNegative(value: number | null | undefined): number | null {
 function finitePercent(value: number | null | undefined): number | null {
   const normalized = finiteNonNegative(value);
   return normalized === null ? null : Math.min(100, normalized);
+}
+
+function finiteInteger(value: number | null | undefined): number | null {
+  return typeof value === 'number'
+    && Number.isSafeInteger(value)
+    && value >= 0
+    ? value
+    : null;
 }
 
 function sumFinite(values: readonly (number | null | undefined)[]): number | null {
