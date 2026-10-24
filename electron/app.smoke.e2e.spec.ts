@@ -108,6 +108,20 @@ test('renders Markdown in a dedicated worker on the app protocol', async () => {
   await expect(output).toHaveText('');
 });
 
+test('converts CSV to Markdown in a worker on the app protocol', async () => {
+  await page.goto('app://bundle/csv-to-markdown-table');
+
+  const input = page.getByTestId('input');
+  const output = page.getByTestId('area-content');
+  await input.fill('name,age\nAlice,30');
+  await expect(output).toContainText('| name | age |');
+  await expect(output).toContainText('| Alice | 30 |');
+
+  await input.fill('"unterminated');
+  await expect(page.getByText('Provided CSV is not valid.', { exact: true })).toBeVisible();
+  await expect(output).toHaveText('');
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 

@@ -122,6 +122,41 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('runs CSV to Markdown conversions in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('csv-to-markdown-table', 1, {
+      kind: 'csv-to-markdown',
+      value: 'name,age\nAlice,30',
+      options: { delimiter: ',', hasHeader: true },
+    }, taskLimits.csvToMarkdown);
+    const latest = runner.run('csv-to-markdown-table', 2, {
+      kind: 'csv-to-markdown',
+      value: 'name;age\nBob;25',
+      options: { delimiter: ';', hasHeader: true },
+    }, taskLimits.csvToMarkdown);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.inputVersion).toBe(2);
+    workers[1]?.reply({ kind: 'csv-to-markdown', valid: true, output: '| name | age |\n| --- | --- |\n| Bob | 25 |' });
+    await expect(latest).resolves.toMatchObject({
+      status: 'success',
+      result: { kind: 'csv-to-markdown', valid: true, output: '| name | age |\n| --- | --- |\n| Bob | 25 |' },
+    });
+  });
+
+  it('rejects oversized CSV to Markdown input before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('csv-to-markdown-table', 1, {
+      kind: 'csv-to-markdown',
+      value: 'x'.repeat(taskLimits.csvToMarkdown.maxInputBytes + 1),
+      options: { delimiter: ',', hasHeader: true },
+    }, taskLimits.csvToMarkdown);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('terminates a task at its deadline', async () => {
     const { runner, workers } = createHarness();
     const timed = runner.run('regex-tester', 1, { kind: 'regex', regex: 'a', text: 'a', flags: 'd' }, {

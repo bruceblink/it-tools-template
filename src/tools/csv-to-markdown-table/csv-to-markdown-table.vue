@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
-import { convertCsvToMarkdownTable } from './csv-to-markdown-table.service';
-import type { UseValidationRule } from '@/composable/validation';
-import { parseCsv } from '@/utils/csv';
-import { withDefaultOnError } from '@/utils/defaults';
 
 const delimiter = useStorage('csv-to-markdown-table:delimiter', ',');
 const hasHeader = useStorage('csv-to-markdown-table:has-header', true);
@@ -16,20 +12,7 @@ const delimiterOptions = [
 ];
 
 const sampleCsv = 'name,role,team\nAlice,Developer,Platform\nBob,Designer,Product';
-
-function transformer(value: string) {
-  return withDefaultOnError(() => convertCsvToMarkdownTable(value, {
-    delimiter: delimiter.value,
-    hasHeader: hasHeader.value,
-  }), '');
-}
-
-const rules: UseValidationRule<string>[] = [
-  {
-    validator: value => value === '' || parseCsv(value, { delimiter: delimiter.value }),
-    message: 'Provided CSV is not valid.',
-  },
-];
+const workerTaskOptions = computed(() => ({ delimiter: delimiter.value, hasHeader: hasHeader.value }));
 </script>
 
 <template>
@@ -51,7 +34,8 @@ const rules: UseValidationRule<string>[] = [
     input-placeholder="Paste your CSV here..."
     output-label="Markdown table"
     output-language="markdown"
-    :input-validation-rules="rules"
-    :transformer="transformer"
+    worker-task-kind="csv-to-markdown"
+    :worker-task-options="workerTaskOptions"
+    worker-invalid-message="Provided CSV is not valid."
   />
 </template>

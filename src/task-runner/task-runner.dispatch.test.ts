@@ -203,6 +203,28 @@ describe('task runner worker dispatch', () => {
     });
   });
 
+  it('converts CSV to Markdown in the worker and reports invalid CSV safely', () => {
+    expect(executeWorkerTask({
+      kind: 'csv-to-markdown',
+      value: 'name;age\nAlice;30',
+      options: { delimiter: ';', hasHeader: true },
+    })).toEqual({
+      kind: 'csv-to-markdown',
+      valid: true,
+      output: '| name | age |\n| --- | --- |\n| Alice | 30 |',
+    });
+    expect(executeWorkerTask({
+      kind: 'csv-to-markdown',
+      value: '"unterminated',
+      options: { delimiter: ',', hasHeader: true },
+    })).toEqual({
+      kind: 'csv-to-markdown',
+      valid: false,
+      output: '',
+      errorMessage: 'Provided CSV is not valid.',
+    });
+  });
+
   it('converts JSON Lines and returns its summary in the worker', () => {
     expect(executeWorkerTask({
       kind: 'json-lines',

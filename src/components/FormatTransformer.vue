@@ -7,6 +7,7 @@ import { taskRunner } from '@/task-runner/task-runner';
 import { taskLimits } from '@/task-runner/task-runner.types';
 import { useI18n } from 'vue-i18n';
 import type { CsvToJsonOptions } from '@/tools/csv-to-json/csv-to-json.service';
+import type { CsvToMarkdownTableOptions } from '@/tools/csv-to-markdown-table/csv-to-markdown-table.service';
 import type { JsonKeySorterOptions } from '@/tools/json-key-sorter/json-key-sorter.service';
 import type { JsonLinesSummary } from '@/tools/json-lines-converter/json-lines-converter.service';
 import type { JsonLinesTaskOptions, WorkerTask, XmlFormatTaskOptions } from '@/task-runner/task-runner.types';
@@ -20,8 +21,8 @@ const props = withDefaults(
     inputDefault?: string
     outputLabel?: string
     outputLanguage?: string
-    workerTaskKind?: 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'toml-to-json' | 'json-to-yaml' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'
-    workerTaskOptions?: CsvToJsonOptions | JsonKeySorterOptions | JsonLinesTaskOptions | XmlFormatTaskOptions
+    workerTaskKind?: 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'toml-to-json' | 'json-to-yaml' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml'
+    workerTaskOptions?: CsvToJsonOptions | CsvToMarkdownTableOptions | JsonKeySorterOptions | JsonLinesTaskOptions | XmlFormatTaskOptions
     workerInvalidMessage?: string
   }>(),
   {
@@ -86,6 +87,9 @@ watch([input, workerTaskKind, workerTaskOptions], () => {
       if (kind === 'csv-to-json') {
         return { kind, value: input.value, options: workerTaskOptions.value as CsvToJsonOptions | undefined ?? {} };
       }
+      if (kind === 'csv-to-markdown') {
+        return { kind, value: input.value, options: workerTaskOptions.value as CsvToMarkdownTableOptions | undefined ?? {} };
+      }
       if (kind === 'json-to-csv') {
         return { kind, value: input.value };
       }
@@ -102,7 +106,7 @@ watch([input, workerTaskKind, workerTaskOptions], () => {
         return { kind, value: input.value, options: workerTaskOptions.value as XmlFormatTaskOptions ?? { indentSize: 2, collapseContent: true } };
       }
       return { kind, value: input.value };
-    })() as Extract<WorkerTask, { kind: 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>;
+    })() as Extract<WorkerTask, { kind: 'json-key-sorter' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>;
     const limits = kind.includes('toml')
       ? taskLimits.tomlConversion
       : kind === 'json-key-sorter'
@@ -111,6 +115,8 @@ watch([input, workerTaskKind, workerTaskOptions], () => {
       ? taskLimits.jsonMinify
       : kind === 'csv-to-json'
         ? taskLimits.csvToJson
+        : kind === 'csv-to-markdown'
+          ? taskLimits.csvToMarkdown
         : kind === 'json-to-csv'
           ? taskLimits.jsonToCsv
             : kind === 'json-lines'

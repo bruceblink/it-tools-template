@@ -2,6 +2,7 @@ import RandExp from 'randexp';
 import JSON5 from 'json5';
 import { diffTextLines } from '@/tools/text-diff/text-diff.service';
 import { convertCsvToJson } from '@/tools/csv-to-json/csv-to-json.service';
+import { convertCsvToMarkdownTable } from '@/tools/csv-to-markdown-table/csv-to-markdown-table.service';
 import { extractJsonPath } from '@/tools/json-path-extractor/json-path-extractor.service';
 import { diff as diffJson } from '@/tools/json-diff/json-diff.models';
 import { convertArrayToCsv } from '@/tools/json-to-csv/json-to-csv.service';
@@ -162,6 +163,15 @@ export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
     }
     catch {
       return { kind: 'csv-to-json', valid: false, output: '' };
+    }
+  }
+
+  if (task.kind === 'csv-to-markdown') {
+    try {
+      return { kind: 'csv-to-markdown', valid: true, output: convertCsvToMarkdownTable(task.value, task.options) };
+    }
+    catch {
+      return { kind: 'csv-to-markdown', valid: false, output: '', errorMessage: 'Provided CSV is not valid.' };
     }
   }
 

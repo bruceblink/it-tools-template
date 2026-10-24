@@ -1,6 +1,7 @@
 import type { RegexMatch, RegexMatchSummary } from '@/tools/regex-tester/regex-tester.service';
 import type { TextDiffRow } from '@/tools/text-diff/text-diff.service';
 import type { CsvToJsonOptions } from '@/tools/csv-to-json/csv-to-json.service';
+import type { CsvToMarkdownTableOptions } from '@/tools/csv-to-markdown-table/csv-to-markdown-table.service';
 import type { JsonKeySorterOptions } from '@/tools/json-key-sorter/json-key-sorter.service';
 import type { Difference } from '@/tools/json-diff/json-diff.types';
 import type { JsonLinesConverterOptions, JsonLinesDirection, JsonLinesSummary } from '@/tools/json-lines-converter/json-lines-converter.service';
@@ -31,6 +32,7 @@ export type WorkerTask =
   | { kind: 'math-evaluate'; value: string }
   | { kind: 'json-minify'; value: string }
   | { kind: 'csv-to-json'; value: string; options: CsvToJsonOptions }
+  | { kind: 'csv-to-markdown'; value: string; options: CsvToMarkdownTableOptions }
   | { kind: 'json-to-csv'; value: string }
   | { kind: 'json-lines'; value: string; direction: JsonLinesDirection; options: JsonLinesConverterOptions }
   | { kind: 'xml-format'; value: string; options: XmlFormatTaskOptions }
@@ -47,7 +49,7 @@ export type WorkerTask =
 export type WorkerTaskResult =
   | { kind: 'regex'; matches: RegexMatch[]; summary: RegexMatchSummary; sample: string }
   | { kind: 'text-diff'; rows: TextDiffRow[] }
-  | { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'yaml-viewer' | 'sql-format' | 'json-minify' | 'csv-to-json' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
+  | { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'yaml-viewer' | 'sql-format' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv'; valid: boolean; output: string; errorMessage?: string }
   | { kind: 'env-vars-parser'; result: EnvParseResult; output: string }
   | { kind: 'bcrypt-hash'; hash: string }
   | { kind: 'bcrypt-compare'; matches: boolean }
@@ -162,6 +164,11 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
+  csvToMarkdown: {
+    timeoutMs: 10_000,
+    maxInputBytes: 256 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+  },
   jsonToCsv: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
@@ -187,4 +194,4 @@ export const taskLimits = {
     maxInputBytes: 256 * 1024,
     maxOutputBytes: 2 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'markdownRender', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'markdownRender', TaskLimits>;
