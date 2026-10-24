@@ -29,6 +29,15 @@ const monitorMessages = {
     gap: 'Gap detected; the trend continues from a new baseline.',
     systemCpu: 'Whole-system CPU usage',
     memoryUsed: 'Memory in use',
+    disk: 'Disk',
+    diskUsed: 'Disk usage',
+    diskRead: 'Read',
+    diskWrite: 'Write',
+    diskFilesystems: (count: number) => `${count} filesystems`,
+    network: 'Network',
+    networkReceived: 'Received',
+    networkTransmitted: 'Sent',
+    networkInterfaces: (count: number) => `${count} interfaces`,
     processCpu: 'IT Tools process CPU',
     processMemory: 'IT Tools process memory',
     availableMemory: 'Available memory',
@@ -57,6 +66,15 @@ const monitorMessages = {
     gap: '检测到采样断档，曲线已从新基线继续。',
     systemCpu: '全机 CPU 使用率',
     memoryUsed: '内存使用率',
+    disk: '磁盘',
+    diskUsed: '磁盘使用率',
+    diskRead: '读取',
+    diskWrite: '写入',
+    diskFilesystems: (count: number) => `${count} 个文件系统`,
+    network: '网络',
+    networkReceived: '接收',
+    networkTransmitted: '发送',
+    networkInterfaces: (count: number) => `${count} 个接口`,
     processCpu: 'IT Tools 进程 CPU',
     processMemory: 'IT Tools 进程内存',
     availableMemory: '可用内存',
@@ -97,6 +115,12 @@ const latestSample = computed(() => samples.value.at(-1) ?? null);
 const isPaused = computed(() => state.value === 'paused');
 const cpuTrend = computed(() => samples.value.slice(-60).map(sample => sample.cpu.system.value ?? 0));
 const memoryTrend = computed(() => samples.value.slice(-60).map(sample => sample.memory.usedPercent.value ?? 0));
+const diskUsagePercent = computed(() => {
+  const filesystems = latestSample.value?.disk.filesystems ?? [];
+  const totalBytes = filesystems.reduce((total, filesystem) => total + (filesystem.sizeBytes ?? 0), 0);
+  const usedBytes = filesystems.reduce((total, filesystem) => total + (filesystem.usedBytes ?? 0), 0);
+  return totalBytes > 0 ? Math.min(100, Math.max(0, (usedBytes / totalBytes) * 100)) : null;
+});
 
 onMounted(() => {
   unsubscribe = subscribeSystemMonitor(handleSample);
@@ -190,6 +214,11 @@ function formatMetric(metric: SystemMonitorMetric | undefined): string {
   return formatBytes(metric.value);
 }
 
+function formatRate(metric: SystemMonitorMetric | undefined): string {
+  const value = formatMetric(metric);
+  return value === '—' ? value : `${value}/s`;
+}
+
 function formatBytes(value: number): string {
   if (value < 1024) {
     return `${Math.round(value)} B`;
@@ -274,6 +303,34 @@ function statusKey(): string {
         </div>
       </n-card>
 
+      <n-card :title="copy.disk" data-test-id="system-monitor-disk-card">
+        <div class="metric-value">{{ diskUsagePercent === null ? '—' : `${diskUsagePercent.toFixed(1)}%` }}</div>
+        <div class="metric-label">{{ copy.diskUsed }}</div>
+        <div class="metric-detail">
+          {{ copy.diskFilesystems(latestSample?.disk.filesystems.length ?? 0) }} · {{ copy.diskRead }} {{ formatRate(latestSample?.disk.readBytesPerSecond) }} · {{ copy.diskWrite }} {{ formatRate(latestSample?.disk.writeBytesPerSecond) }}
+        </div>
+        <div class="monitor-compact-list">
+          <div v-for="filesystem in latestSample?.disk.filesystems.slice(0, 4)" :key="filesystem.id" class="monitor-compact-row">
+            <span>{{ filesystem.mount }}</span>
+            <span>{{ formatMetric(filesystem.usedPercent) }}</span>
+          </div>
+        </div>
+      </n-card>
+
+      <n-card :title="copy.network" data-test-id="system-monitor-network-card">
+        <div class="metric-value">{{ formatRate(latestSample?.network.receivedBytesPerSecond) }}</div>
+        <div class="metric-label">{{ copy.networkReceived }}</div>
+        <div class="metric-detail">
+          {{ copy.networkTransmitted }} {{ formatRate(latestSample?.network.transmittedBytesPerSecond) }} · {{ copy.networkInterfaces(latestSample?.network.interfaces.length ?? 0) }}
+        </div>
+        <div class="monitor-compact-list">
+          <div v-for="networkInterface in latestSample?.network.interfaces.slice(0, 4)" :key="networkInterface.id" class="monitor-compact-row">
+            <span>{{ networkInterface.id }}</span>
+            <span>{{ networkInterface.operstate }}</span>
+          </div>
+        </div>
+      </n-card>
+
       <n-card :title="copy.metrics.process" data-test-id="system-monitor-process-card">
         <div class="metric-value">{{ formatMetric(latestSample?.cpu.process) }}</div>
         <div class="metric-label">{{ copy.processCpu }}</div>
@@ -347,6 +404,28 @@ function statusKey(): string {
 .metric-detail {
   margin-top: 8px;
   font-variant-numeric: tabular-nums;
+}
+
+.monitor-compact-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  color: var(--text-color-3);
+  font-size: 12px;
+}
+
+.monitor-compact-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+
+.monitor-compact-row span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sparkline {

@@ -2,8 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { app, ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import type {
   SystemMonitorBridgeResult,
+  SystemMonitorDiskSnapshot,
   SystemMonitorErrorCode,
   SystemMonitorMetric,
+  SystemMonitorNetworkSnapshot,
   SystemMonitorSample,
   SystemMonitorSessionInfo,
   SystemMonitorWorkerSample,
@@ -157,7 +159,8 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
     }
     finally {
       sampleInFlight = false;
-      if (!hasSamplingSubscriber(false)) {
+      // A paused subscriber keeps the worker warm so resume can publish a new baseline promptly.
+      if (subscriptions.size === 0) {
         serviceHost.close();
       }
       if (sampleAgain) {
@@ -174,7 +177,9 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
     }
     const active = [...subscriptions.values()].filter(subscription => !subscription.paused);
     if (active.length === 0) {
-      serviceHost.close();
+      if (subscriptions.size === 0) {
+        serviceHost.close();
+      }
       return;
     }
     const intervalMs = Math.min(...active.map(subscription => subscription.intervalMs));
@@ -224,6 +229,8 @@ export function registerSystemMonitorIpc(dependencies: SystemMonitorIpcDependenc
         ),
         process: metric(appMetric?.memoryBytes ?? null, 'bytes', appMetric?.memoryBytes === null ? 'failed' : 'ok'),
       },
+      disk: worker?.disk ?? emptyDiskSnapshot(),
+      network: worker?.network ?? emptyNetworkSnapshot(),
     };
   }
 
@@ -336,6 +343,26 @@ function metric(
     value: value !== null && Number.isFinite(value) ? value : null,
     unit,
     status: value !== null && Number.isFinite(value) ? status : status === 'ok' ? 'failed' : status,
+  };
+}
+
+function emptyDiskSnapshot(): SystemMonitorDiskSnapshot {
+  return {
+    filesystems: [],
+    readBytesPerSecond: metric(null, 'bytes', 'failed'),
+    writeBytesPerSecond: metric(null, 'bytes', 'failed'),
+    status: 'failed',
+    truncated: false,
+  };
+}
+
+function emptyNetworkSnapshot(): SystemMonitorNetworkSnapshot {
+  return {
+    interfaces: [],
+    receivedBytesPerSecond: metric(null, 'bytes', 'failed'),
+    transmittedBytesPerSecond: metric(null, 'bytes', 'failed'),
+    status: 'failed',
+    truncated: false,
   };
 }
 

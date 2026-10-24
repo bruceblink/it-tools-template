@@ -1,6 +1,6 @@
 # 数据库管理工具与系统监视器开发计划
 
-制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4、S5 和 S6 已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。S6 在此基础上增加三引擎批量新增与删除草稿、提交预览和有限事务。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理；磁盘、网络、进程列表和三平台验收归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
+制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4、S5 和 S6 已完成，S7a 已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。S6 在此基础上增加三引擎批量新增与删除草稿、提交预览和有限事务。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理。S7a 增加磁盘容量/读写速率和网络接口速率快照，并保持暂停时不采样、恢复时快速建立新基线；进程列表和三平台验收仍归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
 
 ## 目标与默认范围
 
@@ -157,7 +157,7 @@ S0 原型和 S1 入口与页面骨架已完成。两个产品模块仍缺少实�
 | S4（已完成） | 三引擎受限查询与直接编辑 | 三引擎支持单条查询、受限结果和分页、CRUD、跨引擎表数据页、带主键/原值冲突检查的单元格编辑、单表直列查询结果编辑、列管理、当前页导出、服务端筛选排序；PostgreSQL 支持查询取消，连接内提供有界查询历史 | 5–8 人日 |
 | S5（已完成当前切片） | 系统监视器首个可用版本 | 本机 CPU/内存、应用进程指标、曲线、周期、暂停恢复、断档和离开清理；Windows 真窗口验收 | 3–4 人日 |
 | S6（已完成） | 三引擎批量记录操作 | 多行新增与删除草稿、提交预览和有限事务；保留 S4 单元格编辑与单行冲突保护 | 5–7 人日 |
-| S7 | 系统监视器完整 MVP | 磁盘、网络、进程列表及字段可用状态；开销、睡眠恢复、PID 重用和 20 次路由切换验证 | 4–6 人日 |
+| S7（进行中；S7a 已完成） | 系统监视器完整 MVP | 磁盘、网络、进程列表及字段可用状态；开销、睡眠恢复、PID 重用和 20 次路由切换验证 | 4–6 人日 |
 | S8 | 桌面模块发布验收 | Windows、Linux、macOS 打包与实际交互；Web/PWA/Docker 构建隔离检查；三种数据库回归；发布说明、限制和证据齐全 | 3–5 人日 |
 
 完整双模块 MVP 要求同时支持 PostgreSQL、MySQL 和 SQLite，预计 34–51 人日，约 7–11 个全职工作周。这是规划窗口，不是发布日期承诺。S4 后可交付三引擎只读预览版；S5 后可交付双模块预览版。缺少 Linux/macOS 真机证据时，不能把 Windows 验收扩大为三平台已通过。
@@ -253,3 +253,7 @@ Windows 真窗口验收使用重新打包的 x64 Electron 应用，验证时只�
 2026-10-24（S6 批量记录操作）：数据库管理器增加批量新增草稿、表数据行删除标记、草稿预览和一次性事务提交。草稿总数限制为 100 行；提交前由主进程显示原生确认框。新增值按结构列生成，未填写的可编辑列按空字符串提交，NULL 通过单独选项提交；删除草稿携带完整原始行值和主键，服务端在事务中再次核对原值，出现冲突时整批回滚。含 BLOB 等不能安全回读的列仍可新增可编辑字段，但批量删除会停用；取消确认会保留草稿。三种数据库共用受校验的 IPC、utility process 和 renderer 类型。
 
 验证记录：`pnpm exec vitest run electron/database/cell-edit.test.ts electron/database/protocol.test.ts electron/database/sqlite-service.integration.test.ts --environment jsdom` 通过 3 个测试文件、24 项测试；`pnpm test:e2e:sqlite` 使用临时本地 SQLite 文件，通过 20 项服务与协议测试和 1 项 Electron 端到端测试，覆盖读写连接、两行批量新增、预览、事务提交、查询核对和清理，SQLite 3.51.3，临时文件清理已确认。`pnpm test:e2e:postgres` 使用本机 Docker `postgres:17-alpine`，实际 PostgreSQL 17.10，镜像摘要 `sha256:d5daad18926b71c3d663f358af0aea798670cb79fb550c106d19662a9d1627ef`，映射端口 `127.0.0.1:6908`，服务测试和 Electron 端到端测试通过，容器清理已确认。`pnpm test:e2e:mysql` 使用本机 Docker `mysql:8.4`，实际 MySQL 8.4.13，镜像摘要 `sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69`，映射端口 `127.0.0.1:5788`，服务测试和 Electron 端到端测试通过，容器清理已确认。`pnpm typecheck:electron`、`pnpm typecheck:app` 和 `pnpm lint --max-warnings 0` 通过。Computer Use 当前无法枚举可绑定的 Electron 原生窗口；本片使用自动化 Electron 窗口证据，没有扩大为独立真实窗口人工验收。结构编辑、DDL、导入导出、数据库运行监控以及 S7/S8 的系统监视器范围仍未实现。
+
+2026-10-24（S7a 磁盘与网络切片）：系统监视器 utility process 使用已锁定的 `systeminformation` 5.33.15 每 5 秒采集磁盘容量、已用空间、可用空间、读写速率和网络接口累计字节/速率。每次快照最多返回 64 个文件系统和 64 个网络接口，文本字段限制为 256 个字符；超过上限会标记截断。采样周期仍由主进程统一调度，暂停时不采样但保留 worker，恢复时可以快速发送带断档标记的新基线。界面增加磁盘和网络卡片，并显示受限列表与速率；采集失败、无数据和不支持状态保留空值及状态码。
+
+验证记录：`pnpm exec vitest run electron/system-monitor/sampler.test.ts electron/system-monitor/worker-protocol.test.ts electron/system-monitor/system-info.test.ts --environment jsdom` 通过 3 个测试文件、7 项测试；覆盖容量和速率归一化、非法值、接口/文件系统上限和截断标记。`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`、`pnpm electron:build` 通过；`pnpm test:e2e:electron electron/system-monitor.e2e.spec.ts` 通过 2 项 Electron 端到端测试，覆盖 CPU、内存、磁盘、网络卡片、暂停恢复断档、刷新和停止后的无事件行为。Computer Use 当前无法枚举可绑定的 Electron 原生窗口；本片使用自动化 Electron 窗口证据。进程列表、睡眠恢复、PID 启动标识和 20 次路由切换仍待 S7b/S8。

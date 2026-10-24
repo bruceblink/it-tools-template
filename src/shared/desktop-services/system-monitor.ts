@@ -16,6 +16,43 @@ export interface SystemMonitorMetric {
   status: SystemMonitorMetricStatus;
 }
 
+export interface SystemMonitorFilesystem {
+  id: string;
+  mount: string;
+  type: string;
+  sizeBytes: number | null;
+  usedBytes: number | null;
+  availableBytes: number | null;
+  usedPercent: SystemMonitorMetric;
+  status: SystemMonitorMetricStatus;
+}
+
+export interface SystemMonitorDiskSnapshot {
+  filesystems: SystemMonitorFilesystem[];
+  readBytesPerSecond: SystemMonitorMetric;
+  writeBytesPerSecond: SystemMonitorMetric;
+  status: SystemMonitorMetricStatus;
+  truncated: boolean;
+}
+
+export interface SystemMonitorNetworkInterface {
+  id: string;
+  operstate: string;
+  receivedBytes: number | null;
+  transmittedBytes: number | null;
+  receivedBytesPerSecond: SystemMonitorMetric;
+  transmittedBytesPerSecond: SystemMonitorMetric;
+  status: SystemMonitorMetricStatus;
+}
+
+export interface SystemMonitorNetworkSnapshot {
+  interfaces: SystemMonitorNetworkInterface[];
+  receivedBytesPerSecond: SystemMonitorMetric;
+  transmittedBytesPerSecond: SystemMonitorMetric;
+  status: SystemMonitorMetricStatus;
+  truncated: boolean;
+}
+
 export interface SystemMonitorSample {
   sampledAt: number;
   monotonicMs: number;
@@ -33,6 +70,8 @@ export interface SystemMonitorSample {
     usedPercent: SystemMonitorMetric;
     process: SystemMonitorMetric;
   };
+  disk: SystemMonitorDiskSnapshot;
+  network: SystemMonitorNetworkSnapshot;
 }
 
 /** A worker snapshot contains only OS values; the main process adds app metrics. */
@@ -44,6 +83,8 @@ export interface SystemMonitorWorkerSample {
   memoryTotalBytes: number | null;
   memoryAvailableBytes: number | null;
   memoryStatus: SystemMonitorMetricStatus;
+  disk?: SystemMonitorDiskSnapshot;
+  network?: SystemMonitorNetworkSnapshot;
   error: SystemMonitorErrorCode | null;
 }
 
@@ -57,3 +98,6 @@ export const SYSTEM_MONITOR_DEFAULT_INTERVAL_MS = 2_000;
 export const SYSTEM_MONITOR_MIN_INTERVAL_MS = 1_000;
 export const SYSTEM_MONITOR_MAX_INTERVAL_MS = 60_000;
 export const SYSTEM_MONITOR_MAX_HISTORY_POINTS = 3_600;
+export const SYSTEM_MONITOR_EXTENDED_SAMPLE_INTERVAL_MS = 5_000;
+export const SYSTEM_MONITOR_MAX_FILESYSTEMS = 64;
+export const SYSTEM_MONITOR_MAX_NETWORK_INTERFACES = 64;
