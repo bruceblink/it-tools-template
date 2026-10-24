@@ -161,6 +161,22 @@ const desktopTools = import.meta.env.ELECTRON
         capabilities: [],
         contentWidth: 'wide',
       }),
+      defineTool({
+        id: 'builtin/api-client',
+        categoryId: 'development',
+        translationKey: 'api-client',
+        name: translate('tools.api-client.title'),
+        path: '/api-client',
+        description: translate('tools.api-client.description'),
+        keywords: ['api', 'http', 'request', 'rest', 'response', 'headers'],
+        component: () => import('./api-client/api-client.vue'),
+        icon: DeviceDesktop,
+        platforms: ['electron'],
+        dataProcessing: 'network',
+        offline: 'requires-network',
+        capabilities: [],
+        contentWidth: 'wide',
+      }),
     ]
   : [];
 

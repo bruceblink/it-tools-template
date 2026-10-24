@@ -17,6 +17,11 @@ import type {
   SystemMonitorSample,
   SystemMonitorSessionInfo,
 } from '../src/shared/desktop-services/system-monitor';
+import type {
+  ApiBridgeResult,
+  ApiRequestInput,
+  ApiResponse,
+} from '../src/shared/desktop-services/api';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
@@ -50,6 +55,10 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:database:postgres-profiles:save', input),
   deletePostgresProfile: (profileId: string) =>
     ipcRenderer.invoke('desktop:database:postgres-profiles:delete', { profileId }),
+  runApiRequest: (input: ApiRequestInput): Promise<ApiBridgeResult<ApiResponse>> =>
+    ipcRenderer.invoke('desktop:api:request', input),
+  cancelApiRequest: (requestId: string): Promise<ApiBridgeResult<boolean>> =>
+    ipcRenderer.invoke('desktop:api:cancel', { requestId }),
   startSystemMonitor: (intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>> =>
     ipcRenderer.invoke('desktop:system-monitor:start', intervalMs === undefined ? undefined : { intervalMs }),
   setSystemMonitorPaused: (subscriptionId: string, paused: boolean): Promise<SystemMonitorBridgeResult<boolean>> =>

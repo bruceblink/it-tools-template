@@ -13,6 +13,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     '404.page': typeof import('./src/pages/404.page.vue')['default']
     About: typeof import('./src/pages/About.vue')['default']
+    ApiClient: typeof import('./src/tools/api-client/api-client.vue')['default']
     App: typeof import('./src/App.vue')['default']
     AsciiTextDrawer: typeof import('./src/tools/ascii-text-drawer/ascii-text-drawer.vue')['default']
     'Base.layout': typeof import('./src/layouts/base.layout.vue')['default']

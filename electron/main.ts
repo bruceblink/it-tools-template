@@ -33,6 +33,7 @@ import {
 import { registerPluginLifecycleIpc } from './plugin-ipc';
 import { registerDatabaseIpc } from './database/database-ipc';
 import { registerSystemMonitorIpc } from './system-monitor/system-monitor-ipc';
+import { registerApiIpc } from './api/api-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -65,6 +66,7 @@ protocol.registerSchemesAsPrivileged([{
 let mainWindow: BrowserWindow | null = null;
 let databaseIpc: ReturnType<typeof registerDatabaseIpc> | null = null;
 let systemMonitorIpc: ReturnType<typeof registerSystemMonitorIpc> | null = null;
+let apiIpc: ReturnType<typeof registerApiIpc> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -103,6 +105,9 @@ else {
       trustedRendererUrl: () => trustedRendererUrl,
       workerPath: resolve(app.getAppPath(), 'out/main/system-monitor-worker.cjs'),
     });
+    apiIpc = registerApiIpc({
+      trustedRendererUrl: () => trustedRendererUrl,
+    });
     await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
@@ -135,6 +140,8 @@ else {
     databaseIpc = null;
     systemMonitorIpc?.shutdown();
     systemMonitorIpc = null;
+    apiIpc?.shutdown();
+    apiIpc = null;
   });
 }
 
@@ -359,6 +366,7 @@ function closeRendererOwnedServices(contents: WebContents): void {
   }
   databaseIpc?.closeRenderer(contents.id);
   systemMonitorIpc?.closeRenderer(contents.id);
+  apiIpc?.closeRenderer(contents.id);
 }
 
 function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
@@ -429,6 +437,7 @@ async function createMainWindow() {
   window.on('closed', () => {
     databaseIpc?.closeRenderer(rendererId);
     systemMonitorIpc?.closeRenderer(rendererId);
+    apiIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
     }

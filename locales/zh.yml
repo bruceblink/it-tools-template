@@ -138,6 +138,10 @@ tools:
       disk: 磁盘
       network: 网络
 
+  api-client:
+    title: API 客户端
+    description: 在 Electron 桌面应用中发送受限 HTTP 请求并查看响应。
+
   password-strength-analyser:
     title: 密码强度分析仪
     description: 使用此密码强度分析器和破解时间估计工具来发现密码的强度。

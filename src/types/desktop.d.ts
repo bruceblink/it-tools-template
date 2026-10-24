@@ -23,6 +23,11 @@ import type {
   SystemMonitorSample,
   SystemMonitorSessionInfo,
 } from '../shared/desktop-services/system-monitor';
+import type {
+  ApiBridgeResult,
+  ApiRequestInput,
+  ApiResponse,
+} from '../shared/desktop-services/api';
 
 export {};
 
@@ -99,6 +104,8 @@ declare global {
         input: PostgresConnectionProfileInput,
       ): Promise<DatabaseBridgeResult<PostgresConnectionProfile>>;
       deletePostgresProfile?(profileId: string): Promise<DatabaseBridgeResult<boolean>>;
+      runApiRequest?(input: ApiRequestInput): Promise<ApiBridgeResult<ApiResponse>>;
+      cancelApiRequest?(requestId: string): Promise<ApiBridgeResult<boolean>>;
       startSystemMonitor?(intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>>;
       setSystemMonitorPaused?(
         subscriptionId: string,
