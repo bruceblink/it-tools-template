@@ -1,6 +1,6 @@
 # 数据库管理工具与系统监视器开发计划
 
-制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4、S5 和 S6 已完成，S7a、S7b、S7c 已完成，S8a 已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。S6 在此基础上增加三引擎批量新增与删除草稿、提交预览和有限事务。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理。S7a 增加磁盘容量/读写速率和网络接口速率快照；S7b 增加最多 2,000 条的进程列表、名称搜索、CPU/内存排序和分页；S7c 在单调时间断档、计数器重置和路由切换时重置 CPU 基线并保留断档标记，自动化验证 20 次路由切换后的订阅清理。S8a 将 Web 产物扫描接入 `pnpm check`，拒绝数据库驱动、主机采集依赖和桌面 IPC 标记进入 `dist`。性能预算和三平台验收仍归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
+制定日期：2026-10-19。源码规划基线：`main` 的 `7320c58`。S0、S1、S2a–S2f、S3、S4、S5 和 S6 已完成，S7a、S7b、S7c 已完成，S8a、S8b 已完成。S4 数据库管理工具 MVP 已完成：三引擎支持受限 SQL、分页浏览、筛选、排序、当前页导出、CRUD、带主键和原值冲突检查的单元格编辑、列管理、PostgreSQL 查询取消和本次连接内的查询历史。表数据页及可直接映射到单表的查询结果支持编辑；复杂查询保持只读。S6 在此基础上增加三引擎批量新增与删除草稿、提交预览和有限事务。MySQL 和 SQLite 的同步查询继续使用既有超时边界，界面不显示不受支持的取消按钮。S5 已提供本机 CPU、内存、应用进程指标、有限曲线、采样周期、暂停恢复、断档标记和离开清理。S7a 增加磁盘容量/读写速率和网络接口速率快照；S7b 增加最多 2,000 条的进程列表、名称搜索、CPU/内存排序和分页；S7c 在单调时间断档、计数器重置和路由切换时重置 CPU 基线并保留断档标记，自动化验证 20 次路由切换后的订阅清理。S8a 将 Web 产物扫描接入 `pnpm check`，拒绝数据库驱动、主机采集依赖和桌面 IPC 标记进入 `dist`；S8b 生成 Windows x64 未压缩包，增加打包目录冒烟用例并记录探索性性能基线。性能预算和三平台验收仍归入 S7/S8。总入口见[长期开发计划](01-development-plan.md)，性能和插件基础见[性能与扩展计划](07-performance-extensibility-plan.md)。
 
 ## 目标与默认范围
 
@@ -158,7 +158,7 @@ S0 原型和 S1 入口与页面骨架已完成。两个产品模块仍缺少实�
 | S5（已完成当前切片） | 系统监视器首个可用版本 | 本机 CPU/内存、应用进程指标、曲线、周期、暂停恢复、断档和离开清理；Windows 真窗口验收 | 3–4 人日 |
 | S6（已完成） | 三引擎批量记录操作 | 多行新增与删除草稿、提交预览和有限事务；保留 S4 单元格编辑与单行冲突保护 | 5–7 人日 |
 | S7（进行中；S7a/S7b/S7c 已完成） | 系统监视器完整 MVP | 磁盘、网络、进程列表及字段可用状态；开销、睡眠恢复、PID 重用和 20 次路由切换验证 | 4–6 人日 |
-| S8（进行中；S8a 已完成） | 桌面模块发布验收 | Windows、Linux、macOS 打包与实际交互；Web/PWA/Docker 构建隔离检查；三种数据库回归；发布说明、限制和证据齐全 | 3–5 人日 |
+| S8（进行中；S8a/S8b 已完成） | 桌面模块发布验收 | Windows、Linux、macOS 打包与实际交互；Web/PWA/Docker 构建隔离检查；三种数据库回归；发布说明、限制和证据齐全 | 3–5 人日 |
 
 完整双模块 MVP 要求同时支持 PostgreSQL、MySQL 和 SQLite，预计 34–51 人日，约 7–11 个全职工作周。这是规划窗口，不是发布日期承诺。S4 后可交付三引擎只读预览版；S5 后可交付双模块预览版。缺少 Linux/macOS 真机证据时，不能把 Windows 验收扩大为三平台已通过。
 
@@ -269,3 +269,7 @@ Windows 真窗口验收使用重新打包的 x64 Electron 应用，验证时只�
 2026-10-24（S8a Web 产物隔离门禁）：新增 `scripts/web-platform-isolation.test.mjs`，递归扫描生产 `dist` 的脚本、样式、HTML、JSON 和 source map，拒绝 `systeminformation`、系统监视器/数据库桌面 IPC、MySQL、PostgreSQL 游标和 SQLite 桌面依赖标记进入 Web bundle。测试接入 `pnpm check`，并与既有 Web 端桌面专属路由隐藏和 404 端到端测试配合。
 
 验证记录：`pnpm check` 通过，包含 119 个测试文件通过、2 个跳过；738 项测试通过、18 项跳过；隔离门禁在构建后的 `dist` 上通过，Web 初始 JavaScript gzip 为 299.93 KiB。`pnpm test:e2e src/tools/desktop-platform-visibility.e2e.spec.ts` 的 Chromium 和 WebKit 通过；Firefox 二进制已下载，但本机启动失败并报告 Windows 并行配置错误，因此 Firefox 证据未完成。`docker build --pull=false -t it-tools-template:s8a .` 通过，构建上下文使用 `node:24-alpine` 和 `nginx:stable-alpine`；`pnpm headers:docker` 使用 Docker Server 29.7.2、Nginx 1.30.6 通过 HTTP 头检查，容器已清理。Computer Use 原生窗口证据仍不可用；Windows/Linux/macOS 打包和真实交互仍待后续 S8 切片。
+
+2026-10-24（S8b Windows 打包验收）：使用当前 `main` 运行 `pnpm electron:package:win`。Electron 编译和目录打包阶段可用；NSIS 安装包阶段因外部下载地址 `20.205.243.166:443` 超时而失败。随后使用 `pnpm exec electron-builder --win dir --publish never` 生成 `release/win-unpacked`，作为不依赖安装器下载的 Windows x64 交付目录。新增 `electron/packaged-app.e2e.spec.ts`，按当前平台查找打包可执行文件，使用独立用户目录打开首页、数据库管理器和系统监视器并在结束后清理目录。
+
+验证记录：`pnpm test:e2e:electron electron/packaged-app.e2e.spec.ts` 通过 1 项，打包目录中的两个桌面工作区均可打开；`pnpm typecheck:electron` 和 `pnpm lint --max-warnings 0` 通过。`pnpm perf:baseline -- --runs 1 --platform electron --output docs/performance-baseline-2026-10-24-s8b.json --force` 通过，报告状态为 `exploratory`，源码提交为 S8a 的 `755b599`，启动 1,245.73 ms、空闲 CPU 0.39%、工作集 988,123,136 字节；报告只覆盖 Windows 自动化单轮，不替代 20 轮正式性能基线。Linux/macOS 打包和真实窗口交互没有在本机验证；NSIS 安装包因下载超时未生成。
