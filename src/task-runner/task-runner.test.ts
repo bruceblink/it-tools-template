@@ -157,6 +157,40 @@ describe('TaskRunner', () => {
     expect(workers).toHaveLength(0);
   });
 
+  it('runs Docker Run to Compose conversions in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('docker-run-to-compose', 1, {
+      kind: 'docker-run-to-compose',
+      value: 'docker run --name old nginx',
+    }, taskLimits.dockerRunToCompose);
+    const latest = runner.run('docker-run-to-compose', 2, {
+      kind: 'docker-run-to-compose',
+      value: 'docker run --name web nginx',
+    }, taskLimits.dockerRunToCompose);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.task).toEqual({ kind: 'docker-run-to-compose', value: 'docker run --name web nginx' });
+    const result: WorkerTaskResult = {
+      kind: 'docker-run-to-compose',
+      yaml: "version: '3.9'\nservices:\n    nginx:\n        image: nginx\n        container_name: web\n",
+      messages: [],
+    };
+    workers[1]?.reply(result);
+    await expect(latest).resolves.toEqual({ status: 'success', result });
+  });
+
+  it('rejects oversized Docker Run to Compose input before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('docker-run-to-compose', 1, {
+      kind: 'docker-run-to-compose',
+      value: 'x'.repeat(taskLimits.dockerRunToCompose.maxInputBytes + 1),
+    }, taskLimits.dockerRunToCompose);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('terminates a task at its deadline', async () => {
     const { runner, workers } = createHarness();
     const timed = runner.run('regex-tester', 1, { kind: 'regex', regex: 'a', text: 'a', flags: 'd' }, {

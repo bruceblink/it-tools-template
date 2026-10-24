@@ -122,6 +122,20 @@ test('converts CSV to Markdown in a worker on the app protocol', async () => {
   await expect(output).toHaveText('');
 });
 
+test('converts Docker Run to Compose in a dedicated worker on the app protocol', async () => {
+  await page.goto('app://bundle/docker-run-to-docker-compose-converter');
+
+  const input = page.getByTestId('docker-run-command');
+  const output = page.getByTestId('area-content');
+  await input.fill('docker run --name web -p 8080:80 --restart always nginx');
+  await expect(output).toContainText('image: nginx');
+  await expect(output).toContainText("- '8080:80'");
+
+  await input.fill('docker run --rm --gpus all --name worker image:tag');
+  await expect(page.getByText('The option "--rm" could not be translated to docker-compose.yml.', { exact: true })).toBeVisible();
+  await expect(page.getByText('The option "--gpus" is not yet implemented.', { exact: true })).toBeVisible();
+});
+
 test('reads Electron runtime details through the shared platform adapter', async () => {
   await page.goto('app://bundle/device-information');
 

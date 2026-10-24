@@ -57,6 +57,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日优化 Text Statistics：一次字符循环统计字符数、词数和行数，并复用 TextEncoder 计算 UTF-8 字节数，避免为词数和行数创建两个分割数组。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，1 MiB 合成输入的中位耗时从 14.61 毫秒降至 3.76 毫秒。完整 `pnpm check` 通过 784 项单测（18 项跳过）；Chromium Web E2E 通过。Firefox 在本机启动失败，真实窗口交互未执行。详细实现和测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日将 Docker Run 转 Compose 改为专用 Worker：合成 256 KiB 命令原本同步运行约 1.46 秒，现由 Worker 处理，并限制输入 256 KiB、输出 2 MiB 和执行时间 10 秒。原有转换结果和诊断消息保持不变。完整 `pnpm check` 通过 790 项单测（18 项跳过）；Chromium Web 与隐藏 Electron `app://bundle` E2E 通过。详细实现与测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

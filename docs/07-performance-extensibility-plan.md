@@ -225,7 +225,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较和 Markdown 转 HTML 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML 和 Docker Run 转 Compose 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
@@ -234,6 +234,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - TOML 的 JSON、YAML 双向转换已迁入共享 Worker。其余大输入工具仍需逐项设定字节、行数和输出上限。确需整体载入的算法要先检查大小；批量文件再评估流式处理。
 - SQL Formatter 使用独立 Worker，避免把 `sql-formatter` 加入共享 Worker；输入最多 256 KiB，输出最多 2 MiB，运行最多 10 秒。Environment Variables Parser 使用共享 Worker，一次解析后同时返回诊断与所选格式；输入最多 256 KiB、2,000 行，输出最多 2 MiB，运行最多 10 秒。
 - Bcrypt 哈希与比较使用独立 Worker；盐轮数限制为 4–16，合并输入最多 64 KiB，输出最多 4 KiB，任务最多运行 5 秒。
+- Docker Run 转 Compose 使用独立 Worker；输入最多 256 KiB，结构化结果最多 2 MiB，任务最多运行 10 秒。Text Statistics 通过一次字符循环统计字符、词和行数，避免为词数和行数分配分割数组。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
@@ -589,3 +590,9 @@ CSV 转换现由共享任务 Worker 执行。分隔符和首行标题选项仍�
 Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，再交替运行旧算法和新服务 21 次。16 KiB、64 KiB、256 KiB、1 MiB 输入的中位耗时由 0.18、0.94、3.88、14.61 毫秒降至 0.10、0.28、0.92、3.76 毫秒，约快 1.9、3.3、4.2、3.9 倍。这是 Node.js 合成微基准，不包含浏览器输入、响应式更新或渲染。
 
 最终 `pnpm check` 通过 42 项脚本测试、784 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.80 KiB。Chromium Web E2E 1 项通过，覆盖 Unicode、空白和换行计数。Firefox 在本机启动时返回 `spawn UNKNOWN`，未计为通过；未运行真实窗口交互。
+
+本轮 Docker Run 转 Compose Worker 迁移（2026-10-25）：工具原本在每次输入变化后同步调用 `composerize-ts`。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，对重复 `--env KEYn=x` 参数组成的命令预热一次后测量 6 次。16 KiB、64 KiB 和 256 KiB 输入的中位数/最大值分别为 9.42/11.58、94.86/98.67 和 1,455.03/1,792.64 毫秒；256 KiB 输入生成 390,769 字节 YAML。这是 Node.js 合成微基准，不包含浏览器交互或渲染。
+
+转换现由独立 Worker 执行。输入变化延迟 150 毫秒，并终止旧任务；Worker 超时 10 秒后由宿主终止。输入上限为 256 KiB，序列化结果上限为 2 MiB。组件离开时取消任务，并清除旧 YAML 与诊断。`composerize-ts` 的 `yamljs` 依赖假定存在 `window` 全局；Worker 在动态导入期间将自身临时映射到该名称，导入完成后立即移除此属性。Web Worker 入口和延迟加载块分别为 2.58 KiB、125.25 KiB；Electron 对应输出为 4.20 KiB、287.63 KiB。PWA 首屏 JavaScript gzip 为 299.79 KiB。
+
+服务测试覆盖原 YAML、不可转换选项、未实现选项、输入上限和输出上限。完整 `pnpm check` 通过 42 项脚本测试、790 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。Chromium Web E2E 1 项通过，覆盖转换、诊断和超限输入；隐藏 Electron `app://bundle` E2E 1 项通过，确认 Worker 动态块可加载并保留诊断。未运行真实窗口交互。
