@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult } from '../src/shared/desktop-services/object-storage';
+import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult, StorageUploadInput, StorageTransferResult, StorageProgress } from '../src/shared/desktop-services/object-storage';
 import type {
   DatabaseBatchMutationInput,
   DatabaseBatchMutationResponse,
@@ -39,6 +39,17 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:object-storage:list', input),
   previewStorageObject: (input: StoragePreviewInput): Promise<StorageResult<StoragePreview>> =>
     ipcRenderer.invoke('desktop:object-storage:preview', input),
+  uploadStorageObject: (input: StorageUploadInput): Promise<StorageResult<StorageTransferResult | null>> =>
+    ipcRenderer.invoke('desktop:object-storage:upload', input),
+  downloadStorageObject: (input: StoragePreviewInput): Promise<StorageResult<StorageTransferResult | null>> =>
+    ipcRenderer.invoke('desktop:object-storage:download', input),
+  deleteStorageObject: (input: StoragePreviewInput): Promise<StorageResult<boolean>> =>
+    ipcRenderer.invoke('desktop:object-storage:delete', input),
+  onStorageProgress: (callback: (progress: StorageProgress) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, progress: StorageProgress) => callback(progress);
+    ipcRenderer.on('desktop:object-storage:progress', listener);
+    return () => ipcRenderer.removeListener('desktop:object-storage:progress', listener);
+  },
   cancelStorageRequest: (requestId: string): Promise<StorageResult<boolean>> =>
     ipcRenderer.invoke('desktop:object-storage:cancel', { requestId }),
   disconnectStorage: (): Promise<StorageResult<boolean>> =>

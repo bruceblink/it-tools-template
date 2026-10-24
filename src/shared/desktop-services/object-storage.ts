@@ -8,6 +8,9 @@ export type StorageError =
   | 'access-denied'
   | 'not-found'
   | 'response-too-large'
+  | 'file-too-large'
+  | 'object-exists'
+  | 'local-file-error'
   | 'network-error'
   | 'service-unavailable';
 
@@ -36,6 +39,23 @@ export interface StorageListInput extends StorageRequest {
 
 export interface StoragePreviewInput extends StorageRequest {
   key: string;
+}
+
+export interface StorageUploadInput extends StoragePreviewInput {
+  overwrite: boolean;
+}
+
+export interface StorageTransferResult {
+  key: string;
+  bytes: number;
+}
+
+export interface StorageProgress {
+  requestId: string;
+  key: string;
+  direction: 'upload' | 'download';
+  transferredBytes: number;
+  totalBytes: number | null;
 }
 
 export interface StorageObject {
@@ -68,3 +88,5 @@ export const STORAGE_TIMEOUT_MS = 10_000;
 export const STORAGE_PAGE_SIZE = 100;
 export const STORAGE_RESPONSE_BYTES = 1024 * 1024;
 export const STORAGE_PREVIEW_BYTES = 64 * 1024;
+export const STORAGE_TRANSFER_BYTES = 1024 * 1024 * 1024;
+export const STORAGE_TRANSFER_TIMEOUT_MS = 5 * 60_000;

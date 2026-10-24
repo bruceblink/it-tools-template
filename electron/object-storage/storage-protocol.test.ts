@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseStorageCancel, parseStorageConnect, parseStorageList, parseStoragePreview } from './storage-protocol';
+import {
+  parseStorageCancel,
+  parseStorageConnect,
+  parseStorageList,
+  parseStoragePreview,
+  parseStorageUpload,
+} from './storage-protocol';
 
 const input = {
   requestId: 'request-1',
@@ -61,5 +67,12 @@ describe('object storage protocol', () => {
     expect(parseStoragePreview({ ...request, key: 'nul\0key' })).toBeNull();
     expect(parseStorageCancel({ requestId: request.requestId })).toBe(request.requestId);
     expect(parseStorageCancel({ requestId: request.requestId, endpoint: 'unexpected' })).toBeNull();
+  });
+
+  it('accepts only an explicit overwrite choice and never accepts renderer file paths', () => {
+    const request = { sessionId: 'session-1', requestId: 'request-1', key: 'docs/new.bin', overwrite: false };
+    expect(parseStorageUpload(request)).toEqual(request);
+    expect(parseStorageUpload({ ...request, overwrite: 'yes' })).toBeNull();
+    expect(parseStorageUpload({ ...request, path: 'C:/private/file' })).toBeNull();
   });
 });

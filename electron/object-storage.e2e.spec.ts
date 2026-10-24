@@ -1,6 +1,6 @@
 import { _electron, expect, test } from '@playwright/test';
 import type { ElectronApplication } from '@playwright/test';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 import { CreateBucketCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -49,7 +49,28 @@ test('connects to a local S3 bucket, pages keys, previews bounded text, and clea
   const sessionId = await page.getByTestId('storage-connection').getAttribute('data-session-id');
   expect(sessionId).toBeTruthy();
 
-  await filterPrefix(page, 'docs/');
+  await filterPrefix(page, 'docs/', 5);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByTestId('storage-upload-key')).toBeVisible();
+  await expect(page.getByTestId('storage-prefix')).toBeVisible();
+  const narrowLayout = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth,
+  }));
+  expect(narrowLayout.content).toBeLessThanOrEqual(narrowLayout.viewport);
+  const narrowColumns = await page.locator('.storage-table th').evaluateAll((headers) =>
+    headers.map((header) => ({
+      text: header.textContent?.trim(),
+      width: header.clientWidth,
+      contentWidth: header.scrollWidth,
+    })),
+  );
+  expect(narrowColumns.find((column) => column.text === 'Actions')?.contentWidth).toBeLessThanOrEqual(
+    narrowColumns.find((column) => column.text === 'Actions')?.width ?? 0,
+  );
+  expect(narrowColumns.find((column) => column.text === 'Modified')?.width).toBe(0);
+  await page.screenshot({ path: test.info().outputPath('object-storage-narrow.png'), animations: 'disabled' });
+  await page.setViewportSize({ width: 1280, height: 800 });
   await expect(page.getByTestId('storage-object')).toHaveCount(5);
   await page.getByText('docs/empty.txt', { exact: true }).click();
   await expect(page.getByTestId('storage-preview-text')).toHaveText('');
@@ -65,11 +86,60 @@ test('connects to a local S3 bucket, pages keys, previews bounded text, and clea
   await page.getByText('docs/binary.bin', { exact: true }).click();
   await expect(page.getByTestId('storage-preview')).toContainText('Binary content');
 
-  await filterPrefix(page, 'pagination/');
+  await filterPrefix(page, 'pagination/', 100);
   await expect(page.getByTestId('storage-object')).toHaveCount(100);
   await page.getByTestId('storage-next').click();
   await expect(page.getByTestId('storage-object')).toHaveCount(5);
   await expect(page.getByTestId('storage-next')).toBeDisabled();
+
+  const uploadPath = join(userDataDirectory, 'upload.bin');
+  const downloadPath = join(userDataDirectory, 'download.bin');
+  const uploadBytes = Buffer.alloc(2 * 1024 * 1024, 73);
+  await writeFile(uploadPath, uploadBytes);
+  await writeFile(downloadPath, 'original target');
+  await electronApp.evaluate(
+    ({ dialog }, paths) => {
+      Object.defineProperty(dialog, 'showOpenDialog', {
+        configurable: true,
+        value: async () => ({ canceled: false, filePaths: [paths.upload] }),
+      });
+      Object.defineProperty(dialog, 'showSaveDialog', {
+        configurable: true,
+        value: async () => ({ canceled: false, filePath: paths.download }),
+      });
+      Object.defineProperty(dialog, 'showMessageBox', { configurable: true, value: async () => ({ response: 0 }) });
+    },
+    { upload: uploadPath, download: downloadPath },
+  );
+  await filterPrefix(page, 'transfers/', 0);
+  await expect(page.getByTestId('storage-empty')).toBeVisible();
+  await page.getByTestId('storage-upload-key').locator('input').fill('transfers/upload.bin');
+  await page.getByTestId('storage-upload').click();
+  await expect(page.getByTestId('storage-notice')).toContainText('Upload complete');
+  await expect(page.getByTestId('storage-object')).toHaveCount(1);
+  await page.getByTestId('storage-upload').click();
+  await expect(page.getByTestId('storage-error')).toContainText('already exists');
+  await page.getByTestId('storage-download').click();
+  await expect(page.getByTestId('storage-notice')).toContainText('Download complete');
+  await expect(page.getByTestId('storage-progress')).toContainText('2,097,152');
+  expect(await readFile(downloadPath)).toEqual(uploadBytes);
+  expect((await readdir(userDataDirectory)).filter((name) => name.endsWith('.part'))).toEqual([]);
+  await page.getByTestId('storage-delete').click();
+  await expect(page.getByTestId('storage-workspace')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.getByTestId('storage-object')).toHaveCount(1);
+  await electronApp.evaluate(({ dialog }) => {
+    Object.defineProperty(dialog, 'showMessageBox', { configurable: true, value: async () => ({ response: 1 }) });
+  });
+  await page.getByTestId('storage-overwrite').click();
+  await writeFile(uploadPath, 'replacement content');
+  await page.getByTestId('storage-upload').click();
+  await expect(page.getByTestId('storage-notice')).toContainText('Upload complete');
+  await page.getByTestId('storage-download').click();
+  await expect(page.getByTestId('storage-notice')).toContainText('Download complete');
+  expect(await readFile(downloadPath, 'utf8')).toBe('replacement content');
+  await page.getByTestId('storage-delete').click();
+  await expect(page.getByTestId('storage-notice')).toContainText('Object deleted');
+  await expect(page.getByTestId('storage-empty')).toBeVisible();
 
   await page.getByTestId('storage-disconnect').click();
   await expect(page.getByTestId('storage-connect')).toBeVisible();
@@ -121,10 +191,15 @@ async function connectToBucket(
 async function filterPrefix(
   page: Awaited<ReturnType<ElectronApplication['firstWindow']>>,
   prefix: string,
+  expectedCount: number,
 ): Promise<void> {
   await page.getByTestId('storage-prefix').locator('input').fill(prefix);
   await page.getByTestId('storage-filter').click();
-  await expect(page.getByTestId('storage-empty')).toHaveCount(0);
+  if (expectedCount === 0) {
+    await expect(page.getByTestId('storage-empty')).toBeVisible();
+  } else {
+    await expect(page.getByTestId('storage-object')).toHaveCount(expectedCount);
+  }
 }
 
 async function seedBucket(): Promise<void> {

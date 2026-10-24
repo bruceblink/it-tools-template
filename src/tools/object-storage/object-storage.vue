@@ -1,12 +1,24 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
-import { ArrowLeft, ArrowRight, PlayerStop, PlugConnected, Unlink, Refresh, Search } from '@vicons/tabler';
+import {
+  ArrowLeft,
+  ArrowRight,
+  PlayerStop,
+  PlugConnected,
+  Unlink,
+  Refresh,
+  Search,
+  Upload,
+  Download,
+  Trash,
+} from '@vicons/tabler';
 import type {
   StorageConnection,
   StorageError,
   StoragePage,
   StoragePreview,
   StorageResult,
+  StorageProgress,
 } from '@/shared/desktop-services/object-storage';
 import {
   cancelStorageRequest,
@@ -14,6 +26,10 @@ import {
   disconnectStorage,
   listStorageObjects,
   previewStorageObject,
+  uploadStorageObject,
+  downloadStorageObject,
+  deleteStorageObject,
+  onStorageProgress,
 } from '@/platform-adapter/object-storage';
 
 const { locale } = useI18n();
@@ -32,9 +48,23 @@ const page = ref<StoragePage | null>(null);
 const preview = ref<StoragePreview | null>(null);
 const error = ref<StorageError | null>(null);
 const busy = ref(false);
+const uploadKey = ref('');
+const overwrite = ref(false);
+const progress = ref<StorageProgress | null>(null);
+const notice = ref('');
 let activeRequest: string | null = null;
 let disposed = false;
 let connectionVersion = 0;
+const unsubscribeProgress = onStorageProgress((value) => {
+  if (!disposed && value.requestId === activeRequest) {
+    progress.value = value;
+  }
+});
+const progressPercent = computed(() =>
+  progress.value?.totalBytes
+    ? Math.min(100, Math.round((progress.value.transferredBytes / progress.value.totalBytes) * 100))
+    : 0,
+);
 
 const errorText = computed(() => {
   const messages: Record<StorageError, [string, string]> = {
@@ -50,6 +80,12 @@ const errorText = computed(() => {
     ],
     'not-found': ['The bucket or object was not found.', '未找到 Bucket 或对象。'],
     'response-too-large': ['The service response exceeds the size limit.', '服务响应超过大小限制。'],
+    'file-too-large': ['The file exceeds the 1 GiB transfer limit.', '文件超过 1 GiB 传输上限。'],
+    'object-exists': [
+      'This object already exists. Choose replacement explicitly.',
+      '该对象已存在。替换前请启用覆盖选项。',
+    ],
+    'local-file-error': ['The local file could not be read or saved.', '无法读取或保存本机文件。'],
     'network-error': ['Connection failed. Check the endpoint and region.', '连接失败，请检查服务地址和区域。'],
     'service-unavailable': ['Object storage is unavailable.', '对象存储服务不可用。'],
   };
@@ -65,6 +101,8 @@ async function run<T>(operation: (requestId: string) => Promise<StorageResult<T>
   activeRequest = requestId;
   busy.value = true;
   error.value = null;
+  progress.value = null;
+  notice.value = '';
   const result = await operation(requestId);
   if (disposed || activeRequest !== requestId) {
     return null;
@@ -111,9 +149,9 @@ async function connect(): Promise<void> {
   activePrefix.value = '';
 }
 
-async function list(nextToken: string | null = null): Promise<void> {
+async function list(nextToken: string | null = null): Promise<boolean> {
   if (!connection.value || busy.value) {
-    return;
+    return false;
   }
   const sessionId = connection.value.sessionId;
   const queryPrefix = nextToken ? activePrefix.value : prefix.value;
@@ -123,12 +161,13 @@ async function list(nextToken: string | null = null): Promise<void> {
     listStorageObjects({ sessionId, requestId, prefix: queryPrefix, continuationToken: nextToken }),
   );
   if (disposed || connection.value?.sessionId !== sessionId) {
-    return;
+    return false;
   }
   page.value = result;
   if (result) {
     activePrefix.value = queryPrefix;
   }
+  return result !== null;
 }
 
 async function select(key: string): Promise<void> {
@@ -140,6 +179,42 @@ async function select(key: string): Promise<void> {
   const result = await run((requestId) => previewStorageObject({ sessionId, requestId, key }));
   if (!disposed && connection.value?.sessionId === sessionId) {
     preview.value = result;
+  }
+}
+
+async function transfer(operation: 'upload' | 'download' | 'delete', key: string): Promise<void> {
+  if (!connection.value || busy.value) {
+    return;
+  }
+  const sessionId = connection.value.sessionId;
+  const result = await run(async (requestId) => {
+    const input = { sessionId, requestId, key };
+    if (operation === 'upload') {
+      return uploadStorageObject({ ...input, overwrite: overwrite.value });
+    }
+    if (operation === 'download') {
+      return downloadStorageObject(input);
+    }
+    const deleted = await deleteStorageObject(input);
+    return deleted.ok ? { ok: true as const, value: deleted.value ? { key, bytes: 0 } : null } : deleted;
+  });
+  if (!result || disposed || connection.value?.sessionId !== sessionId) {
+    return;
+  }
+  const message =
+    operation === 'upload'
+      ? label('Upload complete', '上传完成')
+      : operation === 'download'
+        ? label('Download complete', '下载完成')
+        : label('Object deleted', '对象已删除');
+  const refreshed = operation === 'download' || (await list());
+  if (!disposed && activeRequest === null && connection.value?.sessionId === sessionId) {
+    notice.value = refreshed
+      ? message
+      : label(
+          `${message}, but the object list could not be refreshed`,
+          `${message}，但对象列表未能刷新`,
+        );
   }
 }
 
@@ -155,6 +230,10 @@ function disconnect(): void {
   preview.value = null;
   busy.value = false;
   error.value = null;
+  progress.value = null;
+  notice.value = '';
+  uploadKey.value = '';
+  overwrite.value = false;
   accessKey.value = '';
   secretKey.value = '';
   sessionToken.value = '';
@@ -162,6 +241,7 @@ function disconnect(): void {
 
 onBeforeUnmount(() => {
   disposed = true;
+  unsubscribeProgress();
   disconnect();
 });
 </script>
@@ -231,7 +311,35 @@ onBeforeUnmount(() => {
     <n-alert v-if="errorText" type="error" :show-icon="false" role="alert" data-test-id="storage-error">{{
       errorText
     }}</n-alert>
+    <n-alert v-if="notice" type="success" :show-icon="false" role="status" data-test-id="storage-notice">{{
+      notice
+    }}</n-alert>
+    <div v-if="progress" class="storage-progress" data-test-id="storage-progress" role="status">
+      <span
+        >{{ progress.direction === 'upload' ? label('Uploading', '正在上传') : label('Downloading', '正在下载') }}
+        {{ progress.key }}</span
+      >
+      <progress :value="progress.totalBytes === null ? undefined : progressPercent" max="100" />
+      <span
+        >{{ progress.transferredBytes.toLocaleString() }} / {{ progress.totalBytes?.toLocaleString() ?? '?' }}
+        {{ label('bytes', '字节') }}</span
+      >
+    </div>
     <template v-if="connection">
+      <form class="storage-upload" @submit.prevent="transfer('upload', uploadKey)">
+        <n-input
+          v-model:value="uploadKey"
+          :disabled="busy"
+          :placeholder="label('Upload object key', '上传对象键')"
+          data-test-id="storage-upload-key"
+        />
+        <n-checkbox v-model:checked="overwrite" :disabled="busy" data-test-id="storage-overwrite">{{
+          label('Replace existing', '替换已有对象')
+        }}</n-checkbox>
+        <n-button attr-type="submit" :disabled="busy || !uploadKey" data-test-id="storage-upload"
+          ><template #icon><n-icon :component="Upload" /></template>{{ label('Upload file', '上传文件') }}</n-button
+        >
+      </form>
       <form class="storage-filter" @submit.prevent="list()">
         <n-input
           v-model:value="prefix"
@@ -259,6 +367,7 @@ onBeforeUnmount(() => {
                   <th>{{ label('Object key', '对象键') }}</th>
                   <th>{{ label('Bytes', '字节') }}</th>
                   <th>{{ label('Modified', '修改时间') }}</th>
+                  <th class="storage-actions-heading">{{ label('Actions', '操作') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -273,6 +382,26 @@ onBeforeUnmount(() => {
                   </td>
                   <td>{{ object.size.toLocaleString() }}</td>
                   <td>{{ object.lastModified ? new Date(object.lastModified).toLocaleString() : '-' }}</td>
+                  <td>
+                    <div class="storage-object-actions">
+                      <n-button
+                        :disabled="busy"
+                        :title="label('Download', '下载')"
+                        :aria-label="label('Download', '下载')"
+                        data-test-id="storage-download"
+                        @click="transfer('download', object.key)"
+                        ><template #icon><n-icon :component="Download" /></template
+                      ></n-button>
+                      <n-button
+                        :disabled="busy"
+                        :title="label('Delete', '删除')"
+                        :aria-label="label('Delete', '删除')"
+                        data-test-id="storage-delete"
+                        @click="transfer('delete', object.key)"
+                        ><template #icon><n-icon :component="Trash" /></template
+                      ></n-button>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -363,6 +492,38 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
 }
+.storage-upload {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.storage-upload .n-input {
+  flex: 1;
+  min-width: 180px;
+}
+.storage-progress {
+  display: grid;
+  gap: 5px;
+  overflow-wrap: anywhere;
+}
+.storage-progress progress {
+  width: 100%;
+  height: 10px;
+  accent-color: #168c49;
+}
+.storage-table .storage-actions-heading {
+  width: 84px;
+}
+.storage-object-actions {
+  display: flex;
+  gap: 4px;
+}
+.storage-object-actions .n-button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+}
 .storage-results {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
@@ -404,6 +565,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font: inherit;
   overflow-wrap: anywhere;
+  white-space: normal;
   max-width: 100%;
 }
 .storage-table .selected {
@@ -445,6 +607,28 @@ onBeforeUnmount(() => {
   }
   .storage-filter {
     flex-wrap: wrap;
+  }
+}
+@media (max-width: 600px) {
+  .storage-table th:first-child {
+    width: auto;
+  }
+  .storage-table th:nth-child(2),
+  .storage-table td:nth-child(2) {
+    width: 56px;
+    white-space: nowrap;
+  }
+  .storage-table th:nth-child(3),
+  .storage-table td:nth-child(3) {
+    display: none;
+  }
+  .storage-table .storage-actions-heading {
+    width: 76px;
+    white-space: nowrap;
+  }
+  .storage-table th,
+  .storage-table td {
+    padding: 6px 4px;
   }
 }
 </style>

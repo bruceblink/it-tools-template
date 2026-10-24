@@ -1,7 +1,11 @@
 import { Readable } from 'node:stream';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { S3Client } from '@aws-sdk/client-s3';
 import { STORAGE_PREVIEW_BYTES, STORAGE_TIMEOUT_MS } from '../../src/shared/desktop-services/object-storage';
+import type { StorageTransferDependencies } from './storage-transfers';
 import { StorageService } from './storage-service';
 
 const input = {
@@ -12,10 +16,10 @@ const input = {
   accessKeyId: 'synthetic-access',
   secretAccessKey: 'synthetic-secret',
 };
-function setup() {
+function setup(transfers?: StorageTransferDependencies) {
   const send = vi.fn().mockResolvedValue({ Contents: [] });
   const destroy = vi.fn();
-  const service = new StorageService(() => ({ send, destroy }) as unknown as S3Client);
+  const service = new StorageService(() => ({ send, destroy }) as unknown as S3Client, transfers);
   return { send, destroy, service };
 }
 
@@ -117,5 +121,58 @@ describe('object storage lifetime and resource boundaries', () => {
     expect(await pending).toEqual({ ok: false, error: 'cancelled' });
     expect(destroy).toHaveBeenCalledOnce();
     expect(await service.list(1, request)).toEqual({ ok: false, error: 'not-connected' });
+  });
+
+  it('binds uploads to their renderer, maps conflicts, and cancels active file streams', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'it-tools-storage-service-'));
+    const path = join(directory, 'upload.txt');
+    await writeFile(path, 'selected content');
+    const transfers: StorageTransferDependencies = {
+      selectUpload: vi.fn(async () => path),
+      selectDownload: vi.fn(async () => null),
+      confirm: vi.fn(async () => true),
+      progress: vi.fn(),
+    };
+    const { service, send, destroy } = setup(transfers);
+    try {
+      const connected = await service.connect(1, input);
+      if (!connected.ok) {
+        throw new Error('connect failed');
+      }
+      const request = {
+        sessionId: connected.value.sessionId,
+        requestId: 'upload-conflict',
+        key: 'docs/upload.txt',
+        overwrite: false,
+      };
+      expect(await service.upload(2, request)).toEqual({ ok: false, error: 'not-connected' });
+      expect(transfers.selectUpload).not.toHaveBeenCalled();
+
+      send.mockRejectedValueOnce({ $metadata: { httpStatusCode: 412 } });
+      expect(await service.upload(1, request)).toEqual({ ok: false, error: 'object-exists' });
+
+      send.mockImplementation(
+        (_command, { abortSignal }) =>
+          new Promise((_resolve, reject) => {
+            const fail = () => reject(new Error('private SDK diagnostic'));
+            if (abortSignal.aborted) {
+              fail();
+            } else {
+              abortSignal.addEventListener('abort', fail, { once: true });
+            }
+          }),
+      );
+      const pending = service.upload(1, { ...request, requestId: 'upload-cancel' });
+      await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(3));
+      expect(service.cancel(2, 'upload-cancel')).toBe(false);
+      expect(service.cancel(1, 'upload-cancel')).toBe(true);
+      expect(await pending).toEqual({ ok: false, error: 'cancelled' });
+      expect(transfers.progress).toHaveBeenCalledWith(1, expect.objectContaining({ requestId: 'upload-cancel' }));
+      service.shutdown();
+      expect(destroy).toHaveBeenCalledOnce();
+    } finally {
+      service.shutdown();
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });

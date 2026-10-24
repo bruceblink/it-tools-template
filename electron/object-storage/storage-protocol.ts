@@ -2,6 +2,7 @@ import type {
   StorageConnectInput,
   StorageListInput,
   StoragePreviewInput,
+  StorageUploadInput,
 } from '../../src/shared/desktop-services/object-storage';
 
 function record(value: unknown, keys: string[]): value is Record<string, unknown> {
@@ -102,4 +103,12 @@ export function parseStoragePreview(value: unknown): StoragePreviewInput | null 
 
 export function parseStorageCancel(value: unknown): string | null {
   return record(value, ['requestId']) && id(value.requestId) ? value.requestId : null;
+}
+
+export function parseStorageUpload(value: unknown): StorageUploadInput | null {
+  if (!record(value, ['sessionId', 'requestId', 'key', 'overwrite']) || typeof value.overwrite !== 'boolean') {
+    return null;
+  }
+  const parsed = parseStoragePreview({ sessionId: value.sessionId, requestId: value.requestId, key: value.key });
+  return parsed ? { ...parsed, overwrite: value.overwrite } : null;
 }

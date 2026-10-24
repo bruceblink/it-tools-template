@@ -36,7 +36,7 @@ import type {
   GitStatus,
 } from '../shared/desktop-services/git';
 
-import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult } from '../shared/desktop-services/object-storage';
+import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult, StorageUploadInput, StorageTransferResult, StorageProgress } from '../shared/desktop-services/object-storage';
 
 export {};
 
@@ -73,6 +73,10 @@ declare global {
       connectStorage?(input: StorageConnectInput): Promise<StorageResult<StorageConnection>>;
       listStorageObjects?(input: StorageListInput): Promise<StorageResult<StoragePage>>;
       previewStorageObject?(input: StoragePreviewInput): Promise<StorageResult<StoragePreview>>;
+      uploadStorageObject?(input: StorageUploadInput): Promise<StorageResult<StorageTransferResult | null>>;
+      downloadStorageObject?(input: StoragePreviewInput): Promise<StorageResult<StorageTransferResult | null>>;
+      deleteStorageObject?(input: StoragePreviewInput): Promise<StorageResult<boolean>>;
+      onStorageProgress?(callback: (progress: StorageProgress) => void): () => void;
       cancelStorageRequest?(requestId: string): Promise<StorageResult<boolean>>;
       disconnectStorage?(): Promise<StorageResult<boolean>>;
       getRuntimeInfo(): Promise<{

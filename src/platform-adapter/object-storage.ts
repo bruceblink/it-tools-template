@@ -6,6 +6,9 @@ import type {
   StoragePreviewInput,
   StoragePreview,
   StorageResult,
+  StorageUploadInput,
+  StorageTransferResult,
+  StorageProgress,
 } from '@/shared/desktop-services/object-storage';
 
 /** IPC failures remain fixed error codes; service diagnostics never reach the page. */
@@ -33,3 +36,16 @@ export const cancelStorageRequest = (requestId: string): Promise<StorageResult<b
   callStorage((bridge) => bridge.cancelStorageRequest?.(requestId));
 export const disconnectStorage = (): Promise<StorageResult<boolean>> =>
   callStorage((bridge) => bridge.disconnectStorage?.());
+export const uploadStorageObject = (input: StorageUploadInput): Promise<StorageResult<StorageTransferResult | null>> =>
+  callStorage((bridge) => bridge.uploadStorageObject?.(input));
+export const downloadStorageObject = (
+  input: StoragePreviewInput,
+): Promise<StorageResult<StorageTransferResult | null>> =>
+  callStorage((bridge) => bridge.downloadStorageObject?.(input));
+export const deleteStorageObject = (input: StoragePreviewInput): Promise<StorageResult<boolean>> =>
+  callStorage((bridge) => bridge.deleteStorageObject?.(input));
+export function onStorageProgress(callback: (progress: StorageProgress) => void): () => void {
+  return typeof window === 'undefined'
+    ? () => {}
+    : (window.itToolsDesktop?.onStorageProgress?.(callback) ?? (() => {}));
+}

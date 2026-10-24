@@ -10,13 +10,23 @@ import type {
   StoragePreview,
   StoragePreviewInput,
   StorageResult,
+  StorageUploadInput,
+  StorageTransferResult,
 } from '../../src/shared/desktop-services/object-storage';
 import {
   STORAGE_PAGE_SIZE,
   STORAGE_PREVIEW_BYTES,
   STORAGE_TIMEOUT_MS,
+  STORAGE_TRANSFER_TIMEOUT_MS,
 } from '../../src/shared/desktop-services/object-storage';
 import { createStorageClient, StorageResponseLimit } from './storage-client';
+import {
+  deleteStorageObject,
+  downloadStorageObject,
+  uploadStorageObject,
+  StorageTransferError,
+  type StorageTransferDependencies,
+} from './storage-transfers';
 
 interface ActiveRequest {
   requestId: string;
@@ -35,7 +45,10 @@ interface StorageSession {
 export class StorageService {
   private readonly sessions = new Map<number, StorageSession>();
 
-  constructor(private readonly clientFactory = createStorageClient) {}
+  constructor(
+    private readonly clientFactory = createStorageClient,
+    private readonly transfers?: StorageTransferDependencies,
+  ) {}
 
   async connect(renderer: number, input: StorageConnectInput): Promise<StorageResult<StorageConnection>> {
     this.closeRenderer(renderer);
@@ -141,6 +154,48 @@ export class StorageService {
     return true;
   }
 
+  async upload(renderer: number, input: StorageUploadInput): Promise<StorageResult<StorageTransferResult | null>> {
+    return this.transfer(renderer, input, (context) => uploadStorageObject(context, input.overwrite));
+  }
+
+  async download(renderer: number, input: StoragePreviewInput): Promise<StorageResult<StorageTransferResult | null>> {
+    return this.transfer(renderer, input, downloadStorageObject);
+  }
+
+  async delete(renderer: number, input: StoragePreviewInput): Promise<StorageResult<boolean>> {
+    return this.transfer(renderer, input, deleteStorageObject);
+  }
+
+  private async transfer<T>(
+    renderer: number,
+    input: StoragePreviewInput,
+    action: (context: Parameters<typeof downloadStorageObject>[0]) => Promise<T>,
+  ): Promise<StorageResult<T>> {
+    const session = this.getSession(renderer, input.sessionId);
+    if (!session) {
+      return { ok: false, error: 'not-connected' };
+    }
+    const dependencies = this.transfers;
+    if (!dependencies) {
+      return { ok: false, error: 'service-unavailable' };
+    }
+    return this.run(
+      session,
+      input.requestId,
+      (signal) =>
+        action({
+          client: session.client,
+          bucket: session.bucket,
+          key: input.key,
+          requestId: input.requestId,
+          renderer,
+          signal,
+          dependencies,
+        }),
+      STORAGE_TRANSFER_TIMEOUT_MS,
+    );
+  }
+
   closeRenderer(renderer: number): void {
     const session = this.sessions.get(renderer);
     if (!session) {
@@ -209,6 +264,7 @@ export class StorageService {
     session: StorageSession,
     requestId: string,
     action: (signal: AbortSignal) => Promise<T>,
+    timeoutMs = STORAGE_TIMEOUT_MS,
   ): Promise<StorageResult<T>> {
     if (session.active) {
       return { ok: false, error: 'busy' };
@@ -218,7 +274,7 @@ export class StorageService {
     const timer = setTimeout(() => {
       active.reason = 'timeout';
       active.controller.abort();
-    }, STORAGE_TIMEOUT_MS);
+    }, timeoutMs);
     try {
       const value = await action(active.controller.signal);
       return active.reason ? { ok: false, error: active.reason } : { ok: true, value };
@@ -232,6 +288,9 @@ export class StorageService {
 }
 
 function storageError(error: unknown): StorageError {
+  if (error instanceof StorageTransferError) {
+    return error.code;
+  }
   if (error instanceof StorageResponseLimit) {
     return 'response-too-large';
   }
@@ -241,6 +300,9 @@ function storageError(error: unknown): StorageError {
   }
   if (status === 404) {
     return 'not-found';
+  }
+  if (status === 409 || status === 412) {
+    return 'object-exists';
   }
   return 'network-error';
 }
