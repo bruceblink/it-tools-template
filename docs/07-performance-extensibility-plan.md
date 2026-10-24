@@ -238,6 +238,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - List Converter 使用独立 Worker；输入最多 1 MiB、最多 100,000 行，输出最多 2 MiB，任务最多运行 10 秒。Worker 在调用转换器前计算文本、包装选项和分隔符的输出上界；预计结果超过上限时直接返回限制状态。
 - IPv4 CIDR Merge 使用独立 Worker；输入最多 256 KiB、最多 32,768 行，序列化输出最多 2 MiB，任务最多运行 10 秒。Worker 一次完成解析、校验和合并，并逐项限制 CIDR 输出。
 - IPv4 CIDR Overlap Checker 使用独立 Worker；输入最多 256 KiB、最多 1,000 行，结果最多包含 500 个重叠对，序列化输出最多 2 MiB，任务最多运行 10 秒。超过重叠对上限时不返回部分报告。
+- IPv4 CIDR Containment Checker 使用独立 Worker；两份输入合计最多 256 KiB、1,000 行，结果最多包含 500 条匹配，序列化输出最多 2 MiB，任务最多运行 10 秒。超过匹配上限时不返回部分报告。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
@@ -501,7 +502,7 @@ ZIP 使用 `yauzl` 3.4.0 按条目顺序读取。安装器拒绝超过 64 MiB �
 
 ## 下一轮直接执行的范围
 
-P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、CSV to Markdown、JSON Lines、XML、YAML、TOML 和 Markdown 转 HTML 代表性任务。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。摄像头工具资源回收和 Keycode Info 的 `document` 键盘监听器现在分别有单测与 Electron 自动化证据；后续仍需真实媒体硬件、更多 `EventTarget` 类别、真实窗口耗时和 Linux/macOS 基线。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
+P0 Windows 自动化基线和 P1 的语言分包、OUI 分片、Text Diff 精简、富文本扩展收敛与 PDF 延迟解析已完成。P2 已迁移正则、Text Diff、JSON minify、CSV/JSON、CSV to Markdown、JSON Lines、XML、YAML、TOML、Markdown 转 HTML，以及 IPv4 CIDR Merge、Overlap Checker 和 Containment Checker。Electron 自动化回归已测 TOML Worker 20 轮，覆盖 80 个任务 Worker、`window`/`document` 监听器计数和堆对象强引用路径；本次测试的第 11–20 轮堆增量为 183,856 字节。该证据不覆盖其他页面、事件目标或媒体生命周期。摄像头工具资源回收和 Keycode Info 的 `document` 键盘监听器现在分别有单测与 Electron 自动化证据；后续仍需真实媒体硬件、更多 `EventTarget` 类别、真实窗口耗时和 Linux/macOS 基线。PDF 合成签名和篡改样例已通过文件级 E2E；真实外部签名文件及证书链仍待验证。P3 已完成 ToolDefinition 注册基础、Platform Adapter、工具生成器和 117 个工具的元数据审核。P4 已完成按需命令搜索、9 个扩展工具路由、OUI provider、全局设置页面、版本化设置迁移和 Web/Electron 自动化验收。P5 已完成沙箱、签名包校验、能力代理、生命周期服务、签名者信任与桌面管理 UI 的基础流程。Windows Electron 自动化已验证同步无限循环插件会关闭、`forcefullyCrashRenderer()` 会清理插件窗口，宿主设置页仍可操作。自然发生的 Chromium 崩溃、真实窗口插件流程、Linux/macOS 隔离和资源计数仍待验收。
 
 本轮状态更新（2026-10-18）：全局设置入口、语言与主题区、工具设置区和插件管理区已通过系统 Chrome E2E 与 Electron 真实窗口检查；导航顺序调整为语言、主题、设置、About、GitHub。滚动条宽度调整为 8px，轨道透明，滑块默认透明度为 36%。PDF 合成签名与篡改样例的 3 项 E2E 通过。P5 第五片已把签名密钥信任、生命周期服务和桌面管理界面接入主进程 IPC。能力授权按插件运行会话生效，撤销签名密钥会停止对应插件。下一步执行真实窗口安装、启用、拒绝授权、撤销、升级失败回退和卸载验收，再补 Linux/macOS 与资源计数证据。真实窗口耗时、PDF 外部样本和多平台隔离验收仍未完成。
 
@@ -620,4 +621,4 @@ Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，�
 
 解析、状态分类和匹配明细现由专用 Worker 单次完成。两份输入合计最多 256 KiB、1,000 行；结果最多 500 条匹配、序列化输出最多 2 MiB，任务最多运行 10 秒。达到匹配上限时停止当前分析，不返回部分报告。匹配项只携带规则行号和标准 CIDR，不重复传递完整规则对象。新输入会取消旧 Worker，页面只显示当前版本结果。最终 `pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。PWA 首屏 JavaScript gzip 为 299.79 KiB；Web 与 Electron Worker 原始构建大小为 76.84 KiB 和 228.80 KiB。Chromium、WebKit Web E2E 与隐藏 Electron `app://bundle` E2E 各 1 项通过，覆盖默认报告、行号错误、密集匹配上限、输入上限和 Worker 加载。Firefox 启动返回 `spawn UNKNOWN`。Playwright 检查 1280×850 和 390×844 页面，确认两个输入与报告可见，页面无横向溢出，console 无错误或警告。截图保存在系统临时目录。未运行前台 UI 或真实窗口交互。
 
-随后运行完整 `pnpm test:e2e:electron`，共 37 项：29 项通过、6 项跳过、2 项失败。失败都在 `electron/system-monitor.e2e.spec.ts` 的 `app://bundle/system-monitor` 导航前，日志同时报告临时用户目录文件 `EBUSY`。单独重跑该文件后，3 项全部通过。完整套件中的应用 smoke、三个 CIDR Worker、插件管理器、插件沙箱和 Worker 资源测试均通过。此 Electron E2E 使用隐藏自动化窗口，不代表真实窗口交互或 Linux/macOS 结果。当前 13 个本地提交未推送，因此没有本轮远端三平台构建结果。
+随后运行完整 `pnpm test:e2e:electron`，共 37 项：29 项通过、6 项跳过、2 项失败。失败都在 `electron/system-monitor.e2e.spec.ts` 的 `app://bundle/system-monitor` 导航前，日志同时报告临时用户目录文件 `EBUSY`。单独重跑该文件后，3 项全部通过。完整套件中的应用 smoke、三个 CIDR Worker、插件管理器、插件沙箱和 Worker 资源测试均通过。此 Electron E2E 使用隐藏自动化窗口，不代表真实窗口交互或 Linux/macOS 结果。当前 15 个本地提交未推送，因此没有本轮远端三平台构建结果。
