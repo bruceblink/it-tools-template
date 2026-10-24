@@ -55,6 +55,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日评估 CSV 转 Markdown 表格：256 KiB 合成输入的转换中位数为 24.42 毫秒，10 次最大值为 28.32 毫秒；原页面还会单独同步解析 CSV 作验证。转换现由共享 Worker 执行，限制输入 256 KiB、输出 2 MiB、超时 10 秒。共享 CSV 行宽计算也已修复，避免超多行输入触发 `RangeError`。Web 与隐藏 Electron E2E、完整检查通过；首屏 JavaScript gzip 为 299.81 KiB，低于 300 KiB 预算 0.19 KiB。详细实现与测量结果见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日优化 Text Statistics：一次字符循环统计字符数、词数和行数，并复用 TextEncoder 计算 UTF-8 字节数，避免为词数和行数创建两个分割数组。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，1 MiB 合成输入的中位耗时从 14.61 毫秒降至 3.76 毫秒。完整 `pnpm check` 通过 784 项单测（18 项跳过）；Chromium Web E2E 通过。Firefox 在本机启动失败，真实窗口交互未执行。详细实现和测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

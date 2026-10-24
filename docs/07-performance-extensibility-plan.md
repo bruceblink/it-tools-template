@@ -583,3 +583,9 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 CSV 转换现由共享任务 Worker 执行。分隔符和首行标题选项仍由原设置提供；输入变化取消旧任务，结果只有在对应输入仍为当前版本时才显示。输入上限为 256 KiB，Markdown 输出上限为 2 MiB，超时为 10 秒。Worker 使用原有 CSV 解析与表格格式化函数，解析错误会显示固定说明。`task-runner.worker` 输出大小为 Web 241.89 kB、Electron 476.53 kB；PWA 首屏 JavaScript gzip 为 299.81 KiB，低于 300 KiB 预算 0.19 KiB。`pnpm check` 通过 42 项脚本测试、783 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。Chromium Web 和隐藏 Electron `app://bundle` E2E 各 1 项通过，覆盖表格输出、无效 CSV 反馈和超限输入。未运行前台 UI 或真实窗口验收。
 
 本轮 CSV 行宽计算修复（2026-10-25）：`normalizeCsvRows` 原本将每行宽度展开为 `Math.max` 参数。262,000 字节的 CSV 含 131,000 行时触发 `RangeError: Maximum call stack size exceeded`，低于 256 KiB 的任务输入上限。函数现用单次循环求最大列数，避免大型参数列表和额外中间数组。新增 130,000 行回归测试通过。最终 `pnpm check` 通过 42 项脚本测试、783 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；Web 首屏 gzip 为 299.81 KiB。Chromium Web 和隐藏 Electron `app://bundle` CSV 转换 E2E 各 1 项通过。未运行前台 UI 或真实窗口验收。
+
+本轮 Text Statistics 单循环统计优化（2026-10-25）：原页面每次输入变化时创建词语数组和行数组，并单独计算字符数与 UTF-8 大小。新服务用一次字符循环计算字符数、词数和行数，再复用 TextEncoder 计算 UTF-8 大小；它不创建词语或行分割数组，并保留原来的 UTF-16 字符数、ECMAScript 空白字符分隔的词数、CRLF/CR/LF 行数和空输入结果。单元测试逐一比较全部 65,536 个 BMP 字符，以及空输入、补充平面字符、未配对代理项和混合换行符。
+
+Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，再交替运行旧算法和新服务 21 次。16 KiB、64 KiB、256 KiB、1 MiB 输入的中位耗时由 0.18、0.94、3.88、14.61 毫秒降至 0.10、0.28、0.92、3.76 毫秒，约快 1.9、3.3、4.2、3.9 倍。这是 Node.js 合成微基准，不包含浏览器输入、响应式更新或渲染。
+
+最终 `pnpm check` 通过 42 项脚本测试、784 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.80 KiB。Chromium Web E2E 1 项通过，覆盖 Unicode、空白和换行计数。Firefox 在本机启动时返回 `spawn UNKNOWN`，未计为通过；未运行真实窗口交互。
