@@ -1,54 +1,62 @@
-# IT Tools 长期开发计划
+# IT Tools 最新开发计划
 
-本计划于 2026-10-19 复核。后续以 Electron 为主开发方向，共享 Vue 界面和工具逻辑，保持 Web/PWA 与 Docker 分发兼容。默认在 `main` 开发，每轮完成一个可独立验收的范围。
+> 状态：现行计划
+> 更新日期：2026-10-24
+> 当前基线：main 与 origin/main 已同步
+> 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
+> 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
 
-## 新增模块：数据库管理与系统监视
+本计划把“好钢用在刀刃上”落实为单一产品所有者。it-tools-template 负责用户可见的通用工具、
+Electron 工作台、Web/PWA 入口、桌面分发和插件产品；ramag-platform 不再为这些能力维护
+第二套 GPUI 产品界面。双方通过版本化的 ramag-engine / ramag-protocol 接入需要原生权限
+或高性能 Rust 运行时的能力。
 
-用户提出参考 Neon 增加数据库管理工具和系统监视器。范围、接入边界、分阶段验收、性能预算和回滚方式见[数据库管理工具与系统监视器开发计划](13-database-system-monitor-plan.md)。数据库 MVP 从首个可用版本开始支持 PostgreSQL、MySQL 和 SQLite；这两个工具只在 Electron 桌面端显示，其他工具按自身平台声明显示。本机监控按基础指标、受控采样和多平台验收推进。S0–S6 已完成，其中 S5 交付 CPU/内存首个可用版本，S6 交付三引擎批量记录操作；S7a/S7b/S7c 已交付磁盘、网络、受限进程列表、睡眠断档基线重置和 20 次路由切换验收；S8a 增加 Web 产物隔离门禁，S8b 完成 Windows 未压缩包和打包目录冒烟验收，S8c 完成三引擎本机回归，S8d 完成 Web/Electron 各 20 轮性能基线；Linux/macOS、NSIS 安装包、系统监视器长时资源预算和完整性能预算仍待开发。既有性能和插件验收缺口继续保留。
+## 1. 双项目职责
 
-## 当前主线：性能与扩展接入
+| 范围 | it-tools-template 的责任 | ramag-platform 的责任 |
+|---|---|---|
+| Web/PWA | 完整承载可移植工具、WASM 和离线策略 | 不提供 Web UI |
+| Electron | 完整承载工具路由、数据库、API、Git、消息、容器、对象存储、剪贴板和普通系统监控 | 提供受控原生能力适配 |
+| 通用计算 | 117 个工具、格式转换、编码、数据处理和测试样例 | 不复制工具入口；必要时提供可移植核心 |
+| SSH/SFTP/PTY | 产品入口、连接状态、权限提示和用户流程 | 提供 Rust 会话、PTY、隧道和安全边界 |
+| 本地安全存储 | 负责应用配置和凭据；不暴露通用 Node 或文件接口 | 只有原生核心需要共享秘密且 Electron 无法满足保护边界时才提供引擎级服务 |
+| 高精度系统诊断 | 普通 CPU、内存、磁盘、网络和进程页面 | 只在基准证明 Electron/Node 不满足时提供采集能力 |
+| GPUI | 不实现 | 只实现原生核心工作区，不恢复通用工具箱 |
 
-详细评估、指标、验收条件和回滚范围见 [性能、扩展接入与插件平台开发计划](07-performance-extensibility-plan.md)。该计划取代原始按天数排列的后续排期；下文历史阶段保留为实施索引。
+Electron 和 GPUI 的共同要求是能力协议一致：相同参数校验、权限、错误码、取消、
+分页、进度和数据上限。两端不要求共享 Vue 或 GPUI 组件，也不要求像素级相同。
+Web 只显示浏览器或 WASM 可用的入口；桌面专用能力必须有明确的平台标记。
 
-| 顺序 | 工作范围 | 完成标志 |
-| --- | --- | --- |
-| P0 | 建立打包应用与生产 Web 的性能基线 | 启动、工具切换、内存、CPU 和代表输入有可复现报告 |
-| P1 | 优化启动与按需加载 | 首屏与大型工具逐项达到既定体积目标，离线与双端行为兼容 |
-| P2 | 建立可取消、有限资源的计算执行器 | 大输入不阻塞界面，旧结果不会覆盖新结果，离开工具后资源释放 |
-| P3 | 统一工具定义和平台能力接入 | 新工具可通过统一定义进入路由、搜索与导航，保留原工具路径和收藏 |
-| P4 | 第一方工具包与 SDK 试用 | 三类真实样例验证接口、生命周期和版本兼容 |
-| P5 | 独立插件包与隔离试点 | Electron 安装、权限、停用、升级恢复和隔离验证通过 |
+## 2. 当前主线：先接收功能，再删除重复
 
-P0–P5 按一位主开发者持续投入估算约 12–16 周，属于工作量窗口。平台插件化具备演进条件；先交付内置模块和第一方工具包，再验证第三方运行时代码的隔离与分发。公开插件商店在试点结果明确后单独排期。
+详细性能、扩展和插件路线见 [07-performance-extensibility-plan.md](07-performance-extensibility-plan.md)。
+数据库和系统监视的具体页面与服务边界见 [13-database-system-monitor-plan.md](13-database-system-monitor-plan.md)。
 
-P0–P4 的主要实现已完成。P4 已接入仓库内 SDK v0、三类第一方工具包、按需命令搜索、设置管理界面、版本化设置迁移、OUI 数据提供器和兼容原 URL 的扩展工具路由。P5 的 Electron 本地插件 MVP 已具备沙箱、签名包校验与暂存、受限能力代理、生命周期管理、签名者信任、主进程 IPC、桌面管理界面、签名打包 CLI 和第一方能力样例。Windows 自动化已覆盖安装、权限拒绝与批准、剪贴板能力、升级失败回退、撤销签名者、卸载、无限循环终止和强制 renderer 终止后的窗口清理。Web/Docker 外部插件、插件 Worker、公开商店和生产签名密钥不在 MVP 范围内。真实窗口操作、Linux/macOS 隔离、自然发生的 Chromium 崩溃和跨平台资源计数仍待验收。实施细节、限制和回滚范围见[性能与扩展计划](07-performance-extensibility-plan.md)、[插件包格式 v1](08-electron-plugin-package-format-v1.md)、[插件 MVP 快速开始](11-electron-plugin-mvp-quickstart.md)、[生命周期服务 v1](10-electron-plugin-lifecycle-v1.md)及[SDK v0 接口说明](extension-sdk-v0.md)。
+| 顺序 | ID | 范围 | 完成标志 |
+|---|---|---|---|
+| P0 | BOUNDARY-001 | 建立两个仓库的功能矩阵和平台声明 | 每个功能有唯一所有者、目标入口、数据边界和回滚版本 |
+| P1 | PRODUCT-DB-SYSTEM-001 | 收口数据库管理器和普通系统监视器 | Electron 三引擎流程、分页/编辑/取消、监控采样和资源清理通过 |
+| P1 | PRODUCT-WORKBENCH-001 | 接收 API、Git、对象存储和容器工作台 | Electron 工作台覆盖关键流程，Web 显示受限或不可用状态 |
+| P2 | PRODUCT-MESSAGE-001 | 接收 Redis、MongoDB、Kafka 和 MQTT | 连接、消息/文档操作、取消、错误和权限边界有测试 |
+| P2 | PRODUCT-LOCAL-001 | 接收剪贴板、更新、设置和普通系统能力 | 主进程权限最小化，数据和凭据策略通过安全回归 |
+| P3 | NATIVE-BRIDGE-001 | 接入 ramag-engine 的 SSH/SFTP/PTY、隧道和必要的引擎级安全存储 | Electron 主进程和 GPUI 使用同一 protocol_version 和协议测试 |
+| P4 | RETIRE-RAMAG-001 | 配合 Ramag 移除重复工具 | 旧入口有迁移提示，用户配置可读，两个仓库无重复产品路线 |
+| P5 | RELEASE-DUAL-001 | 发布 Web、Electron 和 GPUI 核心版本 | 各平台安装、升级、权限拒绝、资源和回滚证据齐全 |
 
-## 术语与命名约定
+在 P0 完成前，it-tools-template 不把新的数据库、Git、API、消息、容器或对象存储
+能力交给另一个仓库重复实现。新功能先判断是否属于通用工具、Electron 工作台或原生核心。
 
-| 术语 | English / 缩写 | 本计划中的职责边界 |
-| --- | --- | --- |
-| 工具定义 | Tool Definition | 描述工具名称、路径、分类、组件、翻译和运行能力的元数据；不代表工具运行时状态。 |
-| 应用壳 | Application Shell | 首页、路由、导航、主题、搜索和 PWA 启动所需的公共资源；不包含具体工具的大型依赖。 |
-| 本地存储 | Local Storage | 浏览器端持久化设置和非敏感偏好；不用于默认保存凭据或用户秘密。 |
-| 运行时缓存 | Runtime Cache | Service Worker 按访问结果缓存资源；不等同于应用首次安装时的预缓存。 |
+## 3. 当前基线
 
-## 当前基线
+项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、
+系统监视器和受限插件能力。现有性能、PWA、安全、插件和数据库验收记录继续有效，
+但它们不改变新的职责边界。打包成功不等于签名、公证、安装升级、真实设备权限和
+完整原生窗口验收完成。
 
-项目注册了 117 个工具，提供 9 个语言包。2026-10-16 已发布 [v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6)，包含 Web ZIP、Windows x64、Linux x64、macOS ARM64 桌面包以及 Docker 镜像说明。[发布流水线](https://github.com/bruceblink/it-tools-template/actions/runs/38903578854) 与三平台 Electron smoke 已通过。2026-10-18 的 `pnpm check` 最近一次记录通过类型检查、lint、Web/Electron 构建，以及 96 个测试文件的 599 项测试。System Chrome 的扩展路由与 PWA 回归 8 项通过；设置管理页面的迁移、保存和重载回归 1 项通过。Electron smoke 9 项通过，覆盖扩展设置迁移、保存、重载、Worker 资源回收和插件沙箱隔离原型。
-
-分发流程已经建立。桌面启动、内存、真实设备权限、签名、公证、安装升级和卸载仍需专项验收，不能从打包成功推断这些能力已完成。工具注册检查验证了英文和中文基础键，其他语言仍需单独审查。
-
-质量基线见 [实施记录](02-quality-baseline.md#实施记录)，随机源和 JWT 的最终验收见 [安全任务记录](03-security-inputs-plan.md#实施记录)，内容、HTML 与响应头见 [执行记录](04-security-boundaries.md#执行记录)。按用户的后续要求，`auto-imports.d.ts` 从版本库移除并加入 `.gitignore`；应用类型检查前自动生成该声明。
-
-开发前的主要工程问题与处理状态：
-
-- 应用级 `vue-tsc` 曾有 125 条错误。本轮恢复了标准库配置，修正 `MaybeRef`、第三方类型声明、组件属性和空值处理，已通过检查。
-- `pnpm validate` 原来只执行测试和构建。本轮增加 `pnpm check`，并让 `validate` 转发到该入口。
-- token、OTP secret、UUID、随机端口和 MAC 已接入默认 Web Crypto 随机源，边界和失败行为有确定性测试。
-- JWT 的五个敏感字段及后续 27 个工具的内容输入已改为页面内存状态，并清理固定的旧存储键。显示与处理偏好继续保留。
-- PWA 原先首次预缓存约 24 MB；现已按应用壳筛选为 12 个文件、约 1.17 MiB，并为工具资源增加访问后缓存。Monaco、OUI 数据和首屏 JavaScript 的剩余体积目标仍需继续优化，见 [PWA 实施记录](05-pwa-cache-plan.md#执行记录)。
-- README 已更新为 117 个工具；需要用注册完整性检查防止工具列表与路由不一致。
-- E2E workflow 原来读取了不存在的 Playwright 依赖字段。本轮改为读取实际安装版本、固定浏览器缓存版本，并使用 frozen lockfile。
+质量基线见 [02-quality-baseline.md](02-quality-baseline.md)，Web/Electron 边界见
+[06-web-electron-assessment.md](06-web-electron-assessment.md)，性能与插件细节见
+[07-performance-extensibility-plan.md](07-performance-extensibility-plan.md)。
+历史阶段从下一节开始保留，作为证据索引，不作为新的并行产品路线。
 
 ## 历史阶段一：质量基线（原始窗口 0–30 天）
 
@@ -106,7 +114,7 @@ P0–P4 的主要实现已完成。P4 已接入仓库内 SDK v0、三类第一�
 - 离线应用壳可以启动，已访问工具可以离线打开。
 - 构建体积超限能够在 CI 中被发现并阻止合并。
 
-## 原始长期方向与当前承接
+## 原始长期方向与当前承接（历史参考）
 
 - 将工具元数据收敛为统一 `ToolDefinition`，增加 `sensitive`、`offline`、`requiresMedia` 和 `supportsShare` 等能力描述。
 - 从工具元数据生成路由、菜单、搜索索引、README 工具清单和翻译覆盖报告。
