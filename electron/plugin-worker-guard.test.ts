@@ -30,11 +30,11 @@ class TestServiceWorkerContainer {
 describe('plugin worker guard', () => {
   it('injects the host script before plugin code and removes response-policy meta tags', () => {
     const original = '\uFEFF<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="worker-src \'self\'"><script src="/plugin.js"></script></head></html>';
-    const transformed = injectPluginWorkerGuard(original, '/__it_tools/v1/call?__it_tools_internal=worker-guard');
+    const transformed = injectPluginWorkerGuard(original, '/__it_tools/v1/call?__it_tools_internal=plugin-bootstrap');
 
-    expect(transformed).toContain('<!doctype html><script src="/__it_tools/v1/call?__it_tools_internal=worker-guard"></script>');
+    expect(transformed).toContain('<!doctype html><script src="/__it_tools/v1/call?__it_tools_internal=plugin-bootstrap"></script>');
     expect(transformed).not.toContain('http-equiv');
-    expect(transformed.indexOf('__it_tools_internal=worker-guard')).toBeLessThan(transformed.indexOf('/plugin.js'));
+    expect(transformed.indexOf('__it_tools_internal=plugin-bootstrap')).toBeLessThan(transformed.indexOf('/plugin.js'));
     expect(original).toContain('http-equiv');
   });
 

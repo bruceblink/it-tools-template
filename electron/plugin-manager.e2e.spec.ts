@@ -153,6 +153,10 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!pluginWindow) {
     throw new Error('The plugin window was not created.');
   }
+  await expect.poll(async () => pluginWindow.evaluate(() => {
+    const api = (globalThis as unknown as { itTools?: { apiVersion?: string; hostApiVersion?: string } }).itTools;
+    return { apiVersion: api?.apiVersion, hostApiVersion: api?.hostApiVersion };
+  })).toEqual({ apiVersion: '1.0.0', hostApiVersion: '1.2.0' });
   await expect(pluginWindow.locator('#runtime-proof')).toHaveText('Available');
   await pluginWindow.locator('#clipboard-text').fill('signed plugin clipboard sample');
   await pluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();

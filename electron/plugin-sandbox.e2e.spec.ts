@@ -64,19 +64,19 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   const guardResponses: string[] = [];
   const guardErrors: string[] = [];
   pluginPage.on('response', (candidate) => {
-    if (candidate.url().includes('__it_tools_internal=worker-guard')) {
+    if (candidate.url().includes('__it_tools_internal=plugin-bootstrap')) {
       guardResponses.push(`${candidate.status()} ${candidate.url()}`);
     }
   });
   pluginPage.on('requestfailed', (candidate) => {
-    if (candidate.url().includes('__it_tools_internal=worker-guard')) {
+    if (candidate.url().includes('__it_tools_internal=plugin-bootstrap')) {
       guardErrors.push(`${candidate.url()} ${candidate.failure()?.errorText ?? ''}`);
     }
   });
   pluginPage.on('pageerror', error => guardErrors.push(error.message));
   const response = await pluginPage.reload();
   const documentHtml = await response?.text();
-  expect(documentHtml).toContain('__it_tools_internal=worker-guard');
+  expect(documentHtml).toContain('__it_tools_internal=plugin-bootstrap');
   const rendererState = await pluginPage.evaluate(() => ({
     origin: location.origin,
     secureContext: window.isSecureContext,

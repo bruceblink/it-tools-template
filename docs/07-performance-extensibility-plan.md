@@ -656,7 +656,13 @@ Worker 单测覆盖所选格式、无效命令、任务替换和取消。Chromiu
 
 ### 2026-10-25：主页返回时的卡片边框回归
 
-主页入场期间的布局变化可能触发零位移 `pointermove`。该事件会提前给所有工具卡片启用 hover 样式，即使用户没有移动鼠标。现在只有鼠标实际移动到工具卡片时才启用该样式。Home 往返 20 次的 Electron E2E 通过。Computer Use 在点击 Home 后检测到窗口输入状态变化，窗口随后消失；本轮没有完成真实窗口返回状态确认。
+主页入场期间的布局变化可能触发 `pointermove`。该事件会提前给所有工具卡片启用 hover 样式，即使用户没有移动鼠标。现在主页入场动画期间会关闭 hover 样式；动画结束后，只有鼠标实际移动到工具卡片时才启用该样式。Home 往返 20 次的 Electron E2E 连续运行 3 轮并通过。完整 Electron E2E 共 39 项，33 项通过、6 项按环境跳过。Computer Use 在点击 Home 后检测到窗口输入状态变化，窗口随后消失；本轮没有完成真实窗口返回状态确认。
+
+### 2026-10-25：插件渲染器 API v1
+
+宿主在插件代码运行前注入冻结的 `window.itTools` 客户端。客户端版本为 `1.0.0`，宿主兼容版本为 `1.2.0`。`capabilities.runtime.getInfo()` 和 `capabilities.clipboard.writeText(text)` 使用现有同源能力代理。包清单请求能力与用户授权仍分别校验；API 错误使用稳定错误码和状态码。TypeScript 声明见 `plugins/sdk/it-tools-plugin.d.ts`。该接口目前不提供插件设置存储、工具卡片贡献或宿主路由注册，这些内容留在 P1 后续设计范围内。
+
+Windows 本机 `pnpm check` 通过 135 个测试文件（2 个跳过）、841 项测试（18 项跳过）、类型检查、lint、Web/PWA/Electron 构建和 Web 隔离检查。完整 Electron E2E 共 39 项，33 项通过、6 项按环境跳过；插件管理器 E2E 验证版本字段、获准的运行时查询、未授权拒绝和获准的剪贴板写入。Linux/macOS 与公开插件分发仍待后续验收。
 
 ### 2026-10-25：插件 Worker 资源边界
 

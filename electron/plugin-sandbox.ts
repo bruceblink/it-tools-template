@@ -15,6 +15,7 @@ import type {
   PluginCapabilityBroker,
   PluginCapabilityExecutor,
 } from './plugin-capability-broker';
+import { getPluginApiV1Script } from './plugin-api-v1';
 import { getPluginWorkerGuardScript, injectPluginWorkerGuard } from './plugin-worker-guard';
 import { resolveRendererFile } from './security';
 
@@ -255,14 +256,14 @@ async function installPluginSessionPolicy(
       return pluginResponse('Not found', 404);
     }
     if (requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH
-      && requestUrl.searchParams.get('__it_tools_internal') === 'worker-guard') {
+      && requestUrl.searchParams.get('__it_tools_internal') === 'plugin-bootstrap') {
       if (request.method !== 'GET') {
         return pluginResponse('Method not allowed', 405, { Allow: 'GET' });
       }
       if (policy.activeContentsId === null) {
         return pluginResponse('Plugin inactive', 410);
       }
-      return pluginResponse(getPluginWorkerGuardScript(), 200, {
+      return pluginResponse(`${getPluginWorkerGuardScript()}\n${getPluginApiV1Script()}`, 200, {
         'Content-Type': 'text/javascript; charset=utf-8',
       });
     }
@@ -292,8 +293,8 @@ async function installPluginSessionPolicy(
       let body = request.method === 'HEAD' ? null : await readFile(filePath);
       const extension = extname(filePath).toLowerCase();
       if (body && extension === '.html') {
-        const guardUrl = `${PLUGIN_CAPABILITY_API_PATH}?__it_tools_internal=worker-guard`;
-        body = Buffer.from(injectPluginWorkerGuard(body.toString('utf8'), guardUrl), 'utf8');
+        const bootstrapUrl = `${PLUGIN_CAPABILITY_API_PATH}?__it_tools_internal=plugin-bootstrap`;
+        body = Buffer.from(injectPluginWorkerGuard(body.toString('utf8'), bootstrapUrl), 'utf8');
       }
       return pluginResponse(body, 200, {
         'Content-Type': contentTypes[extension] ?? 'application/octet-stream',
@@ -325,7 +326,7 @@ async function installPluginSessionPolicy(
 
     if (requestUrl.protocol === `${PLUGIN_SCHEME}:`
       && requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH
-      && requestUrl.searchParams.get('__it_tools_internal') === 'worker-guard') {
+      && requestUrl.searchParams.get('__it_tools_internal') === 'plugin-bootstrap') {
       const sourceFrame = details.frame;
       const trustedMainFrame = sourceFrame !== undefined
         && sourceFrame !== null
