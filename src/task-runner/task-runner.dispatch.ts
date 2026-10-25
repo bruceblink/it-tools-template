@@ -12,6 +12,7 @@ import { formatJson } from '@/tools/json-viewer/json.models';
 import { formatYaml } from '@/tools/yaml-viewer/yaml-models';
 import { formatEnvVarsResult, parseEnvVars } from '@/tools/env-vars-parser/env-vars-parser.service';
 import { matchRegex, summarizeRegexMatches } from '@/tools/regex-tester/regex-tester.service';
+import { CurlCodeGeneratorError, formatCurlRequest, parseCurlCommand } from '@/tools/curl-code-generator/curl-code-generator.service';
 import { executeConversionTask } from './conversion-tasks';
 import { taskLimits } from './task-runner.types';
 import type { WorkerFailureCode, WorkerTask, WorkerTaskResult } from './task-runner.types';
@@ -59,6 +60,38 @@ function createRegexSample(pattern: string): string {
 
 /** Execute a pure task in a worker and reject inputs or outputs outside the per-tool limits. */
 export function executeWorkerTask(task: WorkerTask): WorkerTaskResult {
+  if (task.kind === 'curl-code-generator') {
+    let request;
+    try {
+      request = parseCurlCommand(task.value);
+    }
+    catch (error) {
+      return {
+        kind: 'curl-code-generator',
+        valid: false,
+        errorMessage: error instanceof CurlCodeGeneratorError ? error.message : 'Could not parse this cURL command.',
+      };
+    }
+
+    try {
+      return {
+        kind: 'curl-code-generator',
+        valid: true,
+        request,
+        output: formatCurlRequest(request, task.outputFormat),
+      };
+    }
+    catch (error) {
+      return {
+        kind: 'curl-code-generator',
+        valid: true,
+        request,
+        output: '',
+        outputErrorMessage: error instanceof CurlCodeGeneratorError ? error.message : 'Could not generate cURL code.',
+      };
+    }
+  }
+
   if (task.kind === 'xml-format' || task.kind === 'xml-to-json' || task.kind === 'json-to-xml' || task.kind === 'yaml-to-json' || task.kind === 'json-to-yaml' || task.kind === 'toml-to-json' || task.kind === 'toml-to-yaml' || task.kind === 'json-to-toml' || task.kind === 'yaml-to-toml') {
     return executeConversionTask(task);
   }

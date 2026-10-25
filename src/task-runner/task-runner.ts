@@ -72,6 +72,7 @@ export class TaskRunner {
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'bcrypt-compare' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'bcrypt-compare' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'math-evaluate' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'math-evaluate' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'markdown-render' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'markdown-render' }>>>
+  run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'curl-code-generator' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'curl-code-generator' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'docker-run-to-compose' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'docker-run-to-compose' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'list-convert' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'list-convert' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'ipv4-cidr-merge' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'ipv4-cidr-merge' }>>>

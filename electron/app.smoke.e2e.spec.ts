@@ -108,6 +108,18 @@ test('renders Markdown in a dedicated worker on the app protocol', async () => {
   await expect(output).toHaveText('');
 });
 
+test('generates cURL code in the shared task worker on the app protocol', async () => {
+  await page.goto('app://bundle/curl-code-generator');
+
+  const workerCreated = page.waitForEvent('worker');
+  await page.getByTestId('curl-command-input').fill('curl https://example.com/items -H "Accept: application/json"');
+  const worker = await workerCreated;
+
+  expect(worker.url()).toContain('task-runner.worker');
+  await expect(page.getByTestId('curl-generated-output')).toContainText('fetch("https://example.com/items"');
+  await expect(page.getByTestId('curl-header-table')).toContainText('Accept');
+});
+
 test('converts CSV to Markdown in a worker on the app protocol', async () => {
   await page.goto('app://bundle/csv-to-markdown-table');
 

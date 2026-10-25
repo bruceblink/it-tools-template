@@ -1,12 +1,8 @@
 <script setup lang="ts">
-import { useStorage } from '@vueuse/core';
-import {
-  CurlCodeGeneratorError,
-  formatCurlRequest,
-  parseCurlCommand,
-  type CurlRequest,
-  type CurlCodeOutput,
-} from './curl-code-generator.service';
+import { tryOnBeforeUnmount, useStorage } from '@vueuse/core';
+import type { CurlCodeOutput, CurlRequest } from './curl-code-generator.service';
+import { taskRunner } from '@/task-runner/task-runner';
+import { taskLimits } from '@/task-runner/task-runner.types';
 
 const sampleCurl = `curl 'https://api.example.com/users' \\
   -X POST \\
@@ -23,19 +19,24 @@ const outputOptions: { label: string, value: CurlCodeOutput }[] = [
 const MAX_VISIBLE_CURL_ROWS = 500;
 const rawCurl = ref(sampleCurl);
 const outputFormat = useStorage<CurlCodeOutput>('curl-code-generator:output', 'fetch');
-const parsedCommand = computed<{ request: CurlRequest, error: null } | { request: null, error: string }>(() => {
-  try {
-    return { request: parseCurlCommand(rawCurl.value), error: null };
-  }
-  catch (error) {
-    return {
-      request: null,
-      error: error instanceof CurlCodeGeneratorError ? error.message : 'Could not parse this cURL command.',
-    };
-  }
+const request = shallowRef<CurlRequest | null>(null);
+const generatedCode = ref('');
+const parseErrorMessage = ref('');
+const outputErrorMessage = ref('');
+const taskStatus = ref<'idle' | 'running' | 'input-limit' | 'output-limit' | 'timeout' | 'error'>('idle');
+const { t } = useI18n();
+const taskKey = 'curl-code-generator:generate';
+let taskVersion = 0;
+let taskTimer: ReturnType<typeof setTimeout> | undefined;
+let lastTaskInput: string | undefined;
+
+const parseError = computed(() => {
+  if (taskStatus.value === 'input-limit') { return 'cURL command exceeds 256 KiB.'; }
+  if (taskStatus.value === 'output-limit') { return 'Generated cURL task exceeded its transfer limit.'; }
+  if (taskStatus.value === 'timeout') { return t('taskStatus.timeout'); }
+  if (taskStatus.value === 'error') { return t('taskStatus.error'); }
+  return parseErrorMessage.value;
 });
-const request = computed(() => parsedCommand.value.request);
-const parseError = computed(() => parsedCommand.value.error);
 const summary = computed(() => request.value
   ? {
       method: request.value.method,
@@ -48,16 +49,7 @@ const outputResult = computed(() => {
   if (!request.value) {
     return { code: '', error: null };
   }
-
-  try {
-    return { code: formatCurlRequest(request.value, outputFormat.value), error: null };
-  }
-  catch (error) {
-    return {
-      code: '',
-      error: error instanceof CurlCodeGeneratorError ? error.message : 'Could not generate cURL code.',
-    };
-  }
+  return { code: generatedCode.value, error: outputErrorMessage.value || null };
 });
 const outputLanguage = computed(() => outputFormat.value === 'httpie' ? 'bash' : 'javascript');
 
@@ -72,6 +64,51 @@ const warningRows = computed<Record<string, unknown>[]>(() => (request.value?.wa
   warning,
 })));
 const warningRowsTruncated = computed(() => (request.value?.warnings.length ?? 0) > MAX_VISIBLE_CURL_ROWS);
+
+watch([rawCurl, outputFormat], () => {
+  const version = ++taskVersion;
+  const inputChanged = lastTaskInput !== rawCurl.value;
+  lastTaskInput = rawCurl.value;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+  if (inputChanged) {
+    request.value = null;
+    parseErrorMessage.value = '';
+  }
+  generatedCode.value = '';
+  outputErrorMessage.value = '';
+  taskStatus.value = 'running';
+
+  // Parse and format the current command away from the renderer thread; replace work after edits.
+  taskTimer = setTimeout(async () => {
+    const outcome = await taskRunner.run(taskKey, version, {
+      kind: 'curl-code-generator',
+      value: rawCurl.value,
+      outputFormat: outputFormat.value,
+    }, taskLimits.curlCodeGenerator);
+    if (version !== taskVersion) { return; }
+    if (outcome.status === 'success' && outcome.result.kind === 'curl-code-generator') {
+      if (!outcome.result.valid) {
+        parseErrorMessage.value = outcome.result.errorMessage;
+        taskStatus.value = 'idle';
+        return;
+      }
+      request.value = outcome.result.request;
+      generatedCode.value = outcome.result.output;
+      outputErrorMessage.value = outcome.result.outputErrorMessage ?? '';
+      taskStatus.value = 'idle';
+      return;
+    }
+    if (outcome.status === 'cancelled') { return; }
+    taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+  }, 150);
+}, { immediate: true });
+
+tryOnBeforeUnmount(() => {
+  taskVersion++;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+});
 </script>
 
 <template>
@@ -91,6 +128,10 @@ const warningRowsTruncated = computed(() => (request.value?.warnings.length ?? 0
     <n-alert v-if="parseError" type="error" :show-icon="false">
       {{ parseError }}
     </n-alert>
+
+    <div v-else-if="taskStatus === 'running' && !request" role="status" data-test-id="curl-generation-status" mb-2 text-center op-70>
+      {{ t('taskStatus.calculating') }}
+    </div>
 
     <template v-else-if="request && summary">
       <div grid grid-cols-1 gap-3 md:grid-cols-5>
@@ -113,7 +154,10 @@ const warningRowsTruncated = computed(() => (request.value?.warnings.length ?? 0
           label-width="75px"
           mb-3
         />
-        <n-alert v-if="outputResult.error" type="error" :show-icon="false" mb-3>
+        <div v-if="taskStatus === 'running'" role="status" data-test-id="curl-generation-status" mb-3 text-center op-70>
+          {{ t('taskStatus.calculating') }}
+        </div>
+        <n-alert v-else-if="outputResult.error" type="error" :show-icon="false" mb-3>
           {{ outputResult.error }}
         </n-alert>
         <div v-else data-test-id="curl-generated-output">

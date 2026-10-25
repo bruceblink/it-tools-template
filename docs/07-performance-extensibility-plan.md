@@ -225,7 +225,7 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 
 ### P2：避免大输入阻塞，并能真正停止任务
 
-- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML、Docker Run 转 Compose、List Converter、IPv4 CIDR Merge、IPv4 CIDR Overlap Checker 和 IPv4 CIDR Containment Checker 已迁移到任务执行器。cURL Code Generator 保持同步执行，输入最多 256 KiB、最多 16,000 个解析 token、生成输出最多 2 MiB；页面只生成当前所选格式，并将请求头和警告表限制为各 500 行。已有合成输入基准不足以支持 Worker 迁移。其他同步解析工具仍待评估。
+- 正则匹配、正则样例生成、Text Diff、JSON minify、CSV to JSON、CSV to Markdown、JSON to CSV、JSON Lines、JSON/XML/YAML/TOML 转换、SQL 格式化、Environment Variables Parser、Bcrypt 哈希/比较、Markdown 转 HTML、Docker Run 转 Compose、List Converter、IPv4 CIDR Merge、IPv4 CIDR Overlap Checker、IPv4 CIDR Containment Checker 和 cURL Code Generator 的页面计算已迁移到任务执行器。cURL 命令最多 256 KiB、16,000 个解析 token；页面只生成当前所选格式，请求头和警告表各显示最多 500 行；生成代码最多 2 MiB，Worker 传输数据最多 6 MiB，任务最多运行 10 秒。其他同步解析工具仍待评估。
 - Worker 请求携带任务 ID、输入版本和输出上限。输入变化会终止旧任务，新任务在 150 ms 防抖后启动。Worker 超时由宿主终止，旧版本结果不会写回页面。
 - 每个渲染器最多运行两个任务；每个工具最多保留一个最新等待任务。这个限制适用于当前 Electron/Web 渲染器，不跨多个 Electron 窗口共享。
 - 正则输入最多 256 KiB、模式最多 4,096 字符、结果最多 5,000 项、输出最多 1 MiB、匹配最多运行 1 秒。Text Diff、JSON minify、CSV to JSON 和 JSON to CSV 的输入最多 256 KiB、输出最多 2 MiB、任务最多运行 10 秒；Text Diff 另限制合计 20,000 行。
@@ -630,3 +630,7 @@ Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先分别预热 5 次，�
 本轮 IPv4 CIDR splitter 输出复用优化（2026-10-25）：原页面分别计算拆分结果和输出文本，因此会为同一输入构建两份完整子网数组。现在页面只调用一次 `splitIpv4Cidr`，并从该结果生成输出文本。基准通过 Vite SSR 调用实际 TypeScript 服务，以 `0.0.0.0/20` 拆成 4,096 个 `/32` 子网，预热后进行 31 轮配对测量。旧页面路径的输出构建中位数/最大值为 3.56/8.39 毫秒；复用拆分结果后为 1.83/3.13 毫秒，分别降低约 48.5% 和 62.7%。两种路径输出均为 53,023 字节且内容相同。这是 Node.js/Vite SSR 合成微基准，不含 Vue 响应更新、浏览器绘制或完整用户输入延迟。
 
 新增服务测试覆盖 4,096 项默认输出上限。Chromium Web E2E 1 项和 Electron `app://bundle` smoke E2E 19 项均确认更改源 CIDR 和目标前缀后，摘要和输出同步更新。完整 `pnpm check` 通过 43 项脚本测试、826 项单元测试（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.80 KiB。Windows 打包应用在真实窗口中显示默认 `/24` 到 `/26` 的摘要和 4 项输出。Computer Use 检测到该窗口存在用户输入后阻止了后续值变更，因此本轮没有完成真实窗口动态输入验收。没有检查本轮远端 CI。
+
+本轮 cURL Code Generator Worker 迁移（2026-10-25）：原页面会在每次输入事件中同步解析 Shell 参数并生成当前格式。使用 Vite SSR 调用实际服务，以 7,000 个请求头组成 231,036 字节命令，预热后测量 21 轮；同步路径中位数为 28.88 毫秒，p95 为 41.79 毫秒，最大值为 41.87 毫秒。该服务级基准不包含输入事件、DOM 更新和绘制。页面现以 150 毫秒防抖把解析与所选格式生成提交到共享 Worker；输入变更会取消旧任务并清空旧结果，切换格式保留已解析摘要和请求头。命令限制为 256 KiB 和 16,000 个解析 token，所选代码最多 2 MiB，任务最多运行 10 秒。请求头和警告表继续各显示最多 500 行。
+
+Worker 单测覆盖所选格式、无效命令、任务替换和取消。Chromium Web 定向 E2E 4 项通过，使用 7,000 个请求头验证所有请求头仍进入生成代码，同时页面只显示前 500 行。Electron `app://bundle` smoke 20 项通过，包含 cURL Worker 路径。Computer Use 在 Windows Electron 真实窗口中输入合成命令并确认 GET 摘要、请求头和 fetch 输出；切换到 axios 后显示对应输出。完整 `pnpm check` 通过 43 项脚本测试、834 项单元测试（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.79 KiB。相对 P2 的 300 KiB 预算余量为 0.21 KiB。

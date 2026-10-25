@@ -15,6 +15,24 @@ function expectTaskFailure(run: () => void, code: TaskExecutionError['code']): v
 }
 
 describe('task runner worker dispatch', () => {
+  it('generates the selected cURL output in the worker and reports invalid commands', () => {
+    expect(executeWorkerTask({
+      kind: 'curl-code-generator',
+      value: 'curl https://example.com -H "Accept: application/json"',
+      outputFormat: 'axios',
+    })).toMatchObject({
+      kind: 'curl-code-generator',
+      valid: true,
+      request: { url: 'https://example.com', headers: [{ name: 'Accept', value: 'application/json' }] },
+      output: 'const response = await axios({\n  method: "get",\n  url: "https://example.com",\n  headers: {\n    "Accept": "application/json",\n  },\n});\n\nconsole.log(response.data);',
+    });
+    expect(executeWorkerTask({ kind: 'curl-code-generator', value: 'wget https://example.com', outputFormat: 'fetch' })).toEqual({
+      kind: 'curl-code-generator',
+      valid: false,
+      errorMessage: 'Command must start with curl.',
+    });
+  });
+
   it('returns regex matches, captures, summary, and a bounded sample', () => {
     const result = executeWorkerTask({ kind: 'regex', regex: '(?<letter>a)', text: 'aba', flags: 'dgu' });
 

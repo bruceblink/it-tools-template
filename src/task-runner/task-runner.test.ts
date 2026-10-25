@@ -111,6 +111,36 @@ describe('TaskRunner', () => {
     });
   });
 
+  it('runs cURL generation in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('curl-code-generator', 1, {
+      kind: 'curl-code-generator',
+      value: 'curl https://example.com/old',
+      outputFormat: 'fetch',
+    }, taskLimits.curlCodeGenerator);
+    const latest = runner.run('curl-code-generator', 2, {
+      kind: 'curl-code-generator',
+      value: 'curl https://example.com/latest',
+      outputFormat: 'axios',
+    }, taskLimits.curlCodeGenerator);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.task).toEqual({
+      kind: 'curl-code-generator',
+      value: 'curl https://example.com/latest',
+      outputFormat: 'axios',
+    });
+    const result: WorkerTaskResult = {
+      kind: 'curl-code-generator',
+      valid: true,
+      request: { url: 'https://example.com/latest', method: 'GET', headers: [], data: '', compressed: false, warnings: [] },
+      output: 'const response = await axios({',
+    };
+    workers[1]?.reply(result);
+    await expect(latest).resolves.toEqual({ status: 'success', result });
+  });
+
   it('runs IPv4 CIDR merges in a replaceable worker task', async () => {
     const { runner, workers } = createHarness();
     const first = runner.run('ipv4-cidr-merge', 1, { kind: 'ipv4-cidr-merge', value: 'old' }, taskLimits.ipv4CidrMerge);
