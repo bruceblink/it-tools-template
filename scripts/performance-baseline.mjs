@@ -186,6 +186,13 @@ function buildCoverage(selectedPlatforms, sampleCounts) {
   };
 }
 
+function getElectronWindowVisibility(selectedPlatforms) {
+  if (!selectedPlatforms.includes('electron')) {
+    return null;
+  }
+  return process.env.IT_TOOLS_HEADLESS_E2E === 'true' ? 'hidden' : 'visible';
+}
+
 function machinePlatformName() {
   if (process.platform === 'win32') {
     return 'windows';
@@ -265,6 +272,7 @@ const report = {
     electronAutomation: electronAppDirectory
       ? 'built Electron app directory with a fresh user-data directory per run'
       : 'packaged application with a fresh user-data directory per run',
+    electronWindowVisibility: getElectronWindowVisibility(selectedPlatforms),
     electronAppDirectory: electronAppDirectory ? displayPath(electronAppDirectory) : null,
     syntheticInputIsolation: 'renderer reload between interaction workloads',
     routeCases: routeCases.map(({ id, path, query }) => ({ id, path, query })),

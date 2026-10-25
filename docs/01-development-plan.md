@@ -67,6 +67,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日将 IPv4 CIDR Containment Checker 的规则解析、目标分析和匹配明细生成迁入 Worker。200 条规则与 200 个目标组成的合成输入中，两次同步分析中位耗时为 39.55 毫秒，并产生 40,000 条匹配。Worker 限制两份文本合计 256 KiB、合计 1,000 行、500 条匹配、2 MiB 序列化输出和 10 秒运行时间；超出匹配上限时显示缩小输入提示。对同一密集输入，受限任务在 Vite SSR 基准中的中位耗时为 0.70 毫秒；它只生成错误提示，不生成完整 40,000 条报告，不能与旧分析耗时直接比较。`pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查；Chromium、WebKit、隐藏 Electron Worker E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。System Monitor E2E 现等待应用首页和搜索按钮就绪后再导航，并为 Windows 临时用户目录清理增加重试。完整 Electron E2E 共 37 项：31 项通过、6 项按环境跳过、0 项失败；System Monitor 定向 E2E 3 项通过。详细验证见[性能与插件计划](07-performance-extensibility-plan.md)。
 
+同日完成当前 `main` 的正式构建性能基线，Web 与 Electron 各测 20 轮，0 轮失败。Web 与 Electron 启动中位数/p95 分别为 759.72/856.93 毫秒和 919.71/1,017.53 毫秒。Electron 本轮使用隐藏窗口，因此其数据不代表真实窗口交互或可见窗口路由响应。详细环境、资源和限制见[20 轮性能基线报告](performance-baseline-2026-10-25-main.json)。16 个本地提交已推送至 `origin/main`，远端与本地一致。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、
