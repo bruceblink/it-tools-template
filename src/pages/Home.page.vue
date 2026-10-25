@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { IconDragDrop, IconHeart } from '@tabler/icons-vue';
 import { useHead } from '@unhead/vue';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import Draggable from 'vuedraggable';
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue';
 import ColoredCard from '../components/ColoredCard.vue';
 import ToolCard from '../components/ToolCard.vue';
 import { useToolStore } from '@/tools/tools.store';
 import { config } from '@/config';
 
 const toolStore = useToolStore();
+const Draggable = defineAsyncComponent(() => import('vuedraggable'));
 
 useHead({ title: 'IT Tools - Handy online tools for developers' });
 const { t } = useI18n();

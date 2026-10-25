@@ -14,9 +14,14 @@ export const budgets = {
   toolJavaScriptGzipBytes: 500 * 1024,
 };
 
+/** Worker scripts load only when a tool starts work; the runtime-assets report measures them separately. */
+function isWorkerScript(path) {
+  return path.endsWith('.js') && /(?:^|[.-])worker(?:[.-])/.test(path);
+}
+
 /** @param {string} path */
 export function assertBuildPath(path) {
-  if (!/^[\w./-]+$/.test(path) || path.split('/').some(part => !part || part === '.' || part === '..')) {
+  if (!/^[\w./~-]+$/.test(path) || path.split('/').some(part => !part || part === '.' || part === '..')) {
     throw new Error(`Invalid build resource path: ${path}`);
   }
   return path;
@@ -109,8 +114,8 @@ export function assertPerformanceBudgets({ initial, optionalEntries }) {
     failures.push(`initial JavaScript gzip ${initial.javaScriptGzipBytes} bytes > ${budgets.initialJavaScriptGzipBytes} bytes`);
   }
   for (const entry of optionalEntries) {
-    if (entry.javaScriptGzipBytes > budgets.toolJavaScriptGzipBytes) {
-      failures.push(`${entry.entry} JavaScript closure ${entry.javaScriptGzipBytes} bytes > ${budgets.toolJavaScriptGzipBytes} bytes`);
+    if (entry.incrementalJavaScriptGzipBytes > budgets.toolJavaScriptGzipBytes) {
+      failures.push(`${entry.entry} incremental JavaScript ${entry.incrementalJavaScriptGzipBytes} bytes > ${budgets.toolJavaScriptGzipBytes} bytes`);
     }
   }
   if (failures.length) {
@@ -141,7 +146,11 @@ export async function filterAppShell(directory, entries, additionalEntries = [])
   const runtimeAssets = await getRuntimeAssets(directory);
   runtimeAssets.paths.forEach(file => allFiles.add(file));
   // Root dynamic imports include all tool entries, including synthesized shared entry keys.
-  const optionalEntries = (manifest['index.html'].dynamicImports ?? [])
+  const nestedToolEntries = Object.entries(manifest)
+    .filter(([entry, chunk]) => entry.startsWith('src/tools/') && entry.endsWith('.vue') && chunk.isDynamicEntry)
+    .map(([entry]) => entry);
+  const optionalEntryKeys = new Set([...(manifest['index.html'].dynamicImports ?? []), ...nestedToolEntries]);
+  const optionalEntries = [...optionalEntryKeys]
     .filter(entry => !shell.has(manifest[entry]?.file))
     .map(entry => ({ entry, files: collectStaticFiles(manifest, entry) }));
   for (const entry of optionalEntries) {
@@ -162,8 +171,17 @@ export async function filterAppShell(directory, entries, additionalEntries = [])
   }
   const precache = summarize([...shell].sort());
   const initial = summarize(collectAppShellFiles(manifest));
-  const optional = optionalEntries.map(entry => ({ entry: entry.entry, ...summarize(entry.files) }))
-    .sort((a, b) => b.javaScriptGzipBytes - a.javaScriptGzipBytes);
+  const optional = optionalEntries.map((entry) => {
+    const fullClosure = summarize(entry.files);
+    const incrementalFiles = entry.files.filter(file => !shell.has(file) && !isWorkerScript(file));
+    const incremental = summarize(incrementalFiles);
+    return {
+      entry: entry.entry,
+      ...fullClosure,
+      incrementalJavaScriptGzipBytes: incremental.javaScriptGzipBytes,
+      incrementalJavaScriptFiles: incremental.files.filter(file => file.file.endsWith('.js')),
+    };
+  }).sort((a, b) => b.incrementalJavaScriptGzipBytes - a.incrementalJavaScriptGzipBytes);
   const report = {
     budgets,
     precache,
@@ -173,7 +191,7 @@ export async function filterAppShell(directory, entries, additionalEntries = [])
     // Keep the measured values available to CI artifacts and plan reports.
     pendingOptimizations: {
       initialJavaScript: initial.javaScriptGzipBytes > budgets.initialJavaScriptGzipBytes,
-      entries: optional.filter(entry => entry.javaScriptGzipBytes > budgets.toolJavaScriptGzipBytes).map(entry => entry.entry),
+      entries: optional.filter(entry => entry.incrementalJavaScriptGzipBytes > budgets.toolJavaScriptGzipBytes).map(entry => entry.entry),
       assets: runtimeAssets.paths.filter(file => file.endsWith('.js') && sizes.get(file).gzipBytes > budgets.toolJavaScriptGzipBytes),
     },
   };

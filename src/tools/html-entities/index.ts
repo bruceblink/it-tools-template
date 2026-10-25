@@ -1,5 +1,6 @@
 import { Code } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,6 +15,6 @@ export const tool = defineTool({
   path: '/html-entities',
   description: translate('tools.html-entities.description'),
   keywords: ['html', 'entities', 'escape', 'unescape', 'special', 'characters', 'tags'],
-  component: () => import('./html-entities.vue'),
+  component: () => loadBuiltinToolComponent('html-entities/html-entities.vue'),
   icon: Code,
 });

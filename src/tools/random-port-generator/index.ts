@@ -1,5 +1,6 @@
 import { Server } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,6 +15,6 @@ export const tool = defineTool({
   path: '/random-port-generator',
   description: translate('tools.random-port-generator.description'),
   keywords: ['system', 'port', 'lan', 'generator', 'random', 'development', 'computer', 'registered', 'dynamic', 'range'],
-  component: () => import('./random-port-generator.vue'),
+  component: () => loadBuiltinToolComponent('random-port-generator/random-port-generator.vue'),
   icon: Server,
 });

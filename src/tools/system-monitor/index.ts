@@ -1,5 +1,6 @@
 import { DeviceDesktop } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/system-monitor',
   description: translate('tools.system-monitor.description'),
   keywords: ['system', 'monitor', 'cpu', 'memory', 'disk', 'network', 'process'],
-  component: () => import('./system-monitor.vue'),
+  component: () => loadBuiltinToolComponent('system-monitor/system-monitor.vue'),
   icon: DeviceDesktop,
   platforms: ['electron'],
   dataProcessing: 'local-data',

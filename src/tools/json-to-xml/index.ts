@@ -1,5 +1,6 @@
 import { Braces } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/json-to-xml',
   description: translate('tools.json-to-xml.description'),
   keywords: ['json', 'xml'],
-  component: () => import('./json-to-xml.vue'),
+  component: () => loadBuiltinToolComponent('json-to-xml/json-to-xml.vue'),
   icon: Braces,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

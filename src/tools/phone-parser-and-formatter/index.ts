@@ -1,5 +1,6 @@
 import { Phone } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -22,7 +23,7 @@ export const tool = defineTool({
     'international',
     'national',
   ],
-  component: () => import('./phone-parser-and-formatter.vue'),
+  component: () => loadBuiltinToolComponent('phone-parser-and-formatter/phone-parser-and-formatter.vue'),
   icon: Phone,
   platforms: ['web', 'electron'],
   dataProcessing: 'local-data',

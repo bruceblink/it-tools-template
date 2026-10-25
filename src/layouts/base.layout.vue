@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { computed, defineAsyncComponent, ref } from 'vue';
 import { NIcon, useThemeVars } from 'naive-ui';
 
 import { RouterLink } from 'vue-router';
@@ -14,6 +15,28 @@ import type { ToolCategory } from '@/tools/tools.types';
 import { useToolStore } from '@/tools/tools.store';
 import { useTracker } from '@/modules/tracker/tracker.services';
 import CollapsibleToolMenu from '@/components/CollapsibleToolMenu.vue';
+
+const CommandPalette = defineAsyncComponent(() => import('@/modules/command-palette/command-palette.vue'));
+const commandPaletteLoaded = ref(false);
+const commandPaletteOpen = ref(false);
+const isMac = computed(() => window.navigator.userAgent.toLowerCase().includes('mac'));
+const showUiLibrary = import.meta.env.DEV;
+const commandPaletteKeys = useMagicKeys({
+  passive: false,
+  onEventFired(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && event.type === 'keydown') {
+      event.preventDefault();
+    }
+  },
+});
+
+whenever(() => commandPaletteKeys.ctrl_k?.value ?? false, openCommandPalette);
+whenever(() => commandPaletteKeys.meta_k?.value ?? false, openCommandPalette);
+
+function openCommandPalette() {
+  commandPaletteLoaded.value = true;
+  commandPaletteOpen.value = true;
+}
 
 const themeVars = useThemeVars();
 const styleStore = useStyleStore();
@@ -128,7 +151,7 @@ const tools = computed<ToolCategory[]>(() => [
 
         <c-tooltip :tooltip="$t('home.uiLib')" position="bottom">
           <c-button
-            v-if="config.app.env === 'development'"
+            v-if="showUiLibrary"
             to="/c-lib"
             circle
             variant="text"
@@ -138,7 +161,17 @@ const tools = computed<ToolCategory[]>(() => [
           </c-button>
         </c-tooltip>
 
-        <command-palette />
+        <c-button flex-1 w-full important:justify-start :aria-label="$t('search.label')" @click="openCommandPalette">
+          <span flex items-center gap-3 op-40>
+            <icon-mdi-search />
+            {{ $t('search.label') }}
+
+            <span hidden flex-1 border border-current border-op-40 rounded border-solid px-5px py-3px sm:inline>
+              {{ isMac ? 'Cmd' : 'Ctrl' }}&nbsp;+&nbsp;K
+            </span>
+          </span>
+        </c-button>
+        <CommandPalette v-if="commandPaletteLoaded" v-model:open="commandPaletteOpen" />
 
         <locale-selector v-if="!styleStore.isSmallScreen" />
 

@@ -1,5 +1,6 @@
 import { HttpRound } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -15,7 +16,7 @@ export const tool = defineTool({
   path: '/http-headers-parser',
   description: translate('tools.http-headers-parser.description'),
   keywords: ['http', 'headers', 'parser', 'request', 'response', 'curl', 'authorization', 'cookie', 'api-key', 'sensitive'],
-  component: () => import('./http-headers-parser.vue'),
+  component: () => loadBuiltinToolComponent('http-headers-parser/http-headers-parser.vue'),
   icon: HttpRound,
   createdAt: new Date('2026-07-01'),
 });

@@ -1,5 +1,6 @@
 import { ShieldChevron } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -15,7 +16,7 @@ export const tool = defineTool({
   path: '/csp-analyzer',
   description: translate('tools.csp-analyzer.description'),
   keywords: ['csp', 'content-security-policy', 'security', 'headers', 'script-src', 'frame-ancestors', 'form-action'],
-  component: () => import('./csp-analyzer.vue'),
+  component: () => loadBuiltinToolComponent('csp-analyzer/csp-analyzer.vue'),
   icon: ShieldChevron,
   createdAt: new Date('2026-07-04'),
 });

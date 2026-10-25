@@ -1,5 +1,6 @@
 import { Table } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/csv-to-markdown-table',
   description: translate('tools.csv-to-markdown-table.description'),
   keywords: ['csv', 'markdown', 'table', 'convert'],
-  component: () => import('./csv-to-markdown-table.vue'),
+  component: () => loadBuiltinToolComponent('csv-to-markdown-table/csv-to-markdown-table.vue'),
   icon: Table,
   createdAt: new Date('2026-06-08'),
 });

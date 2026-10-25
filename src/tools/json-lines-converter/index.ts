@@ -1,5 +1,6 @@
 import { FileCode } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -11,7 +12,7 @@ export const tool = defineTool({
   path: '/json-lines-converter',
   description: translate('tools.json-lines-converter.description'),
   keywords: ['json', 'jsonl', 'json lines', 'ndjson', 'newline delimited json'],
-  component: () => import('./json-lines-converter.vue'),
+  component: () => loadBuiltinToolComponent('json-lines-converter/json-lines-converter.vue'),
   icon: FileCode,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

@@ -1,5 +1,6 @@
 import { Language } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/regex-tester',
   description: translate('tools.regex-tester.description'),
   keywords: ['regex', 'tester', 'sample', 'expression', 'matches', 'captures', 'groups'],
-  component: () => import('./regex-tester.vue'),
+  component: () => loadBuiltinToolComponent('regex-tester/regex-tester.vue'),
   icon: Language,
   createdAt: new Date('2024-09-20'),
 });

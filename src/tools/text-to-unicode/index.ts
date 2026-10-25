@@ -1,5 +1,6 @@
 import { TextWrap } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/text-to-unicode',
   description: translate('tools.text-to-unicode.description'),
   keywords: ['text', 'to', 'unicode'],
-  component: () => import('./text-to-unicode.vue'),
+  component: () => loadBuiltinToolComponent('text-to-unicode/text-to-unicode.vue'),
   icon: TextWrap,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

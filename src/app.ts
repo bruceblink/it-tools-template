@@ -8,7 +8,7 @@ import { naive } from './plugins/naive.plugin';
 import 'virtual:uno.css';
 
 import App from './App.vue';
-import router from './router';
+import router, { registerDemoRoutes } from './router';
 import { activateLocale, i18nPlugin, type SupportedLocale } from './plugins/i18n.plugin';
 
 function readSavedLocale() {
@@ -30,6 +30,7 @@ function saveLocale(locale: string) {
 }
 
 export async function mountSharedApp() {
+  await registerDemoRoutes();
   const app = createApp(App);
 
   app.use(createPinia());

@@ -1,5 +1,6 @@
 import { Unlink } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,6 +15,6 @@ export const tool = defineTool({
   path: '/url-parser',
   description: translate('tools.url-parser.description'),
   keywords: ['url', 'parser', 'protocol', 'origin', 'params', 'query', 'duplicate', 'port', 'username', 'password', 'credentials', 'href', 'summary', 'segments'],
-  component: () => import('./url-parser.vue'),
+  component: () => loadBuiltinToolComponent('url-parser/url-parser.vue'),
   icon: Unlink,
 });

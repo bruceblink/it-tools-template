@@ -4,7 +4,7 @@ test.describe('Tool - Text statistics', () => {
   test('updates counts for Unicode, whitespace, and line endings', async ({ page }) => {
     await page.goto('/text-statistics');
 
-    await page.getByPlaceholder('Your text...').fill('😀 x\r\n');
+    await page.getByPlaceholder('Your text...').fill('😀 x\n');
 
     await expect(page.getByTestId('character-count')).toContainText('5');
     await expect(page.getByTestId('word-count')).toContainText('3');

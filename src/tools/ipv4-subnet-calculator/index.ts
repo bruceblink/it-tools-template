@@ -1,5 +1,6 @@
 import { RouterOutlined } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/ipv4-subnet-calculator',
   description: translate('tools.ipv4-subnet-calculator.description'),
   keywords: ['ipv4', 'subnet', 'calculator', 'mask', 'network', 'cidr', 'netmask', 'bitmask', 'broadcast', 'address'],
-  component: () => import('./ipv4-subnet-calculator.vue'),
+  component: () => loadBuiltinToolComponent('ipv4-subnet-calculator/ipv4-subnet-calculator.vue'),
   icon: RouterOutlined,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

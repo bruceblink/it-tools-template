@@ -1,5 +1,6 @@
 import { Lock } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/encryption',
   description: translate('tools.encryption.description'),
   keywords: ['cypher', 'encipher', 'text', 'AES', 'TripleDES', 'Rabbit', 'RC4'],
-  component: () => import('./encryption.vue'),
+  component: () => loadBuiltinToolComponent('encryption/encryption.vue'),
   icon: Lock,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

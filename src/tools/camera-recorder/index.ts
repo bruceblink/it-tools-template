@@ -1,5 +1,6 @@
 import { Camera } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/camera-recorder',
   description: translate('tools.camera-recorder.description'),
   keywords: ['camera', 'recoder'],
-  component: () => import('./camera-recorder.vue'),
+  component: () => loadBuiltinToolComponent('camera-recorder/camera-recorder.vue'),
   icon: Camera,
   createdAt: new Date('2023-05-15'),
   platforms: ['web', 'electron'],

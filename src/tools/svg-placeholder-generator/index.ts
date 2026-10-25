@@ -1,5 +1,6 @@
 import { ImageOutlined } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/svg-placeholder-generator',
   description: translate('tools.svg-placeholder-generator.description'),
   keywords: ['svg', 'placeholder', 'generator', 'image', 'size', 'mockup'],
-  component: () => import('./svg-placeholder-generator.vue'),
+  component: () => loadBuiltinToolComponent('svg-placeholder-generator/svg-placeholder-generator.vue'),
   icon: ImageOutlined,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

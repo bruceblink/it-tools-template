@@ -1,5 +1,6 @@
 import { DeviceMobile } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -30,6 +31,6 @@ export const tool = defineTool({
     'Time',
     'HMAC',
   ],
-  component: () => import('./otp-code-generator-and-validator.vue'),
+  component: () => loadBuiltinToolComponent('otp-code-generator-and-validator/otp-code-generator-and-validator.vue'),
   icon: DeviceMobile,
 });

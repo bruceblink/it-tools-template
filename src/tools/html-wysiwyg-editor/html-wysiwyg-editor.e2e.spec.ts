@@ -35,9 +35,14 @@ test.describe('Tool - HTML WYSIWYG editor', () => {
     expect(await readFile(downloadPath, 'utf8')).toContain('Welcome to this html wysiwyg editor');
   });
 
-  test('writes copied HTML through the shared clipboard adapter', async ({ page }) => {
+  test('writes copied HTML through the shared clipboard adapter', async ({ page }, testInfo) => {
     await page.goto('/html-wysiwyg-editor');
-    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    if (testInfo.project.name === 'webkit') {
+      await page.context().grantPermissions(['clipboard-read'], { origin: new URL(page.url()).origin });
+    }
+    else {
+      await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(page.url()).origin });
+    }
 
     await page.getByRole('button', { name: 'Copy to clipboard' }).click();
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('<h1>Hey!</h1>');

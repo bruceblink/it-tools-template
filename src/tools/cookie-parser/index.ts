@@ -1,5 +1,6 @@
 import { Cookie } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/cookie-parser',
   description: translate('tools.cookie-parser.description'),
   keywords: ['cookie', 'cookies', 'set-cookie', 'http', 'headers', 'secure', 'httponly', 'samesite', 'expires', 'max-age', 'summary', 'duplicate'],
-  component: () => import('./cookie-parser.vue'),
+  component: () => loadBuiltinToolComponent('cookie-parser/cookie-parser.vue'),
   icon: Cookie,
   createdAt: new Date('2026-07-04'),
 });

@@ -1,5 +1,6 @@
 import { HttpRound } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 
 import { codesByCategories } from './http-status-codes.constants';
 import { translate } from '@/plugins/i18n.plugin';
@@ -22,7 +23,7 @@ export const tool = defineTool({
     'codes',
     ...codesByCategories.flatMap(({ codes }) => codes.flatMap(({ code, name }) => [String(code), name])),
   ],
-  component: () => import('./http-status-codes.vue'),
+  component: () => loadBuiltinToolComponent('http-status-codes/http-status-codes.vue'),
   icon: HttpRound,
   createdAt: new Date('2023-04-13'),
 });

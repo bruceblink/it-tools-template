@@ -1,7 +1,6 @@
 import { get, useStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
 import type { MaybeRef, Ref } from 'vue';
-import _ from 'lodash';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';
 import { toolsWithCategory } from './index';
 
@@ -19,14 +18,17 @@ export const useToolStore = defineStore('tools', () => {
   }));
 
   const toolsByCategory = computed<ToolCategory[]>(() => {
-    return _.chain(tools.value)
-      .groupBy('categoryId')
-      .map((components, id) => ({
-        id,
-        name: components[0]?.category ?? id,
-        components,
-      }))
-      .value();
+    const categories = new Map<string, ToolWithCategory[]>();
+    for (const tool of tools.value) {
+      const components = categories.get(tool.categoryId) ?? [];
+      components.push(tool);
+      categories.set(tool.categoryId, components);
+    }
+    return [...categories].map(([id, components]) => ({
+      id,
+      name: components[0]?.category ?? id,
+      components,
+    }));
   });
 
   const favoriteTools = computed(() => {

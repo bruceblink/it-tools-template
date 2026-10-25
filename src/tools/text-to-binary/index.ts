@@ -1,5 +1,6 @@
 import { Binary } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/text-to-binary',
   description: translate('tools.text-to-binary.description'),
   keywords: ['text', 'to', 'binary', 'converter', 'encode', 'decode', 'ascii'],
-  component: () => import('./text-to-binary.vue'),
+  component: () => loadBuiltinToolComponent('text-to-binary/text-to-binary.vue'),
   icon: Binary,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

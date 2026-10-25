@@ -1,5 +1,6 @@
 import { FileDigit } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/data-size-converter',
   description: translate('tools.data-size-converter.description'),
   keywords: ['data', 'size', 'byte', 'bit', 'convert'],
-  component: () => import('./data-size-converter.vue'),
+  component: () => loadBuiltinToolComponent('data-size-converter/data-size-converter.vue'),
   icon: FileDigit,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

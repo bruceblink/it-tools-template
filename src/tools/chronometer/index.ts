@@ -1,5 +1,6 @@
 import { TimerOutlined } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/chronometer',
   description: translate('tools.chronometer.description'),
   keywords: ['chronometer', 'time', 'lap', 'duration', 'measure', 'pause', 'resume', 'stopwatch'],
-  component: () => import('./chronometer.vue'),
+  component: () => loadBuiltinToolComponent('chronometer/chronometer.vue'),
   icon: TimerOutlined,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

@@ -1,5 +1,6 @@
 import { FileText } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/text-statistics',
   description: translate('tools.text-statistics.description'),
   keywords: ['text', 'statistics', 'length', 'characters', 'count', 'size', 'bytes'],
-  component: () => import('./text-statistics.vue'),
+  component: () => loadBuiltinToolComponent('text-statistics/text-statistics.vue'),
   icon: FileText,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

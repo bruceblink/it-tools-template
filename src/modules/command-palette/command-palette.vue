@@ -1,50 +1,39 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useMessage } from 'naive-ui';
-import _ from 'lodash';
 import { useCommandPaletteStore } from './command-palette.store';
 import type { PaletteOption } from './command-palette.types';
 
-const isModalOpen = ref(false);
+const isModalOpen = defineModel<boolean>('open', { default: false });
 const inputRef = ref();
 const router = useRouter();
-const isMac = computed(() => window.navigator.userAgent.toLowerCase().includes('mac'));
-
 const commandPaletteStore = useCommandPaletteStore();
 const { searchPrompt, filteredSearchResult } = storeToRefs(commandPaletteStore);
 const message = useMessage();
 const { t } = useI18n();
+const flatSearchResults = computed(() => Object.values(filteredSearchResult.value).flat());
 
-const keys = useMagicKeys({
-  passive: false,
-  onEventFired(e) {
-    if (e.ctrlKey && e.key === 'k' && e.type === 'keydown') {
-      e.preventDefault();
-    }
-
-    if (e.metaKey && e.key === 'k' && e.type === 'keydown') {
-      e.preventDefault();
-    }
-  },
-});
+const keys = useMagicKeys();
 
 whenever(isModalOpen, () => inputRef.value?.focus());
 
-whenever(() => keys.ctrl_k?.value ?? false, open);
-whenever(() => keys.meta_k?.value ?? false, open);
 whenever(() => keys.escape?.value ?? false, close);
-
-function open() {
-  isModalOpen.value = true;
-  void commandPaletteStore.loadExtensionCommands().catch(() => {
-    message.error(t('taskStatus.error'));
-  });
-}
 
 function close() {
   isModalOpen.value = false;
   searchPrompt.value = '';
 }
+
+watch(isModalOpen, (isOpen) => {
+  if (isOpen) {
+    void commandPaletteStore.loadExtensionCommands().catch(() => {
+      message.error(t('taskStatus.error'));
+    });
+  }
+  else {
+    searchPrompt.value = '';
+  }
+}, { immediate: true });
 
 const selectedOptionIndex = ref(0);
 
@@ -56,7 +45,7 @@ function handleKeydown(event: KeyboardEvent) {
 
   if (isArrowUpOrDown) {
     const increment = isArrowDown ? 1 : -1;
-    const maxIndex = Math.max(_.chain(filteredSearchResult.value).values().flatten().size().value() - 1, 0);
+    const maxIndex = Math.max(flatSearchResults.value.length - 1, 0);
 
     selectedOptionIndex.value = Math.min(Math.max(selectedOptionIndex.value + increment, 0), maxIndex);
 
@@ -64,7 +53,7 @@ function handleKeydown(event: KeyboardEvent) {
   }
 
   if (isEnterPressed) {
-    const option = _.chain(filteredSearchResult.value).values().flatten().nth(selectedOptionIndex.value).value();
+    const option = flatSearchResults.value[selectedOptionIndex.value];
 
     // An empty search result has no selected command to activate.
     if (option) {
@@ -74,11 +63,7 @@ function handleKeydown(event: KeyboardEvent) {
 }
 
 function getOptionIndex(option: PaletteOption) {
-  return _.chain(filteredSearchResult.value)
-    .values()
-    .flatten()
-    .findIndex(o => o === option)
-    .value();
+  return flatSearchResults.value.findIndex(candidate => candidate === option);
 }
 
 async function activateOption(option: PaletteOption) {
@@ -97,7 +82,7 @@ async function activateOption(option: PaletteOption) {
     return;
   }
 
-  const closeAfterNavigation = closeOnSelect || _.isUndefined(closeOnSelect);
+  const closeAfterNavigation = closeOnSelect || closeOnSelect === undefined;
 
   if (option.to) {
     router.push(option.to);
@@ -119,49 +104,36 @@ async function activateOption(option: PaletteOption) {
 </script>
 
 <template>
-  <div flex-1>
-    <c-button w-full important:justify-start @click="open">
-      <span flex items-center gap-3 op-40>
-        <icon-mdi-search />
-        {{ $t('search.label') }}
+  <c-modal
+    v-model:open="isModalOpen"
+    class="palette-modal"
+    shadow-xl
+    important:max-w-650px
+    important:pa-12px
+    @keydown="handleKeydown"
+  >
+    <c-input-text
+      ref="inputRef"
+      v-model:value="searchPrompt"
+      raw-text
+      placeholder="Type to search a tool or a command..."
+      autofocus
+      clearable
+    />
 
-        <span hidden flex-1 border border-current border-op-40 rounded border-solid px-5px py-3px sm:inline>
-          {{ isMac ? 'Cmd' : 'Ctrl' }}&nbsp;+&nbsp;K
-        </span>
-      </span>
-    </c-button>
-
-    <c-modal
-      v-model:open="isModalOpen"
-      class="palette-modal"
-      shadow-xl
-      important:max-w-650px
-      important:pa-12px
-      @keydown="handleKeydown"
-    >
-      <c-input-text
-        ref="inputRef"
-        v-model:value="searchPrompt"
-        raw-text
-        placeholder="Type to search a tool or a command..."
-        autofocus
-        clearable
-      />
-
-      <div v-for="(options, category) in filteredSearchResult" :key="category">
-        <div ml-3 mt-3 text-sm text-primary font-bold op-60>
-          {{ category }}
-        </div>
-        <command-palette-option
-          v-for="option in options"
-          :key="option.name"
-          :option="option"
-          :selected="selectedOptionIndex === getOptionIndex(option)"
-          @activated="activateOption"
-        />
+    <div v-for="(options, category) in filteredSearchResult" :key="category">
+      <div ml-3 mt-3 text-sm text-primary font-bold op-60>
+        {{ category }}
       </div>
-    </c-modal>
-  </div>
+      <command-palette-option
+        v-for="option in options"
+        :key="option.name"
+        :option="option"
+        :selected="selectedOptionIndex === getOptionIndex(option)"
+        @activated="activateOption"
+      />
+    </div>
+  </c-modal>
 </template>
 
 <style scoped lang="less">

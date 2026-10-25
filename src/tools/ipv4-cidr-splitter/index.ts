@@ -1,5 +1,6 @@
 import { ArrowsSplit } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/ipv4-cidr-splitter',
   description: translate('tools.ipv4-cidr-splitter.description'),
   keywords: ['ipv4', 'cidr', 'split', 'subnet', 'network', 'vlan', 'range'],
-  component: () => import('./ipv4-cidr-splitter.vue'),
+  component: () => loadBuiltinToolComponent('ipv4-cidr-splitter/ipv4-cidr-splitter.vue'),
   icon: ArrowsSplit,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

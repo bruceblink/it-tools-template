@@ -1,5 +1,6 @@
 import { Tags } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -28,6 +29,6 @@ export const tool = defineTool({
     'graph',
     'og',
   ],
-  component: () => import('./meta-tag-generator.vue'),
+  component: () => loadBuiltinToolComponent('meta-tag-generator/meta-tag-generator.vue'),
   icon: Tags,
 });

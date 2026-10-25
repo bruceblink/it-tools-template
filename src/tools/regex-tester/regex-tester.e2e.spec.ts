@@ -11,7 +11,11 @@ test.describe('Tool - Regex Tester', () => {
     await expect(page.locator('table')).toContainText('word');
   });
 
-  test('terminates a slow pattern and accepts a later task', async ({ page }) => {
+  test('terminates a slow pattern and accepts a later task', async ({ page }, testInfo) => {
+    test.skip(
+      testInfo.project.name === 'webkit',
+      'This catastrophic backtracking pattern completes without timing out in WebKit, so it cannot exercise the worker timeout there.',
+    );
     await page.goto('/regex-tester');
     const pattern = page.getByLabel('Regex to test:');
     const text = page.getByLabel('Text to match:');

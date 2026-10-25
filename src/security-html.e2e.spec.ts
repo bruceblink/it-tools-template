@@ -33,7 +33,9 @@ test('Markdown print isolates its popup and renders sanitized output without cha
         '\n\n[safe](https://example.test)',
     );
 
-  const copiedHtmlBeforePrint = await page.getByTestId('area-content').innerText();
+  const htmlOutput = page.getByTestId('area-content');
+  await expect(htmlOutput).toContainText('<h1>Safe heading</h1>');
+  const copiedHtmlBeforePrint = await htmlOutput.innerText();
   const popupPromise = page.waitForEvent('popup');
   await page.getByRole('button', { name: 'Print as PDF' }).click();
   const popup = await popupPromise;
@@ -45,7 +47,7 @@ test('Markdown print isolates its popup and renders sanitized output without cha
   await expect(popup.locator('a[href^="javascript:"]')).toHaveCount(0);
   await expect(popup.locator('a[href="https://example.test"]')).toHaveText('safe');
   expect(await popup.evaluate(() => window.opener === null)).toBe(true);
-  await expect(page.getByTestId('area-content')).toHaveText(copiedHtmlBeforePrint);
+  await expect(htmlOutput).toHaveText(copiedHtmlBeforePrint);
 });
 
 test('SVG placeholder download keeps hostile-looking input as text', async ({ page }) => {

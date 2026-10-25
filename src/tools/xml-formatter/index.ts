@@ -1,5 +1,6 @@
 import { Code } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/xml-formatter',
   description: translate('tools.xml-formatter.description'),
   keywords: ['xml', 'prettify', 'format'],
-  component: () => import('./xml-formatter.vue'),
+  component: () => loadBuiltinToolComponent('xml-formatter/xml-formatter.vue'),
   icon: Code,
   createdAt: new Date('2023-06-17'),
 });

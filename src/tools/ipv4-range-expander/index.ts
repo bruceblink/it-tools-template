@@ -1,5 +1,6 @@
 import { UnfoldMoreOutlined } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/ipv4-range-expander',
   description: translate('tools.ipv4-range-expander.description'),
   keywords: ['ipv4', 'range', 'expander', 'subnet', 'creator', 'cidr'],
-  component: () => import('./ipv4-range-expander.vue'),
+  component: () => loadBuiltinToolComponent('ipv4-range-expander/ipv4-range-expander.vue'),
   icon: UnfoldMoreOutlined,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

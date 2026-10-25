@@ -1,5 +1,6 @@
 import { Keyboard } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -29,6 +30,6 @@ export const tool = defineTool({
     'meta',
     'shift',
   ],
-  component: () => import('./keycode-info.vue'),
+  component: () => loadBuiltinToolComponent('keycode-info/keycode-info.vue'),
   icon: Keyboard,
 });

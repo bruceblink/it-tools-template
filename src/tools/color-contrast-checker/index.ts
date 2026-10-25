@@ -1,5 +1,6 @@
 import { Contrast2 } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/color-contrast-checker',
   description: translate('tools.color-contrast-checker.description'),
   keywords: ['color', 'contrast', 'accessibility', 'wcag', 'a11y', 'foreground', 'background'],
-  component: () => import('./color-contrast-checker.vue'),
+  component: () => loadBuiltinToolComponent('color-contrast-checker/color-contrast-checker.vue'),
   icon: Contrast2,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

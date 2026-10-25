@@ -9,9 +9,9 @@ import { createRendererDefines, createRendererPlugins } from './vite.plugins.js'
 
 const baseUrl = process.env.BASE_URL ?? '/';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
-    ...createRendererPlugins(),
+    ...createRendererPlugins({ componentDeclarations: command === 'serve' }),
     VitePWA({
       registerType: 'autoUpdate',
       strategies: 'injectManifest',
@@ -67,5 +67,20 @@ export default defineConfig({
   build: {
     target: 'esnext',
     manifest: true,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'shared-vendor',
+              test: /[\\/]node_modules[\\/]/,
+              minShareCount: 2,
+              entriesAware: true,
+              entriesAwareMergeThreshold: 0,
+            },
+          ],
+        },
+      },
+    },
   },
-});
+}));

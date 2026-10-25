@@ -1,4 +1,5 @@
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 import BracketIcon from '~icons/mdi/code-brackets';
@@ -11,7 +12,7 @@ export const tool = defineTool({
   path: '/toml-to-json',
   description: translate('tools.toml-to-json.description'),
   keywords: ['toml', 'json', 'convert', 'online', 'transform', 'parser'],
-  component: () => import('./toml-to-json.vue'),
+  component: () => loadBuiltinToolComponent('toml-to-json/toml-to-json.vue'),
   icon: BracketIcon,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

@@ -1,5 +1,6 @@
 import { AlignJustified } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/yaml-to-toml',
   description: translate('tools.yaml-to-toml.description'),
   keywords: ['yaml', 'to', 'toml', 'convert', 'transform'],
-  component: () => import('./yaml-to-toml.vue'),
+  component: () => loadBuiltinToolComponent('yaml-to-toml/yaml-to-toml.vue'),
   icon: AlignJustified,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

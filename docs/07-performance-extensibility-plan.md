@@ -219,9 +219,17 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - 分析首屏真实导入图，再处理 UI、图标、搜索和工具元数据的依赖。搜索与导航只读取描述信息，不为建立索引加载工具实现。
 - OUI 数据自适应分片已完成：`oui-data@1.2.0` 共 53,542 条记录、38 个分片，最大 gzip 186,685 字节。Web 只下载所需分片，离线仅保证已缓存分片；Electron 随包保存完整数据并按需读取。构建输出包含 BSD-2-Clause 来源说明。体积与实现细节见本计划的 P1 第二片结果。
 - Text Diff 已移除 Monaco，并改用行差异结果；闭包 gzip 为 335,556 字节。HTML 编辑器只加载当前工具栏需要的 Tiptap 扩展；PDF 解析器延迟到用户选中文件后加载。当前目标入口都低于 500 KiB。每项拆分后仍测量首次可用时间与总资源；PDF 文件选择后的新增闭包为 214,726 字节。
-- Web 构建先写出 `bundle-report.json`，再强制检查 300 KiB 首屏和 500 KiB 静态工具入口预算；任一超限都会使构建失败。边界单测覆盖刚好达标与超过 1 字节的情况。
+- Web 构建先写出 `bundle-report.json`，再强制检查 300 KiB 首屏预算和 500 KiB 工具新增 JavaScript 预算。工具新增 JavaScript 指已载入应用壳后打开工具时还需加载的静态 JavaScript。Worker 文件单独计入运行资源。任一预算超限都会使构建失败。边界单测覆盖刚好达标与超过 1 字节的情况。2026-10-25 的 Vite 8 构建结果见下方迁移记录。
 
 验收：首屏保持在 300 KiB gzip 内，目标工具静态入口保持在 500 KiB 内，预缓存不超过 8 MiB；首页不会加载未访问重型工具的数据或 Worker。PDF 验证代码只在用户选择文件后加载。PWA 访问后离线能力与 Electron 本地资源加载通过回归。代码分割与大型列表优化方法参考 [Vue 性能指南](https://vuejs.org/guide/best-practices/performance.html)。
+
+### 2026-10-25：Vite 与 pnpm 稳定版升级
+
+Vite 升级到 8.3.5，pnpm 升级到 12.15.0。Vite 8 使用 Rolldown，因此 Electron renderer 配置从 `rollupOptions` 改为 `rolldownOptions`。`unplugin-vue-markdown` 同步升级到支持 Vite 8 的 32.1.1，避免保留不兼容的插件 peer 范围。
+
+内置工具页现在由单独的组件注册表按路由载入。工具目录保留工具名称、分类、图标和平台信息，不在应用启动时静态载入工具页面。首页的命令面板与收藏拖放模块按需载入。生产构建不载入组件演示页面。开发构建在挂载前注册这些演示路由。
+
+PWA 构建仍执行 300 KiB 首屏、500 KiB 工具新增 JavaScript 和 8 MiB 预缓存限制。2026-10-25 测得首屏 JavaScript gzip 282,397 字节，预缓存原始大小 1,003,793 字节，117 个工具中最大的新增 JavaScript 为 129,569 字节；124 个可选入口全部通过 500 KiB 检查。Worker 文件单独报告，最大 Worker gzip 为 187,681 字节。Vite 8、pnpm 12.15.0、插件 peer 检查、冻结安装、生产构建和最终 `pnpm check` 均通过。Chromium 与 WebKit 的完整 Playwright 回归通过 267 项，1 项 WebKit 正则超时测试按浏览器行为跳过；该正则在 WebKit 中会快速完成，不能验证 Worker 超时。此 Windows 环境中的 Playwright Firefox 无法启动，重装后仍报告并行配置错误，因此 Firefox 覆盖尚未验证。Electron 主窗口已通过 Computer Use 验证命令搜索、cURL 工具懒加载和代码生成。
 
 ### P2：避免大输入阻塞，并能真正停止任务
 

@@ -1,5 +1,6 @@
 import { ShortTextRound } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/hmac-generator',
   description: translate('tools.hmac-generator.description'),
   keywords: ['hmac', 'generator', 'secret', 'signature', 'MD5', 'SHA1', 'SHA256', 'SHA224', 'SHA512', 'SHA384', 'SHA3', 'RIPEMD160'],
-  component: () => import('./hmac-generator.vue'),
+  component: () => loadBuiltinToolComponent('hmac-generator/hmac-generator.vue'),
   icon: ShortTextRound,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

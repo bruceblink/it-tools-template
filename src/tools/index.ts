@@ -6,6 +6,7 @@ import { tool as hexStringConverter } from './hex-string-converter';
 import { tool as basicAuthGenerator } from './basic-auth-generator';
 import { tool as basicAuthParser } from './basic-auth-parser';
 import { tool as bearerTokenParser } from './bearer-token-parser';
+import { loadBuiltinToolComponent } from './builtin-tool-component-loader';
 import { tool as emailNormalizer } from './email-normalizer';
 
 import { tool as asciiTextDrawer } from './ascii-text-drawer';
@@ -137,7 +138,7 @@ const desktopTools = import.meta.env.ELECTRON
         path: '/database-manager',
         description: translate('tools.database-manager.description'),
         keywords: ['database', 'postgresql', 'mysql', 'sqlite', 'sql', 'table', 'schema'],
-        component: () => import('./database-manager/database-manager.vue'),
+        component: () => loadBuiltinToolComponent('database-manager/database-manager.vue'),
         icon: Database,
         platforms: ['electron'],
         dataProcessing: 'network',
@@ -153,7 +154,7 @@ const desktopTools = import.meta.env.ELECTRON
         path: '/system-monitor',
         description: translate('tools.system-monitor.description'),
         keywords: ['system', 'monitor', 'cpu', 'memory', 'disk', 'network', 'process'],
-        component: () => import('./system-monitor/system-monitor.vue'),
+        component: () => loadBuiltinToolComponent('system-monitor/system-monitor.vue'),
         icon: DeviceDesktop,
         platforms: ['electron'],
         dataProcessing: 'local-data',
@@ -169,7 +170,7 @@ const desktopTools = import.meta.env.ELECTRON
         path: '/api-client',
         description: translate('tools.api-client.description'),
         keywords: ['api', 'http', 'request', 'rest', 'response', 'headers'],
-        component: () => import('./api-client/api-client.vue'),
+        component: () => loadBuiltinToolComponent('api-client/api-client.vue'),
         icon: DeviceDesktop,
         platforms: ['electron'],
         dataProcessing: 'network',
@@ -185,7 +186,7 @@ const desktopTools = import.meta.env.ELECTRON
         path: '/git-workbench',
         description: translate('tools.git-workbench.description'),
         keywords: ['git'],
-        component: () => import('./git-workbench/git-workbench.vue'),
+        component: () => loadBuiltinToolComponent('git-workbench/git-workbench.vue'),
         icon: DeviceDesktop,
         platforms: ['electron'],
         dataProcessing: 'local-data',
@@ -197,14 +198,14 @@ const desktopTools = import.meta.env.ELECTRON
         id: 'builtin/object-storage', categoryId: 'development', translationKey: 'object-storage',
         name: translate('tools.object-storage.title'), path: '/object-storage',
         description: translate('tools.object-storage.description'), keywords: ['s3', 'bucket', 'object', 'storage'],
-        component: () => import('./object-storage/object-storage.vue'), icon: DeviceDesktop, platforms: ['electron'],
+        component: () => loadBuiltinToolComponent('object-storage/object-storage.vue'), icon: DeviceDesktop, platforms: ['electron'],
         dataProcessing: 'network', offline: 'requires-network', capabilities: [], contentWidth: 'wide',
       }),
       defineTool({
         id: 'builtin/container-workbench', categoryId: 'development', translationKey: 'container-workbench',
         name: translate('tools.container-workbench.title'), path: '/container-workbench',
         description: translate('tools.container-workbench.description'), keywords: ['docker', 'container'],
-        component: () => import('./container-workbench/container-workbench.vue'), icon: DeviceDesktop, platforms: ['electron'],
+        component: () => loadBuiltinToolComponent('container-workbench/container-workbench.vue'), icon: DeviceDesktop, platforms: ['electron'],
         dataProcessing: 'local-data', offline: 'conditional', capabilities: [], contentWidth: 'wide',
       }),
     ]

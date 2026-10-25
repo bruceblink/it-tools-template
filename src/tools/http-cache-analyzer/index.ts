@@ -1,5 +1,6 @@
 import { Clock } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/http-cache-analyzer',
   description: translate('tools.http-cache-analyzer.description'),
   keywords: ['http', 'cache', 'headers', 'cache-control', 'etag', 'expires', 'date', 'age', 'freshness', 'vary', 'score', 'grade'],
-  component: () => import('./http-cache-analyzer.vue'),
+  component: () => loadBuiltinToolComponent('http-cache-analyzer/http-cache-analyzer.vue'),
   icon: Clock,
   createdAt: new Date('2026-07-04'),
 });

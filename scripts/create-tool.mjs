@@ -202,6 +202,7 @@ function buildToolFiles(config) {
 `],
     ['index.ts', `import { ArrowsShuffle } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import type { ToolDefinition } from '../tools.types';
 import { translate } from '@/plugins/i18n.plugin';
 
@@ -213,7 +214,7 @@ const toolDefinition = {
   path: '/${toolName}',
   description: translate('tools.${toolName}.description'),
   keywords: [${keywords}],
-  component: () => import('./${toolName}.vue'),
+  component: () => loadBuiltinToolComponent('${toolName}/${toolName}.vue'),
   icon: ArrowsShuffle,
   platforms: [${platformSource}],
   dataProcessing: '${dataProcessing}',

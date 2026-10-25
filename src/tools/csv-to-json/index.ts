@@ -1,5 +1,6 @@
 import { List } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -15,7 +16,7 @@ export const tool = defineTool({
   path: '/csv-to-json',
   description: translate('tools.csv-to-json.description'),
   keywords: ['csv', 'json', 'convert', 'parse', 'nested', 'dot notation'],
-  component: () => import('./csv-to-json.vue'),
+  component: () => loadBuiltinToolComponent('csv-to-json/csv-to-json.vue'),
   icon: List,
   createdAt: new Date('2026-06-08'),
 });

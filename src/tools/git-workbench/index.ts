@@ -1,6 +1,7 @@
 import { DeviceDesktop } from '@vicons/tabler';
 import { translate } from '@/plugins/i18n.plugin';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 
 export const tool = defineTool({
   id: 'builtin/git-workbench',
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/git-workbench',
   description: translate('tools.git-workbench.description'),
   keywords: ['git'],
-  component: () => import('./git-workbench.vue'),
+  component: () => loadBuiltinToolComponent('git-workbench/git-workbench.vue'),
   icon: DeviceDesktop,
   platforms: ['electron'],
   dataProcessing: 'local-data',

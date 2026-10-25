@@ -1,5 +1,6 @@
 import { FileDiff } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/text-diff',
   description: translate('tools.text-diff.description'),
   keywords: ['text', 'diff', 'compare', 'string', 'text diff', 'code'],
-  component: () => import('./text-diff.vue'),
+  component: () => loadBuiltinToolComponent('text-diff/text-diff.vue'),
   icon: FileDiff,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

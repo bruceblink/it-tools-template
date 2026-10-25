@@ -1,5 +1,6 @@
 import { World } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -15,6 +16,6 @@ export const tool = defineTool({
   path: '/mime-types',
   description: translate('tools.mime-types.description'),
   keywords: ['mime', 'types', 'extension', 'content', 'type'],
-  component: () => import('./mime-types.vue'),
+  component: () => loadBuiltinToolComponent('mime-types/mime-types.vue'),
   icon: World,
 });

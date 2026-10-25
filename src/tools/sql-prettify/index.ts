@@ -1,5 +1,6 @@
 import { Database } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -29,6 +30,6 @@ export const tool = defineTool({
     'Spark',
     'SQL Server Transact-SQL',
   ],
-  component: () => import('./sql-prettify.vue'),
+  component: () => loadBuiltinToolComponent('sql-prettify/sql-prettify.vue'),
   icon: Database,
 });

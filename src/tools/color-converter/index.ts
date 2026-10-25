@@ -1,5 +1,6 @@
 import { Palette } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/color-converter',
   description: translate('tools.color-converter.description'),
   keywords: ['color', 'converter'],
-  component: () => import('./color-converter.vue'),
+  component: () => loadBuiltinToolComponent('color-converter/color-converter.vue'),
   icon: Palette,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

@@ -3,7 +3,6 @@ import HomePage from './pages/Home.page.vue';
 import NotFound from './pages/404.page.vue';
 import { tools } from './tools';
 import { config } from './config';
-import { routes as demoRoutes } from './ui/demo/demo.routes';
 import { layouts } from '@/layouts';
 
 const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, contentWidth, extensionOwned }) => ({
@@ -49,10 +48,18 @@ const router = createRouter({
     },
     ...toolsRoutes,
     ...toolsRedirectRoutes,
-    ...(config.app.env === 'development' ? demoRoutes : []),
     { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFound },
   ],
 });
+
+/** Register component demos only in development builds, outside the production route graph. */
+export async function registerDemoRoutes() {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+  const { routes } = await import('./ui/demo/demo.routes');
+  routes.forEach(route => router.addRoute(route));
+}
 
 router.beforeEach(async (to) => {
   if (to.meta.extensionOwned === true) {

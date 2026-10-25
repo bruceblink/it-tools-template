@@ -12,11 +12,12 @@ import { NaiveUiResolver } from 'unplugin-vue-components/resolvers';
 import Components from 'unplugin-vue-components/vite';
 import markdown from 'unplugin-vue-markdown/vite';
 import svgLoader from 'vite-svg-loader';
-import pkg from './package.json';
+import pkg from './package.json' with { type: 'json' };
 
 const projectRoot = dirname(fileURLToPath(import.meta.url));
 
-export function createRendererPlugins() {
+// Production entry graphs omit platform-specific pages and must not replace the shared component declarations.
+export function createRendererPlugins({ componentDeclarations = false }: { componentDeclarations?: boolean } = {}) {
   return [
     VueI18n({
       runtimeOnly: true,
@@ -52,7 +53,7 @@ export function createRendererPlugins() {
     svgLoader(),
     Components({
       dirs: [resolve(projectRoot, 'src')],
-      dts: resolve(projectRoot, 'components.d.ts'),
+      dts: componentDeclarations ? resolve(projectRoot, 'components.d.ts') : false,
       dtsTsx: false,
       extensions: ['vue', 'md'],
       include: [/\.vue$/, /\.vue\?vue/, /\.md$/],

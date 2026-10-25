@@ -56,6 +56,7 @@ test('build paths reject traversal, URLs, query strings, encoded paths and Windo
     assert.throws(() => assertBuildPath(file), /Invalid build resource path/);
   }
   assert.equal(assertBuildPath('assets/nested/editor.worker-1234_ab-.js'), 'assets/nested/editor.worker-1234_ab-.js');
+  assert.equal(assertBuildPath('assets/shared~json-viewer~yaml-viewer-1234.js'), 'assets/shared~json-viewer~yaml-viewer-1234.js');
 });
 
 test('precache budget includes its exact boundary and rejects one extra byte', () => {
@@ -66,7 +67,7 @@ test('precache budget includes its exact boundary and rejects one extra byte', (
 test('initial and tool JavaScript budgets include their exact boundaries and reject one extra byte', () => {
   assert.doesNotThrow(() => assertPerformanceBudgets({
     initial: { javaScriptGzipBytes: budgets.initialJavaScriptGzipBytes },
-    optionalEntries: [{ entry: 'tool', javaScriptGzipBytes: budgets.toolJavaScriptGzipBytes }],
+    optionalEntries: [{ entry: 'tool', incrementalJavaScriptGzipBytes: budgets.toolJavaScriptGzipBytes }],
   }));
   assert.throws(() => assertPerformanceBudgets({
     initial: { javaScriptGzipBytes: budgets.initialJavaScriptGzipBytes + 1 },
@@ -74,8 +75,8 @@ test('initial and tool JavaScript budgets include their exact boundaries and rej
   }), /initial JavaScript gzip .* > /);
   assert.throws(() => assertPerformanceBudgets({
     initial: { javaScriptGzipBytes: budgets.initialJavaScriptGzipBytes },
-    optionalEntries: [{ entry: 'tool', javaScriptGzipBytes: budgets.toolJavaScriptGzipBytes + 1 }],
-  }), /tool JavaScript closure .* > /);
+    optionalEntries: [{ entry: 'tool', incrementalJavaScriptGzipBytes: budgets.toolJavaScriptGzipBytes + 1 }],
+  }), /tool incremental JavaScript .* > /);
 });
 
 test('Workbox candidates are filtered by graph; report measures unique raw and gzip bytes', async (t) => {
@@ -130,6 +131,29 @@ test('size reports include synthesized dynamic entry keys and emitted worker res
   const report = JSON.parse(await readFile(resolve(directory, 'bundle-report.json'), 'utf8'));
   assert(report.optionalEntries.some(entry => entry.entry === '_merged.js'));
   assert(report.runtimeAssets.files.some(file => file.file === 'assets/editor.worker-12345678.js'));
+});
+
+test('size reports include tool pages nested under a lazy component registry', async (t) => {
+  const { directory, entries } = await fixture(t);
+  const nestedToolManifest = {
+    ...manifest,
+    'src/tools/nested/nested-tool.vue': {
+      file: 'assets/nested-tool-12345678.js',
+      isDynamicEntry: true,
+      imports: ['shared'],
+      assets: ['assets/nested.worker-12345678.js'],
+    },
+  };
+  await writeFile(resolve(directory, '.vite/manifest.json'), JSON.stringify(nestedToolManifest));
+  await writeFile(resolve(directory, 'assets/nested-tool-12345678.js'), 'nested tool');
+  await writeFile(resolve(directory, 'assets/nested.worker-12345678.js'), 'nested worker');
+  await filterAppShell(directory, entries);
+  const report = JSON.parse(await readFile(resolve(directory, 'bundle-report.json'), 'utf8'));
+  const entry = report.optionalEntries.find(item => item.entry === 'src/tools/nested/nested-tool.vue');
+  assert(entry);
+  assert(entry.files.some(file => file.file === 'assets/nested.worker-12345678.js'));
+  assert(!entry.incrementalJavaScriptFiles.some(file => file.file === 'assets/nested.worker-12345678.js'));
+  assert.equal(entry.incrementalJavaScriptGzipBytes, gzipSync('nested tool').byteLength);
 });
 
 test('a missing file referenced by the manifest fails the build', async (t) => {

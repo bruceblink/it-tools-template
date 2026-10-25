@@ -49,7 +49,8 @@ export default defineConfig({
       ...createRendererDefines({ desktop: true }),
       'import.meta.env.ELECTRON': 'true',
     },
-    plugins: [...createRendererPlugins(), appProtocolBase],
+    // Keep Electron's platform-specific module graph from overwriting the shared component declarations.
+    plugins: [...createRendererPlugins({ componentDeclarations: false }), appProtocolBase],
     server: {
       host: '127.0.0.1',
       port: 5173,
@@ -58,7 +59,7 @@ export default defineConfig({
     build: {
       outDir: resolve(projectRoot, 'out/renderer'),
       emptyOutDir: true,
-      rollupOptions: {
+      rolldownOptions: {
         input: resolve(projectRoot, 'electron-renderer/index.html'),
       },
     },

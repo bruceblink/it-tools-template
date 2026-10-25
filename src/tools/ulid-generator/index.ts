@@ -1,5 +1,6 @@
 import { SortDescendingNumbers } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/ulid-generator',
   description: translate('tools.ulid-generator.description'),
   keywords: ['ulid', 'generator', 'random', 'id', 'alphanumeric', 'identity', 'token', 'string', 'identifier', 'unique'],
-  component: () => import('./ulid-generator.vue'),
+  component: () => loadBuiltinToolComponent('ulid-generator/ulid-generator.vue'),
   icon: SortDescendingNumbers,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

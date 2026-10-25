@@ -1,5 +1,6 @@
 import { Binary } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/hex-string-converter',
   description: translate('tools.hex-string-converter.description'),
   keywords: ['hex', 'hexadecimal', 'string', 'converter', 'encode', 'decode', 'utf8', 'bytes', 'summary', 'length'],
-  component: () => import('./hex-string-converter.vue'),
+  component: () => loadBuiltinToolComponent('hex-string-converter/hex-string-converter.vue'),
   icon: Binary,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

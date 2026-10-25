@@ -1,5 +1,6 @@
 import { Markdown } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/markdown-to-html',
   description: translate('tools.markdown-to-html.description'),
   keywords: ['markdown', 'html', 'converter', 'pdf'],
-  component: () => import('./markdown-to-html.vue'),
+  component: () => loadBuiltinToolComponent('markdown-to-html/markdown-to-html.vue'),
   icon: Markdown,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

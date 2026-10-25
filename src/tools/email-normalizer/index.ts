@@ -1,5 +1,6 @@
 import { Mail } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/email-normalizer',
   description: translate('tools.email-normalizer.description'),
   keywords: ['email', 'normalizer'],
-  component: () => import('./email-normalizer.vue'),
+  component: () => loadBuiltinToolComponent('email-normalizer/email-normalizer.vue'),
   icon: Mail,
   createdAt: new Date('2024-08-15'),
 });

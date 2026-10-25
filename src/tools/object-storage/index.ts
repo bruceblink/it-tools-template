@@ -1,5 +1,6 @@
 import { DeviceDesktop } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/object-storage',
   description: translate('tools.object-storage.description'),
   keywords: ['s3', 'bucket', 'object', 'storage'],
-  component: () => import('./object-storage.vue'),
+  component: () => loadBuiltinToolComponent('object-storage/object-storage.vue'),
   icon: DeviceDesktop,
   platforms: ['electron'],
   dataProcessing: 'network',

@@ -1,5 +1,6 @@
 import { FileDigit } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/base32-string-converter',
   description: translate('tools.base32-string-converter.description'),
   keywords: ['base32', 'converter', 'conversion', 'encoding', 'decode', 'totp', 'secret', 'rfc4648', 'summary', 'bytes', 'length', 'padding'],
-  component: () => import('./base32-string-converter.vue'),
+  component: () => loadBuiltinToolComponent('base32-string-converter/base32-string-converter.vue'),
   icon: FileDigit,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

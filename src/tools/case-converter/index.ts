@@ -1,5 +1,6 @@
 import { LetterCaseToggle } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -24,7 +25,7 @@ export const tool = defineTool({
     'sentenceCase',
     'snakeCase',
   ],
-  component: () => import('./case-converter.vue'),
+  component: () => loadBuiltinToolComponent('case-converter/case-converter.vue'),
   icon: LetterCaseToggle,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

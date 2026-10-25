@@ -1,5 +1,6 @@
 import { LockSquare } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/bcrypt',
   description: translate('tools.bcrypt.description'),
   keywords: ['bcrypt', 'hash', 'compare', 'password', 'salt', 'round', 'storage', 'crypto'],
-  component: () => import('./bcrypt.vue'),
+  component: () => loadBuiltinToolComponent('bcrypt/bcrypt.vue'),
   icon: LockSquare,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

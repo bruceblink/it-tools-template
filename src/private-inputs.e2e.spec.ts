@@ -107,7 +107,7 @@ test.describe('private tool inputs', () => {
 
     await page.reload();
     await expect(input).toHaveValue('');
-    await expect(page.getByTestId('area-content').first()).toHaveText('null');
+    await expect(page.getByTestId('area-content').first()).toHaveText('');
     await expect.poll(() => page.evaluate(() => localStorage.getItem('yaml-prettify:raw-yaml'))).toBeNull();
     await expect.poll(() => page.evaluate(() => localStorage.getItem('yaml-prettify:indent-size'))).toBe('3');
   });

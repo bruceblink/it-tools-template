@@ -1,5 +1,6 @@
 import { BuildingFactory } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/ipv6-ula-generator',
   description: translate('tools.ipv6-ula-generator.description'),
   keywords: ['ipv6', 'ula', 'generator', 'rfc4193', 'network', 'private'],
-  component: () => import('./ipv6-ula-generator.vue'),
+  component: () => loadBuiltinToolComponent('ipv6-ula-generator/ipv6-ula-generator.vue'),
   icon: BuildingFactory,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

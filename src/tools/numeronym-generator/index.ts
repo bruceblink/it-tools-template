@@ -1,4 +1,5 @@
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import n7mIcon from './n7m-icon.svg?component';
 import { translate } from '@/plugins/i18n.plugin';
 
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/numeronym-generator',
   description: translate('tools.numeronym-generator.description'),
   keywords: ['numeronym', 'generator', 'abbreviation', 'i18n', 'a11y', 'l10n'],
-  component: () => import('./numeronym-generator.vue'),
+  component: () => loadBuiltinToolComponent('numeronym-generator/numeronym-generator.vue'),
   icon: n7mIcon,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

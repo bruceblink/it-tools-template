@@ -1,4 +1,5 @@
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 import PasswordIcon from '~icons/mdi/form-textbox-password';
 
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/password-strength-analyser',
   description: translate('tools.password-strength-analyser.description'),
   keywords: ['password', 'strength', 'analyser', 'and', 'crack', 'time', 'estimation', 'brute', 'force', 'attack', 'entropy', 'cracking', 'hash', 'hashing', 'algorithm', 'algorithms', 'md5', 'sha1', 'sha256', 'sha512', 'bcrypt', 'scrypt', 'argon2', 'argon2id', 'argon2i', 'argon2d'],
-  component: () => import('./password-strength-analyser.vue'),
+  component: () => loadBuiltinToolComponent('password-strength-analyser/password-strength-analyser.vue'),
   icon: PasswordIcon,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

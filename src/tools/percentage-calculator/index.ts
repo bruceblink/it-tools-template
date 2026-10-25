@@ -1,5 +1,6 @@
 import { Percentage } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/percentage-calculator',
   description: translate('tools.percentage-calculator.description'),
   keywords: ['percentage', 'calculator', 'calculate', 'value', 'number', '%'],
-  component: () => import('./percentage-calculator.vue'),
+  component: () => loadBuiltinToolComponent('percentage-calculator/percentage-calculator.vue'),
   icon: Percentage,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

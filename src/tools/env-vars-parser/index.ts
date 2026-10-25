@@ -1,5 +1,6 @@
 import { Variable } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/env-vars-parser',
   description: translate('tools.env-vars-parser.description'),
   keywords: ['env', 'dotenv', 'environment', 'variables', 'docker', 'compose', 'shell', 'export', 'json'],
-  component: () => import('./env-vars-parser.vue'),
+  component: () => loadBuiltinToolComponent('env-vars-parser/env-vars-parser.vue'),
   icon: Variable,
   createdAt: new Date('2026-07-04'),
 });

@@ -1,5 +1,6 @@
 import { Ruler } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/length-converter',
   description: translate('tools.length-converter.description'),
   keywords: ['length', 'distance', 'meter', 'inch', 'convert'],
-  component: () => import('./length-converter.vue'),
+  component: () => loadBuiltinToolComponent('length-converter/length-converter.vue'),
   icon: Ruler,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

@@ -1,6 +1,7 @@
 import { DeviceDesktop } from '@vicons/tabler';
 import { translate } from '@/plugins/i18n.plugin';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 
 export const tool = defineTool({
   id: 'builtin/container-workbench',
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/container-workbench',
   description: translate('tools.container-workbench.description'),
   keywords: ['docker', 'container'],
-  component: () => import('./container-workbench.vue'),
+  component: () => loadBuiltinToolComponent('container-workbench/container-workbench.vue'),
   icon: DeviceDesktop,
   platforms: ['electron'],
   dataProcessing: 'local-data',

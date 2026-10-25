@@ -1,5 +1,6 @@
 import { Calendar } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/date-converter',
   description: translate('tools.date-converter.description'),
   keywords: ['date', 'time', 'converter', 'iso', 'utc', 'timezone', 'year', 'month', 'day', 'minute', 'seconde'],
-  component: () => import('./date-time-converter.vue'),
+  component: () => loadBuiltinToolComponent('date-time-converter/date-time-converter.vue'),
   icon: Calendar,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

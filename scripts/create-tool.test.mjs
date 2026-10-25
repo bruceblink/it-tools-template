@@ -74,6 +74,7 @@ test('creates a tool, registers its category, and adds both required translation
   assert.match(registeredSource, /components: \[\s+existingTool,\s+sampleTool\s+\]/);
   assert.match(generatedDefinition, /id: 'builtin\/sample-tool'/);
   assert.match(generatedDefinition, /\} satisfies ToolDefinition;/);
+  assert.match(generatedDefinition, /loadBuiltinToolComponent\('sample-tool\/sample-tool\.vue'\)/);
   assert.match(generatedDefinition, /dataProcessing: 'memory-only'/);
   assert.match(generatedDefinition, /capabilities: \[\]/);
   assert.match(generatedTest, /createValidatedToolRegistry\(categories, 'extension'\)/);

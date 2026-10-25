@@ -1,5 +1,6 @@
 import { AlignJustified } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/yaml-to-json-converter',
   description: translate('tools.yaml-to-json-converter.description'),
   keywords: ['yaml', 'to', 'json'],
-  component: () => import('./yaml-to-json.vue'),
+  component: () => loadBuiltinToolComponent('yaml-to-json-converter/yaml-to-json.vue'),
   icon: AlignJustified,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

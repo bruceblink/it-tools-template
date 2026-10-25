@@ -1,5 +1,6 @@
 import { Devices } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -11,7 +12,7 @@ export const tool = defineTool({
   path: '/mac-address-lookup',
   description: translate('tools.mac-address-lookup.description'),
   keywords: ['mac', 'address', 'lookup', 'vendor', 'parser', 'manufacturer'],
-  component: () => import('./mac-address-lookup.vue'),
+  component: () => loadBuiltinToolComponent('mac-address-lookup/mac-address-lookup.vue'),
   icon: Devices,
   platforms: ['web', 'electron'],
   dataProcessing: 'local-data',

@@ -1,5 +1,6 @@
 import { Math } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -42,7 +43,7 @@ export const tool = defineTool({
     'tan',
     'tanh',
   ],
-  component: () => import('./math-evaluator.vue'),
+  component: () => loadBuiltinToolComponent('math-evaluator/math-evaluator.vue'),
   icon: Math,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

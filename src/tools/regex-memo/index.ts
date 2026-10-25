@@ -1,5 +1,6 @@
 import { BrandJavascript } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/regex-memo',
   description: translate('tools.regex-memo.description'),
   keywords: ['regex', 'regular', 'expression', 'javascript', 'memo', 'cheatsheet'],
-  component: () => import('./regex-memo.vue'),
+  component: () => loadBuiltinToolComponent('regex-memo/regex-memo.vue'),
   icon: BrandJavascript,
   createdAt: new Date('2024-09-20'),
 });

@@ -1,5 +1,6 @@
 import { Braces } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/json-prettify',
   description: translate('tools.json-prettify.description'),
   keywords: ['json', 'viewer', 'prettify', 'format'],
-  component: () => import('./json-viewer.vue'),
+  component: () => loadBuiltinToolComponent('json-viewer/json-viewer.vue'),
   icon: Braces,
   redirectFrom: ['/json-viewer'],
 });

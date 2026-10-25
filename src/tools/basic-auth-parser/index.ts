@@ -1,5 +1,6 @@
 import { PasswordRound } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/basic-auth-parser',
   description: translate('tools.basic-auth-parser.description'),
   keywords: ['basic', 'auth', 'parser', 'username', 'password', 'base64', 'authentication', 'authorization', 'security', 'weak password'],
-  component: () => import('./basic-auth-parser.vue'),
+  component: () => loadBuiltinToolComponent('basic-auth-parser/basic-auth-parser.vue'),
   icon: PasswordRound,
   createdAt: new Date('2026-07-04'),
 });

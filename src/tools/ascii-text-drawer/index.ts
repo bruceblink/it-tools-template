@@ -1,5 +1,6 @@
 import { Artboard } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/ascii-text-drawer',
   description: translate('tools.ascii-text-drawer.description'),
   keywords: ['ascii', 'asciiart', 'text', 'drawer'],
-  component: () => import('./ascii-text-drawer.vue'),
+  component: () => loadBuiltinToolComponent('ascii-text-drawer/ascii-text-drawer.vue'),
   icon: Artboard,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

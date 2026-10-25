@@ -1,5 +1,6 @@
 import { Speakerphone } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/text-to-nato-alphabet',
   description: translate('tools.text-to-nato-alphabet.description'),
   keywords: ['string', 'nato', 'alphabet', 'phonetic', 'oral', 'transmission'],
-  component: () => import('./text-to-nato-alphabet.vue'),
+  component: () => loadBuiltinToolComponent('text-to-nato-alphabet/text-to-nato-alphabet.vue'),
   icon: Speakerphone,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

@@ -1,5 +1,6 @@
 import { SpeedFilled } from '@vicons/material';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/benchmark-builder',
   description: translate('tools.benchmark-builder.description'),
   keywords: ['benchmark', 'builder', 'execution', 'duration', 'mean', 'variance'],
-  component: () => import('./benchmark-builder.vue'),
+  component: () => loadBuiltinToolComponent('benchmark-builder/benchmark-builder.vue'),
   icon: SpeedFilled,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

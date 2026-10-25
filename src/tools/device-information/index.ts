@@ -1,5 +1,6 @@
 import { DeviceDesktop } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -22,7 +23,7 @@ export const tool = defineTool({
     'user',
     'agent',
   ],
-  component: () => import('./device-information.vue'),
+  component: () => loadBuiltinToolComponent('device-information/device-information.vue'),
   icon: DeviceDesktop,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

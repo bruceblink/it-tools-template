@@ -1,5 +1,6 @@
 import { EyeOff } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -26,7 +27,7 @@ export const tool = defineTool({
     'SHA3',
     'RIPEMD160',
   ],
-  component: () => import('./hash-text.vue'),
+  component: () => loadBuiltinToolComponent('hash-text/hash-text.vue'),
   icon: EyeOff,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

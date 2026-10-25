@@ -1,5 +1,6 @@
 import { Braces } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,6 +15,6 @@ export const tool = defineTool({
   path: '/json-minify',
   description: translate('tools.json-minify.description'),
   keywords: ['json', 'minify', 'format'],
-  component: () => import('./json-minify.vue'),
+  component: () => loadBuiltinToolComponent('json-minify/json-minify.vue'),
   icon: Braces,
 });

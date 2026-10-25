@@ -1,5 +1,6 @@
 import { Key } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -30,6 +31,6 @@ export const tool = defineTool({
     'web',
     'token',
   ],
-  component: () => import('./jwt-parser.vue'),
+  component: () => loadBuiltinToolComponent('jwt-parser/jwt-parser.vue'),
   icon: Key,
 });

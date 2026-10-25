@@ -1,5 +1,6 @@
 import { Temperature } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -22,7 +23,7 @@ export const tool = defineTool({
     'Réaumur',
     'Rømer',
   ],
-  component: () => import('./temperature-converter.vue'),
+  component: () => loadBuiltinToolComponent('temperature-converter/temperature-converter.vue'),
   icon: Temperature,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

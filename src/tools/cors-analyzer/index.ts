@@ -1,5 +1,6 @@
 import { ArrowsRightLeft } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -15,7 +16,7 @@ export const tool = defineTool({
   path: '/cors-analyzer',
   description: translate('tools.cors-analyzer.description'),
   keywords: ['cors', 'http', 'headers', 'origin', 'preflight', 'access-control', 'credentials', 'score', 'grade', 'risk', 'summary'],
-  component: () => import('./cors-analyzer.vue'),
+  component: () => loadBuiltinToolComponent('cors-analyzer/cors-analyzer.vue'),
   icon: ArrowsRightLeft,
   createdAt: new Date('2026-07-04'),
 });

@@ -1,5 +1,6 @@
 import { EyeOff } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/string-obfuscator',
   description: translate('tools.string-obfuscator.description'),
   keywords: ['string', 'obfuscator', 'secret', 'token', 'hide', 'obscure', 'mask', 'masking'],
-  component: () => import('./string-obfuscator.vue'),
+  component: () => loadBuiltinToolComponent('string-obfuscator/string-obfuscator.vue'),
   icon: EyeOff,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

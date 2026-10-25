@@ -2024,14 +2024,14 @@ onUnmounted(() => {
                   :options="dataViewColumnOptions"
                   :placeholder="dataViewText.filterColumn"
                   clearable
-                  @update:value="value => draftDataFilterColumn = value"
+                  @update:value="(value: string | null) => draftDataFilterColumn = value"
                 />
                 <n-select
                   data-test-id="database-filter-operator"
                   :value="draftDataFilterOperator"
                   :options="filterOperatorOptions"
                   :placeholder="dataViewText.filterOperator"
-                  @update:value="value => draftDataFilterOperator = value"
+                  @update:value="(value: DatabaseDataFilterOperator) => draftDataFilterOperator = value"
                 />
                 <n-input
                   v-if="!isNullDataFilter"
@@ -2066,14 +2066,14 @@ onUnmounted(() => {
                   :options="dataViewColumnOptions"
                   :placeholder="dataViewText.sortColumn"
                   clearable
-                  @update:value="value => draftDataSortColumn = value"
+                  @update:value="(value: string | null) => draftDataSortColumn = value"
                 />
                 <n-select
                   data-test-id="database-sort-direction"
                   :value="draftDataSortDirection"
                   :options="sortDirectionOptions"
                   :placeholder="dataViewText.sortDirection"
-                  @update:value="value => draftDataSortDirection = value"
+                  @update:value="(value: 'asc' | 'desc') => draftDataSortDirection = value"
                 />
                 <n-button
                   data-test-id="database-sort-apply"

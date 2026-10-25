@@ -1,5 +1,6 @@
 import { LetterX } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/roman-numeral-converter',
   description: translate('tools.roman-numeral-converter.description'),
   keywords: ['roman', 'arabic', 'converter', 'X', 'I', 'V', 'L', 'C', 'D', 'M'],
-  component: () => import('./roman-numeral-converter.vue'),
+  component: () => loadBuiltinToolComponent('roman-numeral-converter/roman-numeral-converter.vue'),
   icon: LetterX,
   platforms: ['web', 'electron'],
   dataProcessing: 'memory-only',

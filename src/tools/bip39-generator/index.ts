@@ -1,5 +1,6 @@
 import { AlignJustified } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/bip39-generator',
   description: translate('tools.bip39-generator.description'),
   keywords: ['BIP39', 'passphrase', 'generator', 'mnemonic', 'entropy'],
-  component: () => import('./bip39-generator.vue'),
+  component: () => loadBuiltinToolComponent('bip39-generator/bip39-generator.vue'),
   icon: AlignJustified,
   platforms: ['web', 'electron'],
   dataProcessing: 'local-data',

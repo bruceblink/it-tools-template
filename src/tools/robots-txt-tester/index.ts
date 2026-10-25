@@ -1,5 +1,6 @@
 import { Robot } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -14,7 +15,7 @@ export const tool = defineTool({
   path: '/robots-txt-tester',
   description: translate('tools.robots-txt-tester.description'),
   keywords: ['robots', 'robots.txt', 'crawler', 'seo', 'user-agent', 'sitemap', 'crawl-delay'],
-  component: () => import('./robots-txt-tester.vue'),
+  component: () => loadBuiltinToolComponent('robots-txt-tester/robots-txt-tester.vue'),
   icon: Robot,
   createdAt: new Date('2026-07-04'),
 });

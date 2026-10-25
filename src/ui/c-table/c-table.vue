@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import _ from 'lodash';
 import type { HeaderConfiguration } from './c-table.types';
 
 const props = withDefaults(
@@ -30,18 +29,11 @@ const headers = computed(() => {
       });
     }
 
-    return _.map(rawHeaders.value, (value, key) => ({
-      key,
-      label: value,
-    }));
+    return Object.entries(rawHeaders.value).map(([key, label]) => ({ key, label }));
   }
 
-  return _.chain(data.value)
-    .map(row => Object.keys(row))
-    .flatten()
-    .uniq()
-    .map(key => ({ key, label: key }))
-    .value();
+  const keys = new Set(data.value.flatMap(row => Object.keys(row)));
+  return [...keys].map(key => ({ key, label: key }));
 });
 </script>
 

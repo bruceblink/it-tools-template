@@ -1,5 +1,6 @@
 import { Table } from '@vicons/tabler';
 import { defineTool } from '../tool';
+import { loadBuiltinToolComponent } from '../builtin-tool-component-loader';
 import { translate } from '@/plugins/i18n.plugin';
 
 export const tool = defineTool({
@@ -10,7 +11,7 @@ export const tool = defineTool({
   path: '/database-manager',
   description: translate('tools.database-manager.description'),
   keywords: ['database', 'postgresql', 'mysql', 'sqlite', 'sql', 'table', 'schema'],
-  component: () => import('./database-manager.vue'),
+  component: () => loadBuiltinToolComponent('database-manager/database-manager.vue'),
   icon: Table,
   platforms: ['electron'],
   dataProcessing: 'network',
