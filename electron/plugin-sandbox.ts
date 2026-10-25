@@ -15,6 +15,7 @@ import type {
   PluginCapabilityBroker,
   PluginCapabilityExecutor,
 } from './plugin-capability-broker';
+import { getPluginWorkerGuardScript, injectPluginWorkerGuard } from './plugin-worker-guard';
 import { resolveRendererFile } from './security';
 
 export const PLUGIN_SCHEME = 'it-plugin';
@@ -105,6 +106,15 @@ export function getPluginEntryUrl(pluginId: string, entrypoint: string): string 
 }
 
 export function getPluginContentSecurityPolicy(): string {
+  return buildPluginContentSecurityPolicy("'self'");
+}
+
+/** A Worker response may import same-origin scripts but cannot create descendants. */
+export function getPluginWorkerContentSecurityPolicy(): string {
+  return buildPluginContentSecurityPolicy("'none'");
+}
+
+function buildPluginContentSecurityPolicy(workerSource: string): string {
   return [
     "default-src 'none'",
     "script-src 'self'",
@@ -112,8 +122,7 @@ export function getPluginContentSecurityPolicy(): string {
     "img-src 'self' data:",
     "font-src 'self'",
     "connect-src 'self'",
-    // Workers stay disabled until the sandbox can enforce an active worker count per plugin.
-    "worker-src 'none'",
+    `worker-src ${workerSource}`,
     "frame-src 'none'",
     "object-src 'none'",
     "base-uri 'none'",
@@ -245,6 +254,18 @@ async function installPluginSessionPolicy(
     if (!isPluginRendererUrl(requestUrl.href, registration.pluginId)) {
       return pluginResponse('Not found', 404);
     }
+    if (requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH
+      && requestUrl.searchParams.get('__it_tools_internal') === 'worker-guard') {
+      if (request.method !== 'GET') {
+        return pluginResponse('Method not allowed', 405, { Allow: 'GET' });
+      }
+      if (policy.activeContentsId === null) {
+        return pluginResponse('Plugin inactive', 410);
+      }
+      return pluginResponse(getPluginWorkerGuardScript(), 200, {
+        'Content-Type': 'text/javascript; charset=utf-8',
+      });
+    }
     if (requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH) {
       if (policy.activeContentsId === null || !policy.capabilityBroker) {
         return pluginJsonResponse(410, { ok: false, error: 'plugin-inactive' });
@@ -268,10 +289,17 @@ async function installPluginSessionPolicy(
       if (fileStat.size > maximumPluginAssetBytes) {
         return pluginResponse('Asset too large', 413);
       }
-      const body = request.method === 'HEAD' ? null : await readFile(filePath);
+      let body = request.method === 'HEAD' ? null : await readFile(filePath);
+      const extension = extname(filePath).toLowerCase();
+      if (body && extension === '.html') {
+        const guardUrl = `${PLUGIN_CAPABILITY_API_PATH}?__it_tools_internal=worker-guard`;
+        body = Buffer.from(injectPluginWorkerGuard(body.toString('utf8'), guardUrl), 'utf8');
+      }
       return pluginResponse(body, 200, {
-        'Content-Type': contentTypes[extname(filePath).toLowerCase()] ?? 'application/octet-stream',
-      });
+        'Content-Type': contentTypes[extension] ?? 'application/octet-stream',
+      }, extension === '.js' || extension === '.mjs'
+        ? getPluginWorkerContentSecurityPolicy()
+        : getPluginContentSecurityPolicy());
     }
     catch {
       return pluginResponse('Not found', 404);
@@ -292,6 +320,26 @@ async function installPluginSessionPolicy(
 
     if (blockedNetworkProtocols.has(requestUrl.protocol)) {
       callback({ cancel: true });
+      return;
+    }
+
+    if (requestUrl.protocol === `${PLUGIN_SCHEME}:`
+      && requestUrl.pathname === PLUGIN_CAPABILITY_API_PATH
+      && requestUrl.searchParams.get('__it_tools_internal') === 'worker-guard') {
+      const sourceFrame = details.frame;
+      const trustedMainFrame = sourceFrame !== undefined
+        && sourceFrame !== null
+        && sourceFrame.parent === null
+        && isPluginRendererUrl(sourceFrame.url, registration.pluginId);
+      const trustedContents = details.webContentsId === policy.activeContentsId;
+      const trustedInitiator = details.initiatorOrigin === `it-plugin://${registration.pluginId}`;
+      callback({
+        cancel: details.method !== 'GET'
+          || details.resourceType !== 'script'
+          || !trustedMainFrame
+          || !trustedContents
+          || !trustedInitiator,
+      });
       return;
     }
 
@@ -320,13 +368,18 @@ async function installPluginSessionPolicy(
   return policy;
 }
 
-function pluginResponse(body: BodyInit | null, status: number, extraHeaders: Record<string, string> = {}): Response {
+function pluginResponse(
+  body: BodyInit | null,
+  status: number,
+  extraHeaders: Record<string, string> = {},
+  contentSecurityPolicy = getPluginContentSecurityPolicy(),
+): Response {
   return new Response(body, {
     status,
     headers: {
       ...extraHeaders,
       'Cache-Control': 'no-store',
-      'Content-Security-Policy': getPluginContentSecurityPolicy(),
+      'Content-Security-Policy': contentSecurityPolicy,
       'Cross-Origin-Resource-Policy': 'same-origin',
       'Referrer-Policy': 'no-referrer',
       'X-Content-Type-Options': 'nosniff',

@@ -15,6 +15,8 @@
 }
 ```
 
+该路径的 `GET` 查询形式由宿主内部保留，用于加载 Worker guard。它不执行能力调用，也不是插件 API。插件只能用上面的 `POST` 请求协议申请宿主能力。
+
 请求必须使用 `application/json`。消息只接受 `id`、`capability`、`operation` 和 `input` 四个顶层字段。请求 ID 最长 64 个 ASCII 字符。未知字段、错误操作或不符合能力参数结构的请求会被拒绝。
 
 当前协议支持：

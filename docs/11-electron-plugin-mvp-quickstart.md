@@ -6,7 +6,9 @@
 
 从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。
 
-MVP 提供两个宿主能力：读取平台与应用版本，以及在用户操作后写入文本到系统剪贴板。插件不能继承宿主 preload、本地存储或网络访问。插件窗口不允许创建 Web Worker；此限制避免当前缺少运行时 Worker 数量监控的问题。需要 Worker 的插件暂不适合此版本。
+MVP 提供两个宿主能力：读取平台与应用版本，以及在用户操作后写入文本到系统剪贴板。插件不能继承宿主 preload 或其他插件的数据。网络请求只能访问插件自身来源；主进程会拒绝外部连接。
+
+插件可以创建同源 Dedicated Worker。每个插件窗口最多运行两个 Worker。宿主会在 Worker 创建 30 秒后终止它；Worker 出错或插件窗口关闭时，宿主也会终止它。Worker 不能创建子 Worker、SharedWorker 或 ServiceWorker。Worker 不能访问外部网络。Worker 仍可处理插件自身的数据，不会获得宿主 IPC 或 Node.js。
 
 ## 创建签名密钥
 
@@ -44,4 +46,4 @@ MVP 的端到端样例会拒绝未授权的剪贴板写入；批准能力后，�
 
 运行 `pnpm test:plugin-pack` 检查密钥路径、文件覆盖保护、确定性 ZIP、清单签名、文件哈希和不支持的能力。运行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts --reporter=list` 检查沙箱、网络、文件、能力授权、版本回退和插件生命周期。`pnpm check` 会运行打包测试。
 
-MVP 不包括插件商店、Web/Docker 外部插件、插件内 Worker、任意网络代理或生产签名者名单。启用这些能力前，需要分别完成来源、资源和跨平台隔离验收。
+MVP 不包括插件商店、Web/Docker 外部插件、嵌套 Worker、任意网络代理或生产签名者名单。插件 Worker 的创建数、生命周期、同源范围和跨平台行为由自动化验收。

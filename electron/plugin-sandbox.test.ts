@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   getPluginContentSecurityPolicy,
+  getPluginWorkerContentSecurityPolicy,
   getPluginEntryUrl,
   assertPluginSessionRoot,
   getPluginSessionPartition,
@@ -57,10 +58,11 @@ describe('Electron plugin renderer boundary', () => {
     expect(policy).toContain("default-src 'none'");
     expect(policy).toContain("script-src 'self'");
     expect(policy).toContain("connect-src 'self'");
-    expect(policy).toContain("worker-src 'none'");
+    expect(policy).toContain("worker-src 'self'");
     expect(policy).toContain("frame-src 'none'");
     expect(policy).not.toContain('unsafe-inline');
     expect(policy).not.toContain('https:');
+    expect(getPluginWorkerContentSecurityPolicy()).toContain("worker-src 'none'");
   });
 
   it('resolves only package-local files and rejects symlink escapes', async () => {

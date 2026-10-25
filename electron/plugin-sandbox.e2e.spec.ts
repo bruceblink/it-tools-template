@@ -61,7 +61,22 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   await expect(pluginPage.locator('#clipboard-capability-proof')).toHaveText('Not authorized');
   await pluginPage.getByRole('button', { name: 'Dismiss capability status' }).click();
   await expect(capabilityToast).toBeHidden();
+  const guardResponses: string[] = [];
+  const guardErrors: string[] = [];
+  pluginPage.on('response', (candidate) => {
+    if (candidate.url().includes('__it_tools_internal=worker-guard')) {
+      guardResponses.push(`${candidate.status()} ${candidate.url()}`);
+    }
+  });
+  pluginPage.on('requestfailed', (candidate) => {
+    if (candidate.url().includes('__it_tools_internal=worker-guard')) {
+      guardErrors.push(`${candidate.url()} ${candidate.failure()?.errorText ?? ''}`);
+    }
+  });
+  pluginPage.on('pageerror', error => guardErrors.push(error.message));
   const response = await pluginPage.reload();
+  const documentHtml = await response?.text();
+  expect(documentHtml).toContain('__it_tools_internal=worker-guard');
   const rendererState = await pluginPage.evaluate(() => ({
     origin: location.origin,
     secureContext: window.isSecureContext,
@@ -77,33 +92,145 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(rendererState.preloadBridge).toBe('undefined');
   expect(response?.headers()['content-security-policy']).toContain("connect-src 'self'");
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
-  expect(response?.headers()['content-security-policy']).toContain("worker-src 'none'");
+  expect(response?.headers()['content-security-policy']).toContain("worker-src 'self'");
 
-  const workerResult = await pluginPage.evaluate(() => new Promise<string>((resolve) => {
-    let worker: Worker | undefined;
-    const timeout = setTimeout(() => {
-      worker?.terminate();
-      resolve('timeout');
-    }, 1_000);
-    try {
-      worker = new Worker('/worker.js');
-      worker.onmessage = () => {
-        clearTimeout(timeout);
-        worker?.terminate();
-        resolve('started');
+  let localServerRequests = 0;
+  const server = createServer((_request, response) => {
+    localServerRequests += 1;
+    response.end('unexpected network access');
+  });
+  const port = await new Promise<number>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address() as AddressInfo;
+      resolve(address.port);
+    });
+  });
+
+  try {
+    const workerProof = await pluginPage.evaluate(async (url) => {
+      const ready = (worker: Worker) => new Promise<string>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Plugin worker did not start.')), 2_000);
+        worker.addEventListener('message', (event) => {
+          if (event.data === 'worker-ready') {
+            clearTimeout(timeout);
+            resolve(event.data);
+          }
+        });
+        worker.addEventListener('error', (event) => {
+          event.preventDefault();
+          clearTimeout(timeout);
+          reject(new Error('Plugin worker was blocked.'));
+        }, { once: true });
+      });
+      const message = (worker: Worker, expected: string | string[]) => new Promise<string>((resolve, reject) => {
+        const accepted = new Set(Array.isArray(expected) ? expected : [expected]);
+        const timeout = setTimeout(() => reject(new Error(`Plugin worker did not return ${expected}.`)), 2_000);
+        worker.addEventListener('message', (event) => {
+          if (accepted.has(event.data)) {
+            clearTimeout(timeout);
+            resolve(event.data);
+          }
+        });
+      });
+
+      const first = new Worker('/worker.js');
+      const workerConstructor = Worker.prototype.constructor as unknown as typeof Worker;
+      const second = new workerConstructor('/worker.js');
+      await Promise.all([ready(first), ready(second)]);
+      let overflow: string;
+      try {
+        const extraWorker = new Worker('/worker.js');
+        extraWorker.terminate();
+        overflow = 'allowed';
+      }
+      catch (error) {
+        overflow = error instanceof DOMException ? error.name : 'unexpected-error';
+      }
+
+      const echoPromise = message(first, 'echoed');
+      first.postMessage({ kind: 'echo' });
+      const echo = await echoPromise;
+      const nestedPromise = message(second, ['nested-blocked', 'nested-allowed']);
+      second.postMessage({ kind: 'nested' });
+      const nestedWorker = await nestedPromise;
+      const fetchPromise = message(second, ['network-blocked', 'network-allowed']);
+      second.postMessage({ kind: 'fetch', url });
+      const externalRequest = await fetchPromise;
+
+      first.terminate();
+      const replacement = new Worker('/worker.js');
+      await ready(replacement);
+      replacement.terminate();
+      second.terminate();
+
+      const sharedWorker = typeof SharedWorker === 'undefined'
+        ? 'blocked'
+        : (() => {
+            try {
+              const worker = new SharedWorker('/worker.js');
+              worker.port.close();
+              return 'allowed';
+            }
+            catch {
+              return 'blocked';
+            }
+          })();
+      let serviceWorker = 'unavailable';
+      if (navigator.serviceWorker && typeof navigator.serviceWorker.register === 'function') {
+        try {
+          await navigator.serviceWorker.register('/service-worker.js');
+          serviceWorker = 'allowed';
+        }
+        catch {
+          serviceWorker = 'blocked';
+        }
+      }
+
+      return {
+        echo,
+        overflow,
+        nestedWorker,
+        externalRequest,
+        sharedWorker,
+        serviceWorker,
+        workerConstructorEscape: Object.getPrototypeOf(Worker) === null
+          && Worker.prototype.constructor === Worker,
+        guardInstalled: Object.prototype.hasOwnProperty.call(globalThis, '__itToolsPluginWorkerGuardInstalled'),
       };
-      worker.onerror = (event) => {
-        event.preventDefault();
-        clearTimeout(timeout);
-        resolve('blocked');
-      };
-    }
-    catch {
-      clearTimeout(timeout);
-      resolve('blocked');
-    }
-  }));
-  expect(workerResult).toBe('blocked');
+    }, `http://127.0.0.1:${port}/probe`);
+
+    expect({ guardResponses, guardErrors }).toEqual({
+      guardResponses: [expect.stringContaining('200 ')],
+      guardErrors: [],
+    });
+    expect(workerProof).toEqual({
+      echo: 'echoed',
+      overflow: 'QuotaExceededError',
+      nestedWorker: 'nested-blocked',
+      externalRequest: 'network-blocked',
+      sharedWorker: 'blocked',
+      serviceWorker: expect.stringMatching(/^(blocked|unavailable)$/),
+      workerConstructorEscape: true,
+      guardInstalled: true,
+    });
+    expect(localServerRequests).toBe(0);
+
+    const pageFetchResult = await pluginPage.evaluate(async (url) => {
+      try {
+        await fetch(url);
+        return 'allowed';
+      }
+      catch {
+        return 'blocked';
+      }
+    }, `http://127.0.0.1:${port}/page-probe`);
+    expect(pageFetchResult).toBe('blocked');
+    expect(localServerRequests).toBe(0);
+  }
+  finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
   expect(await hostPage.evaluate(() => document.readyState)).toMatch(/interactive|complete/);
 
   const hostPrivateFile = join(userDataDirectory, 'host-private.txt');
@@ -139,33 +266,4 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(await pluginPage.evaluate(() => window.open('https://example.invalid'))).toBeNull();
   expect(await pluginPage.evaluate(() => window.open('app://bundle/settings'))).toBeNull();
 
-  let localServerRequests = 0;
-  const server = createServer((_request, response) => {
-    localServerRequests += 1;
-    response.end('unexpected network access');
-  });
-  const port = await new Promise<number>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address() as AddressInfo;
-      resolve(address.port);
-    });
-  });
-
-  try {
-    const fetchResult = await pluginPage.evaluate(async (url) => {
-      try {
-        await fetch(url);
-        return 'allowed';
-      }
-      catch {
-        return 'blocked';
-      }
-    }, `http://127.0.0.1:${port}/probe`);
-    expect(fetchResult).toBe('blocked');
-    expect(localServerRequests).toBe(0);
-  }
-  finally {
-    await new Promise<void>(resolve => server.close(() => resolve()));
-  }
 });

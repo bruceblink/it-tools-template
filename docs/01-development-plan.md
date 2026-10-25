@@ -2,7 +2,7 @@
 
 > 状态：现行计划
 > 更新日期：2026-10-25
-> 当前基线：main 含未推送的工作台提交；origin/main 保持不变
+> 当前基线：`main`；当前平台和插件工作范围见本计划与性能扩展计划
 > 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
 > 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
 
@@ -30,26 +30,22 @@ Web、Electron 和 GPUI 的平台范围必须在工具定义中明确。it-tools
 Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPUI 的原生能力。
 两个项目只对照用户场景，不共享实现和运行时。
 
-## 2. 当前主线：先接收功能，再删除重复
+## 2. 当前主线：平台稳定性与插件开发接口
 
 详细性能、扩展和插件路线见 [07-performance-extensibility-plan.md](07-performance-extensibility-plan.md)。
-数据库和系统监视的具体页面与服务边界见 [13-database-system-monitor-plan.md](13-database-system-monitor-plan.md)。
+数据库和系统监视的具体页面与服务边界见 [13-database-system-monitor-plan.md](13-database-system-monitor-plan.md)。已交付工具和工作台功能进入维护状态；只有已知缺陷或性能数据支持时才改动这些功能。
 
 | 顺序 | ID | 范围 | 完成标志 |
 |---|---|---|---|
-| P0 | BOUNDARY-001 | 已建立能力归属矩阵，继续核对两个仓库的入口和回滚信息 | 每个功能有唯一所有者、目标入口、数据边界和回滚版本 |
-| P1 | PRODUCT-DB-SYSTEM-001 | 收口数据库管理器和普通系统监视器 | Electron 三引擎流程、分页/编辑/取消、监控采样和资源清理通过 |
-| P1 | PRODUCT-WORKBENCH-001 | 接收 API、Git、对象存储和容器工作台 | Electron 工作台覆盖关键流程，Web 显示受限或不可用状态 |
-| P2 | PRODUCT-MESSAGE-001 | 接收 Redis、MongoDB、Kafka 和 MQTT | 连接、消息/文档操作、取消、错误和权限边界有测试 |
-| P2 | PRODUCT-LOCAL-001 | 接收剪贴板、更新、设置和普通系统能力 | 主进程权限最小化，数据和凭据策略通过安全回归 |
-| P3 | ELECTRON-WORKBENCH-001 | 完成 it-tools-template 自己的 Electron 工作台和插件能力 | Electron 页面、权限、错误恢复和资源边界通过 |
-| P4 | RAMAG-BOUNDARY-ALIGN-001 | 对照 Ramag 的功能边界，确认没有重复投入 | 只更新功能归属和场景记录，不建立跨项目依赖 |
-| P5 | RELEASE-WEB-ELECTRON-001 | 发布 Web、PWA 和 Electron 产品版本 | Web 部署、桌面安装、升级、权限拒绝和回滚证据齐全 |
+| P0 | PLATFORM-ISSUES-001 | 修复平台已知问题并补齐跨平台证据 | 每个问题有复现条件、回归测试和平台覆盖记录 |
+| P1 | PLUGIN-API-V1-001 | 设计并验证版本化插件开发接口 | 样例插件使用稳定的清单、工具贡献、能力和设置接口 |
+| P2 | PLUGIN-ISOLATION-001 | 完成插件资源、生命周期和平台隔离 | 权限、Worker、失败恢复和停用边界在 Windows/Linux/macOS 通过回归 |
+| P3 | PERFORMANCE-BASELINE-001 | 维护性能基线并修复有数据支持的回退 | 固定输入和运行环境可复现；有明确平台与测量范围 |
+| P4 | RELEASE-WEB-ELECTRON-001 | 按维护需要发布 Web、PWA 和 Electron 版本 | 发布包含已验证的构建、权限拒绝、升级和回滚证据 |
 
-在 P0 完成前，it-tools-template 不把新的数据库、Git、API、消息、容器或对象存储
-能力交给另一个仓库重复实现。新功能先判断是否属于通用工具、Electron 工作台或原生核心。
+不在当前主线上增加新的内置工具或工作台协议。跨项目仍保持独立，不共享进程、运行时、代码包或接口协议。
 
-当前进度（2026-10-24）：`PRODUCT-WORKBENCH-001` 已完成 API、Git、对象存储传输和只读容器工作台首片。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储首片计划](15-object-storage-workbench-plan.md)和[对象存储传输计划](16-object-storage-transfers-plan.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台首片计划](17-container-workbench-plan.md)。`pnpm check`、Web 路由隔离测试和本机 Docker RustFS Electron E2E 通过。无头 Electron 流程在 390×844 视口下没有横向溢出，测试确认窗口保持隐藏。真实窗口交互验收未执行。其他服务专用协议继续按本计划逐片实现。
+当前进度（2026-10-25）：API、Git、对象存储和容器工作台的已交付范围进入维护状态。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储首片计划](15-object-storage-workbench-plan.md)和[对象存储传输计划](16-object-storage-transfers-plan.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台首片计划](17-container-workbench-plan.md)。后续只按已知问题和测量证据维护这些功能。
 
 性能优化进度（2026-10-25）：P2 对 Markdown 转 HTML 的同步解析做了 256 KiB 合成输入测量。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，单次渲染中位数为 28.04 毫秒，10 次测量最大值为 38.91 毫秒。工具现用专用 Worker，并限制输入为 256 KiB、HTML 输出为 2 MiB、运行时间为 10 秒；新输入会取消旧任务。完整检查、Chromium Web 和隐藏 Electron `app://bundle` 回归通过，Web 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。详细实现与边界见[性能与插件计划](07-performance-extensibility-plan.md)。
 
