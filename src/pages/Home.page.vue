@@ -19,6 +19,10 @@ const toolCardHoverEnabled = ref(false);
 
 // Wait for movement over a tool card so pointer motion from route navigation does not enable stale hover styling.
 function enableToolCardHover(event: PointerEvent) {
+  if (event.pointerType !== 'mouse' || (event.movementX === 0 && event.movementY === 0)) {
+    return;
+  }
+
   if (!(event.target instanceof Element) || !event.target.closest('.grid-wrapper .decoration-none')) {
     return;
   }
