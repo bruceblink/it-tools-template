@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { API_MAX_BODY_BYTES, API_MAX_URL_LENGTH } from '../../src/shared/desktop-services/api';
 import { parseApiRequest, parseApiRequestId } from './api-protocol';
 
 const baseRequest = {
@@ -27,6 +28,36 @@ describe('API request protocol', () => {
     expect(parseApiRequest({ ...baseRequest, method: 'POST', body: 'x'.repeat(256 * 1024 + 1) })).toBeNull();
     expect(parseApiRequest({ ...baseRequest, timeoutMs: 31_000 })).toBeNull();
     expect(parseApiRequest({ ...baseRequest, extra: true })).toBeNull();
+  });
+
+  it('enforces body limits using UTF-8 bytes at the exact boundary', () => {
+    expect(parseApiRequest({
+      ...baseRequest,
+      method: 'POST',
+      body: 'é'.repeat(API_MAX_BODY_BYTES / 2),
+    })).not.toBeNull();
+    expect(parseApiRequest({
+      ...baseRequest,
+      method: 'POST',
+      body: 'é'.repeat(API_MAX_BODY_BYTES / 2) + 'é',
+    })).toBeNull();
+    expect(parseApiRequest({
+      ...baseRequest,
+      method: 'POST',
+      body: '😀'.repeat(API_MAX_BODY_BYTES / 4),
+    })).not.toBeNull();
+    expect(parseApiRequest({
+      ...baseRequest,
+      method: 'POST',
+      body: '😀'.repeat(API_MAX_BODY_BYTES / 4) + '😀',
+    })).toBeNull();
+  });
+
+  it('enforces URL limits using UTF-8 bytes at the exact boundary', () => {
+    const baseUrl = 'http://a/?q=';
+    const maximumUrl = baseUrl + 'é'.repeat((API_MAX_URL_LENGTH - baseUrl.length) / 2);
+    expect(parseApiRequest({ ...baseRequest, url: maximumUrl })).not.toBeNull();
+    expect(parseApiRequest({ ...baseRequest, url: `${maximumUrl}é` })).toBeNull();
   });
 
   it('accepts only bounded cancellation IDs', () => {

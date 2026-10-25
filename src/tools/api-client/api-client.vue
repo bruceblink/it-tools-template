@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import type { ApiHttpMethod, ApiResponse } from '@/shared/desktop-services/api';
-import { API_DEFAULT_TIMEOUT_MS, API_MAX_BODY_BYTES, API_MAX_HEADERS, API_MAX_RESPONSE_BYTES } from '@/shared/desktop-services/api';
+import {
+  API_DEFAULT_TIMEOUT_MS,
+  API_MAX_BODY_BYTES,
+  API_MAX_HEADERS,
+  API_MAX_HEADERS_JSON_BYTES,
+  API_MAX_RESPONSE_BYTES,
+  API_MAX_URL_LENGTH,
+} from '@/shared/desktop-services/api';
 import { cancelApiRequest, runApiRequest, type ApiOperation } from '@/platform-adapter/api';
+import { validateApiClientInput } from './api-client.validation';
 
 interface RequestHistoryEntry {
   id: string;
@@ -46,6 +54,9 @@ const errorText = computed(() => {
         timeout: '请求超时。',
         'network-error': '网络请求失败。',
         'service-unavailable': 'API 服务不可用。',
+        'headers-too-large': `请求头 JSON 超过 ${Math.round(API_MAX_HEADERS_JSON_BYTES / 1024)} KiB 上限。`,
+        'url-too-large': `请求 URL 超过 ${Math.round(API_MAX_URL_LENGTH / 1024)} KiB 上限。`,
+        'body-too-large': `请求正文超过 ${Math.round(API_MAX_BODY_BYTES / 1024)} KiB 上限。`,
       }
     : {
         'invalid-request': 'The request parameters are invalid.',
@@ -54,6 +65,9 @@ const errorText = computed(() => {
         timeout: 'The request timed out.',
         'network-error': 'The network request failed.',
         'service-unavailable': 'The API service is unavailable.',
+        'headers-too-large': `Request headers JSON exceeds ${Math.round(API_MAX_HEADERS_JSON_BYTES / 1024)} KiB.`,
+        'url-too-large': `Request URL exceeds ${Math.round(API_MAX_URL_LENGTH / 1024)} KiB.`,
+        'body-too-large': `Request body exceeds ${Math.round(API_MAX_BODY_BYTES / 1024)} KiB.`,
       };
   return labels[error.value] ?? error.value;
 });
@@ -62,6 +76,14 @@ async function sendRequest(): Promise<void> {
   if (status.value === 'running') {
     return;
   }
+  const inputError = validateApiClientInput(url.value, headersText.value, canSendBody.value ? body.value : '');
+  if (inputError) {
+    status.value = 'failed';
+    error.value = inputError;
+    response.value = null;
+    return;
+  }
+
   let headers: Record<string, string>;
   try {
     const parsed: unknown = JSON.parse(headersText.value || '{}');
@@ -212,7 +234,7 @@ onBeforeUnmount(() => {
     </n-card>
 
     <p class="api-client-limit">
-      {{ isChinese ? `请求头最多 ${API_MAX_HEADERS} 项，正文最多 ${Math.round(API_MAX_BODY_BYTES / 1024)} KiB，响应最多 ${Math.round(API_MAX_RESPONSE_BYTES / 1024)} KiB。` : `Up to ${API_MAX_HEADERS} headers, a ${Math.round(API_MAX_BODY_BYTES / 1024)} KiB request body, and a ${Math.round(API_MAX_RESPONSE_BYTES / 1024)} KiB response.` }}
+      {{ isChinese ? `请求头 JSON 最多 ${Math.round(API_MAX_HEADERS_JSON_BYTES / 1024)} KiB、请求头最多 ${API_MAX_HEADERS} 项、URL 最多 ${Math.round(API_MAX_URL_LENGTH / 1024)} KiB、正文最多 ${Math.round(API_MAX_BODY_BYTES / 1024)} KiB、响应最多 ${Math.round(API_MAX_RESPONSE_BYTES / 1024)} KiB。` : `Request headers JSON up to ${Math.round(API_MAX_HEADERS_JSON_BYTES / 1024)} KiB, ${API_MAX_HEADERS} headers, a ${Math.round(API_MAX_URL_LENGTH / 1024)} KiB URL, a ${Math.round(API_MAX_BODY_BYTES / 1024)} KiB body, and a ${Math.round(API_MAX_RESPONSE_BYTES / 1024)} KiB response.` }}
     </p>
   </div>
 </template>

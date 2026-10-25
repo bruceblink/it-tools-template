@@ -241,6 +241,8 @@ PDF 页面只在用户选择文件后才加载 `pdf-signature-reader`。首次�
 - IPv4 CIDR Containment Checker 使用独立 Worker；两份输入合计最多 256 KiB、1,000 行，结果最多包含 500 条匹配，序列化输出最多 2 MiB，任务最多运行 10 秒。超过匹配上限时不返回部分报告。
 - 小输入不盲目转移线程；比较线程启动和复制成本。只有性能分析证明收益后，才为个别算法评估 WASM 或原生实现。
 
+本轮 API Client 请求预检（2026-10-25）：渲染器现在在 JSON 解析和 Electron IPC 之前检查请求头 JSON、URL 和请求正文。请求头 JSON 上限为 128 KiB；URL 保持最多 8 KiB UTF-8 字节；请求正文保持最多 256 KiB UTF-8 字节。超限时页面说明具体限制，并且不会发出请求。主进程的原有限制仍然保留，IPC 来源校验继续生效。UTF-8 计数会在超过上限时立即停止，避免先复制完整文本到编码数组。服务单测覆盖 ASCII、多字节字符、代理对和孤立代理字符的 TextEncoder 等价字节数，以及 URL 和正文的准确边界。Electron E2E 验证正常 GET/POST、三种超限请求不抵达本机测试服务器、取消和会话历史。`pnpm check` 通过 43 项脚本测试、832 项单元测试（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查；PWA 首屏 JavaScript gzip 为 299.80 KiB。定向 API Client Electron E2E 1 项通过。Computer Use 启动了本地 Electron 预览，但同屏其他应用遮挡该窗口，未完成 API 页面手动交互；本轮交互由 Electron E2E 覆盖。Windows/macOS/Linux 的 Electron 构建与 smoke tests 已在提交 `e3de32c` 的远端工作流通过；该提交还修复 Windows runner 的 8.3 短路径断言。当前源码改动尚未包含在远端 CI 中。
+
 验收：正常输入输出与旧实现一致；高成本小正则和大文件都能超时或取消；旧任务不会覆盖新结果。连续切换代表工具 20 轮后没有逐轮累积的 Worker、监听或媒体资源，内存快照解释保留对象。Worker 可改善响应性，但仍可使用部分网络 API，不能单独充当第三方插件权限隔离；相关限制见 [MDN Worker 说明](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)。
 
 ### P2 第一片结果：正则、文本比较与表格转换可取消

@@ -10,6 +10,7 @@ import {
   API_MAX_TIMEOUT_MS,
   API_MAX_URL_LENGTH,
   API_MIN_TIMEOUT_MS,
+  utf8ByteLengthWithinLimit,
 } from '../../src/shared/desktop-services/api';
 
 const methods = new Set<ApiHttpMethod>(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
@@ -43,7 +44,9 @@ export function parseApiRequestId(value: unknown): string | null {
 }
 
 function parseUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length === 0 || value.length > API_MAX_URL_LENGTH) {
+  if (typeof value !== 'string'
+    || value.length === 0
+    || utf8ByteLengthWithinLimit(value, API_MAX_URL_LENGTH) === null) {
     return null;
   }
   try {
@@ -74,10 +77,14 @@ function parseHeaders(value: unknown): Record<string, string> | null {
       || /[\r\n]/.test(rawValue)) {
       return null;
     }
-    totalBytes += new TextEncoder().encode(name).byteLength + new TextEncoder().encode(rawValue).byteLength;
-    if (totalBytes > API_MAX_HEADER_BYTES) {
+    const nameBytes = utf8ByteLengthWithinLimit(name, API_MAX_HEADER_NAME_LENGTH);
+    if (nameBytes === null) {
       return null;
     }
+    const remainingValueBytes = API_MAX_HEADER_BYTES - totalBytes - nameBytes;
+    const valueBytes = utf8ByteLengthWithinLimit(rawValue, remainingValueBytes);
+    if (valueBytes === null) { return null; }
+    totalBytes += nameBytes + valueBytes;
     headers[name] = rawValue;
   }
   return headers;
@@ -87,7 +94,7 @@ function parseBody(value: unknown): string | null | undefined {
   if (value === null || value === undefined) {
     return null;
   }
-  if (typeof value !== 'string' || new TextEncoder().encode(value).byteLength > API_MAX_BODY_BYTES) {
+  if (typeof value !== 'string' || utf8ByteLengthWithinLimit(value, API_MAX_BODY_BYTES) === null) {
     return undefined;
   }
   return value;
