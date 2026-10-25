@@ -17,13 +17,18 @@ const favoriteTools = computed(() => toolStore.favoriteTools);
 const repositoryUrl = config.app.repositoryUrl;
 const toolCardHoverEnabled = ref(false);
 
-// Wait for real pointer movement after this route mounts so a previous page's hover is not carried over.
-function enableToolCardHover() {
+// Wait for movement over a tool card so pointer motion from route navigation does not enable stale hover styling.
+function enableToolCardHover(event: PointerEvent) {
+  if (!(event.target instanceof Element) || !event.target.closest('.grid-wrapper .decoration-none')) {
+    return;
+  }
+
   toolCardHoverEnabled.value = true;
+  window.removeEventListener('pointermove', enableToolCardHover);
 }
 
 onMounted(() => {
-  window.addEventListener('pointermove', enableToolCardHover, { once: true, passive: true });
+  window.addEventListener('pointermove', enableToolCardHover, { passive: true });
 });
 
 onBeforeUnmount(() => {
@@ -38,54 +43,56 @@ function onUpdateFavoriteTools() {
 
 <template>
   <div>
-    <div class="grid-wrapper">
-      <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ColoredCard v-if="config.showBanner" :title="$t('home.follow.title')" :icon="IconHeart">
-          {{ $t('home.follow.p1') }}
-          <a :href="`${repositoryUrl}`" rel="noopener" target="_blank" :aria-label="$t('home.follow.githubRepository')">GitHub</a>.
-          {{ $t('home.follow.thankYou') }}
-          <n-icon :component="IconHeart" />
-        </ColoredCard>
-      </div>
-
-      <transition name="height">
-        <div v-if="toolStore.favoriteTools.length > 0">
-          <h3 class="mb-5px mt-25px text-neutral-400 font-500">
-            {{ $t('home.categories.favoriteTools') }}
-            <c-tooltip :tooltip="$t('home.categories.favoritesDndToolTip')">
-              <n-icon :component="IconDragDrop" size="18" />
-            </c-tooltip>
-          </h3>
-          <Draggable
-            :list="favoriteTools"
-            class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4"
-            ghost-class="ghost-favorites-draggable"
-            item-key="name"
-            @end="onUpdateFavoriteTools"
-          >
-            <template #item="{ element: tool }">
-              <ToolCard :tool="tool" :hover-enabled="toolCardHoverEnabled" />
-            </template>
-          </Draggable>
+    <Transition name="home-grid" appear>
+      <div class="grid-wrapper home-grid">
+        <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
+          <ColoredCard v-if="config.showBanner" :title="$t('home.follow.title')" :icon="IconHeart">
+            {{ $t('home.follow.p1') }}
+            <a :href="`${repositoryUrl}`" rel="noopener" target="_blank" :aria-label="$t('home.follow.githubRepository')">GitHub</a>.
+            {{ $t('home.follow.thankYou') }}
+            <n-icon :component="IconHeart" />
+          </ColoredCard>
         </div>
-      </transition>
 
-      <div v-if="toolStore.newTools.length > 0">
+        <transition name="height">
+          <div v-if="toolStore.favoriteTools.length > 0">
+            <h3 class="mb-5px mt-25px text-neutral-400 font-500">
+              {{ $t('home.categories.favoriteTools') }}
+              <c-tooltip :tooltip="$t('home.categories.favoritesDndToolTip')">
+                <n-icon :component="IconDragDrop" size="18" />
+              </c-tooltip>
+            </h3>
+            <Draggable
+              :list="favoriteTools"
+              class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4"
+              ghost-class="ghost-favorites-draggable"
+              item-key="name"
+              @end="onUpdateFavoriteTools"
+            >
+              <template #item="{ element: tool }">
+                <ToolCard :tool="tool" :hover-enabled="toolCardHoverEnabled" />
+              </template>
+            </Draggable>
+          </div>
+        </transition>
+
+        <div v-if="toolStore.newTools.length > 0">
+          <h3 class="mb-5px mt-25px text-neutral-400 font-500">
+            {{ t('home.categories.newestTools') }}
+          </h3>
+          <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
+            <ToolCard v-for="tool in toolStore.newTools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
+          </div>
+        </div>
+
         <h3 class="mb-5px mt-25px text-neutral-400 font-500">
-          {{ t('home.categories.newestTools') }}
+          {{ $t('home.categories.allTools') }}
         </h3>
         <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ToolCard v-for="tool in toolStore.newTools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
+          <ToolCard v-for="tool in toolStore.tools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
         </div>
       </div>
-
-      <h3 class="mb-5px mt-25px text-neutral-400 font-500">
-        {{ $t('home.categories.allTools') }}
-      </h3>
-      <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-        <ToolCard v-for="tool in toolStore.tools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
-      </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -112,6 +119,22 @@ function onUpdateFavoriteTools() {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
   transform: scale(1.1);
   animation: ghost-favorites-draggable-animation 0.2s ease-out;
+}
+
+.home-grid {
+  transition: opacity 180ms ease-out, transform 180ms ease-out;
+}
+
+.home-grid-enter-from,
+.home-grid-appear-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-grid {
+    transition: none;
+  }
 }
 
 @keyframes ghost-favorites-draggable-animation {
