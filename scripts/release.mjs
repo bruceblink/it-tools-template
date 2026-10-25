@@ -78,13 +78,13 @@ if (!shouldContinue) {
 }
 
 try {
-  consola.info('Updating changelog');
-  await addToChangelog({ changelog: markdown, version });
-  consola.success('Changelog updated');
-
   consola.info('Updating package version');
   await $`pnpm version ${version} --no-git-tag-version`;
   consola.success('Package version updated');
+
+  consola.info('Updating changelog');
+  await addToChangelog({ changelog: markdown, version });
+  consola.success('Changelog updated');
 
   consola.info('Creating release commit');
   await $`git add CHANGELOG.md package.json`;
