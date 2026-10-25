@@ -69,6 +69,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 同日完成当前 `main` 的正式构建性能基线，Web 与 Electron 各测 20 轮，0 轮失败。Web 与 Electron 启动中位数/p95 分别为 759.72/856.93 毫秒和 919.71/1,017.53 毫秒。Electron 本轮使用隐藏窗口，因此其数据不代表真实窗口交互或可见窗口路由响应。详细环境、资源和限制见[20 轮性能基线报告](performance-baseline-2026-10-25-main.json)。16 个本地提交已推送至 `origin/main`，远端与本地一致。
 
+随后优化 IPv4 CIDR splitter：页面复用 `splitIpv4Cidr` 的结果生成文本，不再第二次重建完整子网数组。4096 个 `/32` 子网的 Vite SSR 合成基准中，输出构建中位耗时从 3.56 毫秒降至 1.83 毫秒；输出保持一致。完整 `pnpm check`、Chromium Web E2E 1 项和 Electron `app://bundle` smoke E2E 19 项通过。Windows 打包应用的真实窗口显示了默认输入和 4 个子网结果；窗口输入变更未完成，Computer Use 检测到用户输入后阻止了写入。详细方法和限制见[性能与插件计划](07-performance-extensibility-plan.md)。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

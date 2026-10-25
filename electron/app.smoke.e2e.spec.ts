@@ -155,6 +155,22 @@ test('merges IPv4 CIDR ranges in a dedicated worker on the app protocol', async 
   await expect(output).toHaveText('');
 });
 
+test('updates IPv4 CIDR split results on the app protocol', async () => {
+  await page.goto('app://bundle/ipv4-cidr-splitter');
+
+  const output = page.getByTestId('area-content');
+  await expect(output).toContainText('192.168.0.0/26');
+  await expect(output).toContainText('192.168.0.192/26');
+
+  await page.getByLabel('Source CIDR').fill('10.0.0.0/24');
+  await page.getByPlaceholder('Please Input').fill('25');
+
+  const subnetCountRow = page.locator('tr').filter({ hasText: 'Subnet count' });
+  await expect(subnetCountRow).toContainText('2');
+  await expect(output).toContainText('10.0.0.0/25');
+  await expect(output).toContainText('10.0.0.128/25');
+});
+
 test('analyzes IPv4 CIDR overlaps in a dedicated worker on the app protocol', async () => {
   await page.goto('app://bundle/ipv4-cidr-overlap-checker');
 

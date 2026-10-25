@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core';
-import { formatIpv4CidrSplit, splitIpv4Cidr } from './ipv4-cidr-splitter.service';
+import { splitIpv4Cidr } from './ipv4-cidr-splitter.service';
 import type { UseValidationRule } from '@/composable/validation';
 import { withDefaultOnError } from '@/utils/defaults';
 
@@ -11,9 +11,7 @@ const result = computed(() =>
   withDefaultOnError(() => splitIpv4Cidr(sourceCidr.value, targetPrefix.value), undefined),
 );
 
-const output = computed(() =>
-  withDefaultOnError(() => formatIpv4CidrSplit(sourceCidr.value, targetPrefix.value), ''),
-);
+const output = computed(() => result.value?.subnets.map(subnet => subnet.cidr).join('\n') ?? '');
 
 function validateSourceCidr(value: string) {
   splitIpv4Cidr(value, targetPrefix.value);

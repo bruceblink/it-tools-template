@@ -48,6 +48,14 @@ describe('ipv4-cidr-splitter service', () => {
     ].join('\n'));
   });
 
+  it('formats the full default output limit of 4,096 subnets', () => {
+    const lines = formatIpv4CidrSplit('0.0.0.0/20', 32).split('\n');
+
+    expect(lines).toHaveLength(4_096);
+    expect(lines[0]).toBe('0.0.0.0/32');
+    expect(lines.at(-1)).toBe('0.0.15.255/32');
+  });
+
   it('rejects target prefixes shorter than the source prefix', () => {
     expect(() => splitIpv4Cidr('192.168.0.0/24', 23)).toThrow(Ipv4CidrSplitterError);
   });
