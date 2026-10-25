@@ -16,10 +16,19 @@ const { t } = useI18n();
 const favoriteTools = computed(() => toolStore.favoriteTools);
 const repositoryUrl = config.app.repositoryUrl;
 const toolCardHoverEnabled = ref(false);
+const homeGridEntering = ref(false);
+
+function startHomeGridTransition() {
+  homeGridEntering.value = true;
+}
+
+function finishHomeGridTransition() {
+  homeGridEntering.value = false;
+}
 
 // Wait for movement over a tool card so pointer motion from route navigation does not enable stale hover styling.
 function enableToolCardHover(event: PointerEvent) {
-  if (event.pointerType !== 'mouse' || (event.movementX === 0 && event.movementY === 0)) {
+  if (homeGridEntering.value || event.pointerType !== 'mouse' || (event.movementX === 0 && event.movementY === 0)) {
     return;
   }
 
@@ -47,7 +56,13 @@ function onUpdateFavoriteTools() {
 
 <template>
   <div>
-    <Transition name="home-grid" appear>
+    <Transition
+      name="home-grid"
+      appear
+      @before-enter="startHomeGridTransition"
+      @after-enter="finishHomeGridTransition"
+      @enter-cancelled="finishHomeGridTransition"
+    >
       <div class="grid-wrapper home-grid">
         <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
           <ColoredCard v-if="config.showBanner" :title="$t('home.follow.title')" :icon="IconHeart">
