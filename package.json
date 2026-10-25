@@ -1,7 +1,7 @@
 {
   "name": "it-tools",
   "type": "module",
-  "version": "2026.10.18-ff54770",
+  "version": "2026.10.25-6f7d474",
   "desktopName": "it-tools",
   "main": "out/main/main.cjs",
   "engines": {
