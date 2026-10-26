@@ -107,6 +107,9 @@ const messages = {
     activationFailed: 'The package did not start. The previous version remains available.',
     rollbackFailed: 'The new version failed and the previous version could not be restored. The plugin is stopped.',
     activeLimit: 'The maximum number of plugin windows is already running.',
+    rendererCrashed: 'The plugin renderer stopped unexpectedly. Run the package again to recover.',
+    rendererUnresponsive: 'The plugin stopped responding and was closed. Run the package again to recover.',
+    windowClosed: 'The plugin window closed unexpectedly. Run the package again to recover.',
     trustUnavailable: 'The trust store is unavailable. The app did not replace or clear its contents.',
     invalidKey: 'The signer key, fingerprint confirmation, or plugin ID list is invalid.',
     operationCancelled: 'Operation cancelled.',
@@ -155,6 +158,9 @@ const messages = {
     activationFailed: '插件包启动失败。旧版本仍可用。',
     rollbackFailed: '新版本启动失败，旧版本也无法恢复。插件当前已停止。',
     activeLimit: '当前运行的插件窗口已达到上限。',
+    rendererCrashed: '插件渲染进程意外停止。可以重新运行插件包来恢复。',
+    rendererUnresponsive: '插件无响应，宿主已关闭窗口。可以重新运行插件包来恢复。',
+    windowClosed: '插件窗口意外关闭。可以重新运行插件包来恢复。',
     trustUnavailable: '信任存储不可用。应用没有替换或清空其中的数据。',
     invalidKey: '签名密钥、指纹确认或插件 ID 列表无效。',
     operationCancelled: '操作已取消。',
@@ -210,6 +216,15 @@ function displayPluginError(error: string): string {
   }
   if (error === 'active-limit') {
     return text('activeLimit');
+  }
+  if (error === 'renderer-crashed') {
+    return text('rendererCrashed');
+  }
+  if (error === 'renderer-unresponsive') {
+    return text('rendererUnresponsive');
+  }
+  if (error === 'window-closed') {
+    return text('windowClosed');
   }
   if (error === 'store-unavailable' || error === 'invalid-store') {
     return text('trustUnavailable');
@@ -469,8 +484,19 @@ watch(signerForm, () => {
   signerPreview.value = undefined;
 }, { deep: true });
 
+let disposePluginStateChange: (() => void) | undefined;
+
 onMounted(() => {
+  disposePluginStateChange = window.itToolsDesktop?.onPluginStateChanged?.(() => {
+    if (!isBusy.value) {
+      void refresh();
+    }
+  });
   void refresh();
+});
+
+onUnmounted(() => {
+  disposePluginStateChange?.();
 });
 </script>
 
@@ -533,6 +559,9 @@ onMounted(() => {
             </div>
             <n-alert v-if="plugin.status === 'invalid'" type="warning" :show-icon="false" mt-3>
               {{ displayPluginError(plugin.errorCode ?? 'invalid-package') }}
+            </n-alert>
+            <n-alert v-else-if="plugin.errorCode" type="warning" :show-icon="false" mt-3>
+              {{ displayPluginError(plugin.errorCode) }}
             </n-alert>
 
             <div class="plugin-capability-list">

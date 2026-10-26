@@ -135,6 +135,53 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await routePluginWindowClosed;
   await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
+
+  await page.goto('app://bundle/settings');
+  await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`)).toBeVisible();
+  const recoveryContributionLink = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
+    .getByRole('link', { name: 'Recovery demo', exact: true });
+  await expect(recoveryContributionLink).toHaveAttribute(
+    'href',
+    '/extensions/org.it-tools.capability-demo/1.0.0/recovery-demo',
+  );
+  await recoveryContributionLink.click();
+  await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/recovery-demo');
+  await page.getByRole('button', { name: 'Run plugin' }).click();
+  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect.poll(async () => (
+    await electronApp.windows()
+  ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
+  const recoveryPluginWindow = (await electronApp.windows()).find(window => window.url().startsWith(`it-plugin://${pluginId}/`));
+  expect(recoveryPluginWindow).toBeDefined();
+  if (!recoveryPluginWindow) {
+    throw new Error('The plugin window was not created for the recovery contribution.');
+  }
+  await expect.poll(async () => recoveryPluginWindow.evaluate(() => (
+    (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
+  ))).toBe('org.it-tools.capability-demo/recovery-demo');
+
+  await page.goto('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/capability-demo');
+  await expect(page.getByText('Another contribution from this plugin is running.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stop plugin' })).toBeHidden();
+  const switchedPluginWindowClosed = recoveryPluginWindow.waitForEvent('close');
+  await page.getByRole('button', { name: 'Run plugin' }).click();
+  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await switchedPluginWindowClosed;
+  await expect.poll(async () => (
+    await electronApp.windows()
+  ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
+  const switchedPluginWindow = (await electronApp.windows()).find(window => window.url().startsWith(`it-plugin://${pluginId}/`));
+  expect(switchedPluginWindow).toBeDefined();
+  if (!switchedPluginWindow) {
+    throw new Error('The plugin window was not recreated for the selected contribution.');
+  }
+  await expect.poll(async () => switchedPluginWindow.evaluate(() => (
+    (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
+  ))).toBe('org.it-tools.capability-demo/capability-demo');
+  const switchedPluginWindowClosedByRoute = switchedPluginWindow.waitForEvent('close');
+  await page.getByRole('button', { name: 'Stop plugin' }).click();
+  await switchedPluginWindowClosedByRoute;
+  await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
   await page.goto('app://bundle/settings');
   await expect(page.getByText('Installed', { exact: true })).toBeVisible();
 
@@ -466,6 +513,11 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     app.getAppMetrics().some(metric => metric.pid === processId)
   ), initialResourceSample.pluginRendererPid)).toBe(false);
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
+  await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toBeVisible();
+  await page.goto('app://bundle/extensions/org.it-tools.capability-demo/4.0.0/capability-demo');
+  await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run plugin' })).toBeVisible();
+  await page.goto('app://bundle/settings');
   await page.reload();
   await expect(page.getByTestId(`plugin-package-${pluginId}-4.0.0`).getByText('Installed')).toBeVisible();
 
@@ -504,8 +556,17 @@ async function createSignedPackage(version = '1.0.0', freezeRenderer = false): P
   const sourceDirectory = join(temporaryDirectory, `capability-demo-${version}-${freezeRenderer ? 'frozen' : 'normal'}`);
   await cp(resolve('plugins/capability-demo'), sourceDirectory, { recursive: true });
   const sourceManifestPath = join(sourceDirectory, 'plugin.source.json');
-  const sourceManifest = JSON.parse(await readFile(sourceManifestPath, 'utf8')) as { version: string };
+  const sourceManifest = JSON.parse(await readFile(sourceManifestPath, 'utf8')) as {
+    version: string;
+    contributions?: { tools: Array<Record<string, unknown>> };
+  };
   sourceManifest.version = version;
+  sourceManifest.contributions?.tools.push({
+    id: `${pluginId}/recovery-demo`,
+    title: 'Recovery demo',
+    description: 'Exercise tool-level stop and recovery behavior.',
+    keywords: ['plugin', 'recovery'],
+  });
   await writeFile(sourceManifestPath, `${JSON.stringify(sourceManifest, null, 2)}\n`);
   if (freezeRenderer) {
     const pluginScriptPath = join(sourceDirectory, 'plugin.js');

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { IpcRendererEvent } from 'electron';
 import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult, StorageUploadInput, StorageTransferResult, StorageProgress } from '../src/shared/desktop-services/object-storage';
 import type {
   ContainerListRequest,
@@ -123,6 +124,15 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     return () => ipcRenderer.removeListener('desktop:system-monitor:sample', listener);
   },
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
+  onPluginStateChanged: (callback: (pluginId: string) => void) => {
+    const listener = (_event: IpcRendererEvent, pluginId: unknown) => {
+      if (typeof pluginId === 'string') {
+        callback(pluginId);
+      }
+    };
+    ipcRenderer.on('desktop:plugins:changed', listener);
+    return () => ipcRenderer.removeListener('desktop:plugins:changed', listener);
+  },
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
   activatePlugin: (
     pluginId: string,

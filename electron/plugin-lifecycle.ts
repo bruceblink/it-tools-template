@@ -42,6 +42,8 @@ const unresponsiveWindowTimeoutMs = 10_000;
 const rendererResponsivenessProbeIntervalMs = 2_000;
 const rendererResponsivenessProbeTimeoutMs = 10_000;
 
+export type PluginRuntimeFailureCode = 'renderer-crashed' | 'renderer-unresponsive' | 'window-closed';
+
 export const pluginLifecycleLimits = Object.freeze({
   maximumInstalledPackages,
   maximumActivePlugins,
@@ -82,6 +84,8 @@ export interface PluginLifecycleSnapshot {
   };
   grantedCapabilities: readonly PluginCapability[];
   status: 'installed' | 'active' | 'invalid';
+  /** The contribution currently selected for the active isolated window. */
+  activeContributionId?: string;
   errorCode?: string;
 }
 
@@ -96,6 +100,8 @@ export interface PluginLifecycleOptions {
   trustedSigningKeys: ReadonlyMap<string, PluginPackageSigningKey>;
   createWindow: (registration: PluginSandboxRegistration) => Promise<BrowserWindow>;
   executeCapability: (manifest: PluginPackageManifest, call: PluginCapabilityCall) => Promise<unknown> | unknown;
+  /** Notify trusted renderers after an unexpected plugin window exit. */
+  onStateChange?: (pluginId: string) => void;
 }
 
 interface ActivePlugin {
@@ -110,12 +116,19 @@ interface ActivePlugin {
   responsivenessProbeInterval?: ReturnType<typeof setInterval>;
   responsivenessProbeTimeout?: ReturnType<typeof setTimeout>;
   responsivenessProbePending: boolean;
+  terminationRequested: boolean;
+  terminationFailureCode?: PluginRuntimeFailureCode;
+}
+
+interface PluginRuntimeFailure {
+  code: PluginRuntimeFailureCode;
 }
 
 /** Own the installed package lifecycle while keeping all windows inside Electron's sandbox. */
 export class PluginLifecycleManager {
   private readonly installRoot: string;
   private readonly activePlugins = new Map<string, ActivePlugin>();
+  private readonly runtimeFailures = new Map<string, PluginRuntimeFailure>();
   private operationQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: PluginLifecycleOptions) {
@@ -233,6 +246,7 @@ export class PluginLifecycleManager {
       }
       try {
         await this.startVerifiedPlugin(pluginId, version, packageRoot, manifest, grants, selectedContributionId);
+        this.runtimeFailures.delete(getPluginPackageKey(pluginId, version));
       }
       catch (activationError) {
         if (previous) {
@@ -275,6 +289,7 @@ export class PluginLifecycleManager {
         return false;
       }
       await this.destroyActivePlugin(active);
+      this.runtimeFailures.delete(getPluginPackageKey(active.pluginId, active.version));
       return true;
     });
   }
@@ -284,6 +299,7 @@ export class PluginLifecycleManager {
       const active = [...this.activePlugins.values()].filter(plugin => plugin.signingKeyId === keyId);
       for (const plugin of active) {
         await this.destroyActivePlugin(plugin);
+        this.runtimeFailures.delete(getPluginPackageKey(plugin.pluginId, plugin.version));
       }
       return active.length;
     });
@@ -303,6 +319,7 @@ export class PluginLifecycleManager {
         throw new PluginPackageError('unsafe-archive-entry', 'The plugin uninstall path changed during the operation.');
       }
       await rm(currentPackageRoot, { recursive: true, force: false });
+      this.runtimeFailures.delete(getPluginPackageKey(pluginId, version));
       const pluginRoot = dirname(currentPackageRoot);
       try {
         if ((await readdir(pluginRoot)).length === 0) {
@@ -348,32 +365,42 @@ export class PluginLifecycleManager {
       grantedCapabilities,
       window,
       responsivenessProbePending: false,
+      terminationRequested: false,
     };
     this.activePlugins.set(pluginId, active);
     let terminationRequested = false;
-    const terminatePluginWindow = () => {
+    const terminatePluginWindow = (failureCode?: PluginRuntimeFailureCode) => {
       if (terminationRequested || this.activePlugins.get(pluginId) !== active || window.isDestroyed()) {
         return;
       }
+      if (failureCode !== undefined) {
+        active.terminationFailureCode = failureCode;
+      }
       terminationRequested = true;
+      active.terminationRequested = true;
       clearInterval(active.responsivenessProbeInterval);
       try {
         window.destroy();
       }
       catch {
         terminationRequested = false;
+        active.terminationRequested = false;
+        active.terminationFailureCode = undefined;
         console.error('Failed to terminate an unresponsive plugin window.');
       }
     };
     window.on('unresponsive', () => {
       clearTimeout(active.unresponsiveTimer);
-      active.unresponsiveTimer = setTimeout(terminatePluginWindow, unresponsiveWindowTimeoutMs);
+      active.unresponsiveTimer = setTimeout(
+        () => terminatePluginWindow('renderer-unresponsive'),
+        unresponsiveWindowTimeoutMs,
+      );
     });
     window.on('responsive', () => {
       clearTimeout(active.unresponsiveTimer);
       active.unresponsiveTimer = undefined;
     });
-    window.webContents.on('render-process-gone', terminatePluginWindow);
+    window.webContents.on('render-process-gone', () => terminatePluginWindow('renderer-crashed'));
     // Keep the main process responsive when a plugin renderer stops processing queued work.
     active.responsivenessProbeInterval = setInterval(() => {
       if (
@@ -385,7 +412,10 @@ export class PluginLifecycleManager {
       }
 
       active.responsivenessProbePending = true;
-      const probeTimeout = setTimeout(terminatePluginWindow, rendererResponsivenessProbeTimeoutMs);
+      const probeTimeout = setTimeout(
+        () => terminatePluginWindow('renderer-unresponsive'),
+        rendererResponsivenessProbeTimeoutMs,
+      );
       active.responsivenessProbeTimeout = probeTimeout;
       void window.webContents.executeJavaScript('void 0').then(
         () => completeResponsivenessProbe(active, probeTimeout),
@@ -400,8 +430,16 @@ export class PluginLifecycleManager {
       clearInterval(active.responsivenessProbeInterval);
       clearTimeout(active.responsivenessProbeTimeout);
       active.responsivenessProbePending = false;
+      const failureCode = active.terminationFailureCode
+        ?? (active.terminationRequested ? undefined : 'window-closed');
       if (this.activePlugins.get(pluginId) === active) {
         this.activePlugins.delete(pluginId);
+      }
+      if (failureCode !== undefined) {
+        this.runtimeFailures.set(getPluginPackageKey(active.pluginId, active.version), {
+          code: failureCode,
+        });
+        this.notifyStateChange(active.pluginId);
       }
     });
   }
@@ -413,6 +451,9 @@ export class PluginLifecycleManager {
       }
       return;
     }
+
+    active.terminationRequested = true;
+    active.terminationFailureCode = undefined;
 
     await new Promise<void>((resolvePromise, rejectPromise) => {
       let timeout: ReturnType<typeof setTimeout>;
@@ -439,6 +480,15 @@ export class PluginLifecycleManager {
     });
     if (this.activePlugins.get(active.pluginId) === active) {
       this.activePlugins.delete(active.pluginId);
+    }
+  }
+
+  private notifyStateChange(pluginId: string): void {
+    try {
+      this.options.onStateChange?.(pluginId);
+    }
+    catch (error) {
+      console.error('Failed to notify plugin lifecycle state change.', error);
     }
   }
 
@@ -486,6 +536,7 @@ export class PluginLifecycleManager {
   private snapshotFromManifest(manifest: PluginPackageManifest): PluginLifecycleSnapshot {
     const active = this.activePlugins.get(manifest.id);
     const isActive = active?.version === manifest.version && !active.window.isDestroyed();
+    const runtimeFailure = this.runtimeFailures.get(getPluginPackageKey(manifest.id, manifest.version));
     return {
       pluginId: manifest.id,
       name: manifest.name,
@@ -499,6 +550,8 @@ export class PluginLifecycleManager {
       },
       grantedCapabilities: isActive ? [...active.grantedCapabilities] : [],
       status: isActive ? 'active' : 'installed',
+      ...(isActive && active.contributionId !== undefined ? { activeContributionId: active.contributionId } : {}),
+      ...(runtimeFailure ? { errorCode: runtimeFailure.code } : {}),
     };
   }
 
@@ -591,6 +644,10 @@ function completeResponsivenessProbe(active: ActivePlugin, probeTimeout: ReturnT
 
 function sameItems(left: readonly string[], right: readonly string[]): boolean {
   return left.length === right.length && left.every(item => right.includes(item));
+}
+
+function getPluginPackageKey(pluginId: string, version: string): string {
+  return `${pluginId}\u0000${version}`;
 }
 
 function pushSnapshot(snapshots: PluginLifecycleSnapshot[], snapshot: PluginLifecycleSnapshot): void {

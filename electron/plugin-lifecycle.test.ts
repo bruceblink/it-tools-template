@@ -107,6 +107,34 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`))
       .resolves.toMatchObject({ status: 'active' });
     expect(createWindow.mock.calls[0]?.[0].contributionId).toBe(`${pluginId}/lifecycle-tool`);
+    expect((await manager.listInstalled())[0]).toMatchObject({
+      status: 'active',
+      activeContributionId: `${pluginId}/lifecycle-tool`,
+    });
+  });
+
+  it('records an unexpected window close and clears the failure after recovery', async () => {
+    const { root, manager, windows, stateChanges } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`);
+
+    windows[0]?.destroy();
+
+    expect(stateChanges).toEqual([pluginId]);
+    expect((await manager.listInstalled())[0]).toMatchObject({
+      status: 'installed',
+      errorCode: 'window-closed',
+    });
+
+    await manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`);
+    expect((await manager.listInstalled())[0]).toMatchObject({
+      status: 'active',
+      activeContributionId: `${pluginId}/lifecycle-tool`,
+    });
+    expect((await manager.listInstalled())[0]?.errorCode).toBeUndefined();
+
+    await manager.disable(pluginId);
+    expect((await manager.listInstalled())[0]?.errorCode).toBeUndefined();
   });
 
   it('disables every active plugin that uses a revoked signing key', async () => {
@@ -200,7 +228,10 @@ describe('Electron plugin lifecycle manager', () => {
       await vi.advanceTimersByTimeAsync(pluginLifecycleLimits.unresponsiveWindowTimeoutMs);
 
       expect(windows[0]?.isDestroyed()).toBe(true);
-      expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed' });
+      expect((await manager.listInstalled())[0]).toMatchObject({
+        status: 'installed',
+        errorCode: 'renderer-unresponsive',
+      });
     }
     finally {
       vi.useRealTimers();
@@ -224,7 +255,10 @@ describe('Electron plugin lifecycle manager', () => {
       await vi.advanceTimersByTimeAsync(pluginLifecycleLimits.rendererResponsivenessProbeTimeoutMs);
 
       expect(window.isDestroyed()).toBe(true);
-      expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed' });
+      expect((await manager.listInstalled())[0]).toMatchObject({
+        status: 'installed',
+        errorCode: 'renderer-unresponsive',
+      });
     }
     finally {
       vi.useRealTimers();
@@ -243,7 +277,10 @@ describe('Electron plugin lifecycle manager', () => {
     window.webContents.emit('render-process-gone');
 
     expect(window.isDestroyed()).toBe(true);
-    expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed' });
+    expect((await manager.listInstalled())[0]).toMatchObject({
+      status: 'installed',
+      errorCode: 'renderer-crashed',
+    });
   });
 });
 
@@ -251,6 +288,7 @@ async function createManager(options: { failVersion?: string } = {}) {
   const root = await createTemporaryDirectory();
   const installRoot = join(root, 'installed');
   const windows: FakePluginWindow[] = [];
+  const stateChanges: string[] = [];
   const createWindow = vi.fn(async (registration: PluginSandboxRegistration) => {
     if (options.failVersion && registration.packageRoot.endsWith(options.failVersion)) {
       throw new Error('The test plugin did not load.');
@@ -259,14 +297,20 @@ async function createManager(options: { failVersion?: string } = {}) {
     windows.push(window);
     return window as unknown as import('electron').BrowserWindow;
   });
-  const manager = createManagerForRoot({ installRoot, trustedSigningKeys, createWindow });
-  return { root, installRoot, manager, createWindow, windows };
+  const manager = createManagerForRoot({
+    installRoot,
+    trustedSigningKeys,
+    createWindow,
+    onStateChange: pluginId => stateChanges.push(pluginId),
+  });
+  return { root, installRoot, manager, createWindow, windows, stateChanges };
 }
 
 function createManagerForRoot(options: {
   installRoot: string;
   trustedSigningKeys: ReadonlyMap<string, PluginPackageSigningKey>;
   createWindow: (registration: PluginSandboxRegistration) => Promise<import('electron').BrowserWindow>;
+  onStateChange?: (pluginId: string) => void;
 }) {
   return new PluginLifecycleManager({
     ...options,

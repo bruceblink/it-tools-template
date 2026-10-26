@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NAlert, NButton, NCard, NEmpty, NSpin, NTag, NText } from 'naive-ui';
 import { useHead } from '@unhead/vue';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -25,6 +25,7 @@ const supportedPluginCapabilities = new Set<DesktopPluginCapability>([
 type ExternalPluginBridge = {
   activatePlugin: NonNullable<NonNullable<Window['itToolsDesktop']>['activatePlugin']>;
   disablePlugin: NonNullable<NonNullable<Window['itToolsDesktop']>['disablePlugin']>;
+  onPluginStateChanged?: NonNullable<NonNullable<Window['itToolsDesktop']>['onPluginStateChanged']>;
 };
 
 const messages = {
@@ -40,6 +41,12 @@ const messages = {
     stop: 'Stop plugin',
     runStarted: 'Plugin window started.',
     stopped: 'Plugin window stopped.',
+    running: 'Running this tool',
+    runningElsewhere: 'Another tool is running',
+    anotherToolRunning: 'Another contribution from this plugin is running. Running this tool will replace it.',
+    rendererCrashed: 'The plugin renderer stopped unexpectedly. Run the tool again to recover.',
+    rendererUnresponsive: 'The plugin stopped responding and was closed. Run the tool again to recover.',
+    windowClosed: 'The plugin window closed unexpectedly. Run the tool again to recover.',
     operationFailed: 'The plugin operation could not be completed.',
     manage: 'Manage plugin',
     home: 'Back to home',
@@ -57,6 +64,12 @@ const messages = {
     stop: '停止插件',
     runStarted: '插件窗口已启动。',
     stopped: '插件窗口已停止。',
+    running: '当前工具正在运行',
+    runningElsewhere: '另一个工具正在运行',
+    anotherToolRunning: '此插件的另一个工具贡献正在运行。运行当前工具会替换它。',
+    rendererCrashed: '插件渲染进程意外停止。可以重新运行当前工具来恢复。',
+    rendererUnresponsive: '插件无响应，宿主已关闭窗口。可以重新运行当前工具来恢复。',
+    windowClosed: '插件窗口意外关闭。可以重新运行当前工具来恢复。',
     operationFailed: '无法完成插件操作。',
     manage: '管理插件',
     home: '返回主页',
@@ -67,6 +80,21 @@ const messages = {
 const activeMessages = computed(() => messages[language.value]);
 const text = (key: keyof typeof messages.en) => activeMessages.value[key];
 const isDesktop = computed(() => typeof window !== 'undefined' && Boolean(window.itToolsDesktop?.listPlugins));
+const currentContributionActive = computed(() => (
+  plugin.value?.status === 'active'
+  && plugin.value.activeContributionId === contribution.value?.id
+));
+const anotherContributionActive = computed(() => (
+  plugin.value?.status === 'active' && !currentContributionActive.value
+));
+const runtimeError = computed(() => {
+  switch (plugin.value?.errorCode) {
+    case 'renderer-crashed': return text('rendererCrashed');
+    case 'renderer-unresponsive': return text('rendererUnresponsive');
+    case 'window-closed': return text('windowClosed');
+    default: return undefined;
+  }
+});
 
 useHead(computed(() => ({
   title: contribution.value ? `${contribution.value.title} - IT Tools` : `${text('title')} - IT Tools`,
@@ -126,7 +154,7 @@ async function loadContribution(): Promise<void> {
 async function runPlugin(): Promise<void> {
   const bridge = getPluginBridge();
   const currentPlugin = plugin.value;
-  if (!bridge || !currentPlugin || currentPlugin.status === 'invalid') {
+  if (!bridge || !currentPlugin || currentPlugin.status === 'invalid' || currentContributionActive.value) {
     return;
   }
 
@@ -164,7 +192,7 @@ async function runPlugin(): Promise<void> {
 async function stopPlugin(): Promise<void> {
   const bridge = getPluginBridge();
   const currentPlugin = plugin.value;
-  if (!bridge || !currentPlugin || currentPlugin.status !== 'active') {
+  if (!bridge || !currentPlugin || !currentContributionActive.value) {
     return;
   }
 
@@ -190,8 +218,20 @@ async function stopPlugin(): Promise<void> {
   }
 }
 
+let disposePluginStateChange: (() => void) | undefined;
+
 onMounted(() => {
+  const bridge = getPluginBridge();
+  disposePluginStateChange = bridge?.onPluginStateChanged?.((pluginId) => {
+    if (pluginId === routeParam('pluginId')) {
+      void loadContribution();
+    }
+  });
   void loadContribution();
+});
+
+onUnmounted(() => {
+  disposePluginStateChange?.();
 });
 </script>
 
@@ -210,11 +250,20 @@ onMounted(() => {
       <n-alert v-if="notice" type="success" role="status" :show-icon="false">
         {{ notice }}
       </n-alert>
+      <n-alert v-if="runtimeError" type="warning" role="status" :show-icon="false">
+        {{ runtimeError }}
+      </n-alert>
       <n-empty v-if="!contribution || !plugin" :description="text('notFound')" />
       <n-card v-else :title="contribution.title">
         <template #header-extra>
-          <n-tag :type="plugin.status === 'invalid' ? 'error' : 'default'">
-            {{ plugin.status === 'invalid' ? text('invalid') : plugin.status === 'active' ? text('run') : text('title') }}
+          <n-tag :type="plugin.status === 'invalid' ? 'error' : currentContributionActive ? 'success' : 'default'">
+            {{ plugin.status === 'invalid'
+              ? text('invalid')
+              : currentContributionActive
+                ? text('running')
+                : anotherContributionActive
+                  ? text('runningElsewhere')
+                  : text('title') }}
           </n-tag>
         </template>
         <p class="external-plugin-tool-description">{{ contribution.description }}</p>
@@ -225,9 +274,12 @@ onMounted(() => {
         <n-alert type="info" :show-icon="false" mb-4>
           {{ text('info') }}
         </n-alert>
+        <n-alert v-if="anotherContributionActive" type="warning" :show-icon="false" mb-4>
+          {{ text('anotherToolRunning') }}
+        </n-alert>
         <div class="external-plugin-tool-actions">
           <n-button
-            v-if="plugin.status === 'active'"
+            v-if="currentContributionActive"
             type="warning"
             :loading="isBusy"
             @click="stopPlugin"
@@ -235,7 +287,7 @@ onMounted(() => {
             {{ text('stop') }}
           </n-button>
           <n-button
-            v-else-if="plugin.status === 'installed'"
+            v-else-if="plugin.status !== 'invalid'"
             type="primary"
             :loading="isBusy"
             @click="runPlugin"

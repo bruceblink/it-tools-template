@@ -61,6 +61,7 @@ declare global {
     };
     grantedCapabilities: readonly DesktopPluginCapability[];
     status: 'installed' | 'active' | 'invalid';
+    activeContributionId?: string;
     errorCode?: string;
   }
 
@@ -157,6 +158,7 @@ declare global {
       stopSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
       onSystemMonitorSample?(callback: (sample: SystemMonitorSample) => void): () => void;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
+      onPluginStateChanged?(callback: (pluginId: string) => void): () => void;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       activatePlugin?(
         pluginId: string,
