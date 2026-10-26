@@ -69,6 +69,7 @@ declare global {
     title: string;
     description: string;
     keywords: readonly string[];
+    route: string;
   }
 
   interface DesktopPluginSignerSnapshot {

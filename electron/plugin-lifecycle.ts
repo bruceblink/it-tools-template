@@ -24,6 +24,7 @@ import {
   readInstalledPluginManifest,
   verifyInstalledPluginPackage,
 } from './plugin-package-integrity';
+import { getExternalPluginToolRoute } from '../src/shared/plugin-tool-route';
 
 export { verifyInstalledPluginPackage } from './plugin-package-integrity';
 
@@ -76,11 +77,16 @@ export interface PluginLifecycleSnapshot {
   version: string;
   requestedCapabilities: readonly string[];
   contributions: {
-    tools: readonly PluginPackageToolContribution[];
+    tools: readonly PluginLifecycleToolContribution[];
   };
   grantedCapabilities: readonly PluginCapability[];
   status: 'installed' | 'active' | 'invalid';
   errorCode?: string;
+}
+
+export interface PluginLifecycleToolContribution extends PluginPackageToolContribution {
+  /** Host-owned metadata route; it never executes package code in the host renderer. */
+  route: string;
 }
 
 export interface PluginLifecycleOptions {
@@ -477,7 +483,10 @@ export class PluginLifecycleManager {
       version: manifest.version,
       requestedCapabilities: [...manifest.requestedCapabilities],
       contributions: {
-        tools: [...(manifest.contributions?.tools ?? [])],
+        tools: (manifest.contributions?.tools ?? []).map(tool => ({
+          ...tool,
+          route: getExternalPluginToolRoute(manifest.id, manifest.version, tool.id),
+        })),
       },
       grantedCapabilities: isActive ? [...active.grantedCapabilities] : [],
       status: isActive ? 'active' : 'installed',

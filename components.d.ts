@@ -96,6 +96,7 @@ declare module 'vue' {
     EnvVarsParser: typeof import('./src/tools/env-vars-parser/env-vars-parser.vue')['default']
     EtaCalculator: typeof import('./src/tools/eta-calculator/eta-calculator.vue')['default']
     ExtensionPluginManager: typeof import('./src/components/ExtensionPluginManager.vue')['default']
+    'ExternalPluginTool.page': typeof import('./src/pages/ExternalPluginTool.page.vue')['default']
     FavoriteButton: typeof import('./src/components/FavoriteButton.vue')['default']
     FormatTransformer: typeof import('./src/components/FormatTransformer.vue')['default']
     GitMemo: typeof import('./src/tools/git-memo/git-memo.vue')['default']

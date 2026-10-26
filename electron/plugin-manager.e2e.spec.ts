@@ -104,6 +104,15 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   const installedPluginCard = page.getByTestId(`plugin-package-${pluginId}-1.0.0`);
   await expect(installedPluginCard.getByText('Contributed tools', { exact: true })).toBeVisible();
   await expect(installedPluginCard.getByText('Review the capabilities and persistent settings granted to this plugin.', { exact: true })).toBeVisible();
+  const contributionLink = installedPluginCard.getByRole('link', { name: 'Capability demo', exact: true });
+  await expect(contributionLink).toHaveAttribute(
+    'href',
+    '/extensions/org.it-tools.capability-demo/1.0.0/capability-demo',
+  );
+  await contributionLink.click();
+  await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/capability-demo');
+  await expect(page.getByText('This page displays signed metadata only.', { exact: false })).toBeVisible();
+  await page.goto('app://bundle/settings');
   await expect(page.getByText('Installed', { exact: true })).toBeVisible();
 
   const runtimeGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)

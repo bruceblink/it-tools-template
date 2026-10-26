@@ -43,6 +43,12 @@ const router = createRouter({
       component: () => import('./pages/Settings.page.vue'),
     },
     {
+      path: '/extensions/:pluginId/:version/:toolId',
+      name: 'external-plugin-tool',
+      component: () => import('./pages/ExternalPluginTool.page.vue'),
+      meta: { layout: layouts.base },
+    },
+    {
       path: '/settings/extensions',
       redirect: { name: 'settings' },
     },

@@ -525,7 +525,9 @@ onMounted(() => {
             <div v-if="plugin.contributions.tools.length > 0" class="plugin-contribution-list">
               <n-text strong>{{ text('tools') }}</n-text>
               <div v-for="tool in plugin.contributions.tools" :key="tool.id" class="plugin-contribution-row">
-                <n-text strong>{{ tool.title }}</n-text>
+                <router-link :to="tool.route" class="plugin-contribution-link">
+                  <n-text strong>{{ tool.title }}</n-text>
+                </router-link>
                 <n-text depth="3">{{ tool.description }}</n-text>
               </div>
             </div>
@@ -653,6 +655,15 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.plugin-contribution-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.plugin-contribution-link:hover {
+  text-decoration: underline;
 }
 
 .plugin-section-heading h2 {

@@ -34,7 +34,7 @@ The root `plugin.json` contains these fields:
 | `apiVersion` | Host API range with an inclusive minimum and exclusive maximum. |
 | `entrypoint` | Safe relative path to the HTML entry file. |
 | `requestedCapabilities` | Unique names from the host capability set. A request is not an authorization. |
-| `contributions` | Optional signed display metadata for tools provided by the package. It does not register a host route or grant execution access. |
+| `contributions` | Optional signed display metadata for tools provided by the package. The host may derive a metadata landing route, but this field does not register a host tool implementation or grant execution access. |
 | `files` | Sorted list of every payload path and its lowercase SHA-256 digest. |
 | `signature` | Ed25519 algorithm, trusted key ID, and standard Base64 signature. |
 
@@ -71,7 +71,7 @@ Example unsigned manifest fields:
 }
 ```
 
-`contributions` is optional. When present, `tools` contains at most 32 records. Each record uses a plugin-namespaced ID (`<plugin-id>/<tool-id>`), a non-empty title and description, and at most 32 unique keywords. The package validator trims display text, rejects unknown fields, duplicate IDs, and IDs outside the package namespace. The desktop plugin manager displays this metadata after signature verification. The current package layer records and displays the declaration; it does not execute external code, add a route to the host registry, or make a capability request an authorization.
+`contributions` is optional. When present, `tools` contains at most 32 records. Each record uses a plugin-namespaced ID (`<plugin-id>/<tool-id>`), a non-empty title and description, and at most 32 unique keywords. The package validator trims display text, rejects unknown fields, duplicate IDs, and IDs outside the package namespace. The desktop plugin manager displays this metadata after signature verification and links each installed version to a host-owned metadata route at `/extensions/<plugin-id>/<version>/<tool-id>`. The route only displays signed metadata and links to plugin management; it does not execute external code or add a component to the host tool registry. A capability request remains separate from signature trust.
 
 Packages that omit `contributions` remain valid. The field is included in the signed payload only when it is present, so existing v1 signatures continue to verify without repacking.
 
