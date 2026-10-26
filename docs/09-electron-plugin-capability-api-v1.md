@@ -100,6 +100,8 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 工具贡献元数据还可以声明 `dataProcessing`、`offline` 和工具级 `capabilities`。宿主校验工具能力必须属于插件清单的 `requestedCapabilities`；从工具页运行贡献时，只向该隔离窗口授予当前工具声明的能力。设置页运行整包时，仍按用户选择的整包授权执行。未声明这些可选字段的旧签名包使用 `unspecified`、`unknown` 和空能力列表，原签名载荷保持兼容。
 
+清单能力 ID 的集合大于当前 v1 执行器支持的集合。宿主会保留并展示已知但暂未实现的声明，启动沙箱时只把当前支持的能力交给代理；未实现的能力不会获得授权，也不会阻止包在没有这些能力的情况下运行。插件应根据实际 API 支持情况处理 `permission-denied` 或 `capability-not-requested` 错误。
+
 ## 验证
 
 `electron/plugin-api-v1.test.ts` 检查 API 版本、运行时查询、授权错误、设置键和值限制、本地输入限制和响应结构。`electron/plugin-capability-broker.test.ts` 检查来源、请求结构、四类能力授权、响应边界、大小限制、频率、并发和撤销。`electron/plugin-settings-store.test.ts` 检查插件命名空间、并发写入、持久化、删除、损坏文件和资源限制。`electron/plugin-manager.e2e.spec.ts` 验证签名样例使用 `window.itTools`，并通过授权前后的运行时查询、剪贴板写入和跨版本设置读取。关闭沙箱窗口时，宿主在销毁前保存 `webContents.id`，以避免关闭事件读取已销毁对象。

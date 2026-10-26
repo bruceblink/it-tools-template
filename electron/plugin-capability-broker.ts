@@ -25,6 +25,11 @@ class RequestBodyTooLargeError extends Error {}
 
 export type PluginCapability = 'runtime.info' | 'clipboard.write' | 'settings.read' | 'settings.write';
 
+/** Return whether the current host can execute a declared plugin capability. */
+export function isSupportedPluginCapability(value: string): value is PluginCapability {
+  return supportedCapabilities.has(value);
+}
+
 export type PluginCapabilityCall =
   | { id: string; capability: 'runtime.info'; operation: 'read'; input: Record<string, never> }
   | { id: string; capability: 'clipboard.write'; operation: 'writeText'; input: { text: string } }
@@ -60,10 +65,10 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
 
   const requested = new Set(options.requestedCapabilities);
   const granted = new Set(options.grantedCapabilities);
-  if ([...requested].some(capability => !supportedCapabilities.has(capability))) {
+  if ([...requested].some(capability => !isSupportedPluginCapability(capability))) {
     throw new Error('The plugin requested a capability that this host API does not support.');
   }
-  if ([...granted].some(capability => !requested.has(capability) || !supportedCapabilities.has(capability))) {
+  if ([...granted].some(capability => !requested.has(capability) || !isSupportedPluginCapability(capability))) {
     throw new Error('The host cannot grant a capability that the plugin did not request.');
   }
 

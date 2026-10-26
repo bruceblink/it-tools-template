@@ -8,7 +8,7 @@ export type PluginToolDataProcessing =
 
 export type PluginToolOfflineSupport = 'available' | 'requires-network' | 'conditional' | 'unknown';
 
-/** Capabilities the host can validate in a signed package manifest. */
+/** Capability IDs accepted in signed package metadata. The current host may expose only a subset at runtime. */
 export type PluginToolCapability =
   | 'clipboard.write'
   | 'data.oui'

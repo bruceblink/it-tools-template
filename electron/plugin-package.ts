@@ -27,6 +27,7 @@ export {
 } from './plugin-package-manifest';
 export type {
   PluginPackageErrorCode,
+  PluginPackageCapability,
   PluginPackageContributions,
   PluginPackageFile,
   PluginPackageManifest,

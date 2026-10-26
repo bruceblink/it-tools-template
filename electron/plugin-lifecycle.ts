@@ -94,7 +94,7 @@ export interface PluginLifecycleToolContribution extends PluginPackageToolContri
   route: string;
   dataProcessing: NonNullable<PluginPackageToolContribution['dataProcessing']>;
   offline: NonNullable<PluginPackageToolContribution['offline']>;
-  capabilities: readonly PluginCapability[];
+  capabilities: NonNullable<PluginPackageToolContribution['capabilities']>;
 }
 
 export interface PluginLifecycleOptions {

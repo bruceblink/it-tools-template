@@ -1,6 +1,5 @@
 import { createPublicKey, KeyObject, verify } from 'node:crypto';
 import * as yauzl from 'yauzl';
-import type { PluginCapability } from './plugin-capability-broker';
 
 export const pluginPackageManifestPath = 'plugin.json';
 
@@ -23,6 +22,17 @@ const windowsDeviceNamePattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)
 const maximumToolContributions = 32;
 const supportedToolDataProcessing = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
 const supportedToolOffline = new Set(['available', 'requires-network', 'conditional', 'unknown']);
+
+/** Capability IDs that a signed package may declare in its manifest metadata. */
+export type PluginPackageCapability =
+  | 'clipboard.write'
+  | 'data.oui'
+  | 'device.camera'
+  | 'file.read'
+  | 'file.save'
+  | 'runtime.info'
+  | 'settings.read'
+  | 'settings.write';
 
 export const pluginPackageLimits = Object.freeze({
   maximumArchiveBytes: 64 * 1024 * 1024,
@@ -67,7 +77,7 @@ export interface PluginPackageToolContribution {
   keywords: readonly string[];
   dataProcessing?: 'memory-only' | 'local-data' | 'user-selected-files' | 'network' | 'unspecified';
   offline?: 'available' | 'requires-network' | 'conditional' | 'unknown';
-  capabilities?: readonly PluginCapability[];
+  capabilities?: readonly PluginPackageCapability[];
 }
 
 export interface PluginPackageContributions {
@@ -388,7 +398,7 @@ function validateContributions(value: unknown, pluginId: string, requestedCapabi
       keywords: [...candidate.keywords] as string[],
       ...(candidate.dataProcessing === undefined ? {} : { dataProcessing: candidate.dataProcessing as PluginPackageToolContribution['dataProcessing'] }),
       ...(candidate.offline === undefined ? {} : { offline: candidate.offline as PluginPackageToolContribution['offline'] }),
-      ...(candidate.capabilities === undefined ? {} : { capabilities: [...candidate.capabilities] as PluginCapability[] }),
+      ...(candidate.capabilities === undefined ? {} : { capabilities: [...candidate.capabilities] as PluginPackageCapability[] }),
     });
   }
   return { tools };

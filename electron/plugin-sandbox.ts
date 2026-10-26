@@ -9,6 +9,7 @@ import {
 } from 'electron';
 import {
   createPluginCapabilityBroker,
+  isSupportedPluginCapability,
   PLUGIN_CAPABILITY_API_PATH,
 } from './plugin-capability-broker';
 import type {
@@ -157,7 +158,10 @@ export async function createPluginSandboxWindow(
 
   const partition = getPluginSessionPartition(registration.pluginId, packageRoot);
   const pluginSession = electronSession.fromPartition(partition, { cache: false });
-  const requestedCapabilities = registration.requestedCapabilities ?? [];
+  // Package manifests may declare known capabilities that this host cannot execute yet.
+  // Only the currently supported subset enters the broker; unsupported declarations remain unavailable.
+  const requestedCapabilities = (registration.requestedCapabilities ?? [])
+    .filter(isSupportedPluginCapability);
   const grantedCapabilities = registration.grantedCapabilities ?? [];
   if (!registration.executeCapability && (requestedCapabilities.length > 0 || grantedCapabilities.length > 0)) {
     throw new Error('Plugin capabilities require a host executor.');
