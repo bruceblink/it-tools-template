@@ -124,8 +124,17 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   },
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
-  activatePlugin: (pluginId: string, version: string, grantedCapabilities: readonly string[]) =>
-    ipcRenderer.invoke('desktop:plugins:activate', { pluginId, version, grantedCapabilities }),
+  activatePlugin: (
+    pluginId: string,
+    version: string,
+    grantedCapabilities: readonly string[],
+    contributionId?: string,
+  ) => ipcRenderer.invoke('desktop:plugins:activate', {
+    pluginId,
+    version,
+    grantedCapabilities,
+    ...(contributionId === undefined ? {} : { contributionId }),
+  }),
   disablePlugin: (pluginId: string) => ipcRenderer.invoke('desktop:plugins:disable', { pluginId }),
   uninstallPlugin: (pluginId: string, version: string) =>
     ipcRenderer.invoke('desktop:plugins:uninstall', { pluginId, version }),

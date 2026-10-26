@@ -43,8 +43,10 @@ export class PluginApiError extends Error {
 }
 
 export interface ITToolsPluginApiV1 {
-  readonly apiVersion: '1.1.0';
+  readonly apiVersion: '1.2.0';
   readonly hostApiVersion: '1.3.0';
+  /** The host-verified contribution ID selected when this plugin window was opened. */
+  readonly toolId: string | undefined;
   readonly capabilities: {
     readonly runtime: {
       getInfo(): Promise<PluginRuntimeInfo>;

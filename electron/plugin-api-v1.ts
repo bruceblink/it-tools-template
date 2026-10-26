@@ -1,6 +1,6 @@
 import { pluginSettingsLimits } from './plugin-settings-store';
 
-export const pluginRendererApiVersion = '1.1.0';
+export const pluginRendererApiVersion = '1.2.0';
 export const pluginHostApiVersion = '1.3.0';
 export const pluginApiMaximumClipboardTextCharacters = 16_384;
 
@@ -20,6 +20,20 @@ export function getPluginApiV1Script(): string {
   const settingKeyPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
   const errorCodePattern = /^[a-z0-9-]{1,64}$/;
   let requestSequence = 0;
+
+  function getToolId() {
+    const hash = typeof globalThis.location?.hash === 'string' ? globalThis.location.hash : '';
+    if (!hash.startsWith('#tool=')) {
+      return undefined;
+    }
+    try {
+      const value = decodeURIComponent(hash.slice('#tool='.length));
+      return value.length > 0 ? value : undefined;
+    }
+    catch {
+      return undefined;
+    }
+  }
 
   class PluginApiError extends Error {
     constructor(code, status) {
@@ -119,6 +133,7 @@ export function getPluginApiV1Script(): string {
   const api = Object.freeze({
     apiVersion: '${pluginRendererApiVersion}',
     hostApiVersion: '${pluginHostApiVersion}',
+    toolId: getToolId(),
     capabilities,
     PluginApiError,
   });

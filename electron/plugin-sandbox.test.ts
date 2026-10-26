@@ -32,6 +32,8 @@ describe('Electron plugin renderer boundary', () => {
     expect(getPluginSessionPartition('org.it-tools.other', versionOneRoot)).not.toBe(versionOnePartition);
     expect(versionOnePartition).not.toContain('persist:');
     expect(getPluginEntryUrl(pluginId, 'index.html')).toBe('it-plugin://org.it-tools.sample/index.html');
+    expect(getPluginEntryUrl(pluginId, 'index.html', `${pluginId}/example-tool`))
+      .toBe('it-plugin://org.it-tools.sample/index.html#tool=org.it-tools.sample%2Fexample-tool');
     expect(isPluginRendererUrl('it-plugin://org.it-tools.sample/tools/example', pluginId)).toBe(true);
   });
 
@@ -48,6 +50,7 @@ describe('Electron plugin renderer boundary', () => {
     for (const entrypoint of ['/index.html', '../index.html', 'pages/../../index.html', 'index%2ehtml', 'script.js']) {
       expect(() => getPluginEntryUrl('org.it-tools.sample', entrypoint)).toThrow();
     }
+    expect(() => getPluginEntryUrl('org.it-tools.sample', 'index.html', 'org.other/tool')).toThrow();
     expect(isPluginRendererUrl('it-plugin://org.it-tools.other/index.html', 'org.it-tools.sample')).toBe(false);
     expect(isPluginRendererUrl('it-plugin://user@org.it-tools.sample/index.html', 'org.it-tools.sample')).toBe(false);
     expect(isPluginRendererUrl('it-plugin://org.it-tools.sample:123/index.html', 'org.it-tools.sample')).toBe(false);

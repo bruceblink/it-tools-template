@@ -36,6 +36,18 @@ describe('plugin renderer API v1', () => {
     expect(requestBody).toMatchObject({ capability: 'runtime.info', operation: 'read', input: {} });
   });
 
+  it('exposes the host-selected contribution ID without making it a capability grant', () => {
+    const context = {
+      fetch: vi.fn(),
+      location: { hash: '#tool=org.example.plugin/example-tool' },
+    };
+    runInNewContext(getPluginApiV1Script(), context);
+
+    const api = (context as unknown as { itTools: { apiVersion: string; toolId?: string } }).itTools;
+    expect(api.apiVersion).toBe('1.2.0');
+    expect(api.toolId).toBe('org.example.plugin/example-tool');
+  });
+
   it('maps broker denial to a stable error and rejects oversized clipboard input locally', async () => {
     const fetch = vi.fn(async (_input: string, init: RequestInit) => {
       const request = JSON.parse(String(init.body)) as { id: string };

@@ -20,7 +20,7 @@ catch (error) {
 }
 ```
 
-`window.itTools.apiVersion` 当前为 `1.1.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
+`window.itTools.apiVersion` 当前为 `1.2.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `toolId`（宿主选择的工具贡献 ID）、`runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。`toolId` 只描述启动上下文，不是能力授权，也不能用于绕过宿主校验。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
 
 `PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
 
@@ -92,7 +92,7 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 ## 当前实现与限制
 
-`window.itTools.apiVersion` 当前为 `1.1.0`，`window.itTools.hostApiVersion` 当前为 `1.3.0`。新增的 `settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 Ki 个字符，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
+`window.itTools.apiVersion` 当前为 `1.2.0`，`window.itTools.hostApiVersion` 当前为 `1.3.0`。新增的 `toolId` 是宿主在贡献页面启动时写入的只读上下文；整包启动时为 `undefined`。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 Ki 个字符，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
 
 签名样例会读取宿主返回的运行时信息、读写持久设置，并在授权后通过客户端写入剪贴板；自动化 E2E 会替换操作系统剪贴板执行器，不写入真实剪贴板。插件未获授权时，客户端返回 `PluginApiError`，错误代码为 `permission-denied`。能力请求仍需由用户在桌面管理界面单独批准。Web 端没有对应的系统能力代理。
 

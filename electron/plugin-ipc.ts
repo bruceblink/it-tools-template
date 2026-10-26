@@ -88,12 +88,15 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     ))) {
       throw new PluginLifecycleError('unsupported-capability', 'The selected capability is not requested and supported.');
     }
+    if (request.contributionId !== undefined && !target.contributions.tools.some(tool => tool.id === request.contributionId)) {
+      throw new PluginLifecycleError('contribution-not-found', 'The requested tool contribution is not available.');
+    }
 
     const grants = await confirmPluginCapabilities(dependencies, request.pluginId, request.grantedCapabilities);
     if (grants === null) {
       return null;
     }
-    return lifecycleManager.activate(request.pluginId, request.version, grants);
+    return lifecycleManager.activate(request.pluginId, request.version, grants, request.contributionId);
   }));
   ipcMain.handle('desktop:plugins:disable', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     return lifecycleManager.disable(parsePluginIdRequest(value));
@@ -274,20 +277,28 @@ function getPluginOperationErrorCode(error: unknown): string {
   return 'operation-failed';
 }
 
-function parseActivationRequest(value: unknown): { pluginId: string; version: string; grantedCapabilities: string[] } {
+function parseActivationRequest(value: unknown): {
+  pluginId: string;
+  version: string;
+  grantedCapabilities: string[];
+  contributionId?: string;
+} {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['pluginId', 'version', 'grantedCapabilities'])
+    || (!hasExactKeys(value, ['pluginId', 'version', 'grantedCapabilities'])
+      && !hasExactKeys(value, ['pluginId', 'version', 'grantedCapabilities', 'contributionId']))
     || typeof value.pluginId !== 'string'
     || typeof value.version !== 'string'
     || !Array.isArray(value.grantedCapabilities)
     || value.grantedCapabilities.length > pluginLifecycleCapabilities.length
-    || value.grantedCapabilities.some(capability => typeof capability !== 'string')) {
+    || value.grantedCapabilities.some(capability => typeof capability !== 'string')
+    || (value.contributionId !== undefined && typeof value.contributionId !== 'string')) {
     throw new PluginIpcInputError();
   }
   return {
     pluginId: value.pluginId,
     version: value.version,
     grantedCapabilities: value.grantedCapabilities as string[],
+    ...(value.contributionId === undefined ? {} : { contributionId: value.contributionId }),
   };
 }
 

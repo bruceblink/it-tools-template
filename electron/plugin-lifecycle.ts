@@ -55,6 +55,7 @@ export const pluginLifecycleCapabilities: readonly PluginCapability[] = [...supp
 export type PluginLifecycleErrorCode =
   | 'not-installed'
   | 'active-limit'
+  | 'contribution-not-found'
   | 'unsupported-capability'
   | 'activation-failed'
   | 'activation-rollback-failed'
@@ -100,6 +101,7 @@ export interface PluginLifecycleOptions {
 interface ActivePlugin {
   pluginId: string;
   version: string;
+  contributionId?: string;
   signingKeyId: string;
   packageRoot: string;
   grantedCapabilities: readonly PluginCapability[];
@@ -199,6 +201,7 @@ export class PluginLifecycleManager {
     pluginId: string,
     version: string,
     grantedCapabilities: readonly string[],
+    contributionId?: string,
   ): Promise<PluginLifecycleSnapshot> {
     return this.runExclusive(async () => {
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
@@ -211,9 +214,11 @@ export class PluginLifecycleManager {
         trustedSigningKeys: this.options.trustedSigningKeys,
       });
       const grants = validateGrantedCapabilities(manifest, grantedCapabilities);
+      const selectedContributionId = validateContribution(manifest, contributionId);
       const previous = this.activePlugins.get(pluginId);
       if (
         previous?.version === version
+        && previous.contributionId === selectedContributionId
         && sameItems(previous.grantedCapabilities, grants)
         && !previous.window.isDestroyed()
       ) {
@@ -227,7 +232,7 @@ export class PluginLifecycleManager {
         await this.destroyActivePlugin(previous);
       }
       try {
-        await this.startVerifiedPlugin(pluginId, version, packageRoot, manifest, grants);
+        await this.startVerifiedPlugin(pluginId, version, packageRoot, manifest, grants, selectedContributionId);
       }
       catch (activationError) {
         if (previous) {
@@ -246,6 +251,7 @@ export class PluginLifecycleManager {
               previous.packageRoot,
               oldManifest,
               previous.grantedCapabilities,
+              previous.contributionId,
             );
           }
           catch (rollbackError) {
@@ -318,11 +324,13 @@ export class PluginLifecycleManager {
     packageRoot: string,
     manifest: PluginPackageManifest,
     grantedCapabilities: readonly PluginCapability[],
+    contributionId?: string,
   ): Promise<void> {
     const registration: PluginSandboxRegistration = {
       pluginId,
       packageRoot,
       entrypoint: manifest.entrypoint,
+      contributionId,
       requestedCapabilities: manifest.requestedCapabilities,
       grantedCapabilities,
       executeCapability: call => this.options.executeCapability(manifest, call),
@@ -334,6 +342,7 @@ export class PluginLifecycleManager {
     const active: ActivePlugin = {
       pluginId,
       version,
+      contributionId,
       signingKeyId: manifest.signature.keyId,
       packageRoot,
       grantedCapabilities,
@@ -553,6 +562,22 @@ function validateGrantedCapabilities(
     }
   }
   return [...requestedGrants] as PluginCapability[];
+}
+
+function validateContribution(
+  manifest: PluginPackageManifest,
+  contributionId: string | undefined,
+): string | undefined {
+  if (contributionId === undefined) {
+    return undefined;
+  }
+  if (!manifest.contributions?.tools.some(tool => tool.id === contributionId)) {
+    throw new PluginLifecycleError(
+      'contribution-not-found',
+      'The requested tool contribution is not declared by this plugin package.',
+    );
+  }
+  return contributionId;
 }
 
 function completeResponsivenessProbe(active: ActivePlugin, probeTimeout: ReturnType<typeof setTimeout>): void {

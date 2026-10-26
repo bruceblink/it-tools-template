@@ -142,6 +142,7 @@ async function runPlugin(): Promise<void> {
       currentPlugin.pluginId,
       currentPlugin.version,
       requestedCapabilities,
+      contribution.value?.id,
     );
     if (!result.ok) {
       operationError.value = text('operationFailed');

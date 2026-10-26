@@ -22,6 +22,7 @@ import { resolveRendererFile } from './security';
 export const PLUGIN_SCHEME = 'it-plugin';
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const pluginContributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const maximumPluginAssetBytes = 16 * 1024 * 1024;
 const pluginEntrypointLoadTimeoutMs = 15_000;
 const blockedNetworkProtocols = new Set(['http:', 'https:', 'ws:', 'wss:', 'ftp:']);
@@ -38,6 +39,8 @@ export interface PluginSandboxRegistration {
   pluginId: string;
   packageRoot: string;
   entrypoint: string;
+  /** The signed contribution selected by the host, when activation starts from a tool route. */
+  contributionId?: string;
   requestedCapabilities?: readonly string[];
   grantedCapabilities?: readonly string[];
   executeCapability?: PluginCapabilityExecutor;
@@ -97,13 +100,20 @@ export function isPluginRendererUrl(candidate: string, pluginId: string): boolea
 }
 
 /** Build a URL only from a normalized relative entrypoint supplied by a validated package record. */
-export function getPluginEntryUrl(pluginId: string, entrypoint: string): string {
+export function getPluginEntryUrl(pluginId: string, entrypoint: string, contributionId?: string): string {
   assertPluginId(pluginId);
   const segments = normalizePluginPath(entrypoint);
   if (segments.length === 0 || !segments.at(-1)?.endsWith('.html')) {
     throw new Error('A plugin entrypoint must name an HTML file.');
   }
-  return `${PLUGIN_SCHEME}://${pluginId}/${segments.map(segment => encodeURIComponent(segment)).join('/')}`;
+  if (contributionId !== undefined && (
+    !pluginContributionIdPattern.test(contributionId)
+    || !contributionId.startsWith(`${pluginId}/`)
+  )) {
+    throw new Error('A plugin contribution must belong to the plugin namespace.');
+  }
+  const toolHash = contributionId === undefined ? '' : `#tool=${encodeURIComponent(contributionId)}`;
+  return `${PLUGIN_SCHEME}://${pluginId}/${segments.map(segment => encodeURIComponent(segment)).join('/')}${toolHash}`;
 }
 
 export function getPluginContentSecurityPolicy(): string {
@@ -138,7 +148,7 @@ export async function createPluginSandboxWindow(
   onWebContentsCreated: (contents: WebContents, pluginId: string) => void,
 ): Promise<BrowserWindow> {
   assertPluginId(registration.pluginId);
-  const entryUrl = getPluginEntryUrl(registration.pluginId, registration.entrypoint);
+  const entryUrl = getPluginEntryUrl(registration.pluginId, registration.entrypoint, registration.contributionId);
   const packageRoot = resolve(registration.packageRoot);
   const entryFile = await resolveRendererFile(packageRoot, new URL(entryUrl).pathname);
   if (!entryFile || !(await stat(entryFile)).isFile()) {

@@ -162,6 +162,7 @@ declare global {
         pluginId: string,
         version: string,
         grantedCapabilities: readonly DesktopPluginCapability[],
+        contributionId?: string,
       ): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       disablePlugin?(pluginId: string): Promise<DesktopPluginOperationResult<boolean>>;
       uninstallPlugin?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;

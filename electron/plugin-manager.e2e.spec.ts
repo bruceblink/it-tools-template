@@ -128,6 +128,9 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!routePluginWindow) {
     throw new Error('The plugin window was not created from the contribution route.');
   }
+  await expect.poll(async () => routePluginWindow.evaluate(() => (
+    (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
+  ))).toBe('org.it-tools.capability-demo/capability-demo');
   const routePluginWindowClosed = routePluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await routePluginWindowClosed;
@@ -193,9 +196,9 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     throw new Error('The plugin window was not created.');
   }
   await expect.poll(async () => pluginWindow.evaluate(() => {
-    const api = (globalThis as unknown as { itTools?: { apiVersion?: string; hostApiVersion?: string } }).itTools;
-    return { apiVersion: api?.apiVersion, hostApiVersion: api?.hostApiVersion };
-  })).toEqual({ apiVersion: '1.1.0', hostApiVersion: '1.3.0' });
+    const api = (globalThis as unknown as { itTools?: { apiVersion?: string; hostApiVersion?: string; toolId?: string } }).itTools;
+    return { apiVersion: api?.apiVersion, hostApiVersion: api?.hostApiVersion, toolId: api?.toolId };
+  })).toEqual({ apiVersion: '1.2.0', hostApiVersion: '1.3.0', toolId: undefined });
   await expect(pluginWindow.locator('#runtime-proof')).toHaveText('Available');
   await pluginWindow.locator('#clipboard-text').fill('signed plugin clipboard sample');
   await pluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();

@@ -96,6 +96,19 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.disable(pluginId)).resolves.toBe(false);
   });
 
+  it('passes a declared contribution to the isolated window and rejects unknown contributions', async () => {
+    const { root, manager, createWindow } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+
+    await expect(manager.activate(pluginId, '1.0.0', [], `${pluginId}/missing-tool`))
+      .rejects.toMatchObject({ code: 'contribution-not-found' });
+    expect(createWindow).not.toHaveBeenCalled();
+
+    await expect(manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`))
+      .resolves.toMatchObject({ status: 'active' });
+    expect(createWindow.mock.calls[0]?.[0].contributionId).toBe(`${pluginId}/lifecycle-tool`);
+  });
+
   it('disables every active plugin that uses a revoked signing key', async () => {
     const { root, manager, windows } = await createManager();
     await manager.installArchive(await writeArchive(root, '1.0.0'));
@@ -293,6 +306,14 @@ function makeSignedArchive(version: string, requestedCapabilities: string[], id:
     apiVersion: { minInclusive: '1.0.0', maxExclusive: '2.0.0' },
     entrypoint: 'index.html',
     requestedCapabilities,
+    contributions: {
+      tools: [{
+        id: `${id}/lifecycle-tool`,
+        title: 'Lifecycle tool',
+        description: 'Lifecycle fixture tool.',
+        keywords: ['lifecycle'],
+      }],
+    },
     files,
   };
   const signature = sign(
