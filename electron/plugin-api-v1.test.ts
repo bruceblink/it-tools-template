@@ -66,6 +66,43 @@ describe('plugin renderer API v1', () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
+  it('bounds and maps persistent plugin settings operations', async () => {
+    const fetch = vi.fn(async (_input: string, init: RequestInit) => {
+      const request = JSON.parse(String(init.body)) as { id: string; capability: string; operation: string };
+      const result = request.operation === 'get'
+        ? { found: false }
+        : request.operation === 'set'
+          ? { written: true }
+          : { deleted: true };
+      return { ok: true, status: 200, json: async () => ({ id: request.id, ok: true, result }) };
+    });
+    const context = { fetch };
+    runInNewContext(getPluginApiV1Script(), context);
+    const api = (context as unknown as { itTools: {
+      capabilities: {
+        settings: {
+          get: (key: string) => Promise<unknown>;
+          set: (key: string, value: unknown) => Promise<unknown>;
+          delete: (key: string) => Promise<unknown>;
+        };
+      };
+    } }).itTools;
+
+    await expect(api.capabilities.settings.get('demo-note')).resolves.toBeUndefined();
+    await expect(api.capabilities.settings.set('demo-note', 'hello')).resolves.toEqual({ written: true });
+    await expect(api.capabilities.settings.delete('demo-note')).resolves.toEqual({ deleted: true });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(JSON.parse(String(fetch.mock.calls[1]?.[1]?.body))).toMatchObject({
+      capability: 'settings.write',
+      operation: 'set',
+      input: { key: 'demo-note', value: 'hello' },
+    });
+
+    await expect(api.capabilities.settings.get('bad key')).rejects.toMatchObject({ code: 'invalid-input', status: 0 });
+    await expect(api.capabilities.settings.set('demo-note', 'x'.repeat(4_097))).rejects.toMatchObject({ code: 'invalid-input', status: 0 });
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
   it('rejects an existing global and malformed responses', async () => {
     const occupiedContext = { fetch: vi.fn(), itTools: {} };
     expect(() => runInNewContext(getPluginApiV1Script(), occupiedContext)).toThrow(/already defined/);

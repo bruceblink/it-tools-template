@@ -20,7 +20,7 @@ catch (error) {
 }
 ```
 
-`window.itTools.apiVersion` 当前为 `1.0.0`。`window.itTools.hostApiVersion` 当前为 `1.2.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `runtime.getInfo()` 和 `clipboard.writeText(text)`。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
+`window.itTools.apiVersion` 当前为 `1.1.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
 
 `PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
 
@@ -58,8 +58,10 @@ catch (error) {
 | --- | --- | --- | --- |
 | `runtime.info` | `read` | 空对象 | 返回宿主执行器提供的 JSON 数据 |
 | `clipboard.write` | `writeText` | `{ "text": "..." }` | 文本最多 16 Ki 个字符；宿主执行器决定是否执行 |
+| `settings.read` | `get` | `{ "key": "..." }` | 读取当前插件命名空间中的一个非秘密设置 |
+| `settings.write` | `set` / `delete` | `{ "key": "...", "value": ... }` 或 `{ "key": "..." }` | 写入或删除一个非秘密设置 |
 
-这两个 ID 仅是协议标识。宿主必须为每个已加载插件提供独立执行器。清单声明的请求能力不会自动获得授权。
+这些 ID 仅是协议标识。宿主必须为每个已加载插件提供独立执行器。清单声明的请求能力不会自动获得授权。
 
 ## 来源检查与资源限制
 
@@ -90,10 +92,12 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 ## 当前实现与限制
 
-签名样例会读取宿主返回的运行时信息，并在授权后通过客户端写入剪贴板；自动化 E2E 会替换操作系统剪贴板执行器，不写入真实剪贴板。插件未获授权时，客户端返回 `PluginApiError`，错误代码为 `permission-denied`。能力请求仍需由用户在桌面管理界面单独批准。Web 端没有对应的系统能力代理。
+`window.itTools.apiVersion` 当前为 `1.1.0`，`window.itTools.hostApiVersion` 当前为 `1.3.0`。新增的 `settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 Ki 个字符，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
 
-调用次数限制只约束每个插件的一次沙箱会话；目前不提供跨启动的配额、用户可配置的频率策略、通用文件访问或通用网络代理。v1 也没有插件设置存储、工具卡片贡献或宿主路由注册。插件包仍处于实验阶段，不代表第三方插件可公开分发，也不替代操作系统进程隔离。Linux 和 macOS 运行时验收仍待完成。
+签名样例会读取宿主返回的运行时信息、读写持久设置，并在授权后通过客户端写入剪贴板；自动化 E2E 会替换操作系统剪贴板执行器，不写入真实剪贴板。插件未获授权时，客户端返回 `PluginApiError`，错误代码为 `permission-denied`。能力请求仍需由用户在桌面管理界面单独批准。Web 端没有对应的系统能力代理。
+
+调用次数限制只约束每个插件的一次沙箱会话；目前不提供跨启动的调用配额、用户可配置的频率策略、通用文件访问或通用网络代理。设置存储使用版本 1 的宿主 JSON 文件，并以临时文件和重命名方式更新；宿主拒绝损坏、符号链接、硬链接和超出大小限制的文件。v1.1 仍没有工具卡片贡献或宿主路由注册。插件包仍处于实验阶段，不代表第三方插件可公开分发，也不替代操作系统进程隔离。Linux 和 macOS 运行时验收仍待完成。
 
 ## 验证
 
-`electron/plugin-api-v1.test.ts` 检查 API 版本、运行时查询、授权错误、本地输入限制和响应结构。`electron/plugin-capability-broker.test.ts` 检查来源、请求结构、授权、响应边界、大小限制、频率、并发和撤销。`electron/plugin-manager.e2e.spec.ts` 验证签名样例使用 `window.itTools`，并通过授权前后的运行时查询和剪贴板写入。关闭沙箱窗口时，宿主在销毁前保存 `webContents.id`，以避免关闭事件读取已销毁对象。
+`electron/plugin-api-v1.test.ts` 检查 API 版本、运行时查询、授权错误、设置键和值限制、本地输入限制和响应结构。`electron/plugin-capability-broker.test.ts` 检查来源、请求结构、四类能力授权、响应边界、大小限制、频率、并发和撤销。`electron/plugin-settings-store.test.ts` 检查插件命名空间、并发写入、持久化、删除、损坏文件和资源限制。`electron/plugin-manager.e2e.spec.ts` 验证签名样例使用 `window.itTools`，并通过授权前后的运行时查询、剪贴板写入和跨版本设置读取。关闭沙箱窗口时，宿主在销毁前保存 `webContents.id`，以避免关闭事件读取已销毁对象。

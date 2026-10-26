@@ -53,10 +53,14 @@ const capabilities = computed(() => language.value === 'zh'
   ? [
       { id: 'runtime.info' as const, label: '读取平台和应用版本' },
       { id: 'clipboard.write' as const, label: '写入系统剪贴板' },
+      { id: 'settings.read' as const, label: '读取此插件的已保存设置' },
+      { id: 'settings.write' as const, label: '保存此插件的设置' },
     ]
   : [
       { id: 'runtime.info' as const, label: 'Read platform and app version' },
       { id: 'clipboard.write' as const, label: 'Write to the system clipboard' },
+      { id: 'settings.read' as const, label: 'Read this plugin\'s saved settings' },
+      { id: 'settings.write' as const, label: 'Save this plugin\'s settings' },
     ]);
 
 const messages = {

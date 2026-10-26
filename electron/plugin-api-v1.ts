@@ -1,5 +1,7 @@
-export const pluginRendererApiVersion = '1.0.0';
-export const pluginHostApiVersion = '1.2.0';
+import { pluginSettingsLimits } from './plugin-settings-store';
+
+export const pluginRendererApiVersion = '1.1.0';
+export const pluginHostApiVersion = '1.3.0';
 export const pluginApiMaximumClipboardTextCharacters = 16_384;
 
 /** Install the stable renderer client without exposing preload or Node APIs. */
@@ -13,6 +15,9 @@ export function getPluginApiV1Script(): string {
   const apiEndpoint = '/__it_tools/v1/call';
   const nativeFetch = globalThis.fetch.bind(globalThis);
   const maximumClipboardTextCharacters = ${pluginApiMaximumClipboardTextCharacters};
+  const maximumSettingsKeyCharacters = ${pluginSettingsLimits.maximumKeyCharacters};
+  const maximumSettingsStringCharacters = ${pluginSettingsLimits.maximumStringCharacters};
+  const settingKeyPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
   const errorCodePattern = /^[a-z0-9-]{1,64}$/;
   let requestSequence = 0;
 
@@ -80,6 +85,36 @@ export function getPluginApiV1Script(): string {
         return request('clipboard.write', 'writeText', { text });
       },
     }),
+    settings: Object.freeze({
+      get(key) {
+        if (typeof key !== 'string' || key.length > maximumSettingsKeyCharacters || !settingKeyPattern.test(key)) {
+          return Promise.reject(new PluginApiError('invalid-input', 0));
+        }
+        return request('settings.read', 'get', { key }).then((result) => {
+          if (typeof result !== 'object' || result === null || Array.isArray(result) || typeof result.found !== 'boolean') {
+            throw new PluginApiError('invalid-response', 200);
+          }
+          return result.found ? result.value : undefined;
+        });
+      },
+      set(key, value) {
+        if (
+          typeof key !== 'string'
+          || key.length > maximumSettingsKeyCharacters
+          || !settingKeyPattern.test(key)
+          || !isValidSettingValue(value, maximumSettingsStringCharacters)
+        ) {
+          return Promise.reject(new PluginApiError('invalid-input', 0));
+        }
+        return request('settings.write', 'set', { key, value });
+      },
+      delete(key) {
+        if (typeof key !== 'string' || key.length > maximumSettingsKeyCharacters || !settingKeyPattern.test(key)) {
+          return Promise.reject(new PluginApiError('invalid-input', 0));
+        }
+        return request('settings.write', 'delete', { key });
+      },
+    }),
   });
   const api = Object.freeze({
     apiVersion: '${pluginRendererApiVersion}',
@@ -93,5 +128,12 @@ export function getPluginApiV1Script(): string {
     configurable: false,
     enumerable: false,
   });
+
+  function isValidSettingValue(value, maximumStringLength) {
+    return value === null
+      || typeof value === 'boolean'
+      || (typeof value === 'number' && Number.isFinite(value))
+      || (typeof value === 'string' && value.length <= maximumStringLength);
+  }
 })();`;
 }

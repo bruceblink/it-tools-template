@@ -107,6 +107,10 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     .getByRole('checkbox', { name: 'Read platform and app version' });
   const clipboardGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
     .getByRole('checkbox', { name: 'Write to the system clipboard' });
+  const settingsReadGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
+    .getByRole('checkbox', { name: "Read this plugin's saved settings" });
+  const settingsWriteGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
+    .getByRole('checkbox', { name: "Save this plugin's settings" });
   await runtimeGrant.check();
   await electronApp.evaluate(({ dialog }) => {
     Object.defineProperty(dialog, 'showMessageBox', {
@@ -129,6 +133,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await deniedWindow.getByRole('button', { name: 'Copy to clipboard' }).click();
   await expect(deniedWindow.locator('#clipboard-proof')).toHaveText('Not authorized');
   await expect(deniedWindow.locator('#copy-result')).toHaveText('Enable clipboard access in the plugin settings to copy text.');
+  await expect(deniedWindow.locator('#settings-proof')).toHaveText('Not authorized');
   expect(await electronApp.evaluate(() => (globalThis as typeof globalThis & { __testClipboardWrites?: number }).__testClipboardWrites ?? 0)).toBe(0);
   const deniedWindowClosed = deniedWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
@@ -143,6 +148,8 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   });
   await runtimeGrant.check();
   await clipboardGrant.check();
+  await settingsReadGrant.check();
+  await settingsWriteGrant.check();
   await page.getByRole('button', { name: 'Run plugin' }).click();
   await expect(page.getByText('Plugin window started.')).toBeVisible();
   await expect.poll(async () => (
@@ -156,13 +163,17 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect.poll(async () => pluginWindow.evaluate(() => {
     const api = (globalThis as unknown as { itTools?: { apiVersion?: string; hostApiVersion?: string } }).itTools;
     return { apiVersion: api?.apiVersion, hostApiVersion: api?.hostApiVersion };
-  })).toEqual({ apiVersion: '1.0.0', hostApiVersion: '1.2.0' });
+  })).toEqual({ apiVersion: '1.1.0', hostApiVersion: '1.3.0' });
   await expect(pluginWindow.locator('#runtime-proof')).toHaveText('Available');
   await pluginWindow.locator('#clipboard-text').fill('signed plugin clipboard sample');
   await pluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();
   await expect(pluginWindow.locator('#clipboard-proof')).toHaveText('Available');
   await expect(pluginWindow.locator('#copy-result')).toHaveText('Text copied.');
   expect(await electronApp.evaluate(() => (globalThis as typeof globalThis & { __testClipboardText?: string }).__testClipboardText)).toBe('signed plugin clipboard sample');
+  await expect(pluginWindow.locator('#settings-proof')).toHaveText('Available');
+  await pluginWindow.locator('#settings-value').fill('version-one');
+  await pluginWindow.getByRole('button', { name: 'Save setting' }).click();
+  await expect(pluginWindow.locator('#settings-result')).toHaveText('Setting saved.');
   await expect(page.getByText('Running', { exact: true })).toBeVisible();
   await pluginWindow.evaluate(() => localStorage.setItem('rollback-proof', 'version-1'));
 
@@ -206,6 +217,8 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     throw new Error('The previous plugin version was not restored.');
   }
   await expect(rolledBackWindow.locator('#runtime-proof')).toHaveText('Available');
+  await expect(rolledBackWindow.locator('#settings-proof')).toHaveText('Available');
+  await expect(rolledBackWindow.locator('#settings-value')).toHaveValue('version-one');
   await expect.poll(async () => rolledBackWindow.evaluate(() => localStorage.getItem('rollback-proof'))).toBe('version-1');
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`).getByText('Running')).toBeVisible();
   await expect(page.getByTestId(`plugin-package-${pluginId}-2.0.0`).getByText('Installed')).toBeVisible();

@@ -669,3 +669,9 @@ Windows 本机 `pnpm check` 通过 135 个测试文件（2 个跳过）、841 �
 插件文档 HTML 由宿主在响应中注入 Worker guard，不改写已签名文件。宿主移除 HTML 响应中的 `http-equiv` 元数据策略，统一使用宿主 CSP。主文档只允许同源 Dedicated Worker；每个插件窗口最多 2 个活动 Worker，每个 Worker 最长运行 30 秒。Worker 出错、停用或页面关闭时，宿主终止对应 Worker。Worker 脚本响应将 `worker-src` 设为 `none`，阻止嵌套 Worker。SharedWorker、ServiceWorker、外部连接和子窗口仍被拒绝。
 
 Electron 单测覆盖并发限制、构造器绕过、显式终止、超时和页面关闭回收。Electron 沙箱 E2E 验证正常 Worker 通信、并发上限、终止后释放名额、嵌套 Worker 拒绝、同源网络边界和共享/服务 Worker 拒绝；插件管理器 E2E 验证签名安装、能力授权、回滚、撤销和卸载不受影响。Windows 本机 `pnpm check` 通过 134 个测试文件（2 个跳过）、838 项测试（18 项跳过），Web 隔离和 Web/Electron 构建通过。完整 Electron E2E 共 39 项，33 项通过、6 项按环境跳过。当前只有 Windows 自动化证据；Linux 和 macOS 的 Electron 回归仍待运行。真实窗口的 Home 返回状态本轮未确认。
+
+### 2026-10-27：插件持久设置 API v1.1
+
+外部插件现在可以使用冻结的 `window.itTools.capabilities.settings` 客户端读取、保存和删除非秘密设置。`settings.read` 与 `settings.write` 是独立的清单能力，也必须分别得到本次插件窗口的用户授权。设置键最多 64 个字符，字符串值最多 4 KiB，每个插件最多保存 128 个值；值只允许字符串、有限数字、布尔值和 `null`。客户端版本升级为 `1.1.0`，宿主兼容版本升级为 `1.3.0`。
+
+宿主把设置存储在用户数据目录的版本 1 JSON 文件中，并按插件 ID 命名空间。文件更新使用随机暂存文件、同步写入和重命名。读取时拒绝损坏文件、符号链接、硬链接和超出 512 KiB 的文件。设置跨插件版本、升级回退和应用重启保留，但不用于凭据、秘密、文件或网络数据。`pnpm check` 通过 136 个测试文件（2 个跳过）、847 项测试（18 项跳过），完整 Electron E2E 为 39 项，其中 33 项通过、6 项按环境跳过。新增单测覆盖命名空间、并发写入、删除、损坏文件和资源限制；插件管理器 E2E 覆盖未授权拒绝、授权读写和升级失败回退后的设置保留。Linux/macOS 和公开第三方分发仍待验收。

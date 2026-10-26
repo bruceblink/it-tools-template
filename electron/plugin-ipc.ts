@@ -10,10 +10,12 @@ import {
 } from 'electron';
 import { PluginLifecycleError, PluginLifecycleManager, pluginLifecycleCapabilities } from './plugin-lifecycle';
 import { PluginPackageError } from './plugin-package-manifest';
-import type { PluginPackageSigningKey } from './plugin-package';
+import type { PluginPackageManifest, PluginPackageSigningKey } from './plugin-package';
 import type { PluginCapabilityCall } from './plugin-capability-broker';
+import { pluginHostApiVersion } from './plugin-api-v1';
 import { isTrustedDesktopSender } from './plugin-ipc-security';
 import { createPluginSandboxWindow } from './plugin-sandbox';
+import { PluginSettingsStore } from './plugin-settings-store';
 import { PluginTrustStore, PluginTrustStoreError } from './plugin-trust-store';
 import type { PluginSignerInput } from './plugin-trust-store';
 
@@ -35,19 +37,26 @@ class PluginIpcInputError extends Error {
 export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependencies): Promise<void> {
   const signingKeys = new Map<string, PluginPackageSigningKey>();
   const trustStore = new PluginTrustStore(resolve(dependencies.userDataRoot, 'plugins', 'trusted-keys.json'), signingKeys);
+  const pluginSettingsStore = new PluginSettingsStore(resolve(dependencies.userDataRoot, 'plugins', 'settings.json'));
   try {
     await trustStore.load();
   }
   catch {
     console.error('The plugin trust store could not be loaded. External plugin installation is disabled.');
   }
+  try {
+    await pluginSettingsStore.load();
+  }
+  catch {
+    console.error('The plugin settings store could not be loaded. Plugin settings are disabled.');
+  }
 
   const lifecycleManager = new PluginLifecycleManager({
     installRoot: resolve(dependencies.userDataRoot, 'plugins', 'packages'),
-    hostApiVersion: '1.2.0',
+    hostApiVersion: pluginHostApiVersion,
     trustedSigningKeys: signingKeys,
     createWindow: registration => createPluginSandboxWindow(registration, dependencies.onPluginWebContentsCreated),
-    executeCapability: (_manifest, call) => executePluginCapability(call),
+    executeCapability: (manifest, call) => executePluginCapability(manifest, call, pluginSettingsStore),
   });
 
   ipcMain.handle('desktop:plugins:list', event => runPluginManagementIpc(
@@ -178,6 +187,12 @@ async function confirmPluginCapabilities(
     if (capability === 'clipboard.write') {
       return '- Write text to the system clipboard / 写入系统剪贴板';
     }
+    if (capability === 'settings.read') {
+      return '- Read this plugin\'s saved settings / 读取此插件的已保存设置';
+    }
+    if (capability === 'settings.write') {
+      return '- Save this plugin\'s settings / 保存此插件的设置';
+    }
     return `- ${capability}`;
   }).join('\n');
   const confirmation = await dialog.showMessageBox(getPluginManagementWindow(dependencies), {
@@ -195,7 +210,11 @@ async function confirmPluginCapabilities(
   return confirmation.response === 1 ? [] : null;
 }
 
-function executePluginCapability(call: PluginCapabilityCall): unknown {
+async function executePluginCapability(
+  manifest: PluginPackageManifest,
+  call: PluginCapabilityCall,
+  settingsStore: PluginSettingsStore,
+): Promise<unknown> {
   if (call.capability === 'runtime.info') {
     return { platform: process.platform, version: app.getVersion() };
   }
@@ -203,6 +222,16 @@ function executePluginCapability(call: PluginCapabilityCall): unknown {
     // The broker validates the requested grant and text length before this OS clipboard write.
     clipboard.writeText(call.input.text);
     return { written: true };
+  }
+  if (call.capability === 'settings.read') {
+    const value = await settingsStore.read(manifest.id, call.input.key);
+    return value === undefined ? { found: false } : { found: true, value };
+  }
+  if (call.capability === 'settings.write' && call.operation === 'set') {
+    return settingsStore.write(manifest.id, call.input.key, call.input.value);
+  }
+  if (call.capability === 'settings.write' && call.operation === 'delete') {
+    return settingsStore.delete(manifest.id, call.input.key);
   }
   throw new Error('The host does not implement this plugin capability.');
 }

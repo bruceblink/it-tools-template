@@ -16,7 +16,7 @@ export const pluginPackageLimits = Object.freeze({
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const signatureDomain = 'IT Tools Electron Plugin Package v1';
-const supportedHostApiVersion = '1.2.0';
+const supportedHostApiVersion = '1.3.0';
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -27,6 +27,8 @@ const knownCapabilities = new Set([
   'file.read',
   'file.save',
   'runtime.info',
+  'settings.read',
+  'settings.write',
 ]);
 const privateKeyMarker = /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/;
 const maximumPrivateKeyBytes = 16 * 1024;

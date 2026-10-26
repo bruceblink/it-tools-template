@@ -1,24 +1,36 @@
+import {
+  isPluginSettingKey,
+  isPluginSettingValue,
+  pluginSettingsLimits,
+} from './plugin-settings-store';
+import type { PluginSettingValue } from './plugin-settings-store';
+
 export const PLUGIN_CAPABILITY_API_PATH = '/__it_tools/v1/call';
 
 export const pluginCapabilityLimits = Object.freeze({
   maximumRequestBytes: 16 * 1024,
   maximumResponseBytes: 16 * 1024,
   maximumClipboardTextCharacters: 16 * 1024,
+  maximumSettingsKeyCharacters: pluginSettingsLimits.maximumKeyCharacters,
+  maximumSettingsStringCharacters: pluginSettingsLimits.maximumStringCharacters,
   maximumRequestsPerMinute: 30,
   maximumConcurrentRequests: 4,
 });
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const requestIdPattern = /^[a-zA-Z0-9_-]{1,64}$/;
-const supportedCapabilities = new Set(['runtime.info', 'clipboard.write']);
+const supportedCapabilities = new Set(['runtime.info', 'clipboard.write', 'settings.read', 'settings.write']);
 
 class RequestBodyTooLargeError extends Error {}
 
-export type PluginCapability = 'runtime.info' | 'clipboard.write';
+export type PluginCapability = 'runtime.info' | 'clipboard.write' | 'settings.read' | 'settings.write';
 
 export type PluginCapabilityCall =
   | { id: string; capability: 'runtime.info'; operation: 'read'; input: Record<string, never> }
-  | { id: string; capability: 'clipboard.write'; operation: 'writeText'; input: { text: string } };
+  | { id: string; capability: 'clipboard.write'; operation: 'writeText'; input: { text: string } }
+  | { id: string; capability: 'settings.read'; operation: 'get'; input: { key: string } }
+  | { id: string; capability: 'settings.write'; operation: 'set'; input: { key: string; value: PluginSettingValue } }
+  | { id: string; capability: 'settings.write'; operation: 'delete'; input: { key: string } };
 
 export type PluginCapabilityExecutor = (call: PluginCapabilityCall) => Promise<unknown> | unknown;
 
@@ -187,6 +199,46 @@ function parseCapabilityCall(bytes: Uint8Array): PluginCapabilityCall | null {
       capability: 'clipboard.write',
       operation: 'writeText',
       input: { text: value.input.text },
+    };
+  }
+  if (
+    value.capability === 'settings.read'
+    && value.operation === 'get'
+    && hasExactKeys(value.input, ['key'])
+    && isPluginSettingKey(value.input.key)
+  ) {
+    return {
+      id: value.id,
+      capability: 'settings.read',
+      operation: 'get',
+      input: { key: value.input.key },
+    };
+  }
+  if (
+    value.capability === 'settings.write'
+    && value.operation === 'set'
+    && hasExactKeys(value.input, ['key', 'value'])
+    && isPluginSettingKey(value.input.key)
+    && isPluginSettingValue(value.input.value)
+  ) {
+    return {
+      id: value.id,
+      capability: 'settings.write',
+      operation: 'set',
+      input: { key: value.input.key, value: value.input.value },
+    };
+  }
+  if (
+    value.capability === 'settings.write'
+    && value.operation === 'delete'
+    && hasExactKeys(value.input, ['key'])
+    && isPluginSettingKey(value.input.key)
+  ) {
+    return {
+      id: value.id,
+      capability: 'settings.write',
+      operation: 'delete',
+      input: { key: value.input.key },
     };
   }
   return null;

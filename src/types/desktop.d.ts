@@ -46,7 +46,7 @@ import type {
 export {};
 
 declare global {
-  type DesktopPluginCapability = 'runtime.info' | 'clipboard.write';
+  type DesktopPluginCapability = 'runtime.info' | 'clipboard.write' | 'settings.read' | 'settings.write';
   type DesktopPluginOperationResult<T> =
     | { ok: true; value: T }
     | { ok: false; error: string };

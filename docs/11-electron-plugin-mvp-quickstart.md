@@ -6,7 +6,7 @@
 
 从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts)。
 
-MVP 提供两个宿主能力：读取平台与应用版本，以及写入文本到系统剪贴板。插件通过 `window.itTools.capabilities.runtime.getInfo()` 和 `window.itTools.capabilities.clipboard.writeText(text)` 调用能力。用户授权前，宿主拒绝调用并返回 `PluginApiError`。插件不能继承宿主 preload 或其他插件的数据。网络请求只能访问插件自身来源；主进程会拒绝外部连接。
+MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系统剪贴板、读取插件设置和保存插件设置。插件通过 `window.itTools.capabilities.runtime.getInfo()`、`window.itTools.capabilities.clipboard.writeText(text)`、`window.itTools.capabilities.settings.get(key)`、`window.itTools.capabilities.settings.set(key, value)` 和 `window.itTools.capabilities.settings.delete(key)` 调用能力。用户授权前，宿主拒绝调用并返回 `PluginApiError`。设置只保存非秘密的基本值，并按插件 ID 命名空间持久化。插件不能继承宿主 preload 或其他插件的数据。网络请求只能访问插件自身来源；主进程会拒绝外部连接。
 
 插件可以创建同源 Dedicated Worker。每个插件窗口最多运行两个 Worker。宿主会在 Worker 创建 30 秒后终止它；Worker 出错或插件窗口关闭时，宿主也会终止它。Worker 不能创建子 Worker、SharedWorker 或 ServiceWorker。Worker 不能访问外部网络。Worker 仍可处理插件自身的数据，不会获得宿主 IPC 或 Node.js。
 

@@ -14,6 +14,8 @@ const knownCapabilities = new Set([
   'file.read',
   'file.save',
   'runtime.info',
+  'settings.read',
+  'settings.write',
 ]);
 const windowsDeviceNamePattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 

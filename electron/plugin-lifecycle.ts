@@ -27,7 +27,12 @@ import {
 export { verifyInstalledPluginPackage } from './plugin-package-integrity';
 
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const supportedCapabilities = new Set<PluginCapability>(['runtime.info', 'clipboard.write']);
+const supportedCapabilities = new Set<PluginCapability>([
+  'runtime.info',
+  'clipboard.write',
+  'settings.read',
+  'settings.write',
+]);
 const maximumInstalledPackages = 128;
 const maximumActivePlugins = 4;
 const windowCloseTimeoutMs = 5_000;

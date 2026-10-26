@@ -103,6 +103,13 @@ h1 {
   gap: 16px;
 }
 
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .section-heading h2 {
   margin-bottom: 4px;
   font-size: 17px;
@@ -202,7 +209,19 @@ textarea {
   resize: vertical;
 }
 
+input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid #cbd2dc;
+  border-radius: 9px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+}
+
 textarea:focus-visible,
+input:focus-visible,
 button:focus-visible {
   outline: 2px solid #1ca364;
   outline-offset: 2px;

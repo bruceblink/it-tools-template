@@ -5,6 +5,7 @@ import {
   PLUGIN_CAPABILITY_API_PATH,
   pluginCapabilityLimits,
 } from './plugin-capability-broker';
+import type { PluginCapabilityCall } from './plugin-capability-broker';
 
 const pluginId = 'org.example.sample';
 const pluginOrigin = `it-plugin://${pluginId}`;
@@ -40,6 +41,51 @@ describe('Electron plugin capability broker', () => {
     expect(denied.status).toBe(403);
     await expect(denied.json()).resolves.toMatchObject({ error: 'permission-denied' });
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('parses settings read, write, and delete operations', async () => {
+    const execute = vi.fn(async (call: PluginCapabilityCall) => {
+      if (call.capability === 'settings.read') {
+        return { found: true, value: 'saved' };
+      }
+      if (call.operation === 'set') {
+        return { written: true };
+      }
+      return { deleted: true };
+    });
+    const broker = createPluginCapabilityBroker({
+      pluginId,
+      requestedCapabilities: ['settings.read', 'settings.write'],
+      grantedCapabilities: ['settings.read', 'settings.write'],
+      execute,
+    });
+
+    await expect(broker.handle(makeRequest({
+      id: 'settings-read',
+      capability: 'settings.read',
+      operation: 'get',
+      input: { key: 'demo-note' },
+    }))).resolves.toMatchObject({ status: 200 });
+    await expect(broker.handle(makeRequest({
+      id: 'settings-write',
+      capability: 'settings.write',
+      operation: 'set',
+      input: { key: 'demo-note', value: 'saved' },
+    }))).resolves.toMatchObject({ status: 200 });
+    await expect(broker.handle(makeRequest({
+      id: 'settings-delete',
+      capability: 'settings.write',
+      operation: 'delete',
+      input: { key: 'demo-note' },
+    }))).resolves.toMatchObject({ status: 200 });
+    expect(execute).toHaveBeenCalledTimes(3);
+
+    expect((await broker.handle(makeRequest({
+      id: 'settings-invalid',
+      capability: 'settings.read',
+      operation: 'get',
+      input: { key: 'bad key' },
+    }))).status).toBe(400);
   });
 
   it('rejects capabilities that the package did not request', async () => {

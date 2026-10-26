@@ -47,6 +47,27 @@
         </form>
       </section>
 
+      <section class="card" aria-labelledby="settings-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="settings-heading">Plugin settings</h2>
+            <p>Non-secret preferences persist across plugin versions.</p>
+          </div>
+          <span id="settings-proof" class="badge" role="status" data-state="pending">Checking</span>
+        </div>
+        <form id="settings-form">
+          <label for="settings-value">Saved note</label>
+          <input id="settings-value" maxlength="4096" placeholder="A non-secret plugin preference">
+          <div class="form-footer">
+            <span id="settings-result" class="copy-result" role="status" aria-live="polite"></span>
+            <div class="button-row">
+              <button id="settings-save" type="submit">Save setting</button>
+              <button id="settings-delete" type="button">Delete setting</button>
+            </div>
+          </div>
+        </form>
+      </section>
+
       <p class="privacy-note">Plugin code runs in an isolated window. The host exposes only the capabilities you approve.</p>
     </main>
     <script src="/plugin.js"></script>
