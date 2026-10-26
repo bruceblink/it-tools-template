@@ -112,6 +112,26 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await contributionLink.click();
   await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/capability-demo');
   await expect(page.getByText('This page displays signed metadata only.', { exact: false })).toBeVisible();
+  await electronApp.evaluate(({ dialog }) => {
+    Object.defineProperty(dialog, 'showMessageBox', {
+      configurable: true,
+      value: async () => ({ response: 1 }),
+    });
+  });
+  await page.getByRole('button', { name: 'Run plugin' }).click();
+  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect.poll(async () => (
+    await electronApp.windows()
+  ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
+  const routePluginWindow = (await electronApp.windows()).find(window => window.url().startsWith(`it-plugin://${pluginId}/`));
+  expect(routePluginWindow).toBeDefined();
+  if (!routePluginWindow) {
+    throw new Error('The plugin window was not created from the contribution route.');
+  }
+  const routePluginWindowClosed = routePluginWindow.waitForEvent('close');
+  await page.getByRole('button', { name: 'Stop plugin' }).click();
+  await routePluginWindowClosed;
+  await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
   await page.goto('app://bundle/settings');
   await expect(page.getByText('Installed', { exact: true })).toBeVisible();
 
