@@ -277,6 +277,14 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   }, upgradeArchivePath);
   await page.getByRole('button', { name: 'Install signed package' }).click();
   await expect(page.getByTestId(`plugin-package-${pluginId}-2.0.0`)).toBeVisible();
+  await page.goto('app://bundle/');
+  const installedVersionHomeLink = page.getByRole('link', { name: 'Capability demo', exact: true });
+  await expect(installedVersionHomeLink).toHaveCount(1);
+  await expect(installedVersionHomeLink).toHaveAttribute(
+    'href',
+    '/extensions/org.it-tools.capability-demo/1.0.0/capability-demo',
+  );
+  await page.goto('app://bundle/settings');
   await electronApp.evaluate(({ BrowserWindow }, targetPluginId) => {
     const originalLoadURL = BrowserWindow.prototype.loadURL as (
       this: BrowserWindowType,

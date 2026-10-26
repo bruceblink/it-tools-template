@@ -4,6 +4,7 @@ import { onScopeDispose, shallowRef } from 'vue';
 import { Puzzle } from '@vicons/tabler';
 import type { MaybeRef, Ref } from 'vue';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';
+import { selectExternalPluginSnapshots } from './external-plugin-tools';
 import { toolsWithCategory } from './index';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
@@ -18,8 +19,7 @@ function getExternalPluginToolTranslationKey(pluginId: string, toolId: string): 
 }
 
 function projectExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
-  return snapshots
-    .filter(plugin => plugin.status !== 'invalid')
+  return selectExternalPluginSnapshots(snapshots)
     .flatMap(plugin => plugin.contributions.tools.map((contribution) => ({
       id: `external/${plugin.pluginId}/${plugin.version}/${contribution.id}`,
       categoryId: externalPluginCategoryId,
