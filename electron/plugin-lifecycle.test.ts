@@ -66,6 +66,18 @@ describe('Electron plugin lifecycle manager', () => {
     expect(await manager.listInstalled()).toEqual([installed]);
   });
 
+  it('starts a package that declares a known capability not implemented by this host', async () => {
+    const { root, manager, createWindow } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0', ['file.read']));
+
+    await expect(manager.activate(pluginId, '1.0.0', [])).resolves.toMatchObject({
+      status: 'active',
+      requestedCapabilities: ['file.read'],
+      grantedCapabilities: [],
+    });
+    expect(createWindow.mock.calls[0]?.[0].requestedCapabilities).toEqual(['file.read']);
+  });
+
   it('rechecks every signed file before creating a plugin window', async () => {
     const { root, installRoot, manager, createWindow } = await createManager();
     const archivePath = await writeArchive(root, '1.0.0');

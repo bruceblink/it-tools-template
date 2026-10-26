@@ -30,6 +30,13 @@ export function isSupportedPluginCapability(value: string): value is PluginCapab
   return supportedCapabilities.has(value);
 }
 
+/** Keep package declarations compatible with the capability API exposed by this host. */
+export function filterSupportedPluginCapabilities(
+  capabilities: readonly string[],
+): PluginCapability[] {
+  return capabilities.filter(isSupportedPluginCapability);
+}
+
 export type PluginCapabilityCall =
   | { id: string; capability: 'runtime.info'; operation: 'read'; input: Record<string, never> }
   | { id: string; capability: 'clipboard.write'; operation: 'writeText'; input: { text: string } }

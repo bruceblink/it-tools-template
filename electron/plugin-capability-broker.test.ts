@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   createPluginCapabilityBroker,
+  filterSupportedPluginCapabilities,
   PLUGIN_CAPABILITY_API_PATH,
   pluginCapabilityLimits,
 } from './plugin-capability-broker';
@@ -11,6 +12,15 @@ const pluginId = 'org.example.sample';
 const pluginOrigin = `it-plugin://${pluginId}`;
 
 describe('Electron plugin capability broker', () => {
+  it('filters known package declarations to the capabilities supported by this host', () => {
+    expect(filterSupportedPluginCapabilities([
+      'file.read',
+      'runtime.info',
+      'device.camera',
+      'settings.write',
+    ])).toEqual(['runtime.info', 'settings.write']);
+  });
+
   it('executes only a requested capability that the host granted', async () => {
     const execute = vi.fn(() => ({ platform: 'win32', version: '1.0.0' }));
     const broker = createPluginCapabilityBroker({
