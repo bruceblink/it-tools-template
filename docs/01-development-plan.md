@@ -1,7 +1,7 @@
 # IT Tools 最新开发计划
 
 > 状态：现行计划
-> 更新日期：2026-10-25
+> 更新日期：2026-10-27
 > 当前基线：`main`；当前平台和插件工作范围见本计划与性能扩展计划
 > 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
 > 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
@@ -70,6 +70,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 随后为 API Client 增加请求预检：渲染器在解析请求头 JSON 和调用 Electron IPC 前限制请求头 JSON 为 128 KiB、URL 为 8 KiB UTF-8 字节、正文为 256 KiB UTF-8 字节。服务单测覆盖多字节边界；Electron E2E 验证超限请求不会抵达本机测试服务器。`pnpm check` 通过 832 项单测（18 项跳过），API Client Electron E2E 1 项通过；Web 首屏 JavaScript gzip 为 299.80 KiB。详细实现和未完成的真实窗口交互说明见[性能与插件计划](07-performance-extensibility-plan.md)。
 
 随后将 cURL Code Generator 的解析和代码生成移入共享 Worker。7,000 个请求头、231,036 字节的合成命令在同步服务路径中位耗时为 28.88 毫秒（21 轮，p95 为 41.79 毫秒）；新页面以 150 毫秒防抖执行所选格式，取消旧任务，保留 256 KiB 输入和 2 MiB 代码输出限制。Chromium Web E2E 4 项、Electron smoke 20 项和完整 `pnpm check` 通过。Windows Electron 真实窗口已验证 GET 摘要、请求头、fetch 与 axios 输出。首屏 JavaScript gzip 为 299.79 KiB。详细方法和限制见[性能与插件计划](07-performance-extensibility-plan.md)。
+
+2026-10-27 完成外部插件工具贡献元数据首片：签名清单支持可选的 `contributions.tools`，插件管理器显示标题、描述和关键词，既有不带该字段的 v1 包继续按原签名载荷验证。样例包、打包脚本、Electron 验证器、生命周期快照和管理器 E2E 已同步。Windows 本机 `pnpm check` 通过 136 个测试文件（2 个跳过）、848 项测试（18 项跳过）；完整 Electron E2E 共 39 项，33 项通过、6 项按环境跳过。当前实现只提供签名后的显示元数据，不执行外部代码、不注册宿主路由；Linux/macOS 和受控路由接入仍待后续切片。
 
 ## 3. 当前基线
 
