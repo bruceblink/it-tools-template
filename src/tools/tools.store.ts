@@ -32,9 +32,9 @@ function projectExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[])
       component: externalPluginToolComponent,
       icon: Puzzle,
       platforms: ['electron'] as const,
-      dataProcessing: 'unspecified' as const,
-      offline: 'unknown' as const,
-      capabilities: [],
+      dataProcessing: contribution.dataProcessing,
+      offline: contribution.offline,
+      capabilities: [...contribution.capabilities],
       isNew: false,
     })));
 }
@@ -46,7 +46,7 @@ export const useToolStore = defineStore('tools', () => {
   let externalPluginRefresh: Promise<void> | undefined;
 
   async function refreshExternalPluginTools(): Promise<void> {
-    const bridge = window.itToolsDesktop;
+    const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
     if (!bridge?.listPlugins) {
       externalPluginTools.value = [];
       return;
@@ -68,9 +68,11 @@ export const useToolStore = defineStore('tools', () => {
     return externalPluginRefresh;
   }
 
-  const disposePluginStateChange = window.itToolsDesktop?.onPluginStateChanged?.(() => {
-    void refreshExternalPluginTools();
-  });
+  const disposePluginStateChange = typeof window === 'undefined'
+    ? undefined
+    : window.itToolsDesktop?.onPluginStateChanged?.(() => {
+      void refreshExternalPluginTools();
+    });
   onScopeDispose(() => disposePluginStateChange?.());
   void refreshExternalPluginTools();
 

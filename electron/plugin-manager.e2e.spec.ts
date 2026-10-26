@@ -121,7 +121,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await electronApp.evaluate(({ dialog }) => {
     Object.defineProperty(dialog, 'showMessageBox', {
       configurable: true,
-      value: async () => ({ response: 1 }),
+      value: async () => ({ response: 0 }),
     });
   });
   await page.getByRole('button', { name: 'Run plugin' }).click();
@@ -137,6 +137,10 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect.poll(async () => routePluginWindow.evaluate(() => (
     (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
   ))).toBe('org.it-tools.capability-demo/capability-demo');
+  await expect(routePluginWindow.locator('#runtime-proof')).toHaveText('Available');
+  await routePluginWindow.locator('#clipboard-text').fill('least privilege check');
+  await routePluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();
+  await expect(routePluginWindow.locator('#clipboard-proof')).toHaveText('Not authorized');
   const routePluginWindowClosed = routePluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await routePluginWindowClosed;

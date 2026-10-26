@@ -162,7 +162,7 @@ async function runPlugin(): Promise<void> {
   operationError.value = undefined;
   notice.value = undefined;
   try {
-    const requestedCapabilities = currentPlugin.requestedCapabilities
+    const requestedCapabilities = (contribution.value?.capabilities ?? [])
       .filter((capability): capability is DesktopPluginCapability => (
         supportedPluginCapabilities.has(capability as DesktopPluginCapability)
       ));

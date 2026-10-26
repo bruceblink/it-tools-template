@@ -98,6 +98,8 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 调用次数限制只约束每个插件的一次沙箱会话；目前不提供跨启动的调用配额、用户可配置的频率策略、通用文件访问或通用网络代理。设置存储使用版本 1 的宿主 JSON 文件，并以临时文件和重命名方式更新；宿主拒绝损坏、符号链接、硬链接和超出大小限制的文件。签名清单现在支持可选的 `contributions.tools` 显示元数据，宿主为已安装版本生成 `/extensions/<plugin-id>/<version>/<tool-id>` 元数据页面。页面的运行和停止按钮只调用现有宿主生命周期接口；快照中的 `activeContributionId` 标识当前隔离窗口选择的工具。窗口意外关闭、渲染进程崩溃和持续无响应会返回稳定故障代码，成功再次运行会清除当前会话的故障记录；设置页和工具页面通过受信的 `desktop:plugins:changed` 事件刷新状态。能力确认和隔离窗口边界保持不变。页面不执行插件代码，也不把外部实现注册到宿主工具路由。插件包仍处于实验阶段，不代表第三方插件可公开分发，也不替代操作系统进程隔离。Linux 和 macOS 运行时验收仍待完成。
 
+工具贡献元数据还可以声明 `dataProcessing`、`offline` 和工具级 `capabilities`。宿主校验工具能力必须属于插件清单的 `requestedCapabilities`；从工具页运行贡献时，只向该隔离窗口授予当前工具声明的能力。设置页运行整包时，仍按用户选择的整包授权执行。未声明这些可选字段的旧签名包使用 `unspecified`、`unknown` 和空能力列表，原签名载荷保持兼容。
+
 ## 验证
 
 `electron/plugin-api-v1.test.ts` 检查 API 版本、运行时查询、授权错误、设置键和值限制、本地输入限制和响应结构。`electron/plugin-capability-broker.test.ts` 检查来源、请求结构、四类能力授权、响应边界、大小限制、频率、并发和撤销。`electron/plugin-settings-store.test.ts` 检查插件命名空间、并发写入、持久化、删除、损坏文件和资源限制。`electron/plugin-manager.e2e.spec.ts` 验证签名样例使用 `window.itTools`，并通过授权前后的运行时查询、剪贴板写入和跨版本设置读取。关闭沙箱窗口时，宿主在销毁前保存 `webContents.id`，以避免关闭事件读取已销毁对象。

@@ -101,6 +101,9 @@ test('builds a deterministic package that verifies with the documented Ed25519 f
       title: 'Capability demo',
       description: 'Review the capabilities and persistent settings granted to this plugin.',
       keywords: ['plugin', 'capability', 'settings'],
+      dataProcessing: 'local-data',
+      offline: 'available',
+      capabilities: ['runtime.info'],
     }],
   });
   for (const file of manifest.files) {

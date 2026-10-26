@@ -8,7 +8,7 @@ export type ToolOfflineSupport = 'available' | 'requires-network' | 'conditional
 
 export type ToolContentWidth = 'standard' | 'wide';
 
-export type ToolCapability = 'clipboard.write' | 'file.read' | 'file.save' | 'device.camera' | 'runtime.info' | 'data.oui';
+export type ToolCapability = 'clipboard.write' | 'file.read' | 'file.save' | 'device.camera' | 'runtime.info' | 'data.oui' | 'settings.read' | 'settings.write';
 
 export interface Tool {
   id?: string

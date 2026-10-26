@@ -31,6 +31,8 @@ const knownCapabilities = new Set([
   'settings.read',
   'settings.write',
 ]);
+const supportedToolDataProcessing = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
+const supportedToolOffline = new Set(['available', 'requires-network', 'conditional', 'unknown']);
 const privateKeyMarker = /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/;
 const maximumPrivateKeyBytes = 16 * 1024;
 const maximumPluginSourceManifestBytes = 64 * 1024;
@@ -310,7 +312,7 @@ function parseSourceManifest(bytes) {
   ) {
     throw new Error('The requested plugin capability list is invalid.');
   }
-  const contributions = validateContributions(value.contributions, value.id);
+  const contributions = validateContributions(value.contributions, value.id, value.requestedCapabilities);
   return {
     formatVersion: 1,
     id: value.id,
@@ -323,7 +325,7 @@ function parseSourceManifest(bytes) {
   };
 }
 
-function validateContributions(value, pluginId) {
+function validateContributions(value, pluginId, requestedCapabilities) {
   if (value === undefined) {
     return undefined;
   }
@@ -339,7 +341,7 @@ function validateContributions(value, pluginId) {
     if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
       throw new Error('A plugin tool contribution is invalid.');
     }
-    assertExactKeys(candidate, ['id', 'title', 'description', 'keywords']);
+    assertExactKeys(candidate, ['id', 'title', 'description', 'keywords'], ['dataProcessing', 'offline', 'capabilities']);
     if (
       typeof candidate.id !== 'string'
       || !contributionIdPattern.test(candidate.id)
@@ -366,12 +368,38 @@ function validateContributions(value, pluginId) {
     ) {
       throw new Error('A plugin tool contribution has invalid keywords.');
     }
+    if (candidate.dataProcessing !== undefined && (
+      typeof candidate.dataProcessing !== 'string'
+      || !supportedToolDataProcessing.has(candidate.dataProcessing)
+    )) {
+      throw new Error('A plugin tool contribution has invalid data processing metadata.');
+    }
+    if (candidate.offline !== undefined && (
+      typeof candidate.offline !== 'string'
+      || !supportedToolOffline.has(candidate.offline)
+    )) {
+      throw new Error('A plugin tool contribution has invalid offline metadata.');
+    }
+    if (candidate.capabilities !== undefined && (
+      !Array.isArray(candidate.capabilities)
+      || new Set(candidate.capabilities).size !== candidate.capabilities.length
+      || candidate.capabilities.some(capability => (
+        typeof capability !== 'string'
+        || !knownCapabilities.has(capability)
+        || !requestedCapabilities.includes(capability)
+      ))
+    )) {
+      throw new Error('A plugin tool contribution requests an undeclared or unsupported capability.');
+    }
     seenIds.add(candidate.id);
     return {
       id: candidate.id,
       title: candidate.title.trim(),
       description: candidate.description.trim(),
       keywords: [...candidate.keywords],
+      ...(candidate.dataProcessing === undefined ? {} : { dataProcessing: candidate.dataProcessing }),
+      ...(candidate.offline === undefined ? {} : { offline: candidate.offline }),
+      ...(candidate.capabilities === undefined ? {} : { capabilities: [...candidate.capabilities] }),
     };
   });
   return { tools };

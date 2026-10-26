@@ -92,6 +92,9 @@ export interface PluginLifecycleSnapshot {
 export interface PluginLifecycleToolContribution extends PluginPackageToolContribution {
   /** Host-owned metadata route; it never executes package code in the host renderer. */
   route: string;
+  dataProcessing: NonNullable<PluginPackageToolContribution['dataProcessing']>;
+  offline: NonNullable<PluginPackageToolContribution['offline']>;
+  capabilities: readonly PluginCapability[];
 }
 
 export interface PluginLifecycleOptions {
@@ -551,6 +554,9 @@ export class PluginLifecycleManager {
       contributions: {
         tools: (manifest.contributions?.tools ?? []).map(tool => ({
           ...tool,
+          dataProcessing: tool.dataProcessing ?? 'unspecified',
+          offline: tool.offline ?? 'unknown',
+          capabilities: [...(tool.capabilities ?? [])],
           route: getExternalPluginToolRoute(manifest.id, manifest.version, tool.id),
         })),
       },

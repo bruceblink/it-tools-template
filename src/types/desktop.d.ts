@@ -42,6 +42,7 @@ import type {
   ContainerWorkbenchResult,
   DockerContainer,
 } from '../shared/desktop-services/container-workbench';
+import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../tools/tools.types';
 
 export {};
 
@@ -71,6 +72,9 @@ declare global {
     description: string;
     keywords: readonly string[];
     route: string;
+    dataProcessing: ToolDataProcessing;
+    offline: ToolOfflineSupport;
+    capabilities: readonly ToolCapability[];
   }
 
   interface DesktopPluginSignerSnapshot {

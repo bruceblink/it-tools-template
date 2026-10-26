@@ -25,6 +25,7 @@ interface SignedArchiveOptions {
   signedFiles?: Record<string, string>;
   archivedFiles?: Record<string, string>;
   apiVersion?: PluginPackageUnsignedManifest['apiVersion'];
+  requestedCapabilities?: readonly string[];
   contributions?: PluginPackageUnsignedManifest['contributions'];
   signingKey?: KeyObject;
   compressedFiles?: ReadonlySet<string>;
@@ -92,12 +93,16 @@ describe('Electron plugin package staging', () => {
     const root = await createTemporaryDirectory();
     const archivePath = join(root, 'contributions.itplugin');
     await writeFile(archivePath, makeSignedArchive({
+      requestedCapabilities: ['runtime.info', 'clipboard.write'],
       contributions: {
         tools: [{
           id: 'org.example.sandbox/sample-tool',
           title: 'Sample tool',
           description: 'A bounded sample tool contribution.',
           keywords: ['sample', 'plugin'],
+          dataProcessing: 'local-data',
+          offline: 'available',
+          capabilities: ['runtime.info'],
         }],
       },
     }));
@@ -112,6 +117,9 @@ describe('Electron plugin package staging', () => {
       title: 'Sample tool',
       description: 'A bounded sample tool contribution.',
       keywords: ['sample', 'plugin'],
+      dataProcessing: 'local-data',
+      offline: 'available',
+      capabilities: ['runtime.info'],
     }]);
 
     const oldArchivePath = join(root, 'old.itplugin');
@@ -138,6 +146,26 @@ describe('Electron plugin package staging', () => {
     await expect(stagePluginPackageArchive({
       archivePath: invalidArchivePath,
       installRoot: join(root, 'invalid-installed'),
+      hostApiVersion: '1.2.0',
+      trustedSigningKeys,
+    })).rejects.toMatchObject({ code: 'invalid-package' });
+
+    const undeclaredCapabilityPath = join(root, 'undeclared-capability.itplugin');
+    await writeFile(undeclaredCapabilityPath, makeSignedArchive({
+      requestedCapabilities: ['runtime.info'],
+      contributions: {
+        tools: [{
+          id: 'org.example.sandbox/sample-tool',
+          title: 'Sample tool',
+          description: 'This tool asks for a capability not declared by the package.',
+          keywords: ['bad'],
+          capabilities: ['clipboard.write'],
+        }],
+      },
+    }));
+    await expect(stagePluginPackageArchive({
+      archivePath: undeclaredCapabilityPath,
+      installRoot: join(root, 'undeclared-capability-installed'),
       hostApiVersion: '1.2.0',
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'invalid-package' });
@@ -373,7 +401,7 @@ function makeSignedArchive(options: SignedArchiveOptions = {}): Buffer {
     version: '1.0.0',
     apiVersion: options.apiVersion ?? { minInclusive: '1.0.0', maxExclusive: '2.0.0' },
     entrypoint: 'index.html',
-    requestedCapabilities: [],
+    requestedCapabilities: [...(options.requestedCapabilities ?? [])],
     ...(options.contributions ? { contributions: options.contributions } : {}),
     files,
   };

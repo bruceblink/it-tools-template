@@ -1,5 +1,6 @@
 import { createPublicKey, KeyObject, verify } from 'node:crypto';
 import * as yauzl from 'yauzl';
+import type { PluginCapability } from './plugin-capability-broker';
 
 export const pluginPackageManifestPath = 'plugin.json';
 
@@ -20,6 +21,8 @@ const knownCapabilities = new Set([
 ]);
 const windowsDeviceNamePattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 const maximumToolContributions = 32;
+const supportedToolDataProcessing = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
+const supportedToolOffline = new Set(['available', 'requires-network', 'conditional', 'unknown']);
 
 export const pluginPackageLimits = Object.freeze({
   maximumArchiveBytes: 64 * 1024 * 1024,
@@ -62,6 +65,9 @@ export interface PluginPackageToolContribution {
   title: string;
   description: string;
   keywords: readonly string[];
+  dataProcessing?: 'memory-only' | 'local-data' | 'user-selected-files' | 'network' | 'unspecified';
+  offline?: 'available' | 'requires-network' | 'conditional' | 'unknown';
+  capabilities?: readonly PluginCapability[];
 }
 
 export interface PluginPackageContributions {
@@ -169,7 +175,7 @@ export function validatePluginPackageManifest(
   }
 
   const requestedCapabilities = validateCapabilities(value.requestedCapabilities);
-  const contributions = validateContributions(value.contributions, value.id);
+  const contributions = validateContributions(value.contributions, value.id, requestedCapabilities);
   const files = validateFileManifest(value.files);
   if (!files.some(file => file.path === value.entrypoint)) {
     throw new PluginPackageError('invalid-package', 'The plugin package entrypoint is missing from its file list.');
@@ -302,7 +308,7 @@ export function normalizePluginPackagePath(fileName: string, isDirectory = false
   return candidate;
 }
 
-function validateContributions(value: unknown, pluginId: string): PluginPackageContributions | undefined {
+function validateContributions(value: unknown, pluginId: string, requestedCapabilities: readonly string[]): PluginPackageContributions | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -320,7 +326,11 @@ function validateContributions(value: unknown, pluginId: string): PluginPackageC
     if (!isRecord(candidate)) {
       throw new PluginPackageError('invalid-package', 'A plugin tool contribution is invalid.');
     }
-    assertExactKeys(candidate, ['id', 'title', 'description', 'keywords'], 'plugin tool contribution');
+    assertExactKeys(candidate, ['id', 'title', 'description', 'keywords'], 'plugin tool contribution', [
+      'dataProcessing',
+      'offline',
+      'capabilities',
+    ]);
     if (
       typeof candidate.id !== 'string'
       || !contributionIdPattern.test(candidate.id)
@@ -347,12 +357,38 @@ function validateContributions(value: unknown, pluginId: string): PluginPackageC
     ) {
       throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid keywords.');
     }
+    if (candidate.dataProcessing !== undefined && (
+      typeof candidate.dataProcessing !== 'string'
+      || !supportedToolDataProcessing.has(candidate.dataProcessing)
+    )) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid data processing metadata.');
+    }
+    if (candidate.offline !== undefined && (
+      typeof candidate.offline !== 'string'
+      || !supportedToolOffline.has(candidate.offline)
+    )) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid offline metadata.');
+    }
+    if (candidate.capabilities !== undefined && (
+      !Array.isArray(candidate.capabilities)
+      || new Set(candidate.capabilities).size !== candidate.capabilities.length
+      || candidate.capabilities.some(capability => (
+        typeof capability !== 'string'
+        || !knownCapabilities.has(capability)
+        || !requestedCapabilities.includes(capability)
+      ))
+    )) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution requests an undeclared or unsupported capability.');
+    }
     seenIds.add(candidate.id);
     tools.push({
       id: candidate.id,
       title: candidate.title.trim(),
       description: candidate.description.trim(),
       keywords: [...candidate.keywords] as string[],
+      ...(candidate.dataProcessing === undefined ? {} : { dataProcessing: candidate.dataProcessing as PluginPackageToolContribution['dataProcessing'] }),
+      ...(candidate.offline === undefined ? {} : { offline: candidate.offline as PluginPackageToolContribution['offline'] }),
+      ...(candidate.capabilities === undefined ? {} : { capabilities: [...candidate.capabilities] as PluginCapability[] }),
     });
   }
   return { tools };
