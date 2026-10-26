@@ -85,7 +85,7 @@ function onUpdateFavoriteTools() {
               :list="favoriteTools"
               class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4"
               ghost-class="ghost-favorites-draggable"
-              item-key="name"
+              item-key="path"
               @end="onUpdateFavoriteTools"
             >
               <template #item="{ element: tool }">
@@ -100,7 +100,7 @@ function onUpdateFavoriteTools() {
             {{ t('home.categories.newestTools') }}
           </h3>
           <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-            <ToolCard v-for="tool in toolStore.newTools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
+            <ToolCard v-for="tool in toolStore.newTools" :key="tool.path" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
           </div>
         </div>
 
@@ -108,7 +108,7 @@ function onUpdateFavoriteTools() {
           {{ $t('home.categories.allTools') }}
         </h3>
         <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ToolCard v-for="tool in toolStore.tools" :key="tool.name" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
+          <ToolCard v-for="tool in toolStore.tools" :key="tool.path" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
         </div>
       </div>
     </Transition>

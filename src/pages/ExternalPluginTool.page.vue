@@ -223,7 +223,7 @@ let disposePluginStateChange: (() => void) | undefined;
 onMounted(() => {
   const bridge = getPluginBridge();
   disposePluginStateChange = bridge?.onPluginStateChanged?.((pluginId) => {
-    if (pluginId === routeParam('pluginId')) {
+    if (pluginId === routeParam('pluginId') && !isBusy.value) {
       void loadContribution();
     }
   });

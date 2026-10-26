@@ -205,7 +205,9 @@ export class PluginLifecycleManager {
         hostApiVersion: this.options.hostApiVersion,
         trustedSigningKeys: this.options.trustedSigningKeys,
       });
-      return this.snapshotFromManifest(staged.manifest);
+      const snapshot = this.snapshotFromManifest(staged.manifest);
+      this.notifyStateChange(staged.manifest.id);
+      return snapshot;
     });
   }
 
@@ -247,6 +249,7 @@ export class PluginLifecycleManager {
       try {
         await this.startVerifiedPlugin(pluginId, version, packageRoot, manifest, grants, selectedContributionId);
         this.runtimeFailures.delete(getPluginPackageKey(pluginId, version));
+        this.notifyStateChange(pluginId);
       }
       catch (activationError) {
         if (previous) {
@@ -290,6 +293,7 @@ export class PluginLifecycleManager {
       }
       await this.destroyActivePlugin(active);
       this.runtimeFailures.delete(getPluginPackageKey(active.pluginId, active.version));
+      this.notifyStateChange(active.pluginId);
       return true;
     });
   }
@@ -300,6 +304,7 @@ export class PluginLifecycleManager {
       for (const plugin of active) {
         await this.destroyActivePlugin(plugin);
         this.runtimeFailures.delete(getPluginPackageKey(plugin.pluginId, plugin.version));
+        this.notifyStateChange(plugin.pluginId);
       }
       return active.length;
     });
@@ -320,6 +325,7 @@ export class PluginLifecycleManager {
       }
       await rm(currentPackageRoot, { recursive: true, force: false });
       this.runtimeFailures.delete(getPluginPackageKey(pluginId, version));
+      this.notifyStateChange(pluginId);
       const pluginRoot = dirname(currentPackageRoot);
       try {
         if ((await readdir(pluginRoot)).length === 0) {

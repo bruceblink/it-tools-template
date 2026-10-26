@@ -19,15 +19,14 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
   const searchPrompt = ref('');
   const repositoryUrl = config.app.repositoryUrl;
 
-  const toolsOptions = toolStore.tools.map(tool => ({
+  const toolsOptions = computed<PaletteOption[]>(() => toolStore.tools.map(tool => ({
     ...tool,
     to: tool.path,
     toolCategory: tool.category,
     category: 'Tools',
-  }));
+  })));
 
   const builtInSearchOptions: PaletteOption[] = [
-    ...toolsOptions,
     {
       name: 'Random tool',
       description: 'Get a random tool from the list.',
@@ -77,7 +76,12 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
       icon: InfoIcon,
     },
   ];
-  const searchOptions = ref<PaletteOption[]>(builtInSearchOptions);
+  const extensionSearchOptions = ref<PaletteOption[]>([]);
+  const searchOptions = computed<PaletteOption[]>(() => [
+    ...toolsOptions.value,
+    ...builtInSearchOptions,
+    ...extensionSearchOptions.value,
+  ]);
   let extensionCommandLoad: Promise<void> | undefined;
   let extensionCommandLoadLocale: string | undefined;
   let loadedExtensionCommandLocale: string | undefined;
@@ -105,7 +109,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
         if (latestExtensionCommandRequest !== requestId) {
           return;
         }
-        searchOptions.value = [...builtInSearchOptions, ...extensionCommands];
+        extensionSearchOptions.value = extensionCommands;
         loadedExtensionCommandLocale = requestLocale;
         extensionCommandLoadLocale = undefined;
       })

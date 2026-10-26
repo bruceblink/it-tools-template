@@ -120,7 +120,7 @@ describe('Electron plugin lifecycle manager', () => {
 
     windows[0]?.destroy();
 
-    expect(stateChanges).toEqual([pluginId]);
+    expect(stateChanges.at(-1)).toBe(pluginId);
     expect((await manager.listInstalled())[0]).toMatchObject({
       status: 'installed',
       errorCode: 'window-closed',

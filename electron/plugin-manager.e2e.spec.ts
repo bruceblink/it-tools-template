@@ -109,7 +109,13 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     'href',
     '/extensions/org.it-tools.capability-demo/1.0.0/capability-demo',
   );
-  await contributionLink.click();
+  await page.goto('app://bundle/');
+  const homeContributionLink = page.getByRole('link', { name: 'Capability demo', exact: true });
+  await expect(homeContributionLink).toHaveAttribute(
+    'href',
+    '/extensions/org.it-tools.capability-demo/1.0.0/capability-demo',
+  );
+  await homeContributionLink.click();
   await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/capability-demo');
   await expect(page.getByText('This page displays signed metadata only.', { exact: false })).toBeVisible();
   await electronApp.evaluate(({ dialog }) => {
