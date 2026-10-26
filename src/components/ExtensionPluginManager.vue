@@ -75,6 +75,7 @@ const messages = {
     installed: 'Installed',
     active: 'Running',
     invalid: 'Invalid or untrusted',
+    tools: 'Contributed tools',
     requested: 'Requested capabilities',
     noCapabilities: 'This package requests no host capabilities.',
     unsupported: 'Not supported by this host',
@@ -122,6 +123,7 @@ const messages = {
     installed: '已安装',
     active: '正在运行',
     invalid: '无效或不受信任',
+    tools: '贡献的工具',
     requested: '请求的能力',
     noCapabilities: '此插件包没有请求宿主能力。',
     unsupported: '此宿主尚不支持',
@@ -520,6 +522,13 @@ onMounted(() => {
                 {{ packageStatus(plugin) }}
               </n-tag>
             </div>
+            <div v-if="plugin.contributions.tools.length > 0" class="plugin-contribution-list">
+              <n-text strong>{{ text('tools') }}</n-text>
+              <div v-for="tool in plugin.contributions.tools" :key="tool.id" class="plugin-contribution-row">
+                <n-text strong>{{ tool.title }}</n-text>
+                <n-text depth="3">{{ tool.description }}</n-text>
+              </div>
+            </div>
             <n-alert v-if="plugin.status === 'invalid'" type="warning" :show-icon="false" mt-3>
               {{ displayPluginError(plugin.errorCode ?? 'invalid-package') }}
             </n-alert>
@@ -660,6 +669,22 @@ onMounted(() => {
 .plugin-package-list {
   display: grid;
   gap: 12px;
+}
+
+.plugin-contribution-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--n-border-color);
+  border-radius: 8px;
+}
+
+.plugin-contribution-row {
+  display: grid;
+  gap: 2px;
+  padding-top: 6px;
+  border-top: 1px solid var(--n-border-color);
 }
 
 .plugin-capability-list {

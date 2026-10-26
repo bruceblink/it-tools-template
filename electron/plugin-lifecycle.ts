@@ -8,6 +8,7 @@ import {
 import type {
   PluginPackageManifest,
   PluginPackageSigningKey,
+  PluginPackageToolContribution,
 } from './plugin-package';
 import type {
   PluginCapability,
@@ -74,6 +75,9 @@ export interface PluginLifecycleSnapshot {
   name: string;
   version: string;
   requestedCapabilities: readonly string[];
+  contributions: {
+    tools: readonly PluginPackageToolContribution[];
+  };
   grantedCapabilities: readonly PluginCapability[];
   status: 'installed' | 'active' | 'invalid';
   errorCode?: string;
@@ -472,6 +476,9 @@ export class PluginLifecycleManager {
       name: manifest.name,
       version: manifest.version,
       requestedCapabilities: [...manifest.requestedCapabilities],
+      contributions: {
+        tools: [...(manifest.contributions?.tools ?? [])],
+      },
       grantedCapabilities: isActive ? [...active.grantedCapabilities] : [],
       status: isActive ? 'active' : 'installed',
     };
@@ -483,6 +490,7 @@ export class PluginLifecycleManager {
       name: pluginId,
       version,
       requestedCapabilities: [],
+      contributions: { tools: [] },
       grantedCapabilities: [],
       status: 'invalid',
       errorCode,

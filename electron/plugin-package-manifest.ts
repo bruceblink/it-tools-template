@@ -6,6 +6,7 @@ export const pluginPackageManifestPath = 'plugin.json';
 const signatureDomain = 'IT Tools Electron Plugin Package v1';
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const knownCapabilities = new Set([
   'clipboard.write',
@@ -18,6 +19,7 @@ const knownCapabilities = new Set([
   'settings.write',
 ]);
 const windowsDeviceNamePattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
+const maximumToolContributions = 32;
 
 export const pluginPackageLimits = Object.freeze({
   maximumArchiveBytes: 64 * 1024 * 1024,
@@ -55,6 +57,17 @@ export interface PluginPackageFile {
   sha256: string;
 }
 
+export interface PluginPackageToolContribution {
+  id: string;
+  title: string;
+  description: string;
+  keywords: readonly string[];
+}
+
+export interface PluginPackageContributions {
+  tools: readonly PluginPackageToolContribution[];
+}
+
 export interface PluginPackageUnsignedManifest {
   formatVersion: 1;
   id: string;
@@ -66,6 +79,7 @@ export interface PluginPackageUnsignedManifest {
   };
   entrypoint: string;
   requestedCapabilities: readonly string[];
+  contributions?: PluginPackageContributions;
   files: readonly PluginPackageFile[];
 }
 
@@ -120,7 +134,7 @@ export function validatePluginPackageManifest(
     'requestedCapabilities',
     'files',
     'signature',
-  ], 'plugin package manifest');
+  ], 'plugin package manifest', ['contributions']);
 
   if (value.formatVersion !== 1) {
     throw new PluginPackageError('invalid-package', 'The plugin package format is not supported.');
@@ -155,6 +169,7 @@ export function validatePluginPackageManifest(
   }
 
   const requestedCapabilities = validateCapabilities(value.requestedCapabilities);
+  const contributions = validateContributions(value.contributions, value.id);
   const files = validateFileManifest(value.files);
   if (!files.some(file => file.path === value.entrypoint)) {
     throw new PluginPackageError('invalid-package', 'The plugin package entrypoint is missing from its file list.');
@@ -201,6 +216,7 @@ export function validatePluginPackageManifest(
       },
       entrypoint: value.entrypoint,
       requestedCapabilities,
+      ...(contributions ? { contributions } : {}),
       files,
     };
     const payload = Buffer.from(getPluginPackageSigningPayload(unsignedManifest), 'utf8');
@@ -226,6 +242,7 @@ export function validatePluginPackageManifest(
     },
     entrypoint: value.entrypoint,
     requestedCapabilities,
+    ...(contributions ? { contributions } : {}),
     files,
     signature: {
       algorithm: 'Ed25519',
@@ -283,6 +300,62 @@ export function normalizePluginPackagePath(fileName: string, isDirectory = false
     throw new PluginPackageError('unsafe-archive-entry', 'The plugin package contains an unsafe file path.');
   }
   return candidate;
+}
+
+function validateContributions(value: unknown, pluginId: string): PluginPackageContributions | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!isRecord(value)) {
+    throw new PluginPackageError('invalid-package', 'The plugin contribution metadata must be an object.');
+  }
+  assertExactKeys(value, ['tools'], 'plugin contributions');
+  if (!Array.isArray(value.tools) || value.tools.length > maximumToolContributions) {
+    throw new PluginPackageError('invalid-package', 'The plugin tool contribution list is invalid.');
+  }
+
+  const seenIds = new Set<string>();
+  const tools: PluginPackageToolContribution[] = [];
+  for (const candidate of value.tools) {
+    if (!isRecord(candidate)) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution is invalid.');
+    }
+    assertExactKeys(candidate, ['id', 'title', 'description', 'keywords'], 'plugin tool contribution');
+    if (
+      typeof candidate.id !== 'string'
+      || !contributionIdPattern.test(candidate.id)
+      || !candidate.id.startsWith(`${pluginId}/`)
+      || seenIds.has(candidate.id)
+    ) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution ID is invalid or repeated.');
+    }
+    if (
+      typeof candidate.title !== 'string'
+      || candidate.title.trim() === ''
+      || candidate.title.length > 120
+      || typeof candidate.description !== 'string'
+      || candidate.description.trim() === ''
+      || candidate.description.length > 240
+    ) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid display text.');
+    }
+    if (
+      !Array.isArray(candidate.keywords)
+      || candidate.keywords.length > 32
+      || new Set(candidate.keywords).size !== candidate.keywords.length
+      || candidate.keywords.some(keyword => typeof keyword !== 'string' || keyword.trim() === '' || keyword.length > 80)
+    ) {
+      throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid keywords.');
+    }
+    seenIds.add(candidate.id);
+    tools.push({
+      id: candidate.id,
+      title: candidate.title.trim(),
+      description: candidate.description.trim(),
+      keywords: [...candidate.keywords] as string[],
+    });
+  }
+  return { tools };
 }
 
 function validateCapabilities(value: unknown): string[] {
@@ -388,11 +461,19 @@ function canonicalJson(value: unknown): string {
   throw new PluginPackageError('invalid-package', 'The plugin manifest contains an unsupported JSON value.');
 }
 
-function assertExactKeys(record: Record<string, unknown>, expected: readonly string[], label: string): void {
+function assertExactKeys(
+  record: Record<string, unknown>,
+  expected: readonly string[],
+  label: string,
+  optional: readonly string[] = [],
+): void {
   const expectedKeys = new Set(expected);
+  const optionalKeys = new Set(optional);
+  const keys = Object.keys(record);
   if (
-    Object.keys(record).length !== expectedKeys.size
-    || Object.keys(record).some(key => !expectedKeys.has(key))
+    keys.length < expectedKeys.size
+    || keys.some(key => !expectedKeys.has(key) && !optionalKeys.has(key))
+    || expected.some(key => !Object.hasOwn(record, key))
   ) {
     throw new PluginPackageError('invalid-package', `The ${label} has missing or unknown fields.`);
   }

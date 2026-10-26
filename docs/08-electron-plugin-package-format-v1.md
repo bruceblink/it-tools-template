@@ -34,6 +34,7 @@ The root `plugin.json` contains these fields:
 | `apiVersion` | Host API range with an inclusive minimum and exclusive maximum. |
 | `entrypoint` | Safe relative path to the HTML entry file. |
 | `requestedCapabilities` | Unique names from the host capability set. A request is not an authorization. |
+| `contributions` | Optional signed display metadata for tools provided by the package. It does not register a host route or grant execution access. |
 | `files` | Sorted list of every payload path and its lowercase SHA-256 digest. |
 | `signature` | Ed25519 algorithm, trusted key ID, and standard Base64 signature. |
 
@@ -51,6 +52,16 @@ Example unsigned manifest fields:
   },
   "entrypoint": "index.html",
   "requestedCapabilities": [],
+  "contributions": {
+    "tools": [
+      {
+        "id": "org.example.sandbox/example-tool",
+        "title": "Example tool",
+        "description": "Shows the signed display metadata for an external tool.",
+        "keywords": ["example", "plugin"]
+      }
+    ]
+  },
   "files": [
     {
       "path": "index.html",
@@ -59,6 +70,10 @@ Example unsigned manifest fields:
   ]
 }
 ```
+
+`contributions` is optional. When present, `tools` contains at most 32 records. Each record uses a plugin-namespaced ID (`<plugin-id>/<tool-id>`), a non-empty title and description, and at most 32 unique keywords. The package validator trims display text, rejects unknown fields, duplicate IDs, and IDs outside the package namespace. The desktop plugin manager displays this metadata after signature verification. The current package layer records and displays the declaration; it does not execute external code, add a route to the host registry, or make a capability request an authorization.
+
+Packages that omit `contributions` remain valid. The field is included in the signed payload only when it is present, so existing v1 signatures continue to verify without repacking.
 
 The signer signs UTF-8 bytes of the domain string `IT Tools Electron Plugin Package v1`, followed by a newline and canonical JSON for the unsigned manifest. Canonical JSON sorts object keys with JavaScript string ordering, preserves array order, and uses `JSON.stringify` string and number encoding. The `files` array must use ascending JavaScript string order by `path`.
 

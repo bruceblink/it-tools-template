@@ -93,7 +93,16 @@ test('builds a deterministic package that verifies with the documented Ed25519 f
   assert.deepEqual([...archiveEntries.keys()], [...archiveEntries.keys()].sort());
   assert.equal(archiveEntries.has('plugin.source.json'), false);
   assert.equal(archiveEntries.has('plugin.json'), true);
-  assert.equal(JSON.parse(archiveEntries.get('plugin.json').toString('utf8')).id, manifest.id);
+  const packageManifest = JSON.parse(archiveEntries.get('plugin.json').toString('utf8'));
+  assert.equal(packageManifest.id, manifest.id);
+  assert.deepEqual(packageManifest.contributions, {
+    tools: [{
+      id: 'org.it-tools.capability-demo/capability-demo',
+      title: 'Capability demo',
+      description: 'Review the capabilities and persistent settings granted to this plugin.',
+      keywords: ['plugin', 'capability', 'settings'],
+    }],
+  });
   for (const file of manifest.files) {
     assert.equal(createHash('sha256').update(archiveEntries.get(file.path)).digest('hex'), file.sha256);
   }

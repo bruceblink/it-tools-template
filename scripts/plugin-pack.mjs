@@ -18,6 +18,7 @@ const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const signatureDomain = 'IT Tools Electron Plugin Package v1';
 const supportedHostApiVersion = '1.3.0';
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const knownCapabilities = new Set([
@@ -83,6 +84,7 @@ export async function buildPluginPackage({
     apiVersion: sourceManifest.apiVersion,
     entrypoint: sourceManifest.entrypoint,
     requestedCapabilities: sourceManifest.requestedCapabilities,
+    ...(sourceManifest.contributions ? { contributions: sourceManifest.contributions } : {}),
     files: fileManifest,
   };
   const signature = sign(
@@ -275,7 +277,7 @@ function parseSourceManifest(bytes) {
   catch (error) {
     throw new Error('The plugin source manifest must be valid UTF-8 JSON.', { cause: error });
   }
-  assertExactKeys(value, ['formatVersion', 'id', 'name', 'version', 'apiVersion', 'entrypoint', 'requestedCapabilities']);
+  assertExactKeys(value, ['formatVersion', 'id', 'name', 'version', 'apiVersion', 'entrypoint', 'requestedCapabilities'], ['contributions']);
   if (value.formatVersion !== 1 || typeof value.id !== 'string' || !pluginIdPattern.test(value.id) || value.id.length > 128) {
     throw new Error('The plugin source format version or ID is invalid.');
   }
@@ -308,6 +310,7 @@ function parseSourceManifest(bytes) {
   ) {
     throw new Error('The requested plugin capability list is invalid.');
   }
+  const contributions = validateContributions(value.contributions, value.id);
   return {
     formatVersion: 1,
     id: value.id,
@@ -316,7 +319,62 @@ function parseSourceManifest(bytes) {
     apiVersion: { minInclusive: value.apiVersion.minInclusive, maxExclusive: value.apiVersion.maxExclusive },
     entrypoint: value.entrypoint,
     requestedCapabilities: [...value.requestedCapabilities],
+    ...(contributions ? { contributions } : {}),
   };
+}
+
+function validateContributions(value, pluginId) {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('The plugin contribution metadata must be an object.');
+  }
+  assertExactKeys(value, ['tools']);
+  if (!Array.isArray(value.tools) || value.tools.length > 32) {
+    throw new Error('The plugin tool contribution list is invalid.');
+  }
+  const seenIds = new Set();
+  const tools = value.tools.map((candidate) => {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+      throw new Error('A plugin tool contribution is invalid.');
+    }
+    assertExactKeys(candidate, ['id', 'title', 'description', 'keywords']);
+    if (
+      typeof candidate.id !== 'string'
+      || !contributionIdPattern.test(candidate.id)
+      || !candidate.id.startsWith(`${pluginId}/`)
+      || seenIds.has(candidate.id)
+    ) {
+      throw new Error('A plugin tool contribution ID is invalid or repeated.');
+    }
+    if (
+      typeof candidate.title !== 'string'
+      || candidate.title.trim() === ''
+      || candidate.title.length > 120
+      || typeof candidate.description !== 'string'
+      || candidate.description.trim() === ''
+      || candidate.description.length > 240
+    ) {
+      throw new Error('A plugin tool contribution has invalid display text.');
+    }
+    if (
+      !Array.isArray(candidate.keywords)
+      || candidate.keywords.length > 32
+      || new Set(candidate.keywords).size !== candidate.keywords.length
+      || candidate.keywords.some(keyword => typeof keyword !== 'string' || keyword.trim() === '' || keyword.length > 80)
+    ) {
+      throw new Error('A plugin tool contribution has invalid keywords.');
+    }
+    seenIds.add(candidate.id);
+    return {
+      id: candidate.id,
+      title: candidate.title.trim(),
+      description: candidate.description.trim(),
+      keywords: [...candidate.keywords],
+    };
+  });
+  return { tools };
 }
 
 function normalizePackagePath(path) {
@@ -438,12 +496,16 @@ function canonicalJson(value) {
   throw new Error('The plugin manifest contains an unsupported JSON value.');
 }
 
-function assertExactKeys(value, expected) {
+function assertExactKeys(value, expected, optional = []) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('A plugin manifest object has an invalid shape.');
   }
   const keys = Object.keys(value);
-  if (keys.length !== expected.length || keys.some(key => !expected.includes(key))) {
+  if (
+    keys.length < expected.length
+    || keys.some(key => !expected.includes(key) && !optional.includes(key))
+    || expected.some(key => !keys.includes(key))
+  ) {
     throw new Error('A plugin manifest object has missing or unknown fields.');
   }
 }

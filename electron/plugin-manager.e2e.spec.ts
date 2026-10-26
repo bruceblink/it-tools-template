@@ -101,6 +101,9 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
 
   await page.getByRole('button', { name: 'Install signed package' }).click();
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`)).toBeVisible();
+  const installedPluginCard = page.getByTestId(`plugin-package-${pluginId}-1.0.0`);
+  await expect(installedPluginCard.getByText('Contributed tools', { exact: true })).toBeVisible();
+  await expect(installedPluginCard.getByText('Review the capabilities and persistent settings granted to this plugin.', { exact: true })).toBeVisible();
   await expect(page.getByText('Installed', { exact: true })).toBeVisible();
 
   const runtimeGrant = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)

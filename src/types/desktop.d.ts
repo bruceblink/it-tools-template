@@ -56,9 +56,19 @@ declare global {
     name: string;
     version: string;
     requestedCapabilities: readonly string[];
+    contributions: {
+      tools: readonly DesktopPluginToolContribution[];
+    };
     grantedCapabilities: readonly DesktopPluginCapability[];
     status: 'installed' | 'active' | 'invalid';
     errorCode?: string;
+  }
+
+  interface DesktopPluginToolContribution {
+    id: string;
+    title: string;
+    description: string;
+    keywords: readonly string[];
   }
 
   interface DesktopPluginSignerSnapshot {

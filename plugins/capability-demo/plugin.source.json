@@ -13,5 +13,15 @@
     "clipboard.write",
     "settings.read",
     "settings.write"
+  ],
+  "contributions": {
+    "tools": [
+      {
+        "id": "org.it-tools.capability-demo/capability-demo",
+        "title": "Capability demo",
+        "description": "Review the capabilities and persistent settings granted to this plugin.",
+        "keywords": ["plugin", "capability", "settings"]
+      }
+    ]
   ]
 }

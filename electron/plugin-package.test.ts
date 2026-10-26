@@ -25,6 +25,7 @@ interface SignedArchiveOptions {
   signedFiles?: Record<string, string>;
   archivedFiles?: Record<string, string>;
   apiVersion?: PluginPackageUnsignedManifest['apiVersion'];
+  contributions?: PluginPackageUnsignedManifest['contributions'];
   signingKey?: KeyObject;
   compressedFiles?: ReadonlySet<string>;
 }
@@ -85,6 +86,61 @@ describe('Electron plugin package staging', () => {
 
     const installRoot = join(root, 'installed');
     await expect(readdir(installRoot)).resolves.toEqual([]);
+  });
+
+  it('validates signed tool contribution metadata and keeps old packages compatible', async () => {
+    const root = await createTemporaryDirectory();
+    const archivePath = join(root, 'contributions.itplugin');
+    await writeFile(archivePath, makeSignedArchive({
+      contributions: {
+        tools: [{
+          id: 'org.example.sandbox/sample-tool',
+          title: 'Sample tool',
+          description: 'A bounded sample tool contribution.',
+          keywords: ['sample', 'plugin'],
+        }],
+      },
+    }));
+    const result = await stagePluginPackageArchive({
+      archivePath,
+      installRoot: join(root, 'installed'),
+      hostApiVersion: '1.2.0',
+      trustedSigningKeys,
+    });
+    expect(result.manifest.contributions?.tools).toEqual([{
+      id: 'org.example.sandbox/sample-tool',
+      title: 'Sample tool',
+      description: 'A bounded sample tool contribution.',
+      keywords: ['sample', 'plugin'],
+    }]);
+
+    const oldArchivePath = join(root, 'old.itplugin');
+    await writeFile(oldArchivePath, makeSignedArchive());
+    const oldResult = await stagePluginPackageArchive({
+      archivePath: oldArchivePath,
+      installRoot: join(root, 'old-installed'),
+      hostApiVersion: '1.2.0',
+      trustedSigningKeys,
+    });
+    expect(oldResult.manifest.contributions).toBeUndefined();
+
+    const invalidArchivePath = join(root, 'invalid-contribution.itplugin');
+    await writeFile(invalidArchivePath, makeSignedArchive({
+      contributions: {
+        tools: [{
+          id: 'org.other.publisher/tool',
+          title: 'Wrong namespace',
+          description: 'This must be rejected.',
+          keywords: ['bad'],
+        }],
+      },
+    }));
+    await expect(stagePluginPackageArchive({
+      archivePath: invalidArchivePath,
+      installRoot: join(root, 'invalid-installed'),
+      hostApiVersion: '1.2.0',
+      trustedSigningKeys,
+    })).rejects.toMatchObject({ code: 'invalid-package' });
   });
 
   it('rejects files that are not covered by the signed manifest', async () => {
@@ -318,6 +374,7 @@ function makeSignedArchive(options: SignedArchiveOptions = {}): Buffer {
     apiVersion: options.apiVersion ?? { minInclusive: '1.0.0', maxExclusive: '2.0.0' },
     entrypoint: 'index.html',
     requestedCapabilities: [],
+    ...(options.contributions ? { contributions: options.contributions } : {}),
     files,
   };
   const signature = sign(
