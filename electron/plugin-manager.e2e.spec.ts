@@ -147,6 +147,34 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
 
   await page.goto('app://bundle/settings');
+  const futureContributionLink = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
+    .getByRole('link', { name: 'Future capability demo', exact: true });
+  await expect(futureContributionLink).toHaveAttribute(
+    'href',
+    '/extensions/org.it-tools.capability-demo/1.0.0/future-capability-demo',
+  );
+  await futureContributionLink.click();
+  await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/future-capability-demo');
+  await page.getByRole('button', { name: 'Run plugin' }).click();
+  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect.poll(async () => (
+    await electronApp.windows()
+  ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
+  const futurePluginWindow = (await electronApp.windows()).find(window => window.url().startsWith(`it-plugin://${pluginId}/`));
+  expect(futurePluginWindow).toBeDefined();
+  if (!futurePluginWindow) {
+    throw new Error('The plugin window for the unsupported capability contribution was not created.');
+  }
+  await expect.poll(async () => futurePluginWindow.evaluate(() => (
+    (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
+  ))).toBe('org.it-tools.capability-demo/future-capability-demo');
+  await expect(futurePluginWindow.locator('#runtime-proof')).toHaveText('Not authorized');
+  const futurePluginWindowClosed = futurePluginWindow.waitForEvent('close');
+  await page.getByRole('button', { name: 'Stop plugin' }).click();
+  await futurePluginWindowClosed;
+  await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
+
+  await page.goto('app://bundle/settings');
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`)).toBeVisible();
   const recoveryContributionLink = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
     .getByRole('link', { name: 'Recovery demo', exact: true });
@@ -576,14 +604,23 @@ async function createSignedPackage(version = '1.0.0', freezeRenderer = false): P
   const sourceManifestPath = join(sourceDirectory, 'plugin.source.json');
   const sourceManifest = JSON.parse(await readFile(sourceManifestPath, 'utf8')) as {
     version: string;
+    requestedCapabilities: string[];
     contributions?: { tools: Array<Record<string, unknown>> };
   };
   sourceManifest.version = version;
+  sourceManifest.requestedCapabilities.push('file.read');
   sourceManifest.contributions?.tools.push({
     id: `${pluginId}/recovery-demo`,
     title: 'Recovery demo',
     description: 'Exercise tool-level stop and recovery behavior.',
     keywords: ['plugin', 'recovery'],
+  });
+  sourceManifest.contributions?.tools.push({
+    id: `${pluginId}/future-capability-demo`,
+    title: 'Future capability demo',
+    description: 'Exercise a known capability that this host does not implement yet.',
+    keywords: ['plugin', 'capability', 'forward-compatibility'],
+    capabilities: ['file.read'],
   });
   await writeFile(sourceManifestPath, `${JSON.stringify(sourceManifest, null, 2)}\n`);
   if (freezeRenderer) {
