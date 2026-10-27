@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   desktopPluginErrorCodes,
   desktopPluginRuntimeFailureCodes,
+  desktopPluginStateChangeReasons,
+  isDesktopPluginStateChangeEvent,
 } from './plugins';
 
 describe('desktop plugin bridge error catalog', () => {
@@ -26,5 +28,36 @@ describe('desktop plugin bridge error catalog', () => {
     expect(desktopPluginRuntimeFailureCodes.some(code => (
       desktopPluginErrorCodes.includes(code as typeof desktopPluginErrorCodes[number])
     ))).toBe(false);
+  });
+
+  it('accepts bounded state change events and rejects malformed IPC payloads', () => {
+    expect(desktopPluginStateChangeReasons).toEqual([
+      'installed',
+      'activated',
+      'disabled',
+      'uninstalled',
+      'runtime-failure',
+      'rollback',
+    ]);
+    expect(isDesktopPluginStateChangeEvent({
+      schemaVersion: 1,
+      pluginId: 'org.example.plugin',
+      version: '1.2.3',
+      reason: 'runtime-failure',
+      contributionId: 'org.example.plugin/example-tool',
+    })).toBe(true);
+    expect(isDesktopPluginStateChangeEvent({
+      schemaVersion: 1,
+      pluginId: 'C:\\secret',
+      version: '1.2.3',
+      reason: 'activated',
+    })).toBe(false);
+    expect(isDesktopPluginStateChangeEvent({
+      schemaVersion: 1,
+      pluginId: 'org.example.plugin',
+      version: '1.2.3',
+      reason: 'unknown',
+      extra: 'ignored',
+    })).toBe(false);
   });
 });

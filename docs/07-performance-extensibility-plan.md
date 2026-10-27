@@ -748,6 +748,14 @@ SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字
 
 新增 `src/shared/desktop-services/plugins.ts`，集中定义插件管理 IPC 的错误码、插件运行时故障码和结果信封。`electron/plugin-ipc.ts` 的错误映射、`src/types/desktop.d.ts` 的桥接声明和插件快照现在复用同一份类型。运行时故障码保持独立，避免把“插件窗口崩溃”与“安装或授权操作失败”混为一类；实际错误字符串和恢复流程保持不变。Electron 与应用类型检查、相关 lint 和差异检查通过。
 
+### 2026-10-27：插件生命周期状态事件契约
+
+`DesktopPluginStateChangeEvent` 现在是主进程生命周期、插件 IPC、preload 和渲染器桥接声明共同使用的版本化事件。`schemaVersion` 固定为 `1`；事件包含插件 `pluginId`、稳定三段式 `version`、`reason`（`installed`、`activated`、`disabled`、`uninstalled`、`rollback` 或 `runtime-failure`），运行时故障可以附带当前工具贡献的 `contributionId`。生命周期在升级失败后恢复旧版本时只发送 `rollback`，不会把回滚误报为新版本激活。
+
+preload 在把 IPC 数据交给渲染器前检查字段集合、版本、插件 ID、贡献 ID 和原因。未知字段、路径样式 ID、异常版本或未知原因会被丢弃；事件不携带文件路径、错误堆栈或秘密。Home 工具注册表、插件管理页和外部工具详情页继续使用 `event.pluginId` 触发原有刷新，不改变工具路由、能力授权或插件隔离边界。
+
+共享事件守卫、生命周期安装/回滚/运行时故障测试和渲染器刷新消费者已同步。定向 `plugins.test.ts` 与 `plugin-lifecycle.test.ts` 共 19 项通过；应用与 Electron 完整类型检查、相关 lint 和跨平台运行时仍按后续切片执行。
+
 ### 2026-10-27：外部插件工具路由快照校验
 
 渲染器在把 Electron IPC 返回的外部插件工具元数据投影到 Home 和命令面板前，重新使用 `pluginId`、`version` 和贡献 ID 构造宿主路由，并校验标题、说明、治理字段、能力 ID 和重复能力。路由不匹配或元数据结构异常的贡献会被过滤，不会进入工具注册表；这层校验不替代主进程的签名清单验证，只保护渲染器的导航边界。新增单测覆盖路由替换、命名空间越界、未知能力、重复能力和缺少治理元数据。

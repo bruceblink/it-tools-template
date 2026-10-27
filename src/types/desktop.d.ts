@@ -48,6 +48,7 @@ import type {
   DesktopPluginErrorCode as SharedDesktopPluginErrorCode,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
   DesktopPluginRuntimeFailureCode,
+  DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
 } from '../shared/desktop-services/plugins';
 
 export {};
@@ -56,6 +57,7 @@ declare global {
   type DesktopPluginCapability = PluginHostCapability;
   type DesktopPluginErrorCode = SharedDesktopPluginErrorCode;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
+  type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
 
   interface DesktopPluginSnapshot {
     pluginId: string;
@@ -171,7 +173,7 @@ declare global {
       stopSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
       onSystemMonitorSample?(callback: (sample: SystemMonitorSample) => void): () => void;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
-      onPluginStateChanged?(callback: (pluginId: string) => void): () => void;
+      onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       activatePlugin?(
         pluginId: string,

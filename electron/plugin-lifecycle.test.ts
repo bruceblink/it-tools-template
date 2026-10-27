@@ -18,6 +18,7 @@ import {
   verifyInstalledPluginPackage,
 } from './plugin-lifecycle';
 import type { PluginSandboxRegistration } from './plugin-sandbox';
+import type { DesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
 
 const pluginId = 'org.example.sandbox';
 const pluginIds = [pluginId, 'org.example.plugin-1', 'org.example.plugin-2', 'org.example.plugin-3', 'org.example.plugin-4'];
@@ -52,7 +53,7 @@ afterEach(async () => {
 
 describe('Electron plugin lifecycle manager', () => {
   it('stages signed packages without activating them', async () => {
-    const { root, manager } = await createManager();
+    const { root, manager, stateChanges } = await createManager();
     const archivePath = await writeArchive(root, '1.0.0');
 
     const installed = await manager.installArchive(archivePath);
@@ -64,6 +65,12 @@ describe('Electron plugin lifecycle manager', () => {
       supportedCapabilities: ['runtime.info', 'clipboard.write', 'settings.read', 'settings.write'],
       grantedCapabilities: [],
     });
+    expect(stateChanges).toEqual([{
+      schemaVersion: 1,
+      pluginId,
+      version: '1.0.0',
+      reason: 'installed',
+    }]);
     expect(await manager.listInstalled()).toEqual([installed]);
   });
 
@@ -80,17 +87,20 @@ describe('Electron plugin lifecycle manager', () => {
   });
 
   it('rechecks every signed file before creating a plugin window', async () => {
-    const { root, installRoot, manager, createWindow } = await createManager();
+    const { root, installRoot, manager, createWindow, stateChanges } = await createManager();
     const archivePath = await writeArchive(root, '1.0.0');
     await manager.installArchive(archivePath);
     await writeFile(join(installRoot, pluginId, '1.0.0', 'index.html'), '<main>tampered</main>');
 
     await expect(manager.activate(pluginId, '1.0.0', [])).rejects.toMatchObject({ code: 'file-hash-mismatch' });
     expect(createWindow).not.toHaveBeenCalled();
+    expect(stateChanges).toEqual([
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'installed' },
+    ]);
   });
 
   it('grants only requested host-supported capabilities and revokes them on disable', async () => {
-    const { root, manager, createWindow, windows } = await createManager();
+    const { root, manager, createWindow, windows, stateChanges } = await createManager();
     const archivePath = await writeArchive(root, '1.0.0', ['runtime.info', 'clipboard.write']);
     await manager.installArchive(archivePath);
 
@@ -106,6 +116,11 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.disable(pluginId)).resolves.toBe(true);
     expect(windows[0]?.isDestroyed()).toBe(true);
     expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed', grantedCapabilities: [] });
+    expect(stateChanges).toEqual([
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'installed' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'activated' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'disabled' },
+    ]);
     await expect(manager.disable(pluginId)).resolves.toBe(false);
   });
 
@@ -145,7 +160,13 @@ describe('Electron plugin lifecycle manager', () => {
 
     windows[0]?.destroy();
 
-    expect(stateChanges.at(-1)).toBe(pluginId);
+    expect(stateChanges.at(-1)).toEqual({
+      schemaVersion: 1,
+      pluginId,
+      version: '1.0.0',
+      reason: 'runtime-failure',
+      contributionId: `${pluginId}/lifecycle-tool`,
+    });
     const failed = (await manager.listInstalled())[0];
     expect(failed).toMatchObject({
       status: 'installed',
@@ -225,7 +246,7 @@ describe('Electron plugin lifecycle manager', () => {
   });
 
   it('restores the previous version when an upgrade window fails to load', async () => {
-    const { root, manager, createWindow, windows } = await createManager({
+    const { root, manager, createWindow, windows, stateChanges } = await createManager({
       failVersion: '2.0.0',
     });
     await manager.installArchive(await writeArchive(root, '1.0.0', ['runtime.info']));
@@ -242,10 +263,16 @@ describe('Electron plugin lifecycle manager', () => {
     expect(windows[0]?.isDestroyed()).toBe(true);
     expect(windows).toHaveLength(2);
     expect(windows[1]?.isDestroyed()).toBe(false);
+    expect(stateChanges).toEqual([
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'installed' },
+      { schemaVersion: 1, pluginId, version: '2.0.0', reason: 'installed' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'activated' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'rollback' },
+    ]);
   });
 
   it('stops an active window and removes only the selected package version', async () => {
-    const { root, installRoot, manager, windows } = await createManager();
+    const { root, installRoot, manager, windows, stateChanges } = await createManager();
     await manager.installArchive(await writeArchive(root, '1.0.0'));
     await manager.installArchive(await writeArchive(root, '2.0.0'));
     await manager.activate(pluginId, '1.0.0', []);
@@ -255,6 +282,12 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(lstat(join(installRoot, pluginId, '1.0.0'))).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(readFile(join(installRoot, pluginId, '2.0.0', 'plugin.json'), 'utf8')).resolves.toContain(pluginId);
     expect((await manager.listInstalled()).map(item => item.version)).toEqual(['2.0.0']);
+    expect(stateChanges).toEqual([
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'installed' },
+      { schemaVersion: 1, pluginId, version: '2.0.0', reason: 'installed' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'activated' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'uninstalled' },
+    ]);
   });
 
   it('rejects a plugin directory that escapes the install root', async () => {
@@ -365,7 +398,7 @@ async function createManager(options: { failVersion?: string } = {}) {
   const root = await createTemporaryDirectory();
   const installRoot = join(root, 'installed');
   const windows: FakePluginWindow[] = [];
-  const stateChanges: string[] = [];
+  const stateChanges: DesktopPluginStateChangeEvent[] = [];
   const createWindow = vi.fn(async (registration: PluginSandboxRegistration) => {
     if (options.failVersion && registration.packageRoot.endsWith(options.failVersion)) {
       throw new Error('The test plugin did not load.');
@@ -378,7 +411,7 @@ async function createManager(options: { failVersion?: string } = {}) {
     installRoot,
     trustedSigningKeys,
     createWindow,
-    onStateChange: pluginId => stateChanges.push(pluginId),
+    onStateChange: event => stateChanges.push(event),
   });
   return { root, installRoot, manager, createWindow, windows, stateChanges };
 }
@@ -387,7 +420,7 @@ function createManagerForRoot(options: {
   installRoot: string;
   trustedSigningKeys: ReadonlyMap<string, PluginPackageSigningKey>;
   createWindow: (registration: PluginSandboxRegistration) => Promise<import('electron').BrowserWindow>;
-  onStateChange?: (pluginId: string) => void;
+  onStateChange?: (event: DesktopPluginStateChangeEvent) => void;
 }) {
   return new PluginLifecycleManager({
     ...options,

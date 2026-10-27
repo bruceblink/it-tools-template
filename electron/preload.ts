@@ -36,6 +36,7 @@ import type {
   GitRepositoryInfo,
   GitStatus,
 } from '../src/shared/desktop-services/git';
+import { isDesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
@@ -124,10 +125,10 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     return () => ipcRenderer.removeListener('desktop:system-monitor:sample', listener);
   },
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
-  onPluginStateChanged: (callback: (pluginId: string) => void) => {
-    const listener = (_event: IpcRendererEvent, pluginId: unknown) => {
-      if (typeof pluginId === 'string') {
-        callback(pluginId);
+  onPluginStateChanged: (callback: (event: DesktopPluginStateChangeEvent) => void) => {
+    const listener = (_event: IpcRendererEvent, value: unknown) => {
+      if (isDesktopPluginStateChangeEvent(value)) {
+        callback(value);
       }
     };
     ipcRenderer.on('desktop:plugins:changed', listener);

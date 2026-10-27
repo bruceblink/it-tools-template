@@ -148,6 +148,8 @@ const loadContribution = createQueuedRefresh(async () => {
 watch(
   () => [route.params.pluginId, route.params.version, route.params.toolId],
   () => {
+    operationError.value = undefined;
+    notice.value = undefined;
     void loadContribution();
   },
 );
@@ -223,8 +225,8 @@ let disposePluginStateChange: (() => void) | undefined;
 
 onMounted(() => {
   const bridge = getPluginBridge();
-  disposePluginStateChange = bridge?.onPluginStateChanged?.((pluginId) => {
-    if (pluginId === routeParam('pluginId') && !isBusy.value) {
+  disposePluginStateChange = bridge?.onPluginStateChanged?.((event) => {
+    if (event.pluginId === routeParam('pluginId') && !isBusy.value) {
       void loadContribution();
     }
   });
@@ -237,8 +239,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="external-plugin-tool-page">
+  <div class="external-plugin-tool-page" :aria-busy="isLoading">
     <n-spin :show="isLoading">
+      <p v-if="isLoading" class="external-plugin-tool-loading" role="status" aria-live="polite">
+        {{ text('loading') }}
+      </p>
       <n-alert v-if="!isDesktop" type="info" :show-icon="false">
         {{ text('unavailable') }}
       </n-alert>
@@ -254,8 +259,11 @@ onUnmounted(() => {
       <n-alert v-if="runtimeError" type="warning" role="status" :show-icon="false">
         {{ runtimeError }}
       </n-alert>
-      <n-empty v-if="!contribution || !plugin" :description="text('notFound')" />
-      <n-card v-else :title="contribution.title">
+      <n-empty
+        v-if="isDesktop && !isLoading && !loadError && (!contribution || !plugin)"
+        :description="text('notFound')"
+      />
+      <n-card v-else-if="contribution && plugin" :title="contribution.title">
         <template #header-extra>
           <n-tag :type="plugin.status === 'invalid' ? 'error' : currentContributionActive ? 'success' : 'default'">
             {{ plugin.status === 'invalid'

@@ -61,12 +61,12 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     trustedSigningKeys: signingKeys,
     createWindow: registration => createPluginSandboxWindow(registration, dependencies.onPluginWebContentsCreated),
     executeCapability: (manifest, call) => executePluginCapability(manifest, call, pluginSettingsStore),
-    onStateChange: pluginId => {
+    onStateChange: event => {
       const mainWindow = dependencies.getMainWindow();
       if (!mainWindow || mainWindow.isDestroyed()) {
         return;
       }
-      mainWindow.webContents.send('desktop:plugins:changed', pluginId);
+      mainWindow.webContents.send('desktop:plugins:changed', event);
     },
   });
 

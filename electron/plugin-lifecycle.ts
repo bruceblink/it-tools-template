@@ -27,6 +27,7 @@ import {
   verifyInstalledPluginPackage,
 } from './plugin-package-integrity';
 import { getExternalPluginToolRoute } from '../src/shared/plugin-tool-route';
+import type { DesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
 
 export { verifyInstalledPluginPackage } from './plugin-package-integrity';
 
@@ -104,7 +105,7 @@ export interface PluginLifecycleOptions {
   createWindow: (registration: PluginSandboxRegistration) => Promise<BrowserWindow>;
   executeCapability: (manifest: PluginPackageManifest, call: PluginCapabilityCall) => Promise<unknown> | unknown;
   /** Notify trusted renderers after an unexpected plugin window exit. */
-  onStateChange?: (pluginId: string) => void;
+  onStateChange?: (event: DesktopPluginStateChangeEvent) => void;
 }
 
 interface ActivePlugin {
@@ -209,7 +210,11 @@ export class PluginLifecycleManager {
         trustedSigningKeys: this.options.trustedSigningKeys,
       });
       const snapshot = this.snapshotFromManifest(staged.manifest);
-      this.notifyStateChange(staged.manifest.id);
+      this.notifyStateChange({
+        pluginId: staged.manifest.id,
+        version: staged.manifest.version,
+        reason: 'installed',
+      });
       return snapshot;
     });
   }
@@ -254,7 +259,12 @@ export class PluginLifecycleManager {
         this.runtimeFailures.delete(getPluginFailureKey(pluginId, version, selectedContributionId));
         // A successful activation proves that a previous package-level failure has recovered.
         this.runtimeFailures.delete(getPluginFailureKey(pluginId, version));
-        this.notifyStateChange(pluginId);
+        this.notifyStateChange({
+          pluginId,
+          version,
+          reason: 'activated',
+          ...(selectedContributionId === undefined ? {} : { contributionId: selectedContributionId }),
+        });
       }
       catch (activationError) {
         if (previous) {
@@ -275,6 +285,12 @@ export class PluginLifecycleManager {
               previous.grantedCapabilities,
               previous.contributionId,
             );
+            this.notifyStateChange({
+              pluginId: previous.pluginId,
+              version: previous.version,
+              reason: 'rollback',
+              ...(previous.contributionId === undefined ? {} : { contributionId: previous.contributionId }),
+            });
           }
           catch (rollbackError) {
             throw new PluginLifecycleError(
@@ -298,7 +314,12 @@ export class PluginLifecycleManager {
       }
       await this.destroyActivePlugin(active);
       this.runtimeFailures.delete(getPluginFailureKey(active.pluginId, active.version, active.contributionId));
-      this.notifyStateChange(active.pluginId);
+      this.notifyStateChange({
+        pluginId: active.pluginId,
+        version: active.version,
+        reason: 'disabled',
+        ...(active.contributionId === undefined ? {} : { contributionId: active.contributionId }),
+      });
       return true;
     });
   }
@@ -309,7 +330,12 @@ export class PluginLifecycleManager {
       for (const plugin of active) {
         await this.destroyActivePlugin(plugin);
         this.runtimeFailures.delete(getPluginFailureKey(plugin.pluginId, plugin.version, plugin.contributionId));
-        this.notifyStateChange(plugin.pluginId);
+        this.notifyStateChange({
+          pluginId: plugin.pluginId,
+          version: plugin.version,
+          reason: 'disabled',
+          ...(plugin.contributionId === undefined ? {} : { contributionId: plugin.contributionId }),
+        });
       }
       return active.length;
     });
@@ -330,7 +356,12 @@ export class PluginLifecycleManager {
       }
       await rm(currentPackageRoot, { recursive: true, force: false });
       this.clearRuntimeFailures(pluginId, version);
-      this.notifyStateChange(pluginId);
+      this.notifyStateChange({
+        pluginId,
+        version,
+        reason: 'uninstalled',
+        ...(active?.contributionId === undefined ? {} : { contributionId: active.contributionId }),
+      });
       const pluginRoot = dirname(currentPackageRoot);
       try {
         if ((await readdir(pluginRoot)).length === 0) {
@@ -452,7 +483,12 @@ export class PluginLifecycleManager {
         this.runtimeFailures.set(getPluginFailureKey(active.pluginId, active.version, active.contributionId), {
           code: failureCode,
         });
-        this.notifyStateChange(active.pluginId);
+        this.notifyStateChange({
+          pluginId: active.pluginId,
+          version: active.version,
+          reason: 'runtime-failure',
+          ...(active.contributionId === undefined ? {} : { contributionId: active.contributionId }),
+        });
       }
     });
   }
@@ -496,9 +532,12 @@ export class PluginLifecycleManager {
     }
   }
 
-  private notifyStateChange(pluginId: string): void {
+  private notifyStateChange(event: Omit<DesktopPluginStateChangeEvent, 'schemaVersion'>): void {
     try {
-      this.options.onStateChange?.(pluginId);
+      this.options.onStateChange?.({
+        schemaVersion: 1,
+        ...event,
+      });
     }
     catch (error) {
       console.error('Failed to notify plugin lifecycle state change.', error);

@@ -17,7 +17,7 @@ type PluginManagerBridge = Required<Pick<NonNullable<Window['itToolsDesktop']>,
 >>;
 
 const isDesktop = computed(() => typeof window !== 'undefined' && Boolean(getPluginBridge()));
-const isLoading = ref(false);
+const isLoading = ref(true);
 const isBusy = ref(false);
 const plugins = ref<DesktopPluginSnapshot[]>([]);
 const signers = ref<DesktopPluginSignerSnapshot[]>([]);
@@ -246,6 +246,7 @@ function displayPluginError(error: string): string {
 const refresh = createQueuedRefresh(async () => {
   const bridge = getPluginBridge();
   if (!bridge) {
+    isLoading.value = false;
     return;
   }
   isLoading.value = true;
@@ -506,7 +507,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="electron-plugin-manager" aria-labelledby="electron-plugin-manager-title">
+  <section
+    class="electron-plugin-manager"
+    aria-labelledby="electron-plugin-manager-title"
+    :aria-busy="isLoading"
+  >
     <div class="plugin-section-heading">
       <div>
         <h2 id="electron-plugin-manager-title">{{ text('title') }}</h2>
@@ -538,6 +543,9 @@ onUnmounted(() => {
       </n-alert>
 
       <n-spin :show="isLoading">
+        <p v-if="isLoading" class="plugin-loading-status" role="status" aria-live="polite">
+          {{ text('loading') }}
+        </p>
         <n-empty v-if="!isLoading && plugins.length === 0" :description="text('empty')" />
         <div v-else class="plugin-package-list">
           <n-card
