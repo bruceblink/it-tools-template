@@ -740,6 +740,10 @@ SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字
 
 `plugins/sdk/it-tools-plugin.d.ts` 和 `it-tools-plugin-package.d.ts` 不再引用仓库内部的 `src/shared/plugin-capabilities`。新增的 `plugins/sdk/plugin-capabilities.d.ts` 提供包格式能力 ID 和当前宿主支持能力的类型定义。开发者可以把三个声明文件一起放入独立插件项目，类型解析不依赖本仓库的源码目录。SDK 静态回归会检查相对导入和 8 个清单能力 ID，防止后续改动重新引入内部路径依赖。
 
+### 2026-10-27：统一插件工具上下文类型
+
+`PluginToolContext` 现在定义在 `plugins/sdk/it-tools-plugin-package.d.ts`，与签名清单中的工具元数据共用字段类型。运行时声明文件通过类型导入和重新导出复用该定义，不再维护第二份工具上下文接口。`scripts/plugin-sdk.test.mjs` 增加静态回归，确认运行时声明没有重新定义该接口，并继续检查包声明提供它。这样新增工具元数据字段时只需要更新一个 SDK 类型来源；该改动不改变运行时授权或隔离边界。
+
 ### 2026-10-27：外部插件工具路由快照校验
 
 渲染器在把 Electron IPC 返回的外部插件工具元数据投影到 Home 和命令面板前，重新使用 `pluginId`、`version` 和贡献 ID 构造宿主路由，并校验标题、说明、治理字段、能力 ID 和重复能力。路由不匹配或元数据结构异常的贡献会被过滤，不会进入工具注册表；这层校验不替代主进程的签名清单验证，只保护渲染器的导航边界。新增单测覆盖路由替换、命名空间越界、未知能力、重复能力和缺少治理元数据。

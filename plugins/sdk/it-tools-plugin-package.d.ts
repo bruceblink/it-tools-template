@@ -24,6 +24,17 @@ export interface PluginToolContribution {
   readonly capabilities?: readonly PluginToolCapability[];
 }
 
+/** Signed tool metadata exposed to the isolated runtime when a contribution is selected. */
+export interface PluginToolContext {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly keywords: readonly string[];
+  readonly dataProcessing: PluginToolDataProcessing;
+  readonly offline: PluginToolOfflineSupport;
+  readonly capabilities: readonly PluginToolCapability[];
+}
+
 export interface PluginPackageContributions {
   readonly tools: readonly PluginToolContribution[];
 }

@@ -4,10 +4,9 @@ import type {
 } from './plugin-capabilities';
 import type { PluginApiV1Version } from './plugin-api-version';
 import type {
-  PluginToolCapability,
-  PluginToolDataProcessing,
-  PluginToolOfflineSupport,
+  PluginToolContext,
 } from './it-tools-plugin-package';
+export type { PluginToolContext } from './it-tools-plugin-package';
 
 export interface PluginRuntimeInfo {
   readonly platform: string;
@@ -61,17 +60,6 @@ export interface PluginPermissionSnapshot {
   readonly supportedCapabilities: readonly PluginHostCapability[];
   /** Capabilities granted to this isolated window for its current launch. */
   readonly grantedCapabilities: readonly PluginHostCapability[];
-}
-
-/** Signed metadata for the tool contribution that selected this plugin window. */
-export interface PluginToolContext {
-  readonly id: string;
-  readonly title: string;
-  readonly description: string;
-  readonly keywords: readonly string[];
-  readonly dataProcessing: PluginToolDataProcessing;
-  readonly offline: PluginToolOfflineSupport;
-  readonly capabilities: readonly PluginToolCapability[];
 }
 
 /** Signed metadata for the package that owns the current isolated plugin window. */

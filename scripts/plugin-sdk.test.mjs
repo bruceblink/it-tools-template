@@ -29,8 +29,10 @@ test('plugin SDK declarations are self-contained and expose the current capabili
   assert.match(versionTypes, new RegExp(`export type PluginApiV1Version = '${version}';`));
   assert.match(runtimeTypes, /apiVersion: PluginApiV1Version;/);
   assert.match(runtimeTypes, /hostApiVersion: PluginApiV1Version;/);
-  assert.match(runtimeTypes, /interface PluginToolContext/);
+  assert.match(runtimeTypes, /PluginToolContext.*from '\.\/it-tools-plugin-package';/s);
+  assert.doesNotMatch(runtimeTypes, /interface PluginToolContext/);
   assert.match(runtimeTypes, /readonly tool: PluginToolContext \| undefined;/);
+  assert.match(packageTypes, /interface PluginToolContext/);
   assert.match(runtimeTypes, /interface PluginPackageContext/);
   assert.match(runtimeTypes, /readonly plugin: PluginPackageContext;/);
   assert.match(packageTypes, /interface PluginToolContribution/);
