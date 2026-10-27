@@ -734,6 +734,8 @@ Windows 本机 `pnpm check` 通过 138 个测试文件（2 个跳过）、861 �
 
 `src/tools/math-evaluator/math-instance.ts` 不再从 `mathjs` 顶层入口导入整组工厂，而是直接引用 `core/create`、数字工厂和当前常用的算术、矩阵、复数 ESM 工厂。服务保留完整 Math.js 的按需回退；当轻量实例遇到复数类型不匹配时，也会回退到完整实例，因此单位表达式和高级函数继续可用。
 
-在同一台 Windows 机器、同一份 Vite 8.3.5 构建环境中，对比父提交 `568bf7a` 与本次提交 `0275dd5`：Web Worker 从 681,908 字节降至 475,760 字节，减少 206,148 字节（30.23%）；Electron Worker 从 1,705,471 字节降至 1,161,979 字节，减少 543,492 字节（31.87%）。Web Worker 低于 500 KiB 单工具目标；Electron Worker 仍高于该目标，后续继续评估工厂拆分和 Electron 资源加载方式。
+随后在提交 `6692f7f` 中移除整组 `factoriesNumber` 命名空间导入，改为只导入解析器、表达式节点、数字类型和当前算术、矩阵、复数操作实际需要的工厂。完整 Math.js 仍保留为按需回退块，不进入初始 Worker。
 
-验证记录：Math Evaluator Chromium E2E 1 项通过，覆盖普通表达式、单位回退和资源限制；完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），并完成类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致本轮失败。没有新增真实窗口交互或 Linux/macOS 运行时证据。
+在同一台 Windows 机器、同一份 Vite 8.3.5 构建环境中，对比父提交 `568bf7a`：Web Worker 从 681,908 字节降至 278,770 字节，减少 403,138 字节（59.12%）；Electron Worker 从 1,705,471 字节降至 726,576 字节，减少 978,895 字节（57.40%）。相对中间提交 `0275dd5`，Web 和 Electron Worker 再分别减少 41.41% 和 37.47%。Web Worker 低于 500 KiB 单工具目标；Electron Worker 仍高于该目标，后续继续评估 Electron 侧资源拆分。完整 Math.js 回退块仍按需加载，当前 Web/Electron 构建输出分别为约 400.04 kB 和 975.99 kB。
+
+验证记录：Math Evaluator 服务单测 8 项通过，Chromium E2E 1 项通过，覆盖普通表达式、复数、矩阵、单位回退和资源限制；完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），并完成类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致本轮失败。没有新增真实窗口交互或 Linux/macOS 运行时证据。
