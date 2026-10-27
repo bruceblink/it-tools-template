@@ -3,8 +3,6 @@
 // @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
 import { create as createMathInstance } from '../../../node_modules/mathjs/lib/esm/core/create.js';
 // @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
-import * as numberFactories from '../../../node_modules/mathjs/lib/esm/factoriesNumber.js';
-// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
 import { createI } from '../../../node_modules/mathjs/lib/esm/constants.js';
 // @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
 import { createAdd } from '../../../node_modules/mathjs/lib/esm/function/arithmetic/add.js';
@@ -68,11 +66,70 @@ import { createTranspose } from '../../../node_modules/mathjs/lib/esm/function/m
 import { createZeros } from '../../../node_modules/mathjs/lib/esm/function/matrix/zeros.js';
 // @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
 import { createSum } from '../../../node_modules/mathjs/lib/esm/function/statistics/sum.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createParse } from '../../../node_modules/mathjs/lib/esm/expression/parse.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createEvaluate } from '../../../node_modules/mathjs/lib/esm/expression/function/evaluate.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createTyped } from '../../../node_modules/mathjs/lib/esm/core/function/typed.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createNumeric } from '../../../node_modules/mathjs/lib/esm/function/utils/numeric.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createAccessorNode } from '../../../node_modules/mathjs/lib/esm/expression/node/AccessorNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createNode } from '../../../node_modules/mathjs/lib/esm/expression/node/Node.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createResultSet } from '../../../node_modules/mathjs/lib/esm/type/resultset/ResultSet.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createArrayNode } from '../../../node_modules/mathjs/lib/esm/expression/node/ArrayNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createAssignmentNode } from '../../../node_modules/mathjs/lib/esm/expression/node/AssignmentNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createBlockNode } from '../../../node_modules/mathjs/lib/esm/expression/node/BlockNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createConditionalNode } from '../../../node_modules/mathjs/lib/esm/expression/node/ConditionalNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createConstantNode } from '../../../node_modules/mathjs/lib/esm/expression/node/ConstantNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createFunctionAssignmentNode } from '../../../node_modules/mathjs/lib/esm/expression/node/FunctionAssignmentNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createFunctionNode } from '../../../node_modules/mathjs/lib/esm/expression/node/FunctionNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createIndexNode } from '../../../node_modules/mathjs/lib/esm/expression/node/IndexNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createObjectNode } from '../../../node_modules/mathjs/lib/esm/expression/node/ObjectNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createOperatorNode } from '../../../node_modules/mathjs/lib/esm/expression/node/OperatorNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createParenthesisNode } from '../../../node_modules/mathjs/lib/esm/expression/node/ParenthesisNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createRangeNode } from '../../../node_modules/mathjs/lib/esm/expression/node/RangeNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createRelationalNode } from '../../../node_modules/mathjs/lib/esm/expression/node/RelationalNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createSymbolNode } from '../../../node_modules/mathjs/lib/esm/expression/node/SymbolNode.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createEqualScalar } from '../../../node_modules/mathjs/lib/esm/function/relational/equalScalar.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createIsInteger } from '../../../node_modules/mathjs/lib/esm/function/utils/isInteger.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createEqual } from '../../../node_modules/mathjs/lib/esm/function/relational/equal.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createIsBounded } from '../../../node_modules/mathjs/lib/esm/function/utils/isBounded.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createNumber } from '../../../node_modules/mathjs/lib/esm/type/number.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createBignumber } from '../../../node_modules/mathjs/lib/esm/type/bignumber/function/bignumber.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createFraction } from '../../../node_modules/mathjs/lib/esm/type/fraction/function/fraction.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createIsZero } from '../../../node_modules/mathjs/lib/esm/function/utils/isZero.js';
+// @ts-expect-error Math.js does not publish declarations for this ESM entrypoint.
+import { createUnaryMinus } from '../../../node_modules/mathjs/lib/esm/function/arithmetic/unaryMinus.js';
 
 // Keep common arithmetic, matrix, and complex expressions in the initial Worker.
 // Less common functions are supplied by the full Math.js fallback in the service.
 export const mathInstance = createMathInstance({
-  ...numberFactories,
   createI,
   createAdd,
   createAddScalar,
@@ -105,4 +162,34 @@ export const mathInstance = createMathInstance({
   createSum,
   createTranspose,
   createZeros,
+  createParse,
+  createEvaluate,
+  createTyped,
+  createNumeric,
+  createAccessorNode,
+  createNode,
+  createResultSet,
+  createArrayNode,
+  createAssignmentNode,
+  createBlockNode,
+  createConditionalNode,
+  createConstantNode,
+  createFunctionAssignmentNode,
+  createFunctionNode,
+  createIndexNode,
+  createObjectNode,
+  createOperatorNode,
+  createParenthesisNode,
+  createRangeNode,
+  createRelationalNode,
+  createSymbolNode,
+  createEqualScalar,
+  createIsInteger,
+  createEqual,
+  createIsBounded,
+  createNumber,
+  createBignumber,
+  createFraction,
+  createIsZero,
+  createUnaryMinus,
 });
