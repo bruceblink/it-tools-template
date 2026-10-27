@@ -61,6 +61,7 @@ describe('Electron plugin lifecycle manager', () => {
       name: 'Lifecycle fixture',
       version: '1.0.0',
       status: 'installed',
+      supportedCapabilities: ['runtime.info', 'clipboard.write', 'settings.read', 'settings.write'],
       grantedCapabilities: [],
     });
     expect(await manager.listInstalled()).toEqual([installed]);

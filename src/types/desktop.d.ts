@@ -57,6 +57,8 @@ declare global {
     name: string;
     version: string;
     requestedCapabilities: readonly string[];
+    /** Capability IDs that the current Electron host can execute. */
+    supportedCapabilities: readonly DesktopPluginCapability[];
     contributions: {
       tools: readonly DesktopPluginToolContribution[];
     };

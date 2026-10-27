@@ -22,6 +22,8 @@ catch (error) {
 
 `window.itTools.apiVersion` 当前为 `1.2.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `toolId`（宿主选择的工具贡献 ID）、`runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。`toolId` 只描述启动上下文，不是能力授权，也不能用于绕过宿主校验。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
 
+桌面管理器的 `listPlugins()` 快照同时返回 `requestedCapabilities`、`supportedCapabilities` 和 `grantedCapabilities`。前者是包声明，中者是当前宿主可以执行的能力，后者是本次运行实际授予的能力。渲染器应使用快照中的 `supportedCapabilities` 决定是否显示授权控件，不应复制宿主能力列表。已知但暂未实现的清单声明仍会保留在 `requestedCapabilities` 中，并显示为不支持。
+
 `PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
 
 | 错误代码 | 含义 |

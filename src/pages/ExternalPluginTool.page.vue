@@ -15,13 +15,6 @@ const notice = ref<string>();
 const plugin = ref<DesktopPluginSnapshot>();
 const contribution = ref<DesktopPluginToolContribution>();
 
-const supportedPluginCapabilities = new Set<DesktopPluginCapability>([
-  'runtime.info',
-  'clipboard.write',
-  'settings.read',
-  'settings.write',
-]);
-
 type ExternalPluginBridge = {
   activatePlugin: NonNullable<NonNullable<Window['itToolsDesktop']>['activatePlugin']>;
   disablePlugin: NonNullable<NonNullable<Window['itToolsDesktop']>['disablePlugin']>;
@@ -164,7 +157,7 @@ async function runPlugin(): Promise<void> {
   try {
     const requestedCapabilities = (contribution.value?.capabilities ?? [])
       .filter((capability): capability is DesktopPluginCapability => (
-        supportedPluginCapabilities.has(capability as DesktopPluginCapability)
+        currentPlugin.supportedCapabilities.includes(capability as DesktopPluginCapability)
       ));
     const result = await bridge.activatePlugin(
       currentPlugin.pluginId,

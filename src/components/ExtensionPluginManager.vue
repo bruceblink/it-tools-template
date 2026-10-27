@@ -190,6 +190,10 @@ function hasGrant(plugin: DesktopPluginSnapshot, capability: DesktopPluginCapabi
   return selected?.includes(capability) ?? plugin.grantedCapabilities.includes(capability);
 }
 
+function isCapabilitySupported(plugin: DesktopPluginSnapshot, capability: string): capability is DesktopPluginCapability {
+  return plugin.supportedCapabilities.includes(capability as DesktopPluginCapability);
+}
+
 function updateGrant(plugin: DesktopPluginSnapshot, capability: DesktopPluginCapability, checked: boolean): void {
   const key = packageKey(plugin);
   const selected = grantDrafts[key] ?? [...plugin.grantedCapabilities];
@@ -569,7 +573,7 @@ onUnmounted(() => {
               <p v-if="plugin.requestedCapabilities.length === 0">{{ text('noCapabilities') }}</p>
               <div v-for="capability in plugin.requestedCapabilities" :key="capability" class="plugin-capability-row">
                 <n-checkbox
-                  v-if="capabilities.some(item => item.id === capability)"
+                  v-if="isCapabilitySupported(plugin, capability) && capabilities.some(item => item.id === capability)"
                   :checked="hasGrant(plugin, capability as DesktopPluginCapability)"
                   :disabled="isBusy || plugin.status !== 'installed'"
                   @update:checked="updateGrant(plugin, capability as DesktopPluginCapability, $event)"

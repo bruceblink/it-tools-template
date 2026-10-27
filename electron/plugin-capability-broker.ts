@@ -4,6 +4,16 @@ import {
   pluginSettingsLimits,
 } from './plugin-settings-store';
 import type { PluginSettingValue } from './plugin-settings-store';
+import {
+  isSupportedPluginCapability,
+} from './plugin-capabilities';
+import type { PluginCapability } from './plugin-capabilities';
+
+export {
+  filterSupportedPluginCapabilities,
+  isSupportedPluginCapability,
+} from './plugin-capabilities';
+export type { PluginCapability } from './plugin-capabilities';
 
 export const PLUGIN_CAPABILITY_API_PATH = '/__it_tools/v1/call';
 
@@ -19,23 +29,8 @@ export const pluginCapabilityLimits = Object.freeze({
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const requestIdPattern = /^[a-zA-Z0-9_-]{1,64}$/;
-const supportedCapabilities = new Set(['runtime.info', 'clipboard.write', 'settings.read', 'settings.write']);
 
 class RequestBodyTooLargeError extends Error {}
-
-export type PluginCapability = 'runtime.info' | 'clipboard.write' | 'settings.read' | 'settings.write';
-
-/** Return whether the current host can execute a declared plugin capability. */
-export function isSupportedPluginCapability(value: string): value is PluginCapability {
-  return supportedCapabilities.has(value);
-}
-
-/** Keep package declarations compatible with the capability API exposed by this host. */
-export function filterSupportedPluginCapabilities(
-  capabilities: readonly string[],
-): PluginCapability[] {
-  return capabilities.filter(isSupportedPluginCapability);
-}
 
 export type PluginCapabilityCall =
   | { id: string; capability: 'runtime.info'; operation: 'read'; input: Record<string, never> }

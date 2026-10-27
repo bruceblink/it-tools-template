@@ -14,6 +14,7 @@ import type {
   PluginCapability,
   PluginCapabilityCall,
 } from './plugin-capability-broker';
+import { isSupportedPluginCapability, pluginHostCapabilities } from './plugin-capabilities';
 import {
   isValidPluginId,
 } from './plugin-sandbox';
@@ -29,12 +30,6 @@ import { getExternalPluginToolRoute } from '../src/shared/plugin-tool-route';
 export { verifyInstalledPluginPackage } from './plugin-package-integrity';
 
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const supportedCapabilities = new Set<PluginCapability>([
-  'runtime.info',
-  'clipboard.write',
-  'settings.read',
-  'settings.write',
-]);
 const maximumInstalledPackages = 128;
 const maximumActivePlugins = 4;
 const windowCloseTimeoutMs = 5_000;
@@ -52,7 +47,7 @@ export const pluginLifecycleLimits = Object.freeze({
   rendererResponsivenessProbeTimeoutMs,
 });
 
-export const pluginLifecycleCapabilities: readonly PluginCapability[] = [...supportedCapabilities];
+export const pluginLifecycleCapabilities: readonly PluginCapability[] = pluginHostCapabilities;
 
 export type PluginLifecycleErrorCode =
   | 'not-installed'
@@ -79,6 +74,8 @@ export interface PluginLifecycleSnapshot {
   name: string;
   version: string;
   requestedCapabilities: readonly string[];
+  /** Capability IDs this host can execute for the listed package. */
+  supportedCapabilities: readonly PluginCapability[];
   contributions: {
     tools: readonly PluginLifecycleToolContribution[];
   };
@@ -551,6 +548,7 @@ export class PluginLifecycleManager {
       name: manifest.name,
       version: manifest.version,
       requestedCapabilities: [...manifest.requestedCapabilities],
+      supportedCapabilities: [...pluginLifecycleCapabilities],
       contributions: {
         tools: (manifest.contributions?.tools ?? []).map(tool => ({
           ...tool,
@@ -573,6 +571,7 @@ export class PluginLifecycleManager {
       name: pluginId,
       version,
       requestedCapabilities: [],
+      supportedCapabilities: [...pluginLifecycleCapabilities],
       contributions: { tools: [] },
       grantedCapabilities: [],
       status: 'invalid',
@@ -622,7 +621,7 @@ function validateGrantedCapabilities(
     if (!manifest.requestedCapabilities.includes(capability)) {
       throw new PluginLifecycleError('unsupported-capability', 'The plugin did not request a granted capability.');
     }
-    if (!supportedCapabilities.has(capability as PluginCapability)) {
+    if (!isSupportedPluginCapability(capability)) {
       throw new PluginLifecycleError('unsupported-capability', 'The host does not implement a requested capability.');
     }
   }
