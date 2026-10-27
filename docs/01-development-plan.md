@@ -32,8 +32,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 ## 2. 当前主线：平台稳定性与插件开发接口
 
-详细性能、扩展和插件路线见 [07-performance-extensibility-plan.md](07-performance-extensibility-plan.md)。
-数据库和系统监视的具体页面与服务边界见 [13-database-system-monitor-plan.md](13-database-system-monitor-plan.md)。已交付工具和工作台功能进入维护状态；只有已知缺陷或性能数据支持时才改动这些功能。
+详细性能、扩展和插件设计见 [07-performance-extensibility-design.md](07-performance-extensibility-design.md)。
+数据库和系统监视的具体页面与服务边界见 [13-database-system-monitor-design.md](13-database-system-monitor-design.md)。已交付工具和工作台功能进入维护状态；只有已知缺陷或性能数据支持时才改动这些功能。
 
 | 顺序 | ID | 范围 | 完成标志 |
 |---|---|---|---|
@@ -45,31 +45,31 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 不在当前主线上增加新的内置工具或工作台协议。跨项目仍保持独立，不共享进程、运行时、代码包或接口协议。
 
-当前进度（2026-10-25）：API、Git、对象存储和容器工作台的已交付范围进入维护状态。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储首片计划](15-object-storage-workbench-plan.md)和[对象存储传输计划](16-object-storage-transfers-plan.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台首片计划](17-container-workbench-plan.md)。后续只按已知问题和测量证据维护这些功能。
+当前进度（2026-10-25）：API、Git、对象存储和容器工作台的已交付范围进入维护状态。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储工作台设计说明](15-object-storage-workbench-design.md)和[对象存储传输设计说明](16-object-storage-transfers-design.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台设计说明](17-container-workbench-design.md)。后续只按已知问题和测量证据维护这些功能。
 
-性能优化进度（2026-10-25）：P2 对 Markdown 转 HTML 的同步解析做了 256 KiB 合成输入测量。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，单次渲染中位数为 28.04 毫秒，10 次测量最大值为 38.91 毫秒。工具现用专用 Worker，并限制输入为 256 KiB、HTML 输出为 2 MiB、运行时间为 10 秒；新输入会取消旧任务。完整检查、Chromium Web 和隐藏 Electron `app://bundle` 回归通过，Web 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。详细实现与边界见[性能与插件计划](07-performance-extensibility-plan.md)。
+性能优化进度（2026-10-25）：P2 对 Markdown 转 HTML 的同步解析做了 256 KiB 合成输入测量。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，单次渲染中位数为 28.04 毫秒，10 次测量最大值为 38.91 毫秒。工具现用专用 Worker，并限制输入为 256 KiB、HTML 输出为 2 MiB、运行时间为 10 秒；新输入会取消旧任务。完整检查、Chromium Web 和隐藏 Electron `app://bundle` 回归通过，Web 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。详细实现与边界见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日评估 CSV 转 Markdown 表格：256 KiB 合成输入的转换中位数为 24.42 毫秒，10 次最大值为 28.32 毫秒；原页面还会单独同步解析 CSV 作验证。转换现由共享 Worker 执行，限制输入 256 KiB、输出 2 MiB、超时 10 秒。共享 CSV 行宽计算也已修复，避免超多行输入触发 `RangeError`。Web 与隐藏 Electron E2E、完整检查通过；首屏 JavaScript gzip 为 299.81 KiB，低于 300 KiB 预算 0.19 KiB。详细实现与测量结果见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日评估 CSV 转 Markdown 表格：256 KiB 合成输入的转换中位数为 24.42 毫秒，10 次最大值为 28.32 毫秒；原页面还会单独同步解析 CSV 作验证。转换现由共享 Worker 执行，限制输入 256 KiB、输出 2 MiB、超时 10 秒。共享 CSV 行宽计算也已修复，避免超多行输入触发 `RangeError`。Web 与隐藏 Electron E2E、完整检查通过；首屏 JavaScript gzip 为 299.81 KiB，低于 300 KiB 预算 0.19 KiB。详细实现与测量结果见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日优化 Text Statistics：一次字符循环统计字符数、词数和行数，并复用 TextEncoder 计算 UTF-8 字节数，避免为词数和行数创建两个分割数组。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，1 MiB 合成输入的中位耗时从 14.61 毫秒降至 3.76 毫秒。完整 `pnpm check` 通过 784 项单测（18 项跳过）；Chromium Web E2E 通过。Firefox 在本机启动失败，真实窗口交互未执行。详细实现和测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日优化 Text Statistics：一次字符循环统计字符数、词数和行数，并复用 TextEncoder 计算 UTF-8 字节数，避免为词数和行数创建两个分割数组。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，1 MiB 合成输入的中位耗时从 14.61 毫秒降至 3.76 毫秒。完整 `pnpm check` 通过 784 项单测（18 项跳过）；Chromium Web E2E 通过。Firefox 在本机启动失败，真实窗口交互未执行。详细实现和测量方法见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日将 Docker Run 转 Compose 改为专用 Worker：合成 256 KiB 命令原本同步运行约 1.46 秒，现由 Worker 处理，并限制输入 256 KiB、输出 2 MiB 和执行时间 10 秒。原有转换结果和诊断消息保持不变。完整 `pnpm check` 通过 790 项单测（18 项跳过）；Chromium Web 与隐藏 Electron `app://bundle` E2E 通过。详细实现与测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日将 Docker Run 转 Compose 改为专用 Worker：合成 256 KiB 命令原本同步运行约 1.46 秒，现由 Worker 处理，并限制输入 256 KiB、输出 2 MiB 和执行时间 10 秒。原有转换结果和诊断消息保持不变。完整 `pnpm check` 通过 790 项单测（18 项跳过）；Chromium Web 与隐藏 Electron `app://bundle` E2E 通过。详细实现与测量方法见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日将 List Converter 转为专用 Worker：排序模式下 1 MiB、2 MiB、4 MiB 合成列表的同步转换中位数分别为 31.40、62.61、126.62 毫秒。现在限制输入为 1 MiB、行数为 100,000、结果为 2 MiB、运行时间为 10 秒。完整检查通过 797 项单测（18 项跳过）；Chromium Web 的 4 项 E2E 和隐藏 Electron `app://bundle` 回归通过。详细实现与测量方法见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日将 List Converter 转为专用 Worker：排序模式下 1 MiB、2 MiB、4 MiB 合成列表的同步转换中位数分别为 31.40、62.61、126.62 毫秒。现在限制输入为 1 MiB、行数为 100,000、结果为 2 MiB、运行时间为 10 秒。完整检查通过 797 项单测（18 项跳过）；Chromium Web 的 4 项 E2E 和隐藏 Electron `app://bundle` 回归通过。详细实现与测量方法见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日将 IPv4 CIDR 合并迁入专用 Worker：旧页面对每次输入同步解析两次，分别校验和生成输出。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，随机 IPv4 地址输入在 256 KiB 时双次计算中位耗时为 43.22 毫秒，1 MiB 时为 170.56 毫秒。现在只在 Worker 中解析一次，并限制输入 256 KiB、32,768 行、序列化输出 2 MiB 和运行时间 10 秒。验证与详细数据见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日将 IPv4 CIDR 合并迁入专用 Worker：旧页面对每次输入同步解析两次，分别校验和生成输出。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，随机 IPv4 地址输入在 256 KiB 时双次计算中位耗时为 43.22 毫秒，1 MiB 时为 170.56 毫秒。现在只在 Worker 中解析一次，并限制输入 256 KiB、32,768 行、序列化输出 2 MiB 和运行时间 10 秒。验证与详细数据见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日将 IPv4 CIDR Overlap Checker 的解析和配对分析迁入 Worker。400 个相同 `/24` 输入的两次同步计算中位耗时为 85.07 毫秒，并产生 79,800 个重叠对。新 Worker 限制输入 256 KiB、1,000 行、500 个重叠对、2 MiB 序列化输出和 10 秒运行时间；超出重叠对上限时清除报告并显示缩小输入的提示。`pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查。Chromium 与 WebKit E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项、插件管理器与沙箱 E2E 2 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`。详细数据和验证记录见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日将 IPv4 CIDR Overlap Checker 的解析和配对分析迁入 Worker。400 个相同 `/24` 输入的两次同步计算中位耗时为 85.07 毫秒，并产生 79,800 个重叠对。新 Worker 限制输入 256 KiB、1,000 行、500 个重叠对、2 MiB 序列化输出和 10 秒运行时间；超出重叠对上限时清除报告并显示缩小输入的提示。`pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查。Chromium 与 WebKit E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项、插件管理器与沙箱 E2E 2 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`。详细数据和验证记录见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-同日将 IPv4 CIDR Containment Checker 的规则解析、目标分析和匹配明细生成迁入 Worker。200 条规则与 200 个目标组成的合成输入中，两次同步分析中位耗时为 39.55 毫秒，并产生 40,000 条匹配。Worker 限制两份文本合计 256 KiB、合计 1,000 行、500 条匹配、2 MiB 序列化输出和 10 秒运行时间；超出匹配上限时显示缩小输入提示。对同一密集输入，受限任务在 Vite SSR 基准中的中位耗时为 0.70 毫秒；它只生成错误提示，不生成完整 40,000 条报告，不能与旧分析耗时直接比较。`pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查；Chromium、WebKit、隐藏 Electron Worker E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。System Monitor E2E 现等待应用首页和搜索按钮就绪后再导航，并为 Windows 临时用户目录清理增加重试。完整 Electron E2E 共 37 项：31 项通过、6 项按环境跳过、0 项失败；System Monitor 定向 E2E 3 项通过。详细验证见[性能与插件计划](07-performance-extensibility-plan.md)。
+同日将 IPv4 CIDR Containment Checker 的规则解析、目标分析和匹配明细生成迁入 Worker。200 条规则与 200 个目标组成的合成输入中，两次同步分析中位耗时为 39.55 毫秒，并产生 40,000 条匹配。Worker 限制两份文本合计 256 KiB、合计 1,000 行、500 条匹配、2 MiB 序列化输出和 10 秒运行时间；超出匹配上限时显示缩小输入提示。对同一密集输入，受限任务在 Vite SSR 基准中的中位耗时为 0.70 毫秒；它只生成错误提示，不生成完整 40,000 条报告，不能与旧分析耗时直接比较。`pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查；Chromium、WebKit、隐藏 Electron Worker E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。System Monitor E2E 现等待应用首页和搜索按钮就绪后再导航，并为 Windows 临时用户目录清理增加重试。完整 Electron E2E 共 37 项：31 项通过、6 项按环境跳过、0 项失败；System Monitor 定向 E2E 3 项通过。详细验证见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
 同日完成当前 `main` 的正式构建性能基线，Web 与 Electron 各测 20 轮，0 轮失败。Web 与 Electron 启动中位数/p95 分别为 759.72/856.93 毫秒和 919.71/1,017.53 毫秒。Electron 本轮使用隐藏窗口，因此其数据不代表真实窗口交互或可见窗口路由响应。详细环境、资源和限制见[20 轮性能基线报告](performance-baseline-2026-10-25-main.json)。16 个本地提交已推送至 `origin/main`，远端与本地一致。
 
-随后优化 IPv4 CIDR splitter：页面复用 `splitIpv4Cidr` 的结果生成文本，不再第二次重建完整子网数组。4096 个 `/32` 子网的 Vite SSR 合成基准中，输出构建中位耗时从 3.56 毫秒降至 1.83 毫秒；输出保持一致。完整 `pnpm check`、Chromium Web E2E 1 项和 Electron `app://bundle` smoke E2E 19 项通过。Windows 打包应用的真实窗口显示了默认输入和 4 个子网结果；窗口输入变更未完成，Computer Use 检测到用户输入后阻止了写入。详细方法和限制见[性能与插件计划](07-performance-extensibility-plan.md)。
+随后优化 IPv4 CIDR splitter：页面复用 `splitIpv4Cidr` 的结果生成文本，不再第二次重建完整子网数组。4096 个 `/32` 子网的 Vite SSR 合成基准中，输出构建中位耗时从 3.56 毫秒降至 1.83 毫秒；输出保持一致。完整 `pnpm check`、Chromium Web E2E 1 项和 Electron `app://bundle` smoke E2E 19 项通过。Windows 打包应用的真实窗口显示了默认输入和 4 个子网结果；窗口输入变更未完成，Computer Use 检测到用户输入后阻止了写入。详细方法和限制见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-随后为 API Client 增加请求预检：渲染器在解析请求头 JSON 和调用 Electron IPC 前限制请求头 JSON 为 128 KiB、URL 为 8 KiB UTF-8 字节、正文为 256 KiB UTF-8 字节。服务单测覆盖多字节边界；Electron E2E 验证超限请求不会抵达本机测试服务器。`pnpm check` 通过 832 项单测（18 项跳过），API Client Electron E2E 1 项通过；Web 首屏 JavaScript gzip 为 299.80 KiB。详细实现和未完成的真实窗口交互说明见[性能与插件计划](07-performance-extensibility-plan.md)。
+随后为 API Client 增加请求预检：渲染器在解析请求头 JSON 和调用 Electron IPC 前限制请求头 JSON 为 128 KiB、URL 为 8 KiB UTF-8 字节、正文为 256 KiB UTF-8 字节。服务单测覆盖多字节边界；Electron E2E 验证超限请求不会抵达本机测试服务器。`pnpm check` 通过 832 项单测（18 项跳过），API Client Electron E2E 1 项通过；Web 首屏 JavaScript gzip 为 299.80 KiB。详细实现和未完成的真实窗口交互说明见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
-随后将 cURL Code Generator 的解析和代码生成移入共享 Worker。7,000 个请求头、231,036 字节的合成命令在同步服务路径中位耗时为 28.88 毫秒（21 轮，p95 为 41.79 毫秒）；新页面以 150 毫秒防抖执行所选格式，取消旧任务，保留 256 KiB 输入和 2 MiB 代码输出限制。Chromium Web E2E 4 项、Electron smoke 20 项和完整 `pnpm check` 通过。Windows Electron 真实窗口已验证 GET 摘要、请求头、fetch 与 axios 输出。首屏 JavaScript gzip 为 299.79 KiB。详细方法和限制见[性能与插件计划](07-performance-extensibility-plan.md)。
+随后将 cURL Code Generator 的解析和代码生成移入共享 Worker。7,000 个请求头、231,036 字节的合成命令在同步服务路径中位耗时为 28.88 毫秒（21 轮，p95 为 41.79 毫秒）；新页面以 150 毫秒防抖执行所选格式，取消旧任务，保留 256 KiB 输入和 2 MiB 代码输出限制。Chromium Web E2E 4 项、Electron smoke 20 项和完整 `pnpm check` 通过。Windows Electron 真实窗口已验证 GET 摘要、请求头、fetch 与 axios 输出。首屏 JavaScript gzip 为 299.79 KiB。详细方法和限制见[性能与插件设计说明](07-performance-extensibility-design.md)。
 
 2026-10-27 完成外部插件工具贡献元数据首片：签名清单支持可选的 `contributions.tools`，插件管理器显示标题、描述和关键词，既有不带该字段的 v1 包继续按原签名载荷验证。宿主为已安装版本生成元数据页面，页面通过现有生命周期接口运行和停止隔离插件窗口；页面不执行外部代码，也不把实现注入宿主工具注册表。样例包、打包脚本、Electron 验证器、生命周期快照、管理器链接、路由操作和 E2E 已同步。Windows 本机 `pnpm check` 通过 137 个测试文件（2 个跳过）、853 项测试（18 项跳过）；完整 Electron E2E 共 39 项，33 项通过、6 项按环境跳过。Linux/macOS 和工具级激活路由仍待后续切片。
 
@@ -132,9 +132,9 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 但它们不改变新的职责边界。打包成功不等于签名、公证、安装升级、真实设备权限和
 完整原生窗口验收完成。
 
-质量基线见 [02-quality-baseline.md](02-quality-baseline.md)，Web/Electron 边界见
+归档质量基线见 [02-quality-baseline.md](archive/02-quality-baseline.md)，Web/Electron 边界见
 [06-web-electron-assessment.md](06-web-electron-assessment.md)，性能与插件细节见
-[07-performance-extensibility-plan.md](07-performance-extensibility-plan.md)。
+[07-performance-extensibility-design.md](07-performance-extensibility-design.md)。
 历史阶段从下一节开始保留，作为证据索引，不作为新的并行产品路线。
 
 ## 历史阶段一：质量基线（原始窗口 0–30 天）
@@ -157,7 +157,7 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 ## 历史阶段二：安全与数据边界（原始窗口 31–60 天）
 
-首轮执行 [随机源与敏感输入开发计划](03-security-inputs-plan.md)，分别交付安全随机源和 JWT 签名器敏感输入内存保存。后续按 [内容、HTML 与部署边界计划](04-security-boundaries.md) 检查其他内容输入、HTML 渲染与部署响应头。
+首轮执行的 [随机源与敏感输入开发计划](archive/03-security-inputs-plan.md) 已归档，分别交付安全随机源和 JWT 签名器敏感输入内存保存。后续按归档的 [内容、HTML 与部署边界计划](archive/04-security-boundaries.md) 检查其他内容输入、HTML 渲染与部署响应头。
 
 ### 工作内容
 
@@ -177,7 +177,7 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 ## 历史阶段三：性能与 PWA（原始窗口 61–90 天）
 
-已按 [应用壳与离线缓存计划](05-pwa-cache-plan.md) 交付首片：应用壳预缓存、访问后的静态资源缓存、构建报告与 8 MiB 预缓存预算。300 KiB 首屏 JavaScript、500 KiB 可选入口静态依赖闭包的目标继续保留。随后已完成 Electron 三平台发布；剩余体积与运行时性能工作纳入 [新主线](07-performance-extensibility-plan.md)。
+已按归档的 [应用壳与离线缓存计划](archive/05-pwa-cache-plan.md) 交付首片：应用壳预缓存、访问后的静态资源缓存、构建报告与 8 MiB 预缓存预算。300 KiB 首屏 JavaScript、500 KiB 可选入口静态依赖闭包的目标继续保留。随后已完成 Electron 三平台发布；剩余体积与运行时性能工作纳入 [新主线](07-performance-extensibility-design.md)。
 
 ### 工作内容
 

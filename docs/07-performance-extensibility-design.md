@@ -1,6 +1,6 @@
-# IT Tools 主线路线：Web/Electron 产品承载与 Ramag 场景互补
+# IT Tools 性能与插件平台设计说明
 
-> 状态：现行路线
+> 状态：现行设计与验证记录
 > 更新日期：2026-10-27
 > 执行入口：[01-development-plan.md](01-development-plan.md)
 > P0 边界记录：[14-cross-project-capability-matrix.md](14-cross-project-capability-matrix.md)
@@ -84,7 +84,7 @@ it-tools-template 的技术支线。它们服务于本产品的工具承载和�
 | --- | --- | --- |
 | 分发 | [公开 Release](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6) 包含 Web ZIP、Windows x64、Linux x64、macOS ARM64 产物，以及 Docker 镜像说明 | 签名、公证、安装升级、卸载与真实设备权限验收仍需补齐 |
 | 工具与语言 | [注册表](../src/tools/index.ts) 有 117 个工具，`locales/` 有 9 个语言包 | 注册完整性测试只保证英文和中文基础键；其他语言需单独审查 |
-| 扩展接入 | [Tool 类型](../src/tools/tools.types.ts)、[ToolDefinition 注册](../src/tools/tool-registry.ts)、[Platform Adapter](../src/platform-adapter/index.ts) 和 [第一方 SDK v0](extension-sdk-v0.md) 已建立；9 个样例工具以扩展命名空间 ID 登记，并保留原路由、分类和收藏键 | P4 设置管理、版本迁移和 Web/Electron 自动化验收已完成；P5 仍需验证独立插件隔离、签名与权限检查 |
+| 扩展接入 | [Tool 类型](../src/tools/tools.types.ts)、[ToolDefinition 注册](../src/tools/tool-registry.ts)、[Platform Adapter](../src/platform-adapter/index.ts) 和 [第一方内部 SDK v0](extension-sdk-v0.md) 已建立；9 个样例工具以扩展命名空间 ID 登记，并保留原路由、分类和收藏键 | P4 设置管理、版本迁移和 Web/Electron 自动化验收已完成；P5 仍需验证独立插件隔离、签名与权限检查 |
 | 启动依赖 | [翻译初始化](../src/plugins/i18n.plugin.ts) 使用聚合消息入口；[插件配置](../vite.plugins.ts) 包含全部语言文件 | 应测量各语言对首屏的贡献，并按实际语言加载 |
 | 大型数据 | [MAC 查询](../src/tools/mac-address-lookup/mac-address-lookup.vue) 直接导入整个 `oui-data` | 需要分片、按需读取及明确的离线覆盖范围 |
 | 交互计算 | [正则工具](../src/tools/regex-tester/regex-tester.vue) 在响应式计算中执行匹配与样例生成 | 需要可终止任务，防止高成本输入阻塞页面 |
@@ -593,15 +593,15 @@ Windows Computer Use 在打包 Electron 真实窗口中，用 UI Automation `Set
 
 本轮对象存储工作台首片（2026-10-24）：新增 Electron 专属 `/object-storage` 页面和受限 S3 主进程桥，包含指定 Bucket 连接、每页 100 个对象、前缀筛选、64 KiB 纯文本预览、取消和断开。凭据只保存在会话内存，单次操作最多 10 秒，列表原始响应最多 1 MiB。窗口、路由和连接替换都清理客户端及请求。桌面英文/中文文案与 Web 分离，避免新增桌面功能持续消耗 Web 首屏预算。
 
-验证：完整 `pnpm check` 通过 123 个测试文件、756 项测试（另有 2 个文件和 18 项测试跳过）；本机 Docker RustFS 1.0.1 的 Electron 集成测试通过，容器清理确认；Chromium 与 WebKit 平台隔离流程通过。Web 首屏 JavaScript gzip 为 307,012 字节（299.82 KiB），低于 300 KiB 预算。Firefox 仍返回 `spawn UNKNOWN`。自动化 Electron 页面在桌面及窄窗口布局中显示正常并通过连接释放检查；Computer Use 只取得页面和表单填值证据，连接点击因几何信息不可用而未完成，不能据此宣称完整真实窗口验收。范围、回滚和详细证据见 [对象存储首片计划](15-object-storage-workbench-plan.md)。对象上传、下载、删除、其他服务专用协议和容器工作台仍属于后续开发。
+验证：完整 `pnpm check` 通过 123 个测试文件、756 项测试（另有 2 个文件和 18 项测试跳过）；本机 Docker RustFS 1.0.1 的 Electron 集成测试通过，容器清理确认；Chromium 与 WebKit 平台隔离流程通过。Web 首屏 JavaScript gzip 为 307,012 字节（299.82 KiB），低于 300 KiB 预算。Firefox 仍返回 `spawn UNKNOWN`。自动化 Electron 页面在桌面及窄窗口布局中显示正常并通过连接释放检查；Computer Use 只取得页面和表单填值证据，连接点击因几何信息不可用而未完成，不能据此宣称完整真实窗口验收。范围、回滚和详细证据见 [对象存储工作台设计说明](15-object-storage-workbench-design.md)。对象上传、下载、删除、其他服务专用协议和容器工作台仍属于后续开发。
 
 本轮对象存储传输（2026-10-24）：在只读浏览基础上增加流式文件上传、下载和单对象删除。源文件与下载目标由主进程文件对话框选择；渲染器不能传入本机路径。上传默认使用条件写入避免覆盖，替换和删除需要主进程确认。下载写入同目录独占临时文件，完整校验后替换目标。单文件上限为 1 GiB，传输时限为 5 分钟。Web 构建不包含这些 Electron IPC 与 SDK。
 
-验证：`pnpm check` 通过 124 个单测文件、765 项测试（18 项跳过）、42 项脚本测试和 1 项 Web 隔离检查；类型检查、零警告 lint、Web/PWA/Electron 构建均通过。PWA 首屏 JavaScript gzip 为 299.82 KiB。Docker RustFS 1.0.1 Electron E2E 使用固定镜像 `rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`，映射端口 `127.0.0.1:10085`，1 项流程通过，容器清理已确认。测试覆盖文件上传、对象冲突保护、替换确认、下载字节一致性、进度、取消确认和删除。无头 Electron Playwright 在 390×844 视口下检查横向溢出、表头列宽和隐藏的修改时间列；页面没有横向溢出。此截图不等同于真实窗口验收，真实窗口交互未完成。实施范围和回滚边界见[对象存储传输计划](16-object-storage-transfers-plan.md)。容器工作台和其他服务专用协议仍待开发。
+验证：`pnpm check` 通过 124 个单测文件、765 项测试（18 项跳过）、42 项脚本测试和 1 项 Web 隔离检查；类型检查、零警告 lint、Web/PWA/Electron 构建均通过。PWA 首屏 JavaScript gzip 为 299.82 KiB。Docker RustFS 1.0.1 Electron E2E 使用固定镜像 `rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`，映射端口 `127.0.0.1:10085`，1 项流程通过，容器清理已确认。测试覆盖文件上传、对象冲突保护、替换确认、下载字节一致性、进度、取消确认和删除。无头 Electron Playwright 在 390×844 视口下检查横向溢出、表头列宽和隐藏的修改时间列；页面没有横向溢出。此截图不等同于真实窗口验收，真实窗口交互未完成。实施范围和回滚边界见[对象存储传输设计说明](16-object-storage-transfers-design.md)。容器工作台和其他服务专用协议仍待开发。
 
 本轮只读容器工作台首片（2026-10-24）：新增 Electron 专属 `/container-workbench` 页面。主进程使用固定参数执行 `docker ps --all --last 100`，不经过 Shell。页面只显示容器 ID、名称、镜像、状态、状态说明和端口映射；每次请求最多 10 秒、512 KiB、100 条。取消请求、渲染器关闭和应用退出时，主进程终止对应子进程。Web 不打包容器工作台路由，也不暴露 Docker IPC。当前不支持容器启停、删除、日志、环境变量、标签或挂载。
 
-验证：容器协议和服务单测 8 项通过；Chromium Web 平台隔离 E2E 1 项通过；`pnpm check` 通过 42 项脚本测试、773 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。PWA 首屏 JavaScript gzip 为 307,012 字节（299.82 KiB），低于 300 KiB 预算。Electron E2E 使用固定镜像 `rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`（RustFS 1.0.1），映射端口 `127.0.0.1:8494`，1 项流程通过，容器清理已确认。自动化窗口通过 `IT_TOOLS_HEADLESS_E2E` 保持隐藏；测试确认窗口不可见，并检查 390×844 视口没有横向溢出。未运行前台 UI 或真实窗口验收。实现和回滚边界见[容器工作台首片计划](17-container-workbench-plan.md)。构建仍报告 externalized `path`/`tls`、`js-sha256` 的 `eval`、未匹配 UnoCSS utility 和大 chunk 警告；这些警告没有导致构建失败。
+验证：容器协议和服务单测 8 项通过；Chromium Web 平台隔离 E2E 1 项通过；`pnpm check` 通过 42 项脚本测试、773 项单测（18 项跳过）、类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。PWA 首屏 JavaScript gzip 为 307,012 字节（299.82 KiB），低于 300 KiB 预算。Electron E2E 使用固定镜像 `rustfs/rustfs@sha256:1803faef57627e2d9c2e7d89d655d712ddded5389040054987163043fecb6a3c`（RustFS 1.0.1），映射端口 `127.0.0.1:8494`，1 项流程通过，容器清理已确认。自动化窗口通过 `IT_TOOLS_HEADLESS_E2E` 保持隐藏；测试确认窗口不可见，并检查 390×844 视口没有横向溢出。未运行前台 UI 或真实窗口验收。实现和回滚边界见[容器工作台设计说明](17-container-workbench-design.md)。构建仍报告 externalized `path`/`tls`、`js-sha256` 的 `eval`、未匹配 UnoCSS utility 和大 chunk 警告；这些警告没有导致构建失败。
 
 本轮 Markdown 转 HTML Worker（2026-10-25）：原页面在每次输入变化时同步创建 Markdown renderer 并解析完整文本。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，先预热一次后测量 16 KiB、64 KiB 和 256 KiB 合成输入各 10 次。渲染中位数/最大值分别为 2.17/7.32、6.21/12.24 和 28.04/38.91 毫秒。这是 Node.js 微基准，不代表浏览器端到端耗时。
 
