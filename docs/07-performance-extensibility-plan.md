@@ -748,6 +748,10 @@ SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字
 
 新增 `src/shared/plugin-tool-metadata.ts`，集中定义 `dataProcessing` 和 `offline` 的稳定值集合及运行时类型守卫。内置工具注册表、签名插件清单解析和外部插件渲染器快照校验都复用这组校验，避免三层对治理字段的允许范围发生漂移。共享单测覆盖完整值集合和未知值拒绝；该模块只校验元数据，不授予系统能力。
 
+### 2026-10-27：统一插件 API 版本来源
+
+新增 `src/shared/plugin-api-version.ts` 作为 Electron 插件 API v1 的宿主版本来源。Electron 注入脚本不再重复写入版本字面量；独立 SDK 增加同目录的版本类型声明，静态回归会核对宿主版本、SDK 类型和样例清单的 `minInclusive`。版本升级仍需同时更新兼容范围和接口文档，不会改变插件能力授权边界。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。

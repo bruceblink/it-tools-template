@@ -4,7 +4,7 @@
 
 宿主在插件代码运行前注入 `window.itTools`。插件不需要创建 preload，也不能访问 Node.js、宿主 IPC、插件文件系统或其他插件的数据。
 
-TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts) 获得运行时 API 类型，并引用 [`plugins/sdk/it-tools-plugin-package.d.ts`](../plugins/sdk/it-tools-plugin-package.d.ts) 获得 `plugin.source.json` 清单和工具贡献类型。两个声明文件和同目录的能力类型可以一起复制到插件项目；它们不依赖仓库内部的 `src/` 路径。JavaScript 插件可直接使用相同的接口。
+TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts) 获得运行时 API 类型，并引用 [`plugins/sdk/it-tools-plugin-package.d.ts`](../plugins/sdk/it-tools-plugin-package.d.ts) 获得 `plugin.source.json` 清单和工具贡献类型。四个 SDK 声明文件可以一起复制到插件项目；它们不依赖仓库内部的 `src/` 路径。JavaScript 插件可直接使用相同的接口。
 
 ```ts
 const runtime = await window.itTools.capabilities.runtime.getInfo();

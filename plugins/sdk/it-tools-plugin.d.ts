@@ -2,6 +2,7 @@ import type {
   PluginCapabilityId,
   PluginHostCapability,
 } from './plugin-capabilities';
+import type { PluginApiV1Version } from './plugin-api-version';
 
 export interface PluginRuntimeInfo {
   readonly platform: string;
@@ -58,8 +59,8 @@ export interface PluginPermissionSnapshot {
 }
 
 export interface ITToolsPluginApiV1 {
-  readonly apiVersion: '1.3.0';
-  readonly hostApiVersion: '1.3.0';
+  readonly apiVersion: PluginApiV1Version;
+  readonly hostApiVersion: PluginApiV1Version;
   /** The host-verified contribution ID selected when this plugin window was opened. */
   readonly toolId: string | undefined;
   /** Capability metadata only; this object never grants or revokes a capability. */

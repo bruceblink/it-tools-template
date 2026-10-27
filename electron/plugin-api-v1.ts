@@ -1,11 +1,12 @@
 import { pluginSettingsLimits } from './plugin-settings-store';
+import { pluginApiV1Version } from '../src/shared/plugin-api-version';
 import type {
   PluginCapabilityId,
   PluginHostCapability,
 } from '../src/shared/plugin-capabilities';
 
-export const pluginRendererApiVersion = '1.3.0';
-export const pluginHostApiVersion = '1.3.0';
+export const pluginRendererApiVersion = pluginApiV1Version;
+export const pluginHostApiVersion = pluginApiV1Version;
 export const pluginApiMaximumClipboardTextCharacters = 16_384;
 
 export interface PluginApiV1ScriptOptions {
