@@ -38,6 +38,8 @@ export interface PluginApiV1ScriptOptions {
   requestedCapabilities?: readonly string[];
   supportedCapabilities?: readonly string[];
   grantedCapabilities?: readonly string[];
+  /** Host-validated contribution ID for the current isolated window. */
+  toolId?: string;
   plugin?: PluginApiV1PluginContext;
   tool?: PluginApiV1ToolContext;
 }
@@ -84,6 +86,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
         offline: options.tool.offline,
         capabilities: [...options.tool.capabilities],
       };
+  const explicitToolId = options.toolId ?? toolContext?.id;
   const pluginContext = options.plugin === undefined
     ? undefined
     : {
@@ -206,6 +209,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
   });
   const plugin = freezePluginContext(${JSON.stringify(pluginContext)});
   const tool = freezeToolContext(${JSON.stringify(toolContext)});
+  const explicitToolId = ${JSON.stringify(explicitToolId)};
   const capabilities = Object.freeze({
     runtime: Object.freeze({
       getInfo: () => request('runtime.info', 'read', {}),
@@ -253,7 +257,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
     apiVersion: '${pluginRendererApiVersion}',
     hostApiVersion: '${pluginHostApiVersion}',
     plugin,
-    toolId: tool?.id ?? getToolId(),
+    toolId: explicitToolId ?? tool?.id ?? getToolId(),
     tool,
     permissions,
     capabilities,

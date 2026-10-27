@@ -48,6 +48,36 @@ describe('plugin renderer API v1', () => {
     expect(api.toolId).toBe('org.example.plugin/example-tool');
   });
 
+  it('prefers an explicitly validated contribution ID when the custom protocol hash is unavailable', () => {
+    const context = { fetch: vi.fn() };
+    runInNewContext(getPluginApiV1Script({ toolId: 'org.example.plugin/future-tool' }), context);
+
+    const api = (context as unknown as { itTools: { toolId?: string } }).itTools;
+    expect(api.toolId).toBe('org.example.plugin/future-tool');
+  });
+
+  it('uses the host contribution ID before signed metadata and URL hash fallbacks', () => {
+    const context = {
+      fetch: vi.fn(),
+      location: { hash: '#tool=org.example.plugin/hash-tool' },
+    };
+    runInNewContext(getPluginApiV1Script({
+      toolId: 'org.example.plugin/host-tool',
+      tool: {
+        id: 'org.example.plugin/metadata-tool',
+        title: 'Metadata tool',
+        description: 'Signed metadata.',
+        keywords: [],
+        dataProcessing: 'local-data',
+        offline: 'available',
+        capabilities: [],
+      },
+    }), context);
+
+    const api = (context as unknown as { itTools: { toolId?: string } }).itTools;
+    expect(api.toolId).toBe('org.example.plugin/host-tool');
+  });
+
   it('exposes immutable signed package metadata without granting capabilities', () => {
     const context = { fetch: vi.fn() };
     runInNewContext(getPluginApiV1Script({

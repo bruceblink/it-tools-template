@@ -4,7 +4,66 @@
 
 ## 插件源码
 
-从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以复制 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts)、`it-tools-plugin-package.d.ts`、`plugin-capabilities.d.ts` 和 `plugin-api-version.d.ts`；SDK 目录自包含能力与版本类型，不要求插件项目解析仓库内部的 `src/` 路径。
+从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以复制 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts)、`it-tools-plugin-package.d.ts`、`plugin-capabilities.d.ts`、`plugin-api-version.d.ts` 和 `plugin-api-errors.d.ts`；SDK 目录自包含能力、错误码与版本类型，不要求插件项目解析仓库内部的 `src/` 路径。
+
+## 开发手册约定
+
+### 1. 先确定包身份和 API 范围
+
+包 ID 使用稳定的小写命名空间，例如 `org.example.my-plugin`。包版本使用 `MAJOR.MINOR.PATCH`。当前外部插件渲染器 API 为 `1.4.0`；清单的 `apiVersion` 使用左闭右开范围，并应覆盖 `1.4.0`：
+
+```json
+{
+  "formatVersion": 1,
+  "id": "org.example.my-plugin",
+  "name": "My plugin",
+  "version": "1.0.0",
+  "apiVersion": { "minInclusive": "1.4.0", "maxExclusive": "2.0.0" },
+  "entrypoint": "index.html",
+  "requestedCapabilities": []
+}
+```
+
+`formatVersion`、`apiVersion` 和 `window.itTools.apiVersion` 分别表示包格式、宿主兼容范围和 JavaScript API。它们不能互相替代。宿主拒绝不兼容的 API 范围；插件应在运行时记录 `apiVersion`，但不应依赖日期或构建哈希判断兼容性。
+
+### 2. 只声明实际需要的工具和能力
+
+工具贡献 ID 必须以包 ID 开头，例如 `org.example.my-plugin/example-tool`。`contributions.tools` 只描述标题、说明、关键词、数据处理方式、离线状态和工具级能力。它不会把外部实现注册到宿主工具路由，也不会授予能力。
+
+请求能力只写入 `requestedCapabilities`。用户信任签名者后，仍需在设置页选择能力并确认桌面提示。`runtime.info`、`clipboard.write`、`settings.read` 和 `settings.write` 是当前宿主可执行能力；`data.oui`、`device.camera`、`file.read` 和 `file.save` 可以作为已知声明保留，但当前不会获得授权。插件必须能在未取得任一能力时打开并显示可恢复的状态。
+
+### 3. 使用对外运行时 API
+
+插件只通过 `window.itTools` 对接宿主：
+
+| API | 用途 | 失败处理 |
+| --- | --- | --- |
+| `plugin` | 读取签名包 `id`、`name`、`version` | 只用于显示、日志和设置键命名 |
+| `toolId` | 读取当前宿主选择的贡献 ID | 整包启动时为 `undefined`；不要把 URL hash 当作主标识 |
+| `tool` | 读取当前贡献的冻结元数据 | 整包启动时为 `undefined`；不能当作能力授权 |
+| `permissions` | 查看声明、宿主支持和本次授权 | 只读快照，不会发起授权 |
+| `capabilities.runtime.getInfo()` | 读取平台和应用版本 | 处理 `permission-denied`、`plugin-inactive` 和 `capability-failed` |
+| `capabilities.clipboard.writeText(text)` | 请求写入文本剪贴板 | 输入最多 16 KiB；未授权时不重试请求 |
+| `capabilities.settings.get/set/delete` | 保存非秘密偏好 | 键最多 64 字符，字符串值最多 4 KiB |
+
+贡献页面的 `toolId` 来源优先级是宿主已验证的贡献 ID、`tool.id`、URL hash 回退值。插件不应修改 `window.itTools`，也不应直接调用 `/__it_tools/v1/call`、Electron IPC、Node.js 或宿主 preload。完整请求、响应和错误码见[插件能力 API v1](09-electron-plugin-capability-api-v1.md)。
+
+### 4. 管理状态和资源
+
+插件代码在独立 sandbox renderer 中运行。每个插件窗口最多运行 2 个 Dedicated Worker；每个 Worker 最长 30 秒。Worker 出错、页面关闭或停用时会被终止。插件不能创建 SharedWorker、ServiceWorker、嵌套 Worker、外部网络连接或下载。
+
+插件必须在窗口关闭前释放事件监听器、定时器、Worker 和对象 URL。能力请求应绑定当前页面生命周期；收到 `plugin-inactive` 后停止重试并更新界面。插件设置只保存字符串、有限数字、布尔值或 `null`，不得保存凭据、令牌、文件内容或网络响应。
+
+### 5. 本地接入验收
+
+每个外部插件在交付前应完成以下检查：
+
+- 清单 ID、版本、API 范围、入口和能力声明通过包校验。
+- 未信任签名者时安装或运行被拒绝；信任签名者不会自动授予能力。
+- 未授权的能力显示可理解的拒绝状态，其他插件功能继续运行。
+- 工具贡献 ID 始终位于包命名空间内，`toolId`、`tool` 和 `permissions` 与当前启动上下文一致。
+- 停止、窗口关闭、渲染进程崩溃、升级回退和卸载后，宿主设置页仍可用。
+- Web 和 Docker 构建显示桌面专属降级提示，不尝试加载 `.itplugin`。
 
 MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系统剪贴板、读取插件设置和保存插件设置。插件通过 `window.itTools.capabilities.runtime.getInfo()`、`window.itTools.capabilities.clipboard.writeText(text)`、`window.itTools.capabilities.settings.get(key)`、`window.itTools.capabilities.settings.set(key, value)` 和 `window.itTools.capabilities.settings.delete(key)` 调用能力。用户授权前，宿主拒绝调用并返回 `PluginApiError`。设置只保存非秘密的基本值，并按插件 ID 命名空间持久化。插件不能继承宿主 preload 或其他插件的数据。网络请求只能访问插件自身来源；主进程会拒绝外部连接。
 

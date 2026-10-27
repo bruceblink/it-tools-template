@@ -56,7 +56,7 @@ export interface ITToolsPluginApiV1 {
   readonly hostApiVersion: PluginApiV1Version;
   /** The host-verified package metadata for this plugin window. */
   readonly plugin: PluginPackageContext;
-  /** The host-verified contribution ID selected when this plugin window was opened. */
+  /** The host-verified contribution ID selected when this plugin window was opened. The host value takes precedence over metadata and URL fallback values. */
   readonly toolId: string | undefined;
   /** The host-verified contribution metadata selected when this plugin window was opened. */
   readonly tool: PluginToolContext | undefined;

@@ -4,7 +4,7 @@
 
 宿主在插件代码运行前注入 `window.itTools`。插件不需要创建 preload，也不能访问 Node.js、宿主 IPC、插件文件系统或其他插件的数据。
 
-TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts) 获得运行时 API 类型，并引用 [`plugins/sdk/it-tools-plugin-package.d.ts`](../plugins/sdk/it-tools-plugin-package.d.ts) 获得 `plugin.source.json` 清单和工具贡献类型。四个 SDK 声明文件可以一起复制到插件项目；它们不依赖仓库内部的 `src/` 路径。JavaScript 插件可直接使用相同的接口。
+TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts) 获得运行时 API 类型，并引用 [`plugins/sdk/it-tools-plugin-package.d.ts`](../plugins/sdk/it-tools-plugin-package.d.ts) 获得 `plugin.source.json` 清单和工具贡献类型。五个 SDK 声明文件（运行时、包清单、能力目录、API 版本和错误码）可以一起复制到插件项目；它们不依赖仓库内部的 `src/` 路径。JavaScript 插件可直接使用相同的接口。
 
 ```ts
 const runtime = await window.itTools.capabilities.runtime.getInfo();
@@ -24,9 +24,39 @@ catch (error) {
 
 `window.itTools.plugin` 在每次插件窗口启动时提供已签名包的 `id`、`name` 和 `version`。对象被冻结，插件不能修改清单内容。该上下文只用于显示、日志和选择插件自己的设置键；它不会授予或扩大任何能力。
 
-`window.itTools.tool` 在工具贡献页面启动时提供已签名清单中的只读元数据：`id`、`title`、`description`、`keywords`、`dataProcessing`、`offline` 和声明的 `capabilities`。对象及其数组被冻结。整包启动时 `tool` 为 `undefined`；宿主不会因为此上下文授予能力，实际授权仍只由 `permissions.grantedCapabilities` 和能力代理决定。`toolId` 继续保留，用于兼容已有插件。
+`window.itTools.tool` 在工具贡献页面启动时提供已签名清单中的只读元数据：`id`、`title`、`description`、`keywords`、`dataProcessing`、`offline` 和声明的 `capabilities`。对象及其数组被冻结。整包启动时 `tool` 为 `undefined`；宿主不会因为此上下文授予能力，实际授权仍只由 `permissions.grantedCapabilities` 和能力代理决定。`toolId` 继续保留，用于兼容已有插件。工具页面启动时，`toolId` 的来源优先级是：宿主已验证的当前贡献 ID、`tool.id`、自定义协议 URL 的 `#tool=` 回退值。插件应使用 `toolId` 识别当前贡献，不能从 URL 自行推断包身份或能力。
 
 `window.itTools.permissions` 返回三个冻结数组：`requestedCapabilities` 是签名清单声明，`supportedCapabilities` 是当前宿主可以执行的能力，`grantedCapabilities` 是本次隔离窗口实际获得的授权。插件可以用这些数组提前隐藏或禁用不可用的界面；读取快照不会发起能力请求，也不会增加授权。`grantedCapabilities` 只包含同时出现在声明和宿主支持集合中的能力。
+
+## 对外对接流程
+
+外部插件接入分为四层。插件作者只实现静态资源和 `window.itTools` 调用；打包器负责生成签名包；桌面宿主负责清单、签名、版本和贡献校验；能力代理负责来源、参数、授权和资源限制。插件代码不能跳过打包器、生命周期或能力代理直接访问宿主进程。
+
+1. **声明兼容范围**：在 `plugin.source.json` 中声明 `formatVersion: 1`、包 `version`、`apiVersion.minInclusive`/`maxExclusive`、入口文件、请求能力和可选 `contributions.tools`。`apiVersion` 必须覆盖宿主的 `1.4.0`；未知能力不会自动获得授权。
+2. **声明工具贡献**：工具 ID 使用 `<plugin-id>/<tool-id>`，并提供标题、说明、关键词。`dataProcessing`、`offline` 和工具级 `capabilities` 只用于显示和最小授权筛选；工具能力必须是包 `requestedCapabilities` 的子集。
+3. **打包和安装**：使用 `plugin:pack` 生成签名 `.itplugin`。宿主先校验签名、API 范围、路径、文件哈希和资源上限，再写入暂存目录。安装不执行包内脚本，也不执行 `npm install`。
+4. **信任与授权分离**：用户先核对签名者指纹并信任公钥，再安装包；运行前再选择能力并确认桌面提示。签名信任只确认来源和完整性，不授予运行能力。
+5. **运行时握手**：宿主在插件代码运行前注入 `window.itTools`。插件可读取 `plugin`、`toolId`、`tool` 和 `permissions`，但这些对象只描述上下文。贡献页面的 `toolId` 优先使用宿主已验证的贡献 ID，插件不应依赖 URL hash 作为主标识。
+6. **能力调用**：插件只调用 `window.itTools.capabilities`。请求通过同源能力代理发送；宿主校验来源、请求结构、输入输出大小、频率、并发和当前授权。错误只依赖稳定 `PluginApiError.code`，不解析宿主内部错误文本。
+7. **停止和升级**：插件窗口关闭、停用、撤销授权或版本切换后，旧请求和旧句柄失效。升级失败时宿主恢复旧版本；插件应把设置迁移和运行恢复视为可失败操作。
+
+最小的启动检查可以写成：
+
+```ts
+const api = window.itTools;
+const currentTool = api.toolId;
+const canReadRuntime = api.permissions.grantedCapabilities.includes('runtime.info');
+
+if (currentTool === undefined) {
+  // The package was started as a whole package. Do not assume a tool route.
+}
+if (canReadRuntime) {
+  const info = await api.capabilities.runtime.getInfo();
+  document.querySelector('#platform')!.textContent = info.platform;
+}
+```
+
+对接方应验证四个边界：不支持的 API 版本在安装前被拒绝；未请求或未授权的能力返回稳定错误；贡献 ID 在包内保持命名空间；插件停用后宿主仍可打开设置和其他工具。Web 和 Docker 不加载 `.itplugin`，因此对接方必须为这些平台提供降级说明或继续使用内置工具。
 
 桌面管理器的 `listPlugins()` 快照同时返回 `requestedCapabilities`、`supportedCapabilities` 和 `grantedCapabilities`。前者是包声明，中者是当前宿主可以执行的能力，后者是本次运行实际授予的能力。渲染器应使用快照中的 `supportedCapabilities` 决定是否显示授权控件，不应复制宿主能力列表。已知但暂未实现的清单声明仍会保留在 `requestedCapabilities` 中，并显示为不支持。
 
@@ -40,10 +70,20 @@ catch (error) {
 | `capability-not-requested` | 插件清单没有请求该能力。 |
 | `plugin-inactive` | 插件窗口已停用或已关闭。 |
 | `invalid-input` | 客户端拒绝了不符合接口限制的输入。 |
-| `rate-limit-exceeded` / `too-many-requests` | 调用频率或并发数超过限制。 |
-| `transport-error` / `invalid-response` | API 请求失败，或宿主响应格式无效。 |
-| `capability-failed` / `response-too-large` | 宿主操作失败，或返回内容超过限制。 |
-| `not-found` / `method-not-allowed` / `untrusted-initiator` / `untrusted-origin-header` | 宿主拒绝了错误路径、方法或来源。 |
+| `transport-error` | 请求没有得到网络层响应。 |
+| `invalid-response` | 宿主响应不是有效的 API 响应。 |
+| `request-failed` | 宿主返回了未知或无法映射的失败。 |
+| `not-found` | 请求路径不存在。 |
+| `method-not-allowed` | 请求方法不符合接口约定。 |
+| `untrusted-initiator` | 请求不是来自插件主框架。 |
+| `untrusted-origin-header` | `Origin` 请求头与插件来源不匹配。 |
+| `content-type-required` | 请求没有使用 `application/json`。 |
+| `request-too-large` | 请求体超过 16 KiB。 |
+| `rate-limit-exceeded` | 每分钟调用次数超过限制。 |
+| `too-many-requests` | 同时执行的调用超过限制。 |
+| `invalid-request` | 请求字段或能力操作结构无效。 |
+| `capability-failed` | 宿主能力执行失败。 |
+| `response-too-large` | 宿主响应超过 16 KiB。 |
 
 ## 请求格式
 
@@ -102,7 +142,7 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 ## 当前实现与限制
 
-`window.itTools.apiVersion` 当前为 `1.4.0`，`window.itTools.hostApiVersion` 当前为 `1.4.0`。新增的 `plugin` 是宿主在每个插件窗口中写入的包级只读上下文，包含签名清单的 `id`、`name` 和 `version`。`toolId` 和 `tool` 是宿主在贡献页面启动时写入的只读上下文；整包启动时二者均为 `undefined`。`plugin` 和 `tool` 的元数据来自签名清单，插件不能修改宿主清单，也不能把其中的 `capabilities` 当作授权。新增的 `permissions` 是只读能力快照，不替代宿主授权检查。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 KiB，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
+`window.itTools.apiVersion` 当前为 `1.4.0`，`window.itTools.hostApiVersion` 当前为 `1.4.0`。新增的 `plugin` 是宿主在每个插件窗口中写入的包级只读上下文，包含签名清单的 `id`、`name` 和 `version`。`toolId` 和 `tool` 是宿主在贡献页面启动时写入的只读上下文；整包启动时二者均为 `undefined`。贡献页面的 `toolId` 优先使用宿主在生命周期校验后传入的贡献 ID，再使用 `tool.id` 和 URL hash 回退值。`plugin` 和 `tool` 的元数据来自签名清单，插件不能修改宿主清单，也不能把其中的 `capabilities` 当作授权。新增的 `permissions` 是只读能力快照，不替代宿主授权检查。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 KiB，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
 
 签名样例会读取宿主返回的运行时信息、读写持久设置，并在授权后通过客户端写入剪贴板；自动化 E2E 会替换操作系统剪贴板执行器，不写入真实剪贴板。插件未获授权时，客户端返回 `PluginApiError`，错误代码为 `permission-denied`。能力请求仍需由用户在桌面管理界面单独批准。Web 端没有对应的系统能力代理。
 

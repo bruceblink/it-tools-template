@@ -832,6 +832,12 @@ Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通�
 
 验证记录：Math Evaluator 服务单测 8 项通过，Chromium E2E 1 项通过，覆盖普通表达式、复数、矩阵、单位回退和资源限制；完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），并完成类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致本轮失败。没有新增真实窗口交互或 Linux/macOS 运行时证据。
 
+### 2026-10-28：插件贡献 ID 的跨平台注入
+
+插件隔离窗口此前主要通过 `location.hash` 读取当前工具贡献 ID。Electron 自定义协议在不同平台和窗口复用时，hash 可见时序可能不同，导致插件 API 的 `toolId` 短暂为空。现在主机在 `PluginSandboxRegistration` 中保存已经通过清单校验的 `contributionId`，并在每次重新配置复用的插件 Session 时更新该值。插件引导脚本优先使用这个主机注入的 ID，再回退到工具元数据和 URL hash；该字段不授予能力，也不改变能力声明、用户授权或插件隔离边界。
+
+新增插件 API 回归覆盖显式贡献 ID，插件 API、沙箱和生命周期定向测试共 32 项通过；Windows 本机插件管理器 Electron E2E 1 项通过。远端旧 macOS 运行记录曾在未来能力贡献的 `toolId` 轮询中失败；5ae81cf 的新 CI 已通过 Linux、macOS 和 Windows 三个平台，当前补丁仍需新的远端运行确认。Linux/macOS 真实前台窗口和公开第三方插件分发仍待验收。
+
 ### 2026-10-28：整数进制转换 Worker 化
 
 整数进制转换此前在页面响应式渲染中同步调用 `convertBase` 七次。大输入会重复执行 `BigInt` 解析和除法，导致输入事件占用页面线程。现在使用独立的 `integer-base-converter.worker.ts` 和任务服务：输入只解析一次，再生成固定的二进制、八进制、十进制、十六进制、Base64 及自定义进制输出。这样保持原有小输入结果，同时把高成本计算移到可终止的 Worker。

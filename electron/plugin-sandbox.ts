@@ -36,6 +36,7 @@ interface PluginSessionPolicy {
   grantedCapabilities: readonly string[];
   pluginContext: PluginApiV1PluginContext;
   toolContext?: PluginApiV1ToolContext;
+  toolId?: string;
   capabilityBroker: PluginCapabilityBroker | null;
   activeContentsId: number | null;
 }
@@ -263,6 +264,7 @@ async function installPluginSessionPolicy(
     configuredPolicy.grantedCapabilities = [...grantedCapabilities];
     configuredPolicy.pluginContext = registration.pluginContext;
     configuredPolicy.toolContext = registration.toolContext;
+    configuredPolicy.toolId = registration.contributionId;
     configuredPolicy.capabilityBroker = capabilityBroker;
     return configuredPolicy;
   }
@@ -273,6 +275,7 @@ async function installPluginSessionPolicy(
     grantedCapabilities: [...grantedCapabilities],
     pluginContext: registration.pluginContext,
     toolContext: registration.toolContext,
+    toolId: registration.contributionId,
     capabilityBroker,
     activeContentsId: null,
   };
@@ -300,6 +303,7 @@ async function installPluginSessionPolicy(
         supportedCapabilities: pluginHostCapabilities,
         grantedCapabilities: policy.grantedCapabilities,
         plugin: policy.pluginContext,
+        toolId: policy.toolId,
         tool: policy.toolContext,
       })}`, 200, {
         'Content-Type': 'text/javascript; charset=utf-8',

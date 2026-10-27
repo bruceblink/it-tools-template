@@ -45,6 +45,7 @@ test('plugin SDK declarations are self-contained and expose the current capabili
   assert.match(packageTypes, /interface PluginToolContext/);
   assert.match(runtimeTypes, /interface PluginPackageContext/);
   assert.match(runtimeTypes, /readonly plugin: PluginPackageContext;/);
+  assert.match(runtimeTypes, /readonly toolId: string \| undefined;/);
   assert.match(packageTypes, /interface PluginToolContribution/);
   const manifest = JSON.parse(sampleManifest);
   assert.equal(manifest.apiVersion.minInclusive, version);
