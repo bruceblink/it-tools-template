@@ -611,6 +611,44 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await page.goto('app://bundle/extensions/org.it-tools.capability-demo/4.0.0/capability-demo');
   await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run plugin' })).toBeVisible();
+  await page.getByRole('button', { name: 'Run plugin' }).click();
+  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect.poll(async () => (
+    await electronApp.windows()
+  ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
+  const contributionCrashWindow = (await electronApp.windows()).find(window => window.url().startsWith(`it-plugin://${pluginId}/`));
+  expect(contributionCrashWindow).toBeDefined();
+  if (!contributionCrashWindow) {
+    throw new Error('The plugin window for contribution failure isolation was not created.');
+  }
+  const contributionRendererCrashed = contributionCrashWindow.waitForEvent('crash', { timeout: 10_000 });
+  await electronApp.evaluate(({ BrowserWindow }, targetPluginId) => {
+    const pluginWindow = BrowserWindow.getAllWindows().find(window => (
+      window.webContents.getURL().startsWith(`it-plugin://${targetPluginId}/`)
+    ));
+    if (!pluginWindow) {
+      throw new Error('The contribution plugin window disappeared before the renderer crash test.');
+    }
+    pluginWindow.webContents.forcefullyCrashRenderer();
+  }, pluginId);
+  await contributionRendererCrashed;
+  await expect.poll(async () => electronApp.evaluate(
+    ({ BrowserWindow }, targetPluginId) => {
+      return BrowserWindow.getAllWindows().some(window => {
+        if (window.isDestroyed()) {
+          return false;
+        }
+        const webContents = window.webContents;
+        return Boolean(webContents)
+          && !webContents.isDestroyed()
+          && webContents.getURL().startsWith(`it-plugin://${targetPluginId}/`);
+      });
+    },
+    pluginId,
+  )).toBe(false);
+  await page.reload();
+  await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/4.0.0/capability-demo');
+  await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toBeVisible();
   await page.goto('app://bundle/extensions/org.it-tools.capability-demo/4.0.0/recovery-demo');
   await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Run plugin' })).toBeVisible();

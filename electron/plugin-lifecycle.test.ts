@@ -195,6 +195,20 @@ describe('Electron plugin lifecycle manager', () => {
     expect(recovered?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)?.errorCode).toBeUndefined();
   });
 
+  it('clears a package-level runtime failure after a contribution starts successfully', async () => {
+    const { root, manager, windows } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', []);
+
+    windows[0]?.destroy();
+    expect((await manager.listInstalled())[0]?.errorCode).toBe('window-closed');
+
+    await manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`);
+    const recovered = (await manager.listInstalled())[0];
+    expect(recovered?.errorCode).toBeUndefined();
+    expect(recovered?.contributions.tools.find(tool => tool.id === `${pluginId}/lifecycle-tool`)?.errorCode).toBeUndefined();
+  });
+
   it('disables every active plugin that uses a revoked signing key', async () => {
     const { root, manager, windows } = await createManager();
     await manager.installArchive(await writeArchive(root, '1.0.0'));

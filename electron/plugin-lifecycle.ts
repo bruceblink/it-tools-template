@@ -252,6 +252,8 @@ export class PluginLifecycleManager {
       try {
         await this.startVerifiedPlugin(pluginId, version, packageRoot, manifest, grants, selectedContributionId);
         this.runtimeFailures.delete(getPluginFailureKey(pluginId, version, selectedContributionId));
+        // A successful activation proves that a previous package-level failure has recovered.
+        this.runtimeFailures.delete(getPluginFailureKey(pluginId, version));
         this.notifyStateChange(pluginId);
       }
       catch (activationError) {
