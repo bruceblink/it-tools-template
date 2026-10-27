@@ -33,7 +33,7 @@ The root `plugin.json` contains these fields:
 | `version` | Stable `MAJOR.MINOR.PATCH` version. |
 | `apiVersion` | Host API range with an inclusive minimum and exclusive maximum. |
 | `entrypoint` | Safe relative path to the HTML entry file. |
-| `requestedCapabilities` | Unique names from the host capability set. A request is not an authorization. |
+| `requestedCapabilities` | Unique known capability IDs accepted by the package format. The current host may execute only a subset. A request is not an authorization. |
 | `contributions` | Optional signed display metadata for tools provided by the package. The host may derive a metadata landing route, but this field does not register a host tool implementation or grant execution access. |
 | `files` | Sorted list of every payload path and its lowercase SHA-256 digest. |
 | `signature` | Ed25519 algorithm, trusted key ID, and standard Base64 signature. |
@@ -72,6 +72,8 @@ Example unsigned manifest fields:
 ```
 
 `contributions` is optional. When present, `tools` contains at most 32 records. Each record uses a plugin-namespaced ID (`<plugin-id>/<tool-id>`), a non-empty title and description, and at most 32 unique keywords. The package validator trims display text, rejects unknown fields, duplicate IDs, and IDs outside the package namespace. The desktop plugin manager displays this metadata after signature verification and links each installed version to a host-owned metadata route at `/extensions/<plugin-id>/<version>/<tool-id>`. The route offers explicit run and stop actions through the existing lifecycle IPC; activation still uses the host capability confirmation and opens the package in its isolated plugin window. It does not execute external code in the host renderer or add a component to the host tool registry. A capability request remains separate from signature trust.
+
+The package format currently accepts these known capability IDs: `runtime.info`, `clipboard.write`, `settings.read`, `settings.write`, `data.oui`, `device.camera`, `file.read`, and `file.save`. The v1 runtime broker currently executes only the first four. Installation keeps the other known declarations for forward compatibility; activation filters them out of the broker, and the desktop UI labels them as unsupported instead of offering a grant checkbox. A package can therefore run without an unavailable capability, but it cannot use that capability until a host API implements it.
 
 Packages that omit `contributions` remain valid. The field is included in the signed payload only when it is present, so existing v1 signatures continue to verify without repacking.
 
