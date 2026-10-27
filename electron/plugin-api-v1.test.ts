@@ -44,8 +44,35 @@ describe('plugin renderer API v1', () => {
     runInNewContext(getPluginApiV1Script(), context);
 
     const api = (context as unknown as { itTools: { apiVersion: string; toolId?: string } }).itTools;
-    expect(api.apiVersion).toBe('1.2.0');
+    expect(api.apiVersion).toBe('1.3.0');
     expect(api.toolId).toBe('org.example.plugin/example-tool');
+  });
+
+  it('exposes an immutable permission snapshot without escalating grants', () => {
+    const context = { fetch: vi.fn() };
+    runInNewContext(getPluginApiV1Script({
+      requestedCapabilities: ['runtime.info', 'file.read'],
+      supportedCapabilities: ['runtime.info', 'clipboard.write'],
+      grantedCapabilities: ['runtime.info', 'file.read'],
+    }), context);
+
+    const api = (context as unknown as { itTools: {
+      permissions: {
+        requestedCapabilities: readonly string[];
+        supportedCapabilities: readonly string[];
+        grantedCapabilities: readonly string[];
+      };
+    } }).itTools;
+    expect(api.permissions).toEqual({
+      requestedCapabilities: ['runtime.info', 'file.read'],
+      supportedCapabilities: ['runtime.info', 'clipboard.write'],
+      grantedCapabilities: ['runtime.info'],
+    });
+    expect(Object.isFrozen(api.permissions)).toBe(true);
+    expect(Object.isFrozen(api.permissions.requestedCapabilities)).toBe(true);
+    expect(Object.isFrozen(api.permissions.supportedCapabilities)).toBe(true);
+    expect(Object.isFrozen(api.permissions.grantedCapabilities)).toBe(true);
+    expect(context.fetch).not.toHaveBeenCalled();
   });
 
   it('maps broker denial to a stable error and rejects oversized clipboard input locally', async () => {

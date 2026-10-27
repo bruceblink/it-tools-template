@@ -12,6 +12,7 @@ import {
   filterSupportedPluginCapabilities,
   PLUGIN_CAPABILITY_API_PATH,
 } from './plugin-capability-broker';
+import { pluginHostCapabilities } from './plugin-capabilities';
 import type {
   PluginCapabilityBroker,
   PluginCapabilityExecutor,
@@ -30,6 +31,8 @@ const blockedNetworkProtocols = new Set(['http:', 'https:', 'ws:', 'wss:', 'ftp:
 
 interface PluginSessionPolicy {
   packageRoot: string;
+  declaredCapabilities: readonly string[];
+  grantedCapabilities: readonly string[];
   capabilityBroker: PluginCapabilityBroker | null;
   activeContentsId: number | null;
 }
@@ -160,8 +163,9 @@ export async function createPluginSandboxWindow(
   const pluginSession = electronSession.fromPartition(partition, { cache: false });
   // Package manifests may declare known capabilities that this host cannot execute yet.
   // Only the currently supported subset enters the broker; unsupported declarations remain unavailable.
-  const requestedCapabilities = filterSupportedPluginCapabilities(registration.requestedCapabilities ?? []);
-  const grantedCapabilities = registration.grantedCapabilities ?? [];
+  const declaredCapabilities = registration.requestedCapabilities ?? [];
+  const requestedCapabilities = filterSupportedPluginCapabilities(declaredCapabilities);
+  const grantedCapabilities = filterSupportedPluginCapabilities(registration.grantedCapabilities ?? []);
   if (!registration.executeCapability && (requestedCapabilities.length > 0 || grantedCapabilities.length > 0)) {
     throw new Error('Plugin capabilities require a host executor.');
   }
@@ -240,6 +244,8 @@ async function installPluginSessionPolicy(
   registration: PluginSandboxRegistration,
   capabilityBroker: PluginCapabilityBroker | null,
 ): Promise<PluginSessionPolicy> {
+  const declaredCapabilities = registration.requestedCapabilities ?? [];
+  const grantedCapabilities = filterSupportedPluginCapabilities(registration.grantedCapabilities ?? []);
   const configuredPolicy = configuredSessions.get(pluginSession);
   assertPluginSessionRoot(configuredPolicy?.packageRoot, registration.packageRoot);
   if (configuredPolicy) {
@@ -248,12 +254,16 @@ async function installPluginSessionPolicy(
       throw new Error(`Plugin ${registration.pluginId} already has an active window.`);
     }
     configuredPolicy.capabilityBroker?.revoke();
+    configuredPolicy.declaredCapabilities = [...declaredCapabilities];
+    configuredPolicy.grantedCapabilities = [...grantedCapabilities];
     configuredPolicy.capabilityBroker = capabilityBroker;
     return configuredPolicy;
   }
 
   const policy: PluginSessionPolicy = {
     packageRoot: registration.packageRoot,
+    declaredCapabilities: [...declaredCapabilities],
+    grantedCapabilities: [...grantedCapabilities],
     capabilityBroker,
     activeContentsId: null,
   };
@@ -276,7 +286,11 @@ async function installPluginSessionPolicy(
       if (policy.activeContentsId === null) {
         return pluginResponse('Plugin inactive', 410);
       }
-      return pluginResponse(`${getPluginWorkerGuardScript()}\n${getPluginApiV1Script()}`, 200, {
+      return pluginResponse(`${getPluginWorkerGuardScript()}\n${getPluginApiV1Script({
+        requestedCapabilities: policy.declaredCapabilities,
+        supportedCapabilities: pluginHostCapabilities,
+        grantedCapabilities: policy.grantedCapabilities,
+      })}`, 200, {
         'Content-Type': 'text/javascript; charset=utf-8',
       });
     }

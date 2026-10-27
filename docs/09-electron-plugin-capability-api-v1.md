@@ -20,7 +20,9 @@ catch (error) {
 }
 ```
 
-`window.itTools.apiVersion` 当前为 `1.2.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `toolId`（宿主选择的工具贡献 ID）、`runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。`toolId` 只描述启动上下文，不是能力授权，也不能用于绕过宿主校验。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
+`window.itTools.apiVersion` 当前为 `1.3.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `toolId`（宿主选择的工具贡献 ID）、只读的 `permissions` 快照、`runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。`toolId` 只描述启动上下文，不是能力授权，也不能用于绕过宿主校验。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
+
+`window.itTools.permissions` 返回三个冻结数组：`requestedCapabilities` 是签名清单声明，`supportedCapabilities` 是当前宿主可以执行的能力，`grantedCapabilities` 是本次隔离窗口实际获得的授权。插件可以用这些数组提前隐藏或禁用不可用的界面；读取快照不会发起能力请求，也不会增加授权。`grantedCapabilities` 只包含同时出现在声明和宿主支持集合中的能力。
 
 桌面管理器的 `listPlugins()` 快照同时返回 `requestedCapabilities`、`supportedCapabilities` 和 `grantedCapabilities`。前者是包声明，中者是当前宿主可以执行的能力，后者是本次运行实际授予的能力。渲染器应使用快照中的 `supportedCapabilities` 决定是否显示授权控件，不应复制宿主能力列表。已知但暂未实现的清单声明仍会保留在 `requestedCapabilities` 中，并显示为不支持。
 
@@ -96,7 +98,7 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 ## 当前实现与限制
 
-`window.itTools.apiVersion` 当前为 `1.2.0`，`window.itTools.hostApiVersion` 当前为 `1.3.0`。新增的 `toolId` 是宿主在贡献页面启动时写入的只读上下文；整包启动时为 `undefined`。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 Ki 个字符，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
+`window.itTools.apiVersion` 当前为 `1.3.0`，`window.itTools.hostApiVersion` 当前为 `1.3.0`。新增的 `toolId` 是宿主在贡献页面启动时写入的只读上下文；整包启动时为 `undefined`。新增的 `permissions` 是只读能力快照，不替代宿主授权检查。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 Ki 个字符，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
 
 签名样例会读取宿主返回的运行时信息、读写持久设置，并在授权后通过客户端写入剪贴板；自动化 E2E 会替换操作系统剪贴板执行器，不写入真实剪贴板。插件未获授权时，客户端返回 `PluginApiError`，错误代码为 `permission-denied`。能力请求仍需由用户在桌面管理界面单独批准。Web 端没有对应的系统能力代理。
 

@@ -281,9 +281,36 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     throw new Error('The plugin window was not created.');
   }
   await expect.poll(async () => pluginWindow.evaluate(() => {
-    const api = (globalThis as unknown as { itTools?: { apiVersion?: string; hostApiVersion?: string; toolId?: string } }).itTools;
-    return { apiVersion: api?.apiVersion, hostApiVersion: api?.hostApiVersion, toolId: api?.toolId };
-  })).toEqual({ apiVersion: '1.2.0', hostApiVersion: '1.3.0', toolId: undefined });
+    const api = (globalThis as unknown as { itTools?: {
+      apiVersion?: string;
+      hostApiVersion?: string;
+      toolId?: string;
+      permissions?: {
+        requestedCapabilities: readonly string[];
+        supportedCapabilities: readonly string[];
+        grantedCapabilities: readonly string[];
+      };
+    } }).itTools;
+    return {
+      apiVersion: api?.apiVersion,
+      hostApiVersion: api?.hostApiVersion,
+      toolId: api?.toolId,
+      permissions: api?.permissions && {
+        requestedCapabilities: [...api.permissions.requestedCapabilities],
+        supportedCapabilities: [...api.permissions.supportedCapabilities],
+        grantedCapabilities: [...api.permissions.grantedCapabilities],
+      },
+    };
+  })).toEqual({
+    apiVersion: '1.3.0',
+    hostApiVersion: '1.3.0',
+    toolId: undefined,
+    permissions: {
+      requestedCapabilities: ['runtime.info', 'clipboard.write', 'settings.read', 'settings.write', 'file.read'],
+      supportedCapabilities: ['runtime.info', 'clipboard.write', 'settings.read', 'settings.write'],
+      grantedCapabilities: ['runtime.info', 'clipboard.write', 'settings.read', 'settings.write'],
+    },
+  });
   await expect(pluginWindow.locator('#runtime-proof')).toHaveText('Available');
   await pluginWindow.locator('#clipboard-text').fill('signed plugin clipboard sample');
   await pluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();

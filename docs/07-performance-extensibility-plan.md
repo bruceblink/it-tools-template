@@ -730,6 +730,12 @@ Windows 本机 `pnpm check` 通过 138 个测试文件（2 个跳过）、861 �
 
 受影响的 5 个单元测试文件共 45 项通过，Electron 和应用类型检查通过。提交后完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+### 2026-10-27：插件渲染器权限状态快照
+
+`window.itTools` 客户端版本升级为 `1.3.0`，新增只读的 `permissions` 快照。快照分别返回签名清单的 `requestedCapabilities`、当前 Electron 宿主的 `supportedCapabilities` 和本次隔离窗口的 `grantedCapabilities`。宿主在沙箱 bootstrap 中冻结数组，并把授权集合限制为“已声明且宿主支持”的交集。插件可以据此在调用前显示正确的授权状态，读取快照不会触发能力代理，也不会授予能力。
+
+SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字段、数组冻结、未授权能力过滤和整包授权状态。能力代理的请求校验与生命周期授权边界保持不变。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 ### 2026-10-27：Math Evaluator Worker 直接 ESM 工厂优化
 
 `src/tools/math-evaluator/math-instance.ts` 不再从 `mathjs` 顶层入口导入整组工厂，而是直接引用 `core/create`、数字工厂和当前常用的算术、矩阵、复数 ESM 工厂。服务保留完整 Math.js 的按需回退；当轻量实例遇到复数类型不匹配时，也会回退到完整实例，因此单位表达式和高级函数继续可用。

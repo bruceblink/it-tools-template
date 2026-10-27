@@ -85,6 +85,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 2026-10-27 统一共享能力目录：`src/shared/plugin-capabilities.ts` 维护 8 个清单能力、4 个 Electron 宿主能力和第一方扩展能力子集；外部插件清单、内置工具注册、第一方扩展校验和桌面类型复用同一目录。提交后 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+2026-10-27 完成插件渲染器权限状态快照：`window.itTools.permissions` 以冻结数组公开清单声明、宿主支持和本次窗口实际授权。`grantedCapabilities` 只保留已声明且宿主支持的能力，读取快照不发起能力调用。SDK、插件 API 单测和插件管理器 Electron E2E 已同步；Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 2026-10-27 优化 Math Evaluator Worker：提交 `6692f7f` 只导入实际需要的 Math.js ESM 工厂，Web Worker 从父提交的 681,908 字节降至 278,770 字节，Electron Worker 从 1,705,471 字节降至 726,576 字节；同环境对照分别减少 59.12% 和 57.40%。服务单测 8 项和 Chromium E2E 1 项通过；`pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 个跳过）。Web Worker 已低于 500 KiB 目标，Electron Worker 仍待继续拆分；Linux/macOS 和真实窗口运行时证据仍待验收。
 
 ## 3. 当前基线

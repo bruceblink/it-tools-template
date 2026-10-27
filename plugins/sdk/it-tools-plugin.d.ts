@@ -1,3 +1,8 @@
+import type {
+  PluginCapabilityId,
+  PluginHostCapability,
+} from '../../src/shared/plugin-capabilities';
+
 export interface PluginRuntimeInfo {
   readonly platform: string;
   readonly version: string;
@@ -42,11 +47,23 @@ export class PluginApiError extends Error {
   readonly status: number;
 }
 
+/** Read-only capability metadata for rendering plugin permission state. */
+export interface PluginPermissionSnapshot {
+  /** Capabilities declared by the signed package manifest. */
+  readonly requestedCapabilities: readonly PluginCapabilityId[];
+  /** Capabilities executable by this host implementation. */
+  readonly supportedCapabilities: readonly PluginHostCapability[];
+  /** Capabilities granted to this isolated window for its current launch. */
+  readonly grantedCapabilities: readonly PluginHostCapability[];
+}
+
 export interface ITToolsPluginApiV1 {
-  readonly apiVersion: '1.2.0';
+  readonly apiVersion: '1.3.0';
   readonly hostApiVersion: '1.3.0';
   /** The host-verified contribution ID selected when this plugin window was opened. */
   readonly toolId: string | undefined;
+  /** Capability metadata only; this object never grants or revokes a capability. */
+  readonly permissions: PluginPermissionSnapshot;
   readonly capabilities: {
     readonly runtime: {
       getInfo(): Promise<PluginRuntimeInfo>;

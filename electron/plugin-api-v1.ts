@@ -1,11 +1,33 @@
 import { pluginSettingsLimits } from './plugin-settings-store';
+import type {
+  PluginCapabilityId,
+  PluginHostCapability,
+} from '../src/shared/plugin-capabilities';
 
-export const pluginRendererApiVersion = '1.2.0';
+export const pluginRendererApiVersion = '1.3.0';
 export const pluginHostApiVersion = '1.3.0';
 export const pluginApiMaximumClipboardTextCharacters = 16_384;
 
+export interface PluginApiV1ScriptOptions {
+  requestedCapabilities?: readonly string[];
+  supportedCapabilities?: readonly string[];
+  grantedCapabilities?: readonly string[];
+}
+
 /** Install the stable renderer client without exposing preload or Node APIs. */
-export function getPluginApiV1Script(): string {
+export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): string {
+  const requestedCapabilities = normalizeCapabilityList(options.requestedCapabilities);
+  const supportedCapabilities = normalizeCapabilityList(options.supportedCapabilities);
+  const requested = new Set(requestedCapabilities);
+  const supported = new Set(supportedCapabilities);
+  const grantedCapabilities = normalizeCapabilityList(options.grantedCapabilities)
+    .filter(capability => requested.has(capability) && supported.has(capability));
+  const permissionSnapshot = {
+    requestedCapabilities,
+    supportedCapabilities,
+    grantedCapabilities,
+  };
+
   return `(() => {
   const globalName = 'itTools';
   if (Object.prototype.hasOwnProperty.call(globalThis, globalName)) {
@@ -87,6 +109,11 @@ export function getPluginApiV1Script(): string {
 
   Object.freeze(PluginApiError.prototype);
   Object.freeze(PluginApiError);
+  const permissions = Object.freeze({
+    requestedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.requestedCapabilities)}),
+    supportedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.supportedCapabilities)}),
+    grantedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.grantedCapabilities)}),
+  });
   const capabilities = Object.freeze({
     runtime: Object.freeze({
       getInfo: () => request('runtime.info', 'read', {}),
@@ -134,6 +161,7 @@ export function getPluginApiV1Script(): string {
     apiVersion: '${pluginRendererApiVersion}',
     hostApiVersion: '${pluginHostApiVersion}',
     toolId: getToolId(),
+    permissions,
     capabilities,
     PluginApiError,
   });
@@ -152,3 +180,19 @@ export function getPluginApiV1Script(): string {
   }
 })();`;
 }
+
+function normalizeCapabilityList(values: readonly string[] | undefined): string[] {
+  const unique = new Set<string>();
+  for (const value of values ?? []) {
+    if (typeof value === 'string' && value.length <= 128) {
+      unique.add(value);
+    }
+  }
+  return [...unique];
+}
+
+export type PluginApiV1PermissionSnapshot = {
+  readonly requestedCapabilities: readonly PluginCapabilityId[];
+  readonly supportedCapabilities: readonly PluginHostCapability[];
+  readonly grantedCapabilities: readonly PluginHostCapability[];
+};
