@@ -4,7 +4,7 @@
 
 ## 插件源码
 
-从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts)。
+从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts) 和同目录的 `it-tools-plugin-package.d.ts`；SDK 目录自包含能力类型，不要求插件项目解析仓库内部的 `src/` 路径。
 
 MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系统剪贴板、读取插件设置和保存插件设置。插件通过 `window.itTools.capabilities.runtime.getInfo()`、`window.itTools.capabilities.clipboard.writeText(text)`、`window.itTools.capabilities.settings.get(key)`、`window.itTools.capabilities.settings.set(key, value)` 和 `window.itTools.capabilities.settings.delete(key)` 调用能力。用户授权前，宿主拒绝调用并返回 `PluginApiError`。设置只保存非秘密的基本值，并按插件 ID 命名空间持久化。插件不能继承宿主 preload 或其他插件的数据。网络请求只能访问插件自身来源；主进程会拒绝外部连接。
 

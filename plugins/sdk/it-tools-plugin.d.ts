@@ -1,7 +1,7 @@
 import type {
   PluginCapabilityId,
   PluginHostCapability,
-} from '../../src/shared/plugin-capabilities';
+} from './plugin-capabilities';
 
 export interface PluginRuntimeInfo {
   readonly platform: string;

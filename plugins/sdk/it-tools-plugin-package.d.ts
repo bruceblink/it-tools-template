@@ -1,4 +1,4 @@
-import type { PluginCapabilityId } from '../../src/shared/plugin-capabilities';
+import type { PluginCapabilityId } from './plugin-capabilities';
 
 /** Metadata types for the signed Electron plugin.source.json manifest. */
 export type PluginToolDataProcessing =
