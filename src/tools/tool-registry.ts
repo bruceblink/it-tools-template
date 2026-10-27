@@ -1,10 +1,11 @@
 import type { Tool, ToolCategory, ToolWithCategory } from './tools.types';
+import { pluginCapabilityIds } from '../shared/plugin-capabilities';
 
 const reservedPaths = new Set(['/','/about']);
 const supportedPlatforms = new Set(['web', 'electron']);
 const dataProcessingPolicies = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
 const offlineSupportLevels = new Set(['available', 'requires-network', 'conditional', 'unknown']);
-const knownCapabilities = new Set(['clipboard.write', 'file.read', 'file.save', 'device.camera', 'runtime.info', 'data.oui', 'settings.read', 'settings.write']);
+const knownCapabilities = new Set(pluginCapabilityIds);
 
 export type ToolRegistryValidationMode = 'builtin-compatibility' | 'extension';
 

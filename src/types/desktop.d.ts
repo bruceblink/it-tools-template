@@ -43,11 +43,12 @@ import type {
   DockerContainer,
 } from '../shared/desktop-services/container-workbench';
 import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../tools/tools.types';
+import type { PluginHostCapability } from '../shared/plugin-capabilities';
 
 export {};
 
 declare global {
-  type DesktopPluginCapability = 'runtime.info' | 'clipboard.write' | 'settings.read' | 'settings.write';
+  type DesktopPluginCapability = PluginHostCapability;
   type DesktopPluginOperationResult<T> =
     | { ok: true; value: T }
     | { ok: false; error: string };

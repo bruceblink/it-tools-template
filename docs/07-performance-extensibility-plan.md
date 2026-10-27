@@ -723,3 +723,9 @@ Windows 本机 `pnpm check` 通过 138 个测试文件（2 个跳过）、861 �
 能力代理、插件生命周期和两个桌面页面此前分别维护宿主支持能力列表。现在由 `electron/plugin-capabilities.ts` 集中定义能力 ID、筛选函数和当前宿主支持集合。生命周期快照新增 `supportedCapabilities`，与包的 `requestedCapabilities` 和本次运行的 `grantedCapabilities` 分开返回。插件管理器和工具贡献页面根据该快照渲染授权控件并筛选工具级请求，避免渲染器复制一份可能过期的宿主能力列表。能力代理继续校验清单声明、用户授权和宿主执行能力，集中模块不改变授权边界。
 
 提交后验证：`pnpm check` 通过 138 个测试文件（2 个跳过）、861 项测试（18 项跳过）、类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查；插件管理器 Electron E2E 1 项通过。构建中的 Rolldown、UnoCSS 和依赖 `eval` 提示与本切片无关，Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
+### 2026-10-27：共享插件能力目录
+
+新增 `src/shared/plugin-capabilities.ts`，集中维护清单可声明的 8 个能力 ID、Electron 宿主当前执行的 4 个能力 ID，以及第一方扩展允许的能力子集。外部插件清单、Electron 能力代理、内置工具注册和第一方扩展校验都引用该目录；SDK 清单类型和桌面快照类型也复用相同的能力类型。这样新增或废弃能力时只需要更新一个共享目录，同时保留“声明、宿主支持、实际授权”三层边界。
+
+受影响的 5 个单元测试文件共 45 项通过，Electron 和应用类型检查通过。完整 `pnpm check` 与插件管理器 Electron E2E 将在提交后继续执行；Linux/macOS 运行时和公开第三方插件分发仍待验收。

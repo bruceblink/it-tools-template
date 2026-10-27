@@ -24,6 +24,8 @@ catch (error) {
 
 桌面管理器的 `listPlugins()` 快照同时返回 `requestedCapabilities`、`supportedCapabilities` 和 `grantedCapabilities`。前者是包声明，中者是当前宿主可以执行的能力，后者是本次运行实际授予的能力。渲染器应使用快照中的 `supportedCapabilities` 决定是否显示授权控件，不应复制宿主能力列表。已知但暂未实现的清单声明仍会保留在 `requestedCapabilities` 中，并显示为不支持。
 
+能力 ID 的共享目录位于 [`src/shared/plugin-capabilities.ts`](../src/shared/plugin-capabilities.ts)。它只定义稳定标识和各层允许的子集，不授予任何权限：清单声明仍需经过签名校验，宿主支持仍需经过能力代理校验，用户授权仍决定本次窗口可以调用的能力。
+
 `PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
 
 | 错误代码 | 含义 |

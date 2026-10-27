@@ -1,4 +1,5 @@
 import type { Component } from 'vue';
+import type { PluginCapabilityId } from '../shared/plugin-capabilities';
 
 export type ToolPlatform = 'web' | 'electron';
 
@@ -8,7 +9,7 @@ export type ToolOfflineSupport = 'available' | 'requires-network' | 'conditional
 
 export type ToolContentWidth = 'standard' | 'wide';
 
-export type ToolCapability = 'clipboard.write' | 'file.read' | 'file.save' | 'device.camera' | 'runtime.info' | 'data.oui' | 'settings.read' | 'settings.write';
+export type ToolCapability = PluginCapabilityId;
 
 export interface Tool {
   id?: string

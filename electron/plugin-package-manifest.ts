@@ -1,5 +1,7 @@
 import { createPublicKey, KeyObject, verify } from 'node:crypto';
 import * as yauzl from 'yauzl';
+import { isPluginCapabilityId } from '../src/shared/plugin-capabilities';
+import type { PluginCapabilityId } from '../src/shared/plugin-capabilities';
 
 export const pluginPackageManifestPath = 'plugin.json';
 
@@ -8,31 +10,13 @@ const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
-const knownCapabilities = new Set([
-  'clipboard.write',
-  'data.oui',
-  'device.camera',
-  'file.read',
-  'file.save',
-  'runtime.info',
-  'settings.read',
-  'settings.write',
-]);
 const windowsDeviceNamePattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 const maximumToolContributions = 32;
 const supportedToolDataProcessing = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
 const supportedToolOffline = new Set(['available', 'requires-network', 'conditional', 'unknown']);
 
 /** Capability IDs that a signed package may declare in its manifest metadata. */
-export type PluginPackageCapability =
-  | 'clipboard.write'
-  | 'data.oui'
-  | 'device.camera'
-  | 'file.read'
-  | 'file.save'
-  | 'runtime.info'
-  | 'settings.read'
-  | 'settings.write';
+export type PluginPackageCapability = PluginCapabilityId;
 
 export const pluginPackageLimits = Object.freeze({
   maximumArchiveBytes: 64 * 1024 * 1024,
@@ -384,7 +368,7 @@ function validateContributions(value: unknown, pluginId: string, requestedCapabi
       || new Set(candidate.capabilities).size !== candidate.capabilities.length
       || candidate.capabilities.some(capability => (
         typeof capability !== 'string'
-        || !knownCapabilities.has(capability)
+        || !isPluginCapabilityId(capability)
         || !requestedCapabilities.includes(capability)
       ))
     )) {
@@ -411,7 +395,7 @@ function validateCapabilities(value: unknown): string[] {
   const capabilities = value as string[];
   if (
     new Set(capabilities).size !== capabilities.length
-    || capabilities.some(capability => !knownCapabilities.has(capability))
+    || capabilities.some(capability => !isPluginCapabilityId(capability))
   ) {
     throw new PluginPackageError('invalid-package', 'The plugin package requests an unknown or repeated capability.');
   }

@@ -1,5 +1,6 @@
 import { createValidatedToolRegistry, validateToolRegistry } from '@/tools/tool-registry';
 import type { ToolCapability, ToolCategory, ToolDefinition, ToolPlatform } from '@/tools/tools.types';
+import { firstPartyExtensionCapabilityIds } from '@/shared/plugin-capabilities';
 import { isNamespacedContributionId, validateExtensionManifest } from './extension-manifest';
 import { createExtensionSettingStorage } from './extension-storage';
 import type {
@@ -27,14 +28,7 @@ import type { ExtensionSettingStorage } from './extension-storage';
 
 const maxProviderBytes = 8 * 1024 * 1024;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-const knownCapabilities = new Set<ToolCapability>([
-  'clipboard.write',
-  'file.read',
-  'file.save',
-  'device.camera',
-  'runtime.info',
-  'data.oui',
-]);
+const knownCapabilities = new Set<ToolCapability>(firstPartyExtensionCapabilityIds);
 
 export interface ExtensionHostOptions {
   apiVersion: string

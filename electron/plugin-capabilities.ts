@@ -1,16 +1,14 @@
+import { pluginHostCapabilityIds } from '../src/shared/plugin-capabilities';
+import type { PluginHostCapability } from '../src/shared/plugin-capabilities';
+
 /** Capabilities that the current Electron host can execute for plugin windows. */
-export type PluginCapability = 'runtime.info' | 'clipboard.write' | 'settings.read' | 'settings.write';
+export type PluginCapability = PluginHostCapability;
 
 /**
  * Keep the host capability contract in one place so the broker, lifecycle and
  * renderer-facing snapshots cannot silently drift apart.
  */
-export const pluginHostCapabilities: readonly PluginCapability[] = Object.freeze([
-  'runtime.info',
-  'clipboard.write',
-  'settings.read',
-  'settings.write',
-]);
+export const pluginHostCapabilities: readonly PluginCapability[] = pluginHostCapabilityIds;
 
 const supportedCapabilities = new Set<PluginCapability>(pluginHostCapabilities);
 

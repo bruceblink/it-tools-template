@@ -1,18 +1,12 @@
 import type { ToolCapability, ToolPlatform } from '@/tools/tools.types';
+import { firstPartyExtensionCapabilityIds } from '@/shared/plugin-capabilities';
 import type { ExtensionManifest } from './extension.types';
 
 const extensionIdPattern = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+){2,}$/;
 const contributionIdSuffixPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const supportedPlatforms = new Set<ToolPlatform>(['web', 'electron']);
-const knownCapabilities = new Set<ToolCapability>([
-  'clipboard.write',
-  'file.read',
-  'file.save',
-  'device.camera',
-  'runtime.info',
-  'data.oui',
-]);
+const knownCapabilities = new Set<ToolCapability>(firstPartyExtensionCapabilityIds);
 const contributionKinds = ['tools', 'commands', 'settings', 'dataProviders'] as const;
 
 type StableVersion = readonly [major: number, minor: number, patch: number];

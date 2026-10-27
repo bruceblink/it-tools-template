@@ -1,3 +1,5 @@
+import type { PluginCapabilityId } from '../../src/shared/plugin-capabilities';
+
 /** Metadata types for the signed Electron plugin.source.json manifest. */
 export type PluginToolDataProcessing =
   | 'memory-only'
@@ -9,15 +11,7 @@ export type PluginToolDataProcessing =
 export type PluginToolOfflineSupport = 'available' | 'requires-network' | 'conditional' | 'unknown';
 
 /** Capability IDs accepted in signed package metadata. The current host may expose only a subset at runtime. */
-export type PluginToolCapability =
-  | 'clipboard.write'
-  | 'data.oui'
-  | 'device.camera'
-  | 'file.read'
-  | 'file.save'
-  | 'runtime.info'
-  | 'settings.read'
-  | 'settings.write';
+export type PluginToolCapability = PluginCapabilityId;
 
 export interface PluginToolContribution {
   readonly id: string;
