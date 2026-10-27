@@ -7,11 +7,13 @@ const repositoryRoot = resolve(import.meta.dirname, '..');
 const sdkRoot = resolve(repositoryRoot, 'plugins', 'sdk');
 
 test('plugin SDK declarations are self-contained and expose the current capability contract', async () => {
-  const [runtimeTypes, packageTypes, capabilityTypes, versionTypes, hostVersionSource, sampleManifest] = await Promise.all([
+  const [runtimeTypes, packageTypes, capabilityTypes, versionTypes, apiErrorTypes, hostApiSource, hostVersionSource, sampleManifest] = await Promise.all([
     readFile(resolve(sdkRoot, 'it-tools-plugin.d.ts'), 'utf8'),
     readFile(resolve(sdkRoot, 'it-tools-plugin-package.d.ts'), 'utf8'),
     readFile(resolve(sdkRoot, 'plugin-capabilities.d.ts'), 'utf8'),
     readFile(resolve(sdkRoot, 'plugin-api-version.d.ts'), 'utf8'),
+    readFile(resolve(sdkRoot, 'plugin-api-errors.d.ts'), 'utf8'),
+    readFile(resolve(repositoryRoot, 'electron', 'plugin-api-v1.ts'), 'utf8'),
     readFile(resolve(repositoryRoot, 'src', 'shared', 'plugin-api-version.ts'), 'utf8'),
     readFile(resolve(repositoryRoot, 'plugins', 'capability-demo', 'plugin.source.json'), 'utf8'),
   ]);
@@ -19,10 +21,18 @@ test('plugin SDK declarations are self-contained and expose the current capabili
   assert.match(runtimeTypes, /from '\.\/plugin-capabilities';/);
   assert.match(runtimeTypes, /from '\.\/plugin-api-version';/);
   assert.match(runtimeTypes, /from '\.\/it-tools-plugin-package';/);
+  assert.match(runtimeTypes, /from '\.\/plugin-api-errors';/);
   assert.match(packageTypes, /from '\.\/plugin-capabilities';/);
   assert.doesNotMatch(runtimeTypes, /src\/shared\/plugin-capabilities/);
   assert.doesNotMatch(runtimeTypes, /src\/shared\/plugin-api-version/);
   assert.doesNotMatch(packageTypes, /src\/shared\/plugin-capabilities/);
+
+  const hostApiErrorBlock = /pluginApiErrorCodes = Object\.freeze\(\[([\s\S]*?)\] as const\)/.exec(hostApiSource)?.[1];
+  assert.ok(hostApiErrorBlock, 'the host API error catalog must be a frozen tuple');
+  const hostApiErrorCodes = [...hostApiErrorBlock.matchAll(/'([a-z0-9-]+)'/g)].map(match => match[1]);
+  const sdkApiErrorCodes = [...apiErrorTypes.matchAll(/^\s*\|\s*'([a-z0-9-]+)'/gm)].map(match => match[1]);
+  assert.deepEqual(sdkApiErrorCodes, hostApiErrorCodes);
+  assert.match(runtimeTypes, /export type \{ PluginApiErrorCode \} from '\.\/plugin-api-errors';/);
 
   const version = /pluginApiV1Version = '([^']+)'/.exec(hostVersionSource)?.[1];
   assert.ok(version, 'the host API version source must expose a stable literal');

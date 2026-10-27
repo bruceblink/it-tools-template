@@ -6,7 +6,9 @@ import type { PluginApiV1Version } from './plugin-api-version';
 import type {
   PluginToolContext,
 } from './it-tools-plugin-package';
+import type { PluginApiErrorCode } from './plugin-api-errors';
 export type { PluginToolContext } from './it-tools-plugin-package';
+export type { PluginApiErrorCode } from './plugin-api-errors';
 
 export interface PluginRuntimeInfo {
   readonly platform: string;
@@ -26,26 +28,6 @@ export interface PluginSettingWriteResult {
 export interface PluginSettingDeleteResult {
   readonly deleted: boolean;
 }
-
-export type PluginApiErrorCode =
-  | 'invalid-input'
-  | 'transport-error'
-  | 'invalid-response'
-  | 'request-failed'
-  | 'not-found'
-  | 'method-not-allowed'
-  | 'untrusted-initiator'
-  | 'untrusted-origin-header'
-  | 'plugin-inactive'
-  | 'content-type-required'
-  | 'request-too-large'
-  | 'rate-limit-exceeded'
-  | 'too-many-requests'
-  | 'invalid-request'
-  | 'capability-not-requested'
-  | 'permission-denied'
-  | 'capability-failed'
-  | 'response-too-large';
 
 export class PluginApiError extends Error {
   readonly code: PluginApiErrorCode;

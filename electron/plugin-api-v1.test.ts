@@ -173,6 +173,25 @@ describe('plugin renderer API v1', () => {
     expect(fetch).toHaveBeenCalledOnce();
   });
 
+  it('normalizes an unknown host error to the versioned fallback code', async () => {
+    const fetch = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      json: async () => ({ ok: false, error: 'new-host-code' }),
+    }));
+    const context = { fetch };
+    runInNewContext(getPluginApiV1Script(), context);
+    const api = (context as unknown as {
+      itTools: { capabilities: { runtime: { getInfo: () => Promise<unknown> } } };
+    }).itTools;
+
+    await expect(api.capabilities.runtime.getInfo()).rejects.toMatchObject({
+      name: 'PluginApiError',
+      code: 'request-failed',
+      status: 500,
+    });
+  });
+
   it('bounds and maps persistent plugin settings operations', async () => {
     const fetch = vi.fn(async (_input: string, init: RequestInit) => {
       const request = JSON.parse(String(init.body)) as { id: string; capability: string; operation: string };

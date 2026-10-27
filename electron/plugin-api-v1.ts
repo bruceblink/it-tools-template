@@ -10,6 +10,30 @@ export const pluginRendererApiVersion = pluginApiV1Version;
 export const pluginHostApiVersion = pluginApiV1Version;
 export const pluginApiMaximumClipboardTextCharacters = 16_384;
 
+/** Stable error codes exposed by the versioned renderer API. */
+export const pluginApiErrorCodes = Object.freeze([
+  'invalid-input',
+  'transport-error',
+  'invalid-response',
+  'request-failed',
+  'not-found',
+  'method-not-allowed',
+  'untrusted-initiator',
+  'untrusted-origin-header',
+  'plugin-inactive',
+  'content-type-required',
+  'request-too-large',
+  'rate-limit-exceeded',
+  'too-many-requests',
+  'invalid-request',
+  'capability-not-requested',
+  'permission-denied',
+  'capability-failed',
+  'response-too-large',
+] as const);
+
+export type PluginApiErrorCode = typeof pluginApiErrorCodes[number];
+
 export interface PluginApiV1ScriptOptions {
   requestedCapabilities?: readonly string[];
   supportedCapabilities?: readonly string[];
@@ -79,8 +103,8 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
   const maximumClipboardTextCharacters = ${pluginApiMaximumClipboardTextCharacters};
   const maximumSettingsKeyCharacters = ${pluginSettingsLimits.maximumKeyCharacters};
   const maximumSettingsStringCharacters = ${pluginSettingsLimits.maximumStringCharacters};
+  const pluginApiErrorCodeSet = new Set(${JSON.stringify(pluginApiErrorCodes)});
   const settingKeyPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
-  const errorCodePattern = /^[a-z0-9-]{1,64}$/;
   let requestSequence = 0;
 
   function getToolId() {
@@ -162,7 +186,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
       throw new PluginApiError('invalid-response', response.status);
     }
     if (!response.ok || payload.ok !== true) {
-      const code = typeof payload.error === 'string' && errorCodePattern.test(payload.error)
+      const code = typeof payload.error === 'string' && pluginApiErrorCodeSet.has(payload.error)
         ? payload.error
         : 'request-failed';
       throw new PluginApiError(code, response.status);
