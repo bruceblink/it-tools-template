@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NAlert, NButton, NCard, NEmpty, NSpin, NTag, NText } from 'naive-ui';
 import { useHead } from '@unhead/vue';
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 import { createQueuedRefresh } from '@/tools/queued-refresh';
 
@@ -144,6 +144,13 @@ const loadContribution = createQueuedRefresh(async () => {
     isLoading.value = false;
   }
 });
+
+watch(
+  () => [route.params.pluginId, route.params.version, route.params.toolId],
+  () => {
+    void loadContribution();
+  },
+);
 
 async function runPlugin(): Promise<void> {
   const bridge = getPluginBridge();
