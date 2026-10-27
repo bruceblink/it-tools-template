@@ -736,6 +736,12 @@ Windows 本机 `pnpm check` 通过 138 个测试文件（2 个跳过）、861 �
 
 SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字段、数组冻结、未授权能力过滤和整包授权状态。能力代理的请求校验与生命周期授权边界保持不变。Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+### 2026-10-27：Electron renderer 生产压缩
+
+`electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。
+
+Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通过，覆盖 Math.js 回退、任务 Worker、插件管理和 20 轮 Worker 生命周期。生产压缩不会改变插件沙箱、能力代理或路由边界；Linux/macOS 构建和真实窗口性能仍待验收。
+
 ### 2026-10-27：Math Evaluator Worker 直接 ESM 工厂优化
 
 `src/tools/math-evaluator/math-instance.ts` 不再从 `mathjs` 顶层入口导入整组工厂，而是直接引用 `core/create`、数字工厂和当前常用的算术、矩阵、复数 ESM 工厂。服务保留完整 Math.js 的按需回退；当轻量实例遇到复数类型不匹配时，也会回退到完整实例，因此单位表达式和高级函数继续可用。

@@ -59,6 +59,7 @@ export default defineConfig({
     build: {
       outDir: resolve(projectRoot, 'out/renderer'),
       emptyOutDir: true,
+      minify: 'oxc',
       rolldownOptions: {
         input: resolve(projectRoot, 'electron-renderer/index.html'),
       },
