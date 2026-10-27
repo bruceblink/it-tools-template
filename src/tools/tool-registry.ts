@@ -1,10 +1,9 @@
 import type { Tool, ToolCategory, ToolWithCategory } from './tools.types';
 import { pluginCapabilityIds } from '../shared/plugin-capabilities';
+import { isToolDataProcessing, isToolOfflineSupport } from '../shared/plugin-tool-metadata';
 
 const reservedPaths = new Set(['/','/about']);
 const supportedPlatforms = new Set(['web', 'electron']);
-const dataProcessingPolicies = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
-const offlineSupportLevels = new Set(['available', 'requires-network', 'conditional', 'unknown']);
 const knownCapabilities = new Set(pluginCapabilityIds);
 
 export type ToolRegistryValidationMode = 'builtin-compatibility' | 'extension';
@@ -93,7 +92,7 @@ export function validateToolRegistry(categories: ToolCategory[], mode: ToolRegis
       if (tool.platforms?.some(platform => !supportedPlatforms.has(platform))) {
         throw new Error(`Tool ${toolId} declares an unsupported platform.`);
       }
-      if ((tool.dataProcessing && !dataProcessingPolicies.has(tool.dataProcessing)) || (tool.offline && !offlineSupportLevels.has(tool.offline))) {
+      if ((tool.dataProcessing && !isToolDataProcessing(tool.dataProcessing)) || (tool.offline && !isToolOfflineSupport(tool.offline))) {
         throw new Error(`Tool ${toolId} declares invalid data or offline metadata.`);
       }
       if (tool.capabilities && new Set(tool.capabilities).size !== tool.capabilities.length) {

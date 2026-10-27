@@ -1,6 +1,7 @@
 import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from './tools.types';
 import { isPluginCapabilityId } from '../shared/plugin-capabilities';
 import { getExternalPluginToolRoute } from '../shared/plugin-tool-route';
+import { isToolDataProcessing, isToolOfflineSupport } from '../shared/plugin-tool-metadata';
 
 type ExternalPluginSnapshotStatus = 'installed' | 'active' | 'invalid';
 
@@ -20,20 +21,6 @@ export interface ExternalPluginToolContributionLike {
   offline: ToolOfflineSupport;
   capabilities: readonly ToolCapability[];
 }
-
-const dataProcessingPolicies = new Set<ToolDataProcessing>([
-  'memory-only',
-  'local-data',
-  'user-selected-files',
-  'network',
-  'unspecified',
-]);
-const offlineSupportLevels = new Set<ToolOfflineSupport>([
-  'available',
-  'requires-network',
-  'conditional',
-  'unknown',
-]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -63,8 +50,8 @@ export function isExternalPluginToolContributionTrusted(
     || typeof route !== 'string'
     || typeof dataProcessing !== 'string'
     || typeof offline !== 'string'
-    || !dataProcessingPolicies.has(dataProcessing as ToolDataProcessing)
-    || !offlineSupportLevels.has(offline as ToolOfflineSupport)
+    || !isToolDataProcessing(dataProcessing)
+    || !isToolOfflineSupport(offline)
     || new Set(capabilities).size !== capabilities.length
     || capabilities.some(capability => !isPluginCapabilityId(capability))
   ) {

@@ -2,6 +2,7 @@ import { createPublicKey, KeyObject, verify } from 'node:crypto';
 import * as yauzl from 'yauzl';
 import { isPluginCapabilityId } from '../src/shared/plugin-capabilities';
 import type { PluginCapabilityId } from '../src/shared/plugin-capabilities';
+import { isToolDataProcessing, isToolOfflineSupport } from '../src/shared/plugin-tool-metadata';
 
 export const pluginPackageManifestPath = 'plugin.json';
 
@@ -12,8 +13,6 @@ const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const windowsDeviceNamePattern = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 const maximumToolContributions = 32;
-const supportedToolDataProcessing = new Set(['memory-only', 'local-data', 'user-selected-files', 'network', 'unspecified']);
-const supportedToolOffline = new Set(['available', 'requires-network', 'conditional', 'unknown']);
 
 /** Capability IDs that a signed package may declare in its manifest metadata. */
 export type PluginPackageCapability = PluginCapabilityId;
@@ -352,14 +351,12 @@ function validateContributions(value: unknown, pluginId: string, requestedCapabi
       throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid keywords.');
     }
     if (candidate.dataProcessing !== undefined && (
-      typeof candidate.dataProcessing !== 'string'
-      || !supportedToolDataProcessing.has(candidate.dataProcessing)
+      !isToolDataProcessing(candidate.dataProcessing)
     )) {
       throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid data processing metadata.');
     }
     if (candidate.offline !== undefined && (
-      typeof candidate.offline !== 'string'
-      || !supportedToolOffline.has(candidate.offline)
+      !isToolOfflineSupport(candidate.offline)
     )) {
       throw new PluginPackageError('invalid-package', 'A plugin tool contribution has invalid offline metadata.');
     }
