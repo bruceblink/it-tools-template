@@ -740,6 +740,10 @@ SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字
 
 `plugins/sdk/it-tools-plugin.d.ts` 和 `it-tools-plugin-package.d.ts` 不再引用仓库内部的 `src/shared/plugin-capabilities`。新增的 `plugins/sdk/plugin-capabilities.d.ts` 提供包格式能力 ID 和当前宿主支持能力的类型定义。开发者可以把三个声明文件一起放入独立插件项目，类型解析不依赖本仓库的源码目录。SDK 静态回归会检查相对导入和 8 个清单能力 ID，防止后续改动重新引入内部路径依赖。
 
+### 2026-10-27：外部插件工具路由快照校验
+
+渲染器在把 Electron IPC 返回的外部插件工具元数据投影到 Home 和命令面板前，重新使用 `pluginId`、`version` 和贡献 ID 构造宿主路由，并校验标题、说明、治理字段、能力 ID 和重复能力。路由不匹配或元数据结构异常的贡献会被过滤，不会进入工具注册表；这层校验不替代主进程的签名清单验证，只保护渲染器的导航边界。新增单测覆盖路由替换、命名空间越界、未知能力、重复能力和缺少治理元数据。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。

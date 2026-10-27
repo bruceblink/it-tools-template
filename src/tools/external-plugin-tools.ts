@@ -1,9 +1,82 @@
+import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from './tools.types';
+import { isPluginCapabilityId } from '../shared/plugin-capabilities';
+import { getExternalPluginToolRoute } from '../shared/plugin-tool-route';
+
 type ExternalPluginSnapshotStatus = 'installed' | 'active' | 'invalid';
 
 export interface ExternalPluginSnapshotLike {
   pluginId: string;
   version: string;
   status: ExternalPluginSnapshotStatus;
+}
+
+export interface ExternalPluginToolContributionLike {
+  id: string;
+  title: string;
+  description: string;
+  keywords: readonly string[];
+  route: string;
+  dataProcessing: ToolDataProcessing;
+  offline: ToolOfflineSupport;
+  capabilities: readonly ToolCapability[];
+}
+
+const dataProcessingPolicies = new Set<ToolDataProcessing>([
+  'memory-only',
+  'local-data',
+  'user-selected-files',
+  'network',
+  'unspecified',
+]);
+const offlineSupportLevels = new Set<ToolOfflineSupport>([
+  'available',
+  'requires-network',
+  'conditional',
+  'unknown',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isStringList(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every(item => typeof item === 'string');
+}
+
+/** Rebuild and validate host-owned route metadata before it enters the tool registry. */
+export function isExternalPluginToolContributionTrusted(
+  plugin: Pick<ExternalPluginSnapshotLike, 'pluginId' | 'version'>,
+  value: unknown,
+): value is ExternalPluginToolContributionLike {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const { id, title, description, keywords, route, dataProcessing, offline, capabilities } = value;
+  if (
+    typeof id !== 'string'
+    || typeof title !== 'string'
+    || typeof description !== 'string'
+    || !title.trim()
+    || !description.trim()
+    || !isStringList(keywords)
+    || !isStringList(capabilities)
+    || typeof route !== 'string'
+    || typeof dataProcessing !== 'string'
+    || typeof offline !== 'string'
+    || !dataProcessingPolicies.has(dataProcessing as ToolDataProcessing)
+    || !offlineSupportLevels.has(offline as ToolOfflineSupport)
+    || new Set(capabilities).size !== capabilities.length
+    || capabilities.some(capability => !isPluginCapabilityId(capability))
+  ) {
+    return false;
+  }
+
+  try {
+    return route === getExternalPluginToolRoute(plugin.pluginId, plugin.version, id);
+  }
+  catch {
+    return false;
+  }
 }
 
 function parseStableVersion(version: string): readonly [number, number, number] {

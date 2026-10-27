@@ -4,7 +4,10 @@ import { onScopeDispose, shallowRef } from 'vue';
 import { Puzzle } from '@vicons/tabler';
 import type { MaybeRef, Ref } from 'vue';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';
-import { selectExternalPluginSnapshots } from './external-plugin-tools';
+import {
+  isExternalPluginToolContributionTrusted,
+  selectExternalPluginSnapshots,
+} from './external-plugin-tools';
 import { toolsWithCategory } from './index';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
@@ -20,23 +23,30 @@ function getExternalPluginToolTranslationKey(pluginId: string, toolId: string): 
 
 function projectExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
   return selectExternalPluginSnapshots(snapshots)
-    .flatMap(plugin => plugin.contributions.tools.map((contribution) => ({
-      id: `external/${plugin.pluginId}/${plugin.version}/${contribution.id}`,
-      categoryId: externalPluginCategoryId,
-      category: 'External plugins',
-      name: contribution.title,
-      path: contribution.route,
-      translationKey: getExternalPluginToolTranslationKey(plugin.pluginId, contribution.id),
-      description: contribution.description,
-      keywords: [...new Set([...contribution.keywords, 'plugin', 'external'])],
-      component: externalPluginToolComponent,
-      icon: Puzzle,
-      platforms: ['electron'] as const,
-      dataProcessing: contribution.dataProcessing,
-      offline: contribution.offline,
-      capabilities: [...contribution.capabilities],
-      isNew: false,
-    })));
+    .flatMap((plugin) => {
+      const contributions = plugin.contributions && Array.isArray(plugin.contributions.tools)
+        ? plugin.contributions.tools
+        : [];
+      return contributions
+        .filter(contribution => isExternalPluginToolContributionTrusted(plugin, contribution))
+        .map((contribution) => ({
+          id: `external/${plugin.pluginId}/${plugin.version}/${contribution.id}`,
+          categoryId: externalPluginCategoryId,
+          category: 'External plugins',
+          name: contribution.title,
+          path: contribution.route,
+          translationKey: getExternalPluginToolTranslationKey(plugin.pluginId, contribution.id),
+          description: contribution.description,
+          keywords: [...new Set([...contribution.keywords, 'plugin', 'external'])],
+          component: externalPluginToolComponent,
+          icon: Puzzle,
+          platforms: ['electron'] as const,
+          dataProcessing: contribution.dataProcessing,
+          offline: contribution.offline,
+          capabilities: [...contribution.capabilities],
+          isNew: false,
+        }));
+    });
 }
 
 export const useToolStore = defineStore('tools', () => {
