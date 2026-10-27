@@ -1,6 +1,8 @@
+import type { Component } from 'vue';
 import { describe, expect, it } from 'vitest';
 import {
   isExternalPluginToolContributionTrusted,
+  projectExternalPluginTools,
   selectExternalPluginSnapshots,
 } from './external-plugin-tools';
 
@@ -68,5 +70,71 @@ describe('external plugin tool contribution validation', () => {
     ['governance metadata was removed', { dataProcessing: undefined }],
   ])('rejects %s', (_name, change) => {
     expect(isExternalPluginToolContributionTrusted(plugin, { ...contribution, ...change })).toBe(false);
+  });
+});
+
+describe('external plugin tool registry projection', () => {
+  it('publishes only validated external contributions through the shared registry', () => {
+    const tools = projectExternalPluginTools([
+      {
+        pluginId: 'org.example.demo',
+        version: '1.2.3',
+        status: 'installed' as const,
+        contributions: {
+          tools: [{
+            id: 'org.example.demo/example-tool',
+            title: 'Example tool',
+            description: 'A signed example tool.',
+            keywords: ['example'],
+            route: '/extensions/org.example.demo/1.2.3/example-tool',
+            dataProcessing: 'memory-only',
+            offline: 'available',
+            capabilities: ['runtime.info'],
+          }],
+        },
+      },
+    ], {
+      component: async () => ({} as Component),
+      icon: {} as Component,
+    });
+
+    expect(tools).toHaveLength(1);
+    expect(tools[0]).toMatchObject({
+      id: 'external/org.example.demo/1.2.3/org.example.demo/example-tool',
+      categoryId: 'external-plugins',
+      category: 'External plugins',
+      path: '/extensions/org.example.demo/1.2.3/example-tool',
+      platforms: ['electron'],
+      dataProcessing: 'memory-only',
+      offline: 'available',
+      capabilities: ['runtime.info'],
+    });
+  });
+
+  it('drops malformed contributions before registry publication', () => {
+    const tools = projectExternalPluginTools([
+      {
+        pluginId: 'org.example.demo',
+        version: '1.2.3',
+        status: 'installed' as const,
+        contributions: {
+          tools: [{
+            id: 'org.other.demo/example-tool',
+            title: 'Forged tool',
+            description: 'This route is not owned by the package.',
+            keywords: [],
+            route: '/extensions/org.example.demo/1.2.3/example-tool',
+            dataProcessing: 'memory-only',
+            offline: 'available',
+            capabilities: [],
+          }],
+        },
+      },
+    ], {
+      component: async () => ({} as Component),
+      icon: {} as Component,
+    });
+
+    expect(tools).toEqual([]);
   });
 });

@@ -4,49 +4,15 @@ import { onScopeDispose, shallowRef } from 'vue';
 import { Puzzle } from '@vicons/tabler';
 import type { MaybeRef, Ref } from 'vue';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';
-import {
-  isExternalPluginToolContributionTrusted,
-  selectExternalPluginSnapshots,
-} from './external-plugin-tools';
+import { projectExternalPluginTools as projectExternalPluginToolRegistry } from './external-plugin-tools';
 import { toolsWithCategory } from './index';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
-const externalPluginCategoryId = 'external-plugins';
-
-function getExternalPluginToolTranslationKey(pluginId: string, toolId: string): string {
-  const slug = `${pluginId}-${toolId}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  return `external-plugin-${slug.slice(0, 96)}`;
-}
-
-function projectExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
-  return selectExternalPluginSnapshots(snapshots)
-    .flatMap((plugin) => {
-      const contributions = plugin.contributions && Array.isArray(plugin.contributions.tools)
-        ? plugin.contributions.tools
-        : [];
-      return contributions
-        .filter(contribution => isExternalPluginToolContributionTrusted(plugin, contribution))
-        .map((contribution) => ({
-          id: `external/${plugin.pluginId}/${plugin.version}/${contribution.id}`,
-          categoryId: externalPluginCategoryId,
-          category: 'External plugins',
-          name: contribution.title,
-          path: contribution.route,
-          translationKey: getExternalPluginToolTranslationKey(plugin.pluginId, contribution.id),
-          description: contribution.description,
-          keywords: [...new Set([...contribution.keywords, 'plugin', 'external'])],
-          component: externalPluginToolComponent,
-          icon: Puzzle,
-          platforms: ['electron'] as const,
-          dataProcessing: contribution.dataProcessing,
-          offline: contribution.offline,
-          capabilities: [...contribution.capabilities],
-          isNew: false,
-        }));
-    });
+function projectDesktopExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
+  return projectExternalPluginToolRegistry(snapshots, {
+    component: externalPluginToolComponent,
+    icon: Puzzle,
+  });
 }
 
 export const useToolStore = defineStore('tools', () => {
@@ -67,7 +33,7 @@ export const useToolStore = defineStore('tools', () => {
 
     externalPluginRefresh = bridge.listPlugins()
       .then((result) => {
-        externalPluginTools.value = result.ok ? projectExternalPluginTools(result.value) : [];
+        externalPluginTools.value = result.ok ? projectDesktopExternalPluginTools(result.value) : [];
       })
       .catch(() => {
         externalPluginTools.value = [];

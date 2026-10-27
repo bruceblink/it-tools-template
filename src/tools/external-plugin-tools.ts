@@ -1,4 +1,6 @@
-import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from './tools.types';
+import type { Component } from 'vue';
+import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport, ToolPlatform, ToolWithCategory } from './tools.types';
+import { createValidatedToolRegistry } from './tool-registry';
 import { isPluginCapabilityId } from '../shared/plugin-capabilities';
 import { getExternalPluginToolRoute } from '../shared/plugin-tool-route';
 import { isToolDataProcessing, isToolOfflineSupport } from '../shared/plugin-tool-metadata';
@@ -20,6 +22,11 @@ export interface ExternalPluginToolContributionLike {
   dataProcessing: ToolDataProcessing;
   offline: ToolOfflineSupport;
   capabilities: readonly ToolCapability[];
+}
+
+export interface ExternalPluginToolProjectionOptions {
+  component: () => Promise<Component>;
+  icon: Component;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,4 +117,50 @@ export function selectExternalPluginSnapshots<T extends ExternalPluginSnapshotLi
     }
   }
   return [...selected.values()].sort((left, right) => left.pluginId.localeCompare(right.pluginId));
+}
+
+/** Project signed external metadata through the same registry validation used by first-party extensions. */
+export function projectExternalPluginTools<
+  T extends ExternalPluginSnapshotLike & { contributions?: { tools?: readonly unknown[] } },
+>(
+  snapshots: readonly T[],
+  options: ExternalPluginToolProjectionOptions,
+): ToolWithCategory[] {
+  const components = selectExternalPluginSnapshots(snapshots).flatMap((plugin) => {
+    const contributions = plugin.contributions?.tools ?? [];
+    return contributions
+      .filter(contribution => isExternalPluginToolContributionTrusted(plugin, contribution))
+      .map((contribution) => ({
+        id: `external/${plugin.pluginId}/${plugin.version}/${contribution.id}`,
+        categoryId: 'external-plugins',
+        name: contribution.title,
+        path: contribution.route,
+        translationKey: getExternalPluginToolTranslationKey(plugin.pluginId, contribution.id),
+        description: contribution.description,
+        keywords: [...new Set([...contribution.keywords, 'plugin', 'external'])],
+        component: options.component,
+        icon: options.icon,
+        platforms: ['electron'] as ToolPlatform[],
+        dataProcessing: contribution.dataProcessing,
+        offline: contribution.offline,
+        capabilities: [...contribution.capabilities],
+        isNew: false,
+      }));
+  });
+  if (components.length === 0) {
+    return [];
+  }
+  return createValidatedToolRegistry([{
+    id: 'external-plugins',
+    name: 'External plugins',
+    components,
+  }], 'extension').toolsWithCategory;
+}
+
+function getExternalPluginToolTranslationKey(pluginId: string, toolId: string): string {
+  const slug = `${pluginId}-${toolId}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `external-plugin-${slug.slice(0, 96)}`;
 }

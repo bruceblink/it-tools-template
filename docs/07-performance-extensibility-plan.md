@@ -776,6 +776,12 @@ Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、
 
 Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、877 项测试（18 个跳过），并通过类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查；插件 API/生命周期定向单测、打包器和 SDK 检查通过，插件管理器 Electron E2E 1 项通过。Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+### 2026-10-27：统一外部插件工具注册校验
+
+外部插件工具贡献现在通过 `projectExternalPluginTools()` 投影到共享 `createValidatedToolRegistry()`。渲染器先按插件包身份重建并校验贡献路由、命名空间、治理元数据和能力列表，再由统一注册器检查工具 ID、分类、平台、翻译键、路由冲突和保留路径。校验失败的贡献不会进入 Home 或命令面板；插件实现仍只在 Electron 隔离窗口运行。
+
+新增回归覆盖有效贡献进入外部插件分类，以及伪造贡献被过滤。Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、879 项测试（18 个跳过）；插件管理器 Electron E2E 继续通过 1 项。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。
