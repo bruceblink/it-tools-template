@@ -85,6 +85,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 2026-10-27 统一共享能力目录：`src/shared/plugin-capabilities.ts` 维护 8 个清单能力、4 个 Electron 宿主能力和第一方扩展能力子集；外部插件清单、内置工具注册、第一方扩展校验和桌面类型复用同一目录。提交后 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+2026-10-27 优化 Math Evaluator Worker：直接引用 Math.js ESM 工厂，Web Worker 从 681,908 字节降至 475,760 字节，Electron Worker 从 1,705,471 字节降至 1,161,979 字节；同环境对照分别减少 30.23% 和 31.87%。Math Evaluator Chromium E2E 1 项通过；`pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 个跳过）。Web Worker 已低于 500 KiB 目标，Electron Worker 仍待继续拆分；Linux/macOS 和真实窗口运行时证据仍待验收。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

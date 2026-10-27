@@ -729,3 +729,11 @@ Windows 本机 `pnpm check` 通过 138 个测试文件（2 个跳过）、861 �
 新增 `src/shared/plugin-capabilities.ts`，集中维护清单可声明的 8 个能力 ID、Electron 宿主当前执行的 4 个能力 ID，以及第一方扩展允许的能力子集。外部插件清单、Electron 能力代理、内置工具注册和第一方扩展校验都引用该目录；SDK 清单类型和桌面快照类型也复用相同的能力类型。这样新增或废弃能力时只需要更新一个共享目录，同时保留“声明、宿主支持、实际授权”三层边界。
 
 受影响的 5 个单元测试文件共 45 项通过，Electron 和应用类型检查通过。提交后完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
+### 2026-10-27：Math Evaluator Worker 直接 ESM 工厂优化
+
+`src/tools/math-evaluator/math-instance.ts` 不再从 `mathjs` 顶层入口导入整组工厂，而是直接引用 `core/create`、数字工厂和当前常用的算术、矩阵、复数 ESM 工厂。服务保留完整 Math.js 的按需回退；当轻量实例遇到复数类型不匹配时，也会回退到完整实例，因此单位表达式和高级函数继续可用。
+
+在同一台 Windows 机器、同一份 Vite 8.3.5 构建环境中，对比父提交 `568bf7a` 与本次提交 `0275dd5`：Web Worker 从 681,908 字节降至 475,760 字节，减少 206,148 字节（30.23%）；Electron Worker 从 1,705,471 字节降至 1,161,979 字节，减少 543,492 字节（31.87%）。Web Worker 低于 500 KiB 单工具目标；Electron Worker 仍高于该目标，后续继续评估工厂拆分和 Electron 资源加载方式。
+
+验证记录：Math Evaluator Chromium E2E 1 项通过，覆盖普通表达式、单位回退和资源限制；完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），并完成类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致本轮失败。没有新增真实窗口交互或 Linux/macOS 运行时证据。
