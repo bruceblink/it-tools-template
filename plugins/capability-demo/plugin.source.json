@@ -4,7 +4,7 @@
   "name": "Capability demo",
   "version": "1.0.0",
   "apiVersion": {
-    "minInclusive": "1.3.0",
+    "minInclusive": "1.4.0",
     "maxExclusive": "2.0.0"
   },
   "entrypoint": "index.html",

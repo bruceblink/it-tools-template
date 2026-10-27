@@ -403,6 +403,11 @@ async function openPluginSandboxProof(): Promise<void> {
       pluginId,
       packageRoot,
       entrypoint: 'index.html',
+      pluginContext: {
+        id: pluginId,
+        name: 'Sandbox proof',
+        version: '1.0.0',
+      },
       requestedCapabilities: ['runtime.info', 'clipboard.write'],
       grantedCapabilities: ['runtime.info'],
       executeCapability: (call) => {

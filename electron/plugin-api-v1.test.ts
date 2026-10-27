@@ -44,8 +44,32 @@ describe('plugin renderer API v1', () => {
     runInNewContext(getPluginApiV1Script(), context);
 
     const api = (context as unknown as { itTools: { apiVersion: string; toolId?: string } }).itTools;
-    expect(api.apiVersion).toBe('1.3.0');
+    expect(api.apiVersion).toBe(pluginRendererApiVersion);
     expect(api.toolId).toBe('org.example.plugin/example-tool');
+  });
+
+  it('exposes immutable signed package metadata without granting capabilities', () => {
+    const context = { fetch: vi.fn() };
+    runInNewContext(getPluginApiV1Script({
+      plugin: {
+        id: 'org.example.plugin',
+        name: 'Example plugin',
+        version: '2.4.0',
+      },
+    }), context);
+
+    const api = (context as unknown as { itTools: {
+      plugin?: { id: string; name: string; version: string };
+      permissions: { grantedCapabilities: readonly string[] };
+    } }).itTools;
+    expect(api.plugin).toEqual({
+      id: 'org.example.plugin',
+      name: 'Example plugin',
+      version: '2.4.0',
+    });
+    expect(Object.isFrozen(api.plugin)).toBe(true);
+    expect(api.permissions.grantedCapabilities).toEqual([]);
+    expect(context.fetch).not.toHaveBeenCalled();
   });
 
   it('exposes immutable signed tool metadata without changing capability grants', () => {

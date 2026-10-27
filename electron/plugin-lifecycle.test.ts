@@ -120,6 +120,11 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`))
       .resolves.toMatchObject({ status: 'active' });
     expect(createWindow.mock.calls[0]?.[0].contributionId).toBe(`${pluginId}/lifecycle-tool`);
+    expect(createWindow.mock.calls[0]?.[0].pluginContext).toEqual({
+      id: pluginId,
+      name: 'Lifecycle fixture',
+      version: '1.0.0',
+    });
     expect(createWindow.mock.calls[0]?.[0].toolContext).toMatchObject({
       id: `${pluginId}/lifecycle-tool`,
       title: 'Lifecycle tool',

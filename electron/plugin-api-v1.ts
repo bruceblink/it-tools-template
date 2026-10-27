@@ -14,7 +14,15 @@ export interface PluginApiV1ScriptOptions {
   requestedCapabilities?: readonly string[];
   supportedCapabilities?: readonly string[];
   grantedCapabilities?: readonly string[];
+  plugin?: PluginApiV1PluginContext;
   tool?: PluginApiV1ToolContext;
+}
+
+/** Signed package metadata for the current isolated plugin window. */
+export interface PluginApiV1PluginContext {
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
 }
 
 /** Signed contribution metadata selected by the host for the current plugin window. */
@@ -51,6 +59,13 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
         dataProcessing: options.tool.dataProcessing,
         offline: options.tool.offline,
         capabilities: [...options.tool.capabilities],
+      };
+  const pluginContext = options.plugin === undefined
+    ? undefined
+    : {
+        id: options.plugin.id,
+        name: options.plugin.name,
+        version: options.plugin.version,
       };
 
   return `(() => {
@@ -94,6 +109,17 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
       dataProcessing: value.dataProcessing,
       offline: value.offline,
       capabilities: Object.freeze([...value.capabilities]),
+    });
+  }
+
+  function freezePluginContext(value) {
+    if (!value) {
+      return undefined;
+    }
+    return Object.freeze({
+      id: value.id,
+      name: value.name,
+      version: value.version,
     });
   }
 
@@ -154,6 +180,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
     supportedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.supportedCapabilities)}),
     grantedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.grantedCapabilities)}),
   });
+  const plugin = freezePluginContext(${JSON.stringify(pluginContext)});
   const tool = freezeToolContext(${JSON.stringify(toolContext)});
   const capabilities = Object.freeze({
     runtime: Object.freeze({
@@ -201,6 +228,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
   const api = Object.freeze({
     apiVersion: '${pluginRendererApiVersion}',
     hostApiVersion: '${pluginHostApiVersion}',
+    plugin,
     toolId: tool?.id ?? getToolId(),
     tool,
     permissions,

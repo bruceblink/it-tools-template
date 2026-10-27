@@ -21,7 +21,7 @@ import {
 import type {
   PluginSandboxRegistration,
 } from './plugin-sandbox';
-import type { PluginApiV1ToolContext } from './plugin-api-v1';
+import type { PluginApiV1PluginContext, PluginApiV1ToolContext } from './plugin-api-v1';
 import {
   readInstalledPluginManifest,
   verifyInstalledPluginPackage,
@@ -359,6 +359,7 @@ export class PluginLifecycleManager {
       packageRoot,
       entrypoint: manifest.entrypoint,
       contributionId,
+      pluginContext: getPluginContext(manifest),
       toolContext: getPluginToolContext(manifest, contributionId),
       requestedCapabilities: manifest.requestedCapabilities,
       grantedCapabilities,
@@ -682,6 +683,14 @@ function getPluginToolContext(
     dataProcessing: contribution.dataProcessing ?? 'unspecified',
     offline: contribution.offline ?? 'unknown',
     capabilities: [...(contribution.capabilities ?? [])],
+  };
+}
+
+function getPluginContext(manifest: PluginPackageManifest): PluginApiV1PluginContext {
+  return {
+    id: manifest.id,
+    name: manifest.name,
+    version: manifest.version,
   };
 }
 

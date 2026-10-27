@@ -103,6 +103,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 2026-10-27 启用 Electron renderer 生产压缩：使用 Vite 8 Oxc 压缩后，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，完整 Math.js 回退块从 975,994 字节降至 400,040 字节；Electron Worker 达到 500 KiB 目标。Electron smoke 与插件管理器 E2E 共 21 项通过；Linux/macOS 构建和真实窗口性能仍待验收。
 
+2026-10-27 完成插件包身份上下文与包级故障恢复：插件 API v1 升级到 `1.4.0`，`window.itTools.plugin` 提供冻结的签名包 `id`、`name` 和 `version`；生命周期把已验证包身份传入每个隔离窗口。包级运行时故障在任一工具贡献成功启动后清除，其他贡献的故障记录保持独立。Windows 本机 `pnpm check` 通过 140 个测试文件（2 个跳过）、877 项测试（18 个跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

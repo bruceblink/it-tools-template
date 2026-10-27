@@ -74,9 +74,18 @@ export interface PluginToolContext {
   readonly capabilities: readonly PluginToolCapability[];
 }
 
+/** Signed metadata for the package that owns the current isolated plugin window. */
+export interface PluginPackageContext {
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+}
+
 export interface ITToolsPluginApiV1 {
   readonly apiVersion: PluginApiV1Version;
   readonly hostApiVersion: PluginApiV1Version;
+  /** The host-verified package metadata for this plugin window. */
+  readonly plugin: PluginPackageContext;
   /** The host-verified contribution ID selected when this plugin window was opened. */
   readonly toolId: string | undefined;
   /** The host-verified contribution metadata selected when this plugin window was opened. */

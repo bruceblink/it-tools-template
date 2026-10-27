@@ -305,6 +305,11 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     const api = (globalThis as unknown as { itTools?: {
       apiVersion?: string;
       hostApiVersion?: string;
+      plugin?: {
+        id?: string;
+        name?: string;
+        version?: string;
+      };
       toolId?: string;
       permissions?: {
         requestedCapabilities: readonly string[];
@@ -315,6 +320,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     return {
       apiVersion: api?.apiVersion,
       hostApiVersion: api?.hostApiVersion,
+      plugin: api?.plugin,
       toolId: api?.toolId,
       permissions: api?.permissions && {
         requestedCapabilities: [...api.permissions.requestedCapabilities],
@@ -323,8 +329,13 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
       },
     };
   })).toEqual({
-    apiVersion: '1.3.0',
-    hostApiVersion: '1.3.0',
+    apiVersion: '1.4.0',
+    hostApiVersion: '1.4.0',
+    plugin: {
+      id: 'org.it-tools.capability-demo',
+      name: 'Capability demo',
+      version: '1.0.0',
+    },
     toolId: undefined,
     permissions: {
       requestedCapabilities: ['runtime.info', 'clipboard.write', 'settings.read', 'settings.write', 'file.read'],

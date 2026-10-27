@@ -768,6 +768,14 @@ SDK 类型、API 单测、生命周期注册和插件管理器 Electron E2E 已�
 
 Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、875 项测试（18 个跳过），并通过类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查；插件管理器 Electron E2E 通过 1 项。Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+### 2026-10-27：插件包身份上下文与包级故障恢复
+
+插件 API v1 升级到 `1.4.0`，在 `window.itTools.plugin` 提供已签名包的只读 `id`、`name` 和 `version`。工具贡献的 `window.itTools.tool` 与 `toolId` 保持原有语义；包级启动和工具级启动都使用同一包上下文，包上下文及其字段在插件窗口中冻结。该元数据只支持插件显示、日志和设置命名，不授予能力，也不替代 `permissions.grantedCapabilities`。
+
+生命周期注册把已验证的包身份传入沙箱，独立 SDK 与样例清单同步到 `1.4.0`。当包级窗口发生运行时故障后，任一已验证贡献成功启动都会清除包级故障；其他贡献的独立故障记录仍保留。这样，包级恢复和贡献级恢复不会互相覆盖。
+
+Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、877 项测试（18 个跳过），并通过类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查；插件 API/生命周期定向单测、打包器和 SDK 检查通过，插件管理器 Electron E2E 1 项通过。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。

@@ -20,7 +20,9 @@ catch (error) {
 }
 ```
 
-`window.itTools.apiVersion` 当前为 `1.3.0`。`window.itTools.hostApiVersion` 当前为 `1.3.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含 `toolId`（宿主选择的工具贡献 ID）、只读的 `tool` 贡献上下文、只读的 `permissions` 快照、`runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。`toolId` 只描述启动上下文，不是能力授权，也不能用于绕过宿主校验。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
+`window.itTools.apiVersion` 当前为 `1.4.0`。`window.itTools.hostApiVersion` 当前为 `1.4.0`。插件清单的 `apiVersion` 范围必须包含宿主 API 版本。运行时 API 包含只读的 `plugin` 包上下文、`toolId`（宿主选择的工具贡献 ID）、只读的 `tool` 贡献上下文、只读的 `permissions` 快照、`runtime.getInfo()`、`clipboard.writeText(text)` 和持久设置方法。`plugin` 和 `toolId` 只描述启动上下文，不是能力授权，也不能用于绕过宿主校验。清单没有请求能力或用户没有授权时，宿主会拒绝调用。
+
+`window.itTools.plugin` 在每次插件窗口启动时提供已签名包的 `id`、`name` 和 `version`。对象被冻结，插件不能修改清单内容。该上下文只用于显示、日志和选择插件自己的设置键；它不会授予或扩大任何能力。
 
 `window.itTools.tool` 在工具贡献页面启动时提供已签名清单中的只读元数据：`id`、`title`、`description`、`keywords`、`dataProcessing`、`offline` 和声明的 `capabilities`。对象及其数组被冻结。整包启动时 `tool` 为 `undefined`；宿主不会因为此上下文授予能力，实际授权仍只由 `permissions.grantedCapabilities` 和能力代理决定。`toolId` 继续保留，用于兼容已有插件。
 
@@ -100,7 +102,7 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 ## 当前实现与限制
 
-`window.itTools.apiVersion` 当前为 `1.3.0`，`window.itTools.hostApiVersion` 当前为 `1.3.0`。新增的 `toolId` 和 `tool` 是宿主在贡献页面启动时写入的只读上下文；整包启动时分别为 `undefined`。`tool` 的元数据来自签名清单，插件不能修改宿主清单，也不能把其中的 `capabilities` 当作授权。新增的 `permissions` 是只读能力快照，不替代宿主授权检查。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 Ki 个字符，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
+`window.itTools.apiVersion` 当前为 `1.4.0`，`window.itTools.hostApiVersion` 当前为 `1.4.0`。新增的 `plugin` 是宿主在每个插件窗口中写入的包级只读上下文，包含签名清单的 `id`、`name` 和 `version`。`toolId` 和 `tool` 是宿主在贡献页面启动时写入的只读上下文；整包启动时二者均为 `undefined`。`plugin` 和 `tool` 的元数据来自签名清单，插件不能修改宿主清单，也不能把其中的 `capabilities` 当作授权。新增的 `permissions` 是只读能力快照，不替代宿主授权检查。`settings.get(key)`、`settings.set(key, value)` 和 `settings.delete(key)` 只保存字符串、有限数字、布尔值或 `null`。设置键最多 64 个字符，字符串值最多 4 KiB，每个插件最多保存 128 个值。设置按插件 ID 命名空间保存到宿主用户数据目录，跨插件、插件版本和应用重启隔离。设置不是凭据存储，也不提供文件、网络或秘密管理能力。
 
 签名样例会读取宿主返回的运行时信息、读写持久设置，并在授权后通过客户端写入剪贴板；自动化 E2E 会替换操作系统剪贴板执行器，不写入真实剪贴板。插件未获授权时，客户端返回 `PluginApiError`，错误代码为 `permission-denied`。能力请求仍需由用户在桌面管理界面单独批准。Web 端没有对应的系统能力代理。
 

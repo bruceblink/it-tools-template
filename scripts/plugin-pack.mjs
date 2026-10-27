@@ -16,7 +16,7 @@ export const pluginPackageLimits = Object.freeze({
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const signatureDomain = 'IT Tools Electron Plugin Package v1';
-const supportedHostApiVersion = '1.3.0';
+const supportedHostApiVersion = '1.4.0';
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
