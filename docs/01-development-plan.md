@@ -109,6 +109,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 2026-10-27 统一插件状态刷新排队：Home 工具注册表、插件管理页和外部工具详情页共用 `createQueuedRefresh()`；详情页同时监听插件路由参数变化。刷新进行期间收到的 `desktop:plugins:changed` 事件会安排一次后续刷新，避免并发 `listPlugins()` 返回旧快照；请求失败后仍可接受下一次刷新。该改动不改变插件执行、权限或路由边界。定向插件单测 13 项、应用类型检查和相关 lint 通过；Windows 打包应用真实窗口确认从工具页点击 Home 后回到主页，过渡结束后工具卡片没有异常边框。Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+2026-10-27 优化工具卡片键盘焦点：工具卡片链接现在提供可见的 `:focus-visible` 轮廓，并保留 `prefers-reduced-motion` 下的无动画行为。实现只改变焦点提示，不改变卡片边框颜色或 Home 返回逻辑。应用类型检查、相关 lint、Electron 构建和 Home 卡片回归 E2E 通过；Linux/macOS 真实窗口仍待验收。
+
 ## 3. 当前基线
 
 项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、

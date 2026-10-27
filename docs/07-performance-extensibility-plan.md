@@ -788,6 +788,10 @@ Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、
 
 定向 `queued-refresh` 与外部工具投影单测共 13 项通过，应用类型检查和相关 lint 通过；重新构建 Electron 后插件管理器定向 E2E 1 项通过。Windows 打包应用真实窗口完成“打开工具 → 点击 Home → 确认回到主页”：窗口回到 Home，等待过渡完成后工具卡片没有被错误启用的边框样式。该窗口验收使用当前本地打包产物；未据此推断 Linux/macOS 行为。完整 `pnpm check` 和跨平台运行时证据仍按后续交付切片执行。
 
+### 2026-10-27：工具卡片键盘焦点反馈
+
+工具卡片链接增加 `:focus-visible` 轮廓，键盘用户可以识别当前工具入口。焦点提示只作用于链接外轮廓，不改写卡片边框颜色，因此不会重新触发 Home 返回时的卡片边框回归。卡片保留原有鼠标 hover 逻辑；`prefers-reduced-motion: reduce` 时关闭新增过渡。应用类型检查、相关 lint、Electron 构建和 `home-card-hover.e2e.spec.ts` 1 项通过。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。

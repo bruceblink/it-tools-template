@@ -14,7 +14,7 @@ const theme = useThemeVars();
 </script>
 
 <template>
-  <router-link :to="tool.path" class="decoration-none">
+  <router-link :to="tool.path" class="tool-card-link decoration-none">
     <c-card class="h-full !border-2px" :class="{ '!hover:border-primary': hoverEnabled }">
       <div flex items-center justify-between>
         <n-icon class="text-neutral-400 dark:text-neutral-600" size="40" :component="tool.icon" />
@@ -44,3 +44,26 @@ const theme = useThemeVars();
     </c-card>
   </router-link>
 </template>
+
+<style scoped lang="less">
+.tool-card-link {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.tool-card-link :deep(.c-card) {
+  transition: box-shadow 180ms ease;
+}
+
+.tool-card-link:focus-visible {
+  outline: 2px solid var(--primary-color, #18a058);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-card-link :deep(.c-card) {
+    transition: none;
+  }
+}
+</style>
