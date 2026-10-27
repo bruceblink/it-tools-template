@@ -1,8 +1,8 @@
 # IT Tools 最新开发计划
 
 > 状态：现行计划
-> 更新日期：2026-10-27
-> 当前基线：`main`；当前平台和插件工作范围见本计划与性能扩展计划
+> 更新日期：2026-10-28
+> 当前基线：`main`；当前平台和插件工作范围见本计划与性能与插件平台设计说明
 > 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
 > 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
 
@@ -45,85 +45,17 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 不在当前主线上增加新的内置工具或工作台协议。跨项目仍保持独立，不共享进程、运行时、代码包或接口协议。
 
-当前进度（2026-10-25）：API、Git、对象存储和容器工作台的已交付范围进入维护状态。对象存储支持 S3 兼容 Bucket 连接、分页、前缀筛选、受限文本预览，以及文件上传、下载和单对象删除；详见[对象存储工作台设计说明](15-object-storage-workbench-design.md)和[对象存储传输设计说明](16-object-storage-transfers-design.md)。Electron 容器页面只读列出最多 100 个本机容器；Docker 请求限制为 10 秒和 512 KiB。Web 不注册该页面。范围与回滚记录见[容器工作台设计说明](17-container-workbench-design.md)。后续只按已知问题和测量证据维护这些功能。
+### 当前状态（2026-10-28）
 
-性能优化进度（2026-10-25）：P2 对 Markdown 转 HTML 的同步解析做了 256 KiB 合成输入测量。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，单次渲染中位数为 28.04 毫秒，10 次测量最大值为 38.91 毫秒。工具现用专用 Worker，并限制输入为 256 KiB、HTML 输出为 2 MiB、运行时间为 10 秒；新输入会取消旧任务。完整检查、Chromium Web 和隐藏 Electron `app://bundle` 回归通过，Web 首屏 JavaScript gzip 为 299.82 KiB，低于 300 KiB 预算 0.18 KiB。详细实现与边界见[性能与插件设计说明](07-performance-extensibility-design.md)。
+内置工具、数据库、系统监视、对象存储和容器工作台进入维护状态。后续只在有已知缺陷、性能数据或平台验收证据时修改；具体设计和验证记录集中在相关设计文档。
 
-同日评估 CSV 转 Markdown 表格：256 KiB 合成输入的转换中位数为 24.42 毫秒，10 次最大值为 28.32 毫秒；原页面还会单独同步解析 CSV 作验证。转换现由共享 Worker 执行，限制输入 256 KiB、输出 2 MiB、超时 10 秒。共享 CSV 行宽计算也已修复，避免超多行输入触发 `RangeError`。Web 与隐藏 Electron E2E、完整检查通过；首屏 JavaScript gzip 为 299.81 KiB，低于 300 KiB 预算 0.19 KiB。详细实现与测量结果见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日优化 Text Statistics：一次字符循环统计字符数、词数和行数，并复用 TextEncoder 计算 UTF-8 字节数，避免为词数和行数创建两个分割数组。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，1 MiB 合成输入的中位耗时从 14.61 毫秒降至 3.76 毫秒。完整 `pnpm check` 通过 784 项单测（18 项跳过）；Chromium Web E2E 通过。Firefox 在本机启动失败，真实窗口交互未执行。详细实现和测量方法见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日将 Docker Run 转 Compose 改为专用 Worker：合成 256 KiB 命令原本同步运行约 1.46 秒，现由 Worker 处理，并限制输入 256 KiB、输出 2 MiB 和执行时间 10 秒。原有转换结果和诊断消息保持不变。完整 `pnpm check` 通过 790 项单测（18 项跳过）；Chromium Web 与隐藏 Electron `app://bundle` E2E 通过。详细实现与测量方法见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日将 List Converter 转为专用 Worker：排序模式下 1 MiB、2 MiB、4 MiB 合成列表的同步转换中位数分别为 31.40、62.61、126.62 毫秒。现在限制输入为 1 MiB、行数为 100,000、结果为 2 MiB、运行时间为 10 秒。完整检查通过 797 项单测（18 项跳过）；Chromium Web 的 4 项 E2E 和隐藏 Electron `app://bundle` 回归通过。详细实现与测量方法见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日将 IPv4 CIDR 合并迁入专用 Worker：旧页面对每次输入同步解析两次，分别校验和生成输出。Windows 11、Node.js 24.15.0、AMD Ryzen 9 5900X 上，随机 IPv4 地址输入在 256 KiB 时双次计算中位耗时为 43.22 毫秒，1 MiB 时为 170.56 毫秒。现在只在 Worker 中解析一次，并限制输入 256 KiB、32,768 行、序列化输出 2 MiB 和运行时间 10 秒。验证与详细数据见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日将 IPv4 CIDR Overlap Checker 的解析和配对分析迁入 Worker。400 个相同 `/24` 输入的两次同步计算中位耗时为 85.07 毫秒，并产生 79,800 个重叠对。新 Worker 限制输入 256 KiB、1,000 行、500 个重叠对、2 MiB 序列化输出和 10 秒运行时间；超出重叠对上限时清除报告并显示缩小输入的提示。`pnpm check` 通过 43 项脚本测试、815 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查。Chromium 与 WebKit E2E 各 2 项通过；隐藏 Electron CIDR Worker E2E 2 项、插件管理器与沙箱 E2E 2 项通过。Firefox 在本机启动时返回 `spawn UNKNOWN`。详细数据和验证记录见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日将 IPv4 CIDR Containment Checker 的规则解析、目标分析和匹配明细生成迁入 Worker。200 条规则与 200 个目标组成的合成输入中，两次同步分析中位耗时为 39.55 毫秒，并产生 40,000 条匹配。Worker 限制两份文本合计 256 KiB、合计 1,000 行、500 条匹配、2 MiB 序列化输出和 10 秒运行时间；超出匹配上限时显示缩小输入提示。对同一密集输入，受限任务在 Vite SSR 基准中的中位耗时为 0.70 毫秒；它只生成错误提示，不生成完整 40,000 条报告，不能与旧分析耗时直接比较。`pnpm check` 通过 43 项脚本测试、825 项单测（18 项跳过）、类型检查、lint、Web/Electron 构建和隔离检查；Chromium、WebKit、隐藏 Electron Worker E2E 各 1 项通过。Firefox 启动返回 `spawn UNKNOWN`。System Monitor E2E 现等待应用首页和搜索按钮就绪后再导航，并为 Windows 临时用户目录清理增加重试。完整 Electron E2E 共 37 项：31 项通过、6 项按环境跳过、0 项失败；System Monitor 定向 E2E 3 项通过。详细验证见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-同日完成当前 `main` 的正式构建性能基线，Web 与 Electron 各测 20 轮，0 轮失败。Web 与 Electron 启动中位数/p95 分别为 759.72/856.93 毫秒和 919.71/1,017.53 毫秒。Electron 本轮使用隐藏窗口，因此其数据不代表真实窗口交互或可见窗口路由响应。详细环境、资源和限制见[20 轮性能基线报告](performance-baseline-2026-10-25-main.json)。16 个本地提交已推送至 `origin/main`，远端与本地一致。
-
-随后优化 IPv4 CIDR splitter：页面复用 `splitIpv4Cidr` 的结果生成文本，不再第二次重建完整子网数组。4096 个 `/32` 子网的 Vite SSR 合成基准中，输出构建中位耗时从 3.56 毫秒降至 1.83 毫秒；输出保持一致。完整 `pnpm check`、Chromium Web E2E 1 项和 Electron `app://bundle` smoke E2E 19 项通过。Windows 打包应用的真实窗口显示了默认输入和 4 个子网结果；窗口输入变更未完成，Computer Use 检测到用户输入后阻止了写入。详细方法和限制见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-随后为 API Client 增加请求预检：渲染器在解析请求头 JSON 和调用 Electron IPC 前限制请求头 JSON 为 128 KiB、URL 为 8 KiB UTF-8 字节、正文为 256 KiB UTF-8 字节。服务单测覆盖多字节边界；Electron E2E 验证超限请求不会抵达本机测试服务器。`pnpm check` 通过 832 项单测（18 项跳过），API Client Electron E2E 1 项通过；Web 首屏 JavaScript gzip 为 299.80 KiB。详细实现和未完成的真实窗口交互说明见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-随后将 cURL Code Generator 的解析和代码生成移入共享 Worker。7,000 个请求头、231,036 字节的合成命令在同步服务路径中位耗时为 28.88 毫秒（21 轮，p95 为 41.79 毫秒）；新页面以 150 毫秒防抖执行所选格式，取消旧任务，保留 256 KiB 输入和 2 MiB 代码输出限制。Chromium Web E2E 4 项、Electron smoke 20 项和完整 `pnpm check` 通过。Windows Electron 真实窗口已验证 GET 摘要、请求头、fetch 与 axios 输出。首屏 JavaScript gzip 为 299.79 KiB。详细方法和限制见[性能与插件设计说明](07-performance-extensibility-design.md)。
-
-2026-10-27 完成外部插件工具贡献元数据首片：签名清单支持可选的 `contributions.tools`，插件管理器显示标题、描述和关键词，既有不带该字段的 v1 包继续按原签名载荷验证。宿主为已安装版本生成元数据页面，页面通过现有生命周期接口运行和停止隔离插件窗口；页面不执行外部代码，也不把实现注入宿主工具注册表。样例包、打包脚本、Electron 验证器、生命周期快照、管理器链接、路由操作和 E2E 已同步。Windows 本机 `pnpm check` 通过 137 个测试文件（2 个跳过）、853 项测试（18 项跳过）；完整 Electron E2E 共 39 项，33 项通过、6 项按环境跳过。Linux/macOS 和工具级激活路由仍待后续切片。
-
-2026-10-27 完成工具贡献错误隔离与停用恢复：生命周期快照返回当前 `activeContributionId`，设置页和工具页通过受信 IPC 事件刷新意外关闭、渲染进程崩溃和无响应状态；工具页只停止当前贡献，成功再次运行会清除当前版本的会话故障记录。Windows 本机 `pnpm check` 通过 137 个测试文件（2 个跳过）、856 项测试（18 个跳过）；插件管理器定向 Electron E2E 通过，覆盖贡献切换、停止边界和崩溃恢复提示。Linux/macOS 运行时和公开第三方分发仍待验收。
-
-2026-10-27 完成工具贡献元数据与最小能力授权：签名清单支持工具级 `dataProcessing`、`offline` 和 `capabilities`，旧包保持签名兼容；工具页只向隔离窗口授予当前工具声明的能力。`pnpm check` 和完整 Electron E2E 通过（39 项中 33 项通过、6 项按环境跳过）。Linux/macOS 运行时和公开第三方分发仍待验收。
-
-2026-10-27 完成外部工具版本选择：同一插件保留多个回滚版本时，Home 和命令面板优先显示运行版本，没有运行版本时显示最高已安装版本，并过滤无效包。`pnpm check` 通过 138 个测试文件（2 个跳过）、859 项测试（18 项跳过）；完整 Electron E2E 通过（39 项中 33 项通过、6 项按环境跳过）。
-
-2026-10-27 完成插件声明能力与宿主执行能力边界：清单可以保留已知但当前未实现的能力声明；启动沙箱时只把宿主当前支持的能力交给能力代理，未授权或未实现的能力不会阻止插件在无该能力的情况下运行。新增能力筛选和生命周期回归后，`pnpm check` 通过 138 个测试文件（2 个跳过）、861 项测试（18 项跳过）；完整 Electron E2E 通过（39 项中 33 项通过、6 项按环境跳过）。
-
-2026-10-27 统一宿主支持能力清单：能力代理、生命周期和桌面页面共用集中能力模块；生命周期快照公开 `supportedCapabilities`，页面根据该字段显示授权控件并筛选工具级请求。提交后 `pnpm check` 通过 138 个测试文件（2 个跳过）、861 项测试（18 项跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一共享能力目录：`src/shared/plugin-capabilities.ts` 维护 8 个清单能力、4 个 Electron 宿主能力和第一方扩展能力子集；外部插件清单、内置工具注册、第一方扩展校验和桌面类型复用同一目录。提交后 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 完成插件渲染器权限状态快照：`window.itTools.permissions` 以冻结数组公开清单声明、宿主支持和本次窗口实际授权。`grantedCapabilities` 只保留已声明且宿主支持的能力，读取快照不发起能力调用。SDK、插件 API 单测和插件管理器 Electron E2E 已同步；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 完成插件 SDK 类型自包含：运行时 API、清单类型和能力类型可在独立插件项目中一起使用，不再解析仓库内部 `src/` 路径。新增 SDK 静态回归覆盖能力 ID 和相对导入；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一插件 SDK 工具上下文类型：`PluginToolContext` 归入自包含的包元数据声明，运行时 SDK 通过类型导入并重新导出复用该定义，避免清单类型和运行时类型字段漂移。SDK 静态回归和相关 lint 通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 收紧插件管理错误契约：主进程 IPC、桌面类型声明和插件快照共用稳定的错误码类型，运行时故障码与管理操作错误码分开表达。类型检查覆盖非法 IPC 请求、签名信任、包校验、生命周期和窗口错误；该改动不改变错误返回值或恢复边界。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一插件生命周期状态事件：主进程、IPC、preload 和桌面类型声明共用 `DesktopPluginStateChangeEvent`（`schemaVersion: 1`、插件 ID、版本、原因和可选贡献 ID）。生命周期事件区分安装、激活、停用、卸载、回滚和运行时故障；preload 会丢弃字段、版本、路径格式或未知原因不符合约束的 IPC 数据，不向渲染器传递路径或秘密。Home、插件管理页和外部工具页仍按 `pluginId` 刷新。生命周期单测覆盖回滚只发送 `rollback` 事件、贡献级运行时故障和故障恢复；共享类型单测覆盖有效与非法事件。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 收紧插件设置命名空间上限：运行时写入与持久化防御校验共用最多 128 个插件命名空间的限制。第 129 个插件写入会返回 `resource-limit`，不会改变内存状态或磁盘文件；重载仍能读取原有 128 个命名空间。定向插件设置单测、Electron 类型检查和相关 lint 通过。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 固定插件 API 错误码目录：主机生成的插件客户端只向插件暴露 SDK 声明的 18 个错误码，未知或格式异常的主机错误统一转换为 `request-failed`。独立 SDK 通过自包含的错误码声明文件复用这份版本化契约，静态回归会比较主机目录与 SDK union。插件 API 单测、SDK 静态测试和相关 lint 通过。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 增加外部插件工具路由快照校验：渲染器重建并校验宿主路由、贡献命名空间、治理元数据和能力列表，异常贡献不会进入 Home 或命令面板的工具注册表。该校验不替代签名清单验证；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一插件工具治理元数据：工具注册表、签名清单解析和渲染器快照校验复用共享的 `dataProcessing`/`offline` 值集合和运行时守卫，减少平台层契约漂移。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一插件 API 版本来源：Electron 宿主、独立 SDK 类型和样例清单通过静态回归保持 `1.3.0` 兼容版本一致。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 增加插件工具贡献上下文：`window.itTools.tool` 提供签名清单的只读工具元数据，`toolId` 保持兼容；整包启动时不提供工具上下文，元数据不会授予能力。Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、875 项测试（18 个跳过），插件管理器 Electron E2E 通过 1 项。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 细化工具贡献级运行时故障：插件窗口的崩溃、无响应和意外关闭按贡献 ID记录；同一插件的其他工具不会继承该故障，重新运行当前贡献只清除当前记录。Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、874 项测试（18 个跳过），插件管理器 Electron E2E 通过 1 项。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 优化 Math Evaluator Worker：提交 `6692f7f` 只导入实际需要的 Math.js ESM 工厂，Web Worker 从父提交的 681,908 字节降至 278,770 字节，Electron Worker 从 1,705,471 字节降至 726,576 字节；同环境对照分别减少 59.12% 和 57.40%。服务单测 8 项和 Chromium E2E 1 项通过；`pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 个跳过）。Web Worker 已低于 500 KiB 目标，Electron Worker 仍待继续拆分；Linux/macOS 和真实窗口运行时证据仍待验收。
-
-2026-10-27 启用 Electron renderer 生产压缩：使用 Vite 8 Oxc 压缩后，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，完整 Math.js 回退块从 975,994 字节降至 400,040 字节；Electron Worker 达到 500 KiB 目标。Electron smoke 与插件管理器 E2E 共 21 项通过；Linux/macOS 构建和真实窗口性能仍待验收。
-
-2026-10-27 完成插件包身份上下文与包级故障恢复：插件 API v1 升级到 `1.4.0`，`window.itTools.plugin` 提供冻结的签名包 `id`、`name` 和 `version`；生命周期把已验证包身份传入每个隔离窗口。包级运行时故障在任一工具贡献成功启动后清除，其他贡献的故障记录保持独立。Windows 本机 `pnpm check` 通过 140 个测试文件（2 个跳过）、877 项测试（18 个跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一外部插件工具注册校验：Home 和命令面板使用共享 `createValidatedToolRegistry()` 接收外部贡献；渲染器先校验插件身份、路由、命名空间、治理字段和能力列表，异常贡献会被过滤，不会执行外部代码。Windows 本机 `pnpm check` 通过 140 个测试文件（2 个跳过）、879 项测试（18 个跳过），插件管理器 Electron E2E 1 项通过；Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 统一插件状态刷新排队：Home 工具注册表、插件管理页和外部工具详情页共用 `createQueuedRefresh()`；详情页同时监听插件路由参数变化。刷新进行期间收到的 `desktop:plugins:changed` 事件会安排一次后续刷新，避免并发 `listPlugins()` 返回旧快照；请求失败后仍可接受下一次刷新。该改动不改变插件执行、权限或路由边界。定向插件单测 13 项、应用类型检查和相关 lint 通过；Windows 打包应用真实窗口确认从工具页点击 Home 后回到主页，过渡结束后工具卡片没有异常边框。Linux/macOS 运行时和公开第三方插件分发仍待验收。
-
-2026-10-27 优化工具卡片键盘焦点：工具卡片链接现在提供可见的 `:focus-visible` 轮廓，并保留 `prefers-reduced-motion` 下的无动画行为。实现只改变焦点提示，不改变卡片边框颜色或 Home 返回逻辑。应用类型检查、相关 lint、Electron 构建和 Home 卡片回归 E2E 通过；Linux/macOS 真实窗口仍待验收。
-
-2026-10-28 整数进制转换 Worker 化：整数进制转换改为独立 Worker。Worker 先把输入解析为一次 `BigInt`，再生成二进制、八进制、十进制、十六进制、Base64 和自定义进制结果，避免页面线程为每个输出重复解析。页面输入使用 150ms 防抖；新输入会取消旧任务并清空旧结果，返回结果必须匹配当前输入版本。任务限制为 16 KiB 输入、2 MiB 输出和 10 秒运行时间，超限、超时和无效数字会显示明确状态。模型、Worker 服务和任务替换单测通过；Windows 本机 `pnpm check` 通过 143 个测试文件（2 个跳过）、894 项测试（18 个跳过），类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查均通过。打包 Electron 真实窗口显示默认结果，输入 `255` 后更新为二进制 `11111111`、八进制 `377`、十六进制 `ff`、Base64 `3/` 和自定义进制 `63`，点击 Home 返回主页且工具卡片没有异常边框。Linux/macOS 运行时仍待验收。
-
-2026-10-28 收紧插件贡献 ID 注入：插件隔离窗口现在接收主机已验证的贡献 ID，并以该值作为 `window.itTools.toolId` 的首选来源；自定义协议 URL hash 仍保留为兼容回退。这样在 macOS 等平台上切换工具贡献时，即使加载器暂时没有暴露 hash，插件仍能获得稳定的当前贡献上下文。插件 API、沙箱和生命周期定向测试通过，插件管理器 Electron E2E 在 Windows 本机通过 1 项。远端 macOS 旧运行记录曾在未来能力贡献的 `toolId` 轮询失败；5ae81cf 的新 CI 已通过 Linux、macOS 和 Windows，当前补丁仍需新的远端运行确认。
+| 领域 | 当前入口 | 当前状态 |
+|---|---|---|
+| 性能、Web/Electron 边界和插件平台 | [性能与插件平台设计说明](07-performance-extensibility-design.md) | Worker 迁移、构建预算、平台边界和插件平台 v1 的实施记录集中维护；Linux/macOS 前台窗口、真实设备权限和公开第三方分发仍需独立验收 |
+| 外部插件接口 | [包格式](08-electron-plugin-package-format-v1.md)、[能力 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)、[MVP 使用说明](11-electron-plugin-mvp-quickstart.md) | 清单、工具贡献、能力、设置、错误码、生命周期和安装流程已形成版本化接口 |
+| 数据库与系统监视 | [设计说明](13-database-system-monitor-design.md) | Electron 专属工作台进入维护，跨平台和真实窗口证据按设计说明补齐 |
+| 对象存储与容器 | [对象存储设计说明](15-object-storage-workbench-design.md)、[容器设计说明](17-container-workbench-design.md) | 对象浏览、传输和只读容器列表已合并记录；Web 继续隐藏桌面专属入口 |
+| 双项目边界 | [能力归属矩阵](14-cross-project-capability-matrix.md) | it-tools-template 与 Ramag 不共享进程、运行时、代码包或接口协议 |
 
 ## 3. 当前基线
 
@@ -132,76 +64,33 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 但它们不改变新的职责边界。打包成功不等于签名、公证、安装升级、真实设备权限和
 完整原生窗口验收完成。
 
-归档质量基线见 [02-quality-baseline.md](archive/02-quality-baseline.md)，Web/Electron 边界见
-[06-web-electron-assessment.md](06-web-electron-assessment.md)，性能与插件细节见
+归档质量基线见 [02-quality-baseline.md](archive/02-quality-baseline.md)，Web/Electron 边界与性能、插件细节见
 [07-performance-extensibility-design.md](07-performance-extensibility-design.md)。
-历史阶段从下一节开始保留，作为证据索引，不作为新的并行产品路线。
+历史实施只保留索引，不作为新的并行产品路线。
 
-## 历史阶段一：质量基线（原始窗口 0–30 天）
+## 历史与归档索引
 
-### 工作内容
+历史计划只保留索引。详细实施记录已归档，当前主线不重复维护同一组任务。
 
-- 修复 `vue-tsc`：恢复 `ES2022 + DOM` 类型库，统一从 `vue` 引入 `MaybeRef`，修正 Fuse、figlet、第三方包声明和组件 prop 类型。
-- 新增统一 `pnpm check`，依次运行 `typecheck`、`typecheck:app`、`lint --max-warnings 0`、单元测试和生产构建。
-- 让 CI、Docker nightly 和 release workflow 使用统一检查。
-- 修正 Playwright 版本读取、锁文件安装和浏览器缓存键。
-- 增加工具注册完整性检查，验证路径、名称、分类、组件和翻译键。
-- 更新 README 中的检查入口和计划链接；发布说明在实际发布时按提交范围生成。
+| 范围 | 状态 | 记录 |
+|---|---|---|
+| 质量基线 | 已完成 | [归档质量基线](archive/02-quality-baseline.md) |
+| 安全随机源与敏感输入 | 已完成 | [归档安全输入计划](archive/03-security-inputs-plan.md) |
+| 内容、HTML 与部署边界 | 已完成 | [归档安全边界](archive/04-security-boundaries.md) |
+| PWA 应用壳与离线缓存 | 已完成 | [归档 PWA 计划](archive/05-pwa-cache-plan.md) |
+| Web/Electron 平台评估 | 已合并到性能与插件设计 | [归档原始评估](archive/06-web-electron-assessment.md) |
+| 依赖安全补丁 | 已完成 | [归档依赖补丁记录](archive/12-dependency-security-patches.md) |
 
-### 验收条件
+历史性能报告和构建报告保留在 `docs/`，只作为当时的测量证据。它们不构成新的开发计划。第一方内部扩展 SDK v0 与外部插件 v1 的职责不同，分别见 [第一方 SDK v0](extension-sdk-v0.md) 和 [08–11 接口说明](08-electron-plugin-package-format-v1.md)。
 
-- 应用类型检查无错误，lint 无 warning。
-- 461 个现有单元测试持续通过。
-- CI 中 Chromium、Firefox 和 WebKit 的 E2E 测试通过。
-- 生产构建无未解释的配置错误或依赖解析警告。
+## 长期边界
 
-## 历史阶段二：安全与数据边界（原始窗口 31–60 天）
+- 保持隐私优先和客户端优先部署；云端同步、账号和后端服务只有在出现明确需求后才作为独立能力评估。
+- 117 个现有工具作为兼容基线，不进行大规模删除或重命名。
+- 共享 Web/Electron 界面、工具注册、翻译和平台适配层；桌面原生能力只通过受限接口提供。
+- Ramag 继续独立维护 SSH/SFTP/PTY、隧道和 GPUI 原生能力；两个项目不建立运行时调用关系。
 
-首轮执行的 [随机源与敏感输入开发计划](archive/03-security-inputs-plan.md) 已归档，分别交付安全随机源和 JWT 签名器敏感输入内存保存。后续按归档的 [内容、HTML 与部署边界计划](archive/04-security-boundaries.md) 检查其他内容输入、HTML 渲染与部署响应头。
-
-### 工作内容
-
-- 引入统一 `RandomSource`，默认使用 Web Crypto；token、OTP secret、随机端口和 UUID 相关逻辑不得使用 `Math.random()`。
-- 为随机算法提供可注入测试源，保留可重复的单元测试。
-- 敏感工具默认只保存在内存；只有用户明确选择“记住此设备”时才写入 `sessionStorage` 或 `localStorage`。
-- 统一 HTML 输出处理，复用 DOMPurify，审查 `v-html`、`innerHTML`、打印窗口和文件下载路径。
-- 为 Nginx、Vercel 和 Netlify 增加 CSP、`X-Content-Type-Options`、`Referrer-Policy` 和 frame 防护。
-- 增加 XSS、敏感数据持久化和恶意输入回归测试。
-
-### 验收条件
-
-- 安全相关工具展示明确的本地数据策略。
-- 随机凭据全部通过 Web Crypto 生成。
-- 恶意 Markdown 或 HTML 不执行脚本。
-- 各部署入口返回预期安全响应头。
-
-## 历史阶段三：性能与 PWA（原始窗口 61–90 天）
-
-已按归档的 [应用壳与离线缓存计划](archive/05-pwa-cache-plan.md) 交付首片：应用壳预缓存、访问后的静态资源缓存、构建报告与 8 MiB 预缓存预算。300 KiB 首屏 JavaScript、500 KiB 可选入口静态依赖闭包的目标继续保留。随后已完成 Electron 三平台发布；剩余体积与运行时性能工作纳入 [新主线](07-performance-extensibility-design.md)。
-
-### 工作内容
-
-- 继续使用工具路由懒加载，并进一步拆分 Monaco、mathjs、Tiptap、PDF 和大型数据集。
-- 将 `oui-data` 等大型静态资源改为按需加载，避免首次访问或首次安装 PWA 时下载全部数据。
-- PWA 只预缓存应用壳和核心资源；工具 chunk 使用运行时缓存，实现访问过的工具离线可用。
-- 建立 bundle budget：首屏关键 JavaScript gzip 不超过 300 KB，单个可选工具 chunk gzip 不超过 500 KB，PWA 初始预缓存不超过 8 MB。
-- 在 CI 中上传构建体积报告，超过预算时阻止合并。
-
-### 验收条件
-
-- 桌面和移动端首屏加载时间下降。
-- 离线应用壳可以启动，已访问工具可以离线打开。
-- 构建体积超限能够在 CI 中被发现并阻止合并。
-
-## 原始长期方向与当前承接（历史参考）
-
-- 将工具元数据收敛为统一 `ToolDefinition`，增加 `sensitive`、`offline`、`requiresMedia` 和 `supportsShare` 等能力描述。
-- 从工具元数据生成路由、菜单、搜索索引、README 工具清单和翻译覆盖报告。
-- 先保证所有语言包的键集合一致，再逐步提升翻译质量；命令面板、错误提示和按钮文本全部纳入 i18n。
-- 为明确可公开的非敏感输入与设置评估分享 URL，增加收藏夹导入导出、最近使用工具、常用输入模板、批量处理和结果下载；凭据、文件内容等敏感数据不自动进入 URL。
-- 建立键盘导航、焦点恢复、移动端布局、屏幕阅读器标签和颜色对比验收。
-- 保持隐私优先、客户端本地运行的产品定位；云端同步、账号和后端服务只有在出现明确需求后再作为可选能力引入。
-- [Web 与 Electron 共用界面](06-web-electron-assessment.md) 已完成三平台打包、CI smoke 和公开发布；平台签名、安装升级、原生权限和工具兼容验收继续列为维护项。统一工具定义与插件接口按新计划 P3–P5 推进。
+新增工作必须先写清平台范围、权限、错误、取消、资源上限、验证范围和回滚边界。
 
 ## 测试与发布要求
 

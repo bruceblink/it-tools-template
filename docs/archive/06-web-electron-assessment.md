@@ -2,7 +2,7 @@
 
 评估日期：2026-10-15。实施开始：2026-10-16。评估基于本仓库当前 Vue 应用和本轮安全批次；下文保留原始技术评估，并在末尾记录当前 Electron 试点实现与验收状态。
 
-2026-10-17 状态复核：已完成 [v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6) 的 Web、Docker 和 Windows/Linux/macOS 桌面分发。打包与 smoke 成功不等于签名、公证、安装升级和真实设备权限验收完成。后续排期以 [性能、扩展接入与插件平台设计说明](07-performance-extensibility-design.md) 为准；下面的原始评估与试点记录用于说明演进过程。
+2026-10-17 状态复核：已完成 [v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6) 的 Web、Docker 和 Windows/Linux/macOS 桌面分发。打包与 smoke 成功不等于签名、公证、安装升级和真实设备权限验收完成。后续排期以 [性能、扩展接入与插件平台设计说明](../07-performance-extensibility-design.md) 为准；下面的原始评估与试点记录用于说明演进过程。
 
 ## 结论
 
@@ -20,11 +20,11 @@
 - 进程间通信（Inter-Process Communication / IPC）：调用有明确参数与返回值的原生操作；不提供任意 Shell、文件路径或网络代理。
 - 渐进式 Web 应用（Progressive Web App / PWA）：当前 Web 的安装与离线能力。桌面安装包的更新流程与 PWA Service Worker 更新分别管理。
 
-当前项目注册 117 个工具，使用 Vue、Naive UI、Pinia、UnoCSS 和 vue-i18n。[工具注册表](../src/tools/index.ts) 由 [路由](../src/router.ts) 直接复用，具体工具组件继续懒加载。共享界面初始化位于 [src/app.ts](../src/app.ts)；Web 入口注册 Service Worker，独立桌面渲染入口跳过该步骤。[依赖与脚本](../package.json) 现已包含 Electron 主进程、预加载层和 Windows NSIS 打包配置。
+当前项目注册 117 个工具，使用 Vue、Naive UI、Pinia、UnoCSS 和 vue-i18n。[工具注册表](../../src/tools/index.ts) 由 [路由](../../src/router.ts) 直接复用，具体工具组件继续懒加载。共享界面初始化位于 [src/app.ts](../../src/app.ts)；Web 入口注册 Service Worker，独立桌面渲染入口跳过该步骤。[依赖与脚本](../../package.json) 现已包含 Electron 主进程、预加载层和 Windows NSIS 打包配置。
 
 第一方界面代码以浏览器为运行目标。第三方依赖仍存在 Node 分支：生产构建保留 `mime-types` 的 `path`、`pdf-signature-reader` 的 `tls` 外部化提示，以及 `js-sha256` Node 分支的 `eval` 提示。这些提示不证明对应分支已执行或造成故障，但相关功能必须在双端实际验证。不能通过启用渲染器 Node 集成来替代兼容修复。
 
-原始 PWA 构建曾预缓存约 22.8 MiB；应用壳首片已降至约 1.17 MiB，当前预算与剩余优化见 [PWA 实施记录](archive/05-pwa-cache-plan.md)。这些数字都不是 Electron 安装包大小。桌面包还包含运行时；安装体积、启动时间和内存必须在试点中测量。
+原始 PWA 构建曾预缓存约 22.8 MiB；应用壳首片已降至约 1.17 MiB，当前预算与剩余优化见 [PWA 实施记录](05-pwa-cache-plan.md)。这些数字都不是 Electron 安装包大小。桌面包还包含运行时；安装体积、启动时间和内存必须在试点中测量。
 
 ## 共用范围与平台边界
 
@@ -45,19 +45,19 @@
 
 ## 打包与 API 兼容重点
 
-1. 当前 [Vite 基路径](../vite.config.ts) 和路由使用 `/`。建议评估标准、安全的 `app://bundle/` 自定义协议，处理本地资源和深层路由回退。自定义协议的安全上下文、源、CSP、资源路径和 Worker 必须实测；不能只更换 URL 就视为兼容。相对 `base` 与哈希路由可作为更简单的备选，但应使用同一份路由定义。
+1. 当前 [Vite 基路径](../../vite.config.ts) 和路由使用 `/`。建议评估标准、安全的 `app://bundle/` 自定义协议，处理本地资源和深层路由回退。自定义协议的安全上下文、源、CSP、资源路径和 Worker 必须实测；不能只更换 URL 就视为兼容。相对 `base` 与哈希路由可作为更简单的备选，但应使用同一份路由定义。
 2. 当前入口无条件注册 PWA。双端应拆分启动动作，桌面资源由安装包和桌面升级流程管理，避免 Service Worker 留下另一套版本缓存。
-3. [剪贴板](../src/composable/copy.ts)、文件选择、Blob 下载和文本处理可先保留浏览器实现，验证焦点、取消、覆盖保存和失败提示。原生保存接口需要限制参数、内容大小与可访问路径。
-4. [相机录制](../src/tools/camera-recorder/camera-recorder.vue) 使用摄像头、麦克风和 `MediaRecorder`。需验证允许、拒绝、设备切换、WebM 回放、导出与资源停止。
-5. [文本差异工具](../src/tools/text-diff/text-diff.vue) 的同源 Worker 需验证打包路径、消息处理和释放。Web Crypto 需要安全上下文，不能通过退回不安全随机源来解决协议配置问题。
-6. [ASCII 字体](../src/tools/ascii-text-drawer/ascii-text-drawer.vue) 来自 `unpkg.com`。这类资源必须使用明确的 HTTPS URL，不能依赖自定义协议下的 `//` 相对来源。完整离线试点还需随包提供所需字体，或明确在线功能范围。统计默认关闭；不增加绕过 CSP 或 CORS 的通用网络 IPC。
+3. [剪贴板](../../src/composable/copy.ts)、文件选择、Blob 下载和文本处理可先保留浏览器实现，验证焦点、取消、覆盖保存和失败提示。原生保存接口需要限制参数、内容大小与可访问路径。
+4. [相机录制](../../src/tools/camera-recorder/camera-recorder.vue) 使用摄像头、麦克风和 `MediaRecorder`。需验证允许、拒绝、设备切换、WebM 回放、导出与资源停止。
+5. [文本差异工具](../../src/tools/text-diff/text-diff.vue) 的同源 Worker 需验证打包路径、消息处理和释放。Web Crypto 需要安全上下文，不能通过退回不安全随机源来解决协议配置问题。
+6. [ASCII 字体](../../src/tools/ascii-text-drawer/ascii-text-drawer.vue) 来自 `unpkg.com`。这类资源必须使用明确的 HTTPS URL，不能依赖自定义协议下的 `//` 相对来源。完整离线试点还需随包提供所需字体，或明确在线功能范围。统计默认关闭；不增加绕过 CSP 或 CORS 的通用网络 IPC。
 7. 分别验证 MIME 推断、文件下载、PDF 签名读取与 BIP39 生成，确认第三方包使用正确的浏览器分支。修复或替换不兼容依赖，保留严格 CSP。
 
 Vite 的静态构建和资源基路径支持见 [生产构建文档](https://vite.dev/guide/build)。Electron 的自定义协议与权限注册见 [协议文档](https://www.electronjs.org/docs/latest/api/protocol/)。
 
 ## 桌面安全边界
 
-保留 [现有内容隐私与 HTML 净化边界](archive/04-security-boundaries.md)。用户输入的 Markdown、HTML、SVG 和文件仍属于不可信内容。渲染器关闭 Node 集成，启用上下文隔离和沙箱。主进程校验 IPC 发送方、参数和资源范围，不把系统能力直接交给页面。
+保留 [现有内容隐私与 HTML 净化边界](04-security-boundaries.md)。用户输入的 Markdown、HTML、SVG 和文件仍属于不可信内容。渲染器关闭 Node 集成，启用上下文隔离和沙箱。主进程校验 IPC 发送方、参数和资源范围，不把系统能力直接交给页面。
 
 只允许可信本地应用页面使用所需权限，其他权限默认拒绝。外链经协议和目标校验后交给默认浏览器。当前 Markdown 打印使用空白新窗口，必须与外链分别处理，验证打印内容净化、窗口隔离和生命周期；不能用一条通用“允许新窗口”规则处理全部场景。
 
