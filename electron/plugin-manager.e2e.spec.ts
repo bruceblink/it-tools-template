@@ -134,9 +134,30 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!routePluginWindow) {
     throw new Error('The plugin window was not created from the contribution route.');
   }
-  await expect.poll(async () => routePluginWindow.evaluate(() => (
-    (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
-  ))).toBe('org.it-tools.capability-demo/capability-demo');
+  await expect.poll(async () => routePluginWindow.evaluate(() => {
+    const api = (globalThis as unknown as {
+      itTools?: {
+        toolId?: string;
+        tool?: {
+          id?: string;
+          title?: string;
+          dataProcessing?: string;
+          offline?: string;
+          capabilities?: readonly string[];
+        };
+      };
+    }).itTools;
+    return { toolId: api?.toolId, tool: api?.tool };
+  })).toMatchObject({
+    toolId: 'org.it-tools.capability-demo/capability-demo',
+    tool: {
+      id: 'org.it-tools.capability-demo/capability-demo',
+      title: 'Capability demo',
+      dataProcessing: 'local-data',
+      offline: 'available',
+      capabilities: ['runtime.info'],
+    },
+  });
   await expect(routePluginWindow.locator('#runtime-proof')).toHaveText('Available');
   await routePluginWindow.locator('#clipboard-text').fill('least privilege check');
   await routePluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();

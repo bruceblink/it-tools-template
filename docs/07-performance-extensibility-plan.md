@@ -760,6 +760,14 @@ SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字
 
 Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、874 项测试（18 项跳过），并通过类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。插件管理器 Electron E2E 通过 1 项，覆盖贡献崩溃后的同插件其他工具页面恢复提示。Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+### 2026-10-27：插件工具贡献上下文
+
+插件 API v1 在保留兼容字段 `toolId` 的同时新增只读 `window.itTools.tool`。宿主从签名清单注入当前贡献的 ID、标题、说明、关键词、数据处理策略、离线策略和声明能力；对象及其数组在插件窗口中冻结。整包启动没有贡献上下文时该字段为 `undefined`，贡献元数据不会直接授予能力，实际授权仍由 `permissions.grantedCapabilities` 和能力代理决定。
+
+SDK 类型、API 单测、生命周期注册和插件管理器 Electron E2E 已覆盖该上下文。插件仍不能修改签名清单或通过上下文绕过能力校验。
+
+Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、875 项测试（18 个跳过），并通过类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查；插件管理器 Electron E2E 通过 1 项。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。

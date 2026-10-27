@@ -3,6 +3,11 @@ import type {
   PluginHostCapability,
 } from './plugin-capabilities';
 import type { PluginApiV1Version } from './plugin-api-version';
+import type {
+  PluginToolCapability,
+  PluginToolDataProcessing,
+  PluginToolOfflineSupport,
+} from './it-tools-plugin-package';
 
 export interface PluginRuntimeInfo {
   readonly platform: string;
@@ -58,11 +63,24 @@ export interface PluginPermissionSnapshot {
   readonly grantedCapabilities: readonly PluginHostCapability[];
 }
 
+/** Signed metadata for the tool contribution that selected this plugin window. */
+export interface PluginToolContext {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly keywords: readonly string[];
+  readonly dataProcessing: PluginToolDataProcessing;
+  readonly offline: PluginToolOfflineSupport;
+  readonly capabilities: readonly PluginToolCapability[];
+}
+
 export interface ITToolsPluginApiV1 {
   readonly apiVersion: PluginApiV1Version;
   readonly hostApiVersion: PluginApiV1Version;
   /** The host-verified contribution ID selected when this plugin window was opened. */
   readonly toolId: string | undefined;
+  /** The host-verified contribution metadata selected when this plugin window was opened. */
+  readonly tool: PluginToolContext | undefined;
   /** Capability metadata only; this object never grants or revokes a capability. */
   readonly permissions: PluginPermissionSnapshot;
   readonly capabilities: {

@@ -18,6 +18,7 @@ test('plugin SDK declarations are self-contained and expose the current capabili
 
   assert.match(runtimeTypes, /from '\.\/plugin-capabilities';/);
   assert.match(runtimeTypes, /from '\.\/plugin-api-version';/);
+  assert.match(runtimeTypes, /from '\.\/it-tools-plugin-package';/);
   assert.match(packageTypes, /from '\.\/plugin-capabilities';/);
   assert.doesNotMatch(runtimeTypes, /src\/shared\/plugin-capabilities/);
   assert.doesNotMatch(runtimeTypes, /src\/shared\/plugin-api-version/);
@@ -28,6 +29,9 @@ test('plugin SDK declarations are self-contained and expose the current capabili
   assert.match(versionTypes, new RegExp(`export type PluginApiV1Version = '${version}';`));
   assert.match(runtimeTypes, /apiVersion: PluginApiV1Version;/);
   assert.match(runtimeTypes, /hostApiVersion: PluginApiV1Version;/);
+  assert.match(runtimeTypes, /interface PluginToolContext/);
+  assert.match(runtimeTypes, /readonly tool: PluginToolContext \| undefined;/);
+  assert.match(packageTypes, /interface PluginToolContribution/);
   const manifest = JSON.parse(sampleManifest);
   assert.equal(manifest.apiVersion.minInclusive, version);
 

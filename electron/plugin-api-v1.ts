@@ -4,6 +4,7 @@ import type {
   PluginCapabilityId,
   PluginHostCapability,
 } from '../src/shared/plugin-capabilities';
+import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../src/tools/tools.types';
 
 export const pluginRendererApiVersion = pluginApiV1Version;
 export const pluginHostApiVersion = pluginApiV1Version;
@@ -13,6 +14,18 @@ export interface PluginApiV1ScriptOptions {
   requestedCapabilities?: readonly string[];
   supportedCapabilities?: readonly string[];
   grantedCapabilities?: readonly string[];
+  tool?: PluginApiV1ToolContext;
+}
+
+/** Signed contribution metadata selected by the host for the current plugin window. */
+export interface PluginApiV1ToolContext {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly keywords: readonly string[];
+  readonly dataProcessing: ToolDataProcessing;
+  readonly offline: ToolOfflineSupport;
+  readonly capabilities: readonly ToolCapability[];
 }
 
 /** Install the stable renderer client without exposing preload or Node APIs. */
@@ -28,6 +41,17 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
     supportedCapabilities,
     grantedCapabilities,
   };
+  const toolContext = options.tool === undefined
+    ? undefined
+    : {
+        id: options.tool.id,
+        title: options.tool.title,
+        description: options.tool.description,
+        keywords: [...options.tool.keywords],
+        dataProcessing: options.tool.dataProcessing,
+        offline: options.tool.offline,
+        capabilities: [...options.tool.capabilities],
+      };
 
   return `(() => {
   const globalName = 'itTools';
@@ -56,6 +80,21 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
     catch {
       return undefined;
     }
+  }
+
+  function freezeToolContext(value) {
+    if (!value) {
+      return undefined;
+    }
+    return Object.freeze({
+      id: value.id,
+      title: value.title,
+      description: value.description,
+      keywords: Object.freeze([...value.keywords]),
+      dataProcessing: value.dataProcessing,
+      offline: value.offline,
+      capabilities: Object.freeze([...value.capabilities]),
+    });
   }
 
   class PluginApiError extends Error {
@@ -115,6 +154,7 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
     supportedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.supportedCapabilities)}),
     grantedCapabilities: Object.freeze(${JSON.stringify(permissionSnapshot.grantedCapabilities)}),
   });
+  const tool = freezeToolContext(${JSON.stringify(toolContext)});
   const capabilities = Object.freeze({
     runtime: Object.freeze({
       getInfo: () => request('runtime.info', 'read', {}),
@@ -161,7 +201,8 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
   const api = Object.freeze({
     apiVersion: '${pluginRendererApiVersion}',
     hostApiVersion: '${pluginHostApiVersion}',
-    toolId: getToolId(),
+    toolId: tool?.id ?? getToolId(),
+    tool,
     permissions,
     capabilities,
     PluginApiError,

@@ -48,6 +48,50 @@ describe('plugin renderer API v1', () => {
     expect(api.toolId).toBe('org.example.plugin/example-tool');
   });
 
+  it('exposes immutable signed tool metadata without changing capability grants', () => {
+    const context = { fetch: vi.fn() };
+    runInNewContext(getPluginApiV1Script({
+      tool: {
+        id: 'org.example.plugin/example-tool',
+        title: 'Example tool',
+        description: 'Signed tool metadata.',
+        keywords: ['example', 'plugin'],
+        dataProcessing: 'local-data',
+        offline: 'available',
+        capabilities: ['runtime.info'],
+      },
+    }), context);
+
+    const api = (context as unknown as { itTools: {
+      toolId?: string;
+      tool?: {
+        id: string;
+        title: string;
+        description: string;
+        keywords: readonly string[];
+        dataProcessing: string;
+        offline: string;
+        capabilities: readonly string[];
+      };
+      permissions: { grantedCapabilities: readonly string[] };
+    } }).itTools;
+    expect(api.toolId).toBe('org.example.plugin/example-tool');
+    expect(api.tool).toEqual({
+      id: 'org.example.plugin/example-tool',
+      title: 'Example tool',
+      description: 'Signed tool metadata.',
+      keywords: ['example', 'plugin'],
+      dataProcessing: 'local-data',
+      offline: 'available',
+      capabilities: ['runtime.info'],
+    });
+    expect(Object.isFrozen(api.tool)).toBe(true);
+    expect(Object.isFrozen(api.tool?.keywords)).toBe(true);
+    expect(Object.isFrozen(api.tool?.capabilities)).toBe(true);
+    expect(api.permissions.grantedCapabilities).toEqual([]);
+    expect(context.fetch).not.toHaveBeenCalled();
+  });
+
   it('exposes an immutable permission snapshot without escalating grants', () => {
     const context = { fetch: vi.fn() };
     runInNewContext(getPluginApiV1Script({

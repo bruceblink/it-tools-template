@@ -18,6 +18,7 @@ import type {
   PluginCapabilityExecutor,
 } from './plugin-capability-broker';
 import { getPluginApiV1Script } from './plugin-api-v1';
+import type { PluginApiV1ToolContext } from './plugin-api-v1';
 import { getPluginWorkerGuardScript, injectPluginWorkerGuard } from './plugin-worker-guard';
 import { resolveRendererFile } from './security';
 
@@ -33,6 +34,7 @@ interface PluginSessionPolicy {
   packageRoot: string;
   declaredCapabilities: readonly string[];
   grantedCapabilities: readonly string[];
+  toolContext?: PluginApiV1ToolContext;
   capabilityBroker: PluginCapabilityBroker | null;
   activeContentsId: number | null;
 }
@@ -47,6 +49,7 @@ export interface PluginSandboxRegistration {
   contributionId?: string;
   requestedCapabilities?: readonly string[];
   grantedCapabilities?: readonly string[];
+  toolContext?: PluginApiV1ToolContext;
   executeCapability?: PluginCapabilityExecutor;
 }
 
@@ -256,6 +259,7 @@ async function installPluginSessionPolicy(
     configuredPolicy.capabilityBroker?.revoke();
     configuredPolicy.declaredCapabilities = [...declaredCapabilities];
     configuredPolicy.grantedCapabilities = [...grantedCapabilities];
+    configuredPolicy.toolContext = registration.toolContext;
     configuredPolicy.capabilityBroker = capabilityBroker;
     return configuredPolicy;
   }
@@ -264,6 +268,7 @@ async function installPluginSessionPolicy(
     packageRoot: registration.packageRoot,
     declaredCapabilities: [...declaredCapabilities],
     grantedCapabilities: [...grantedCapabilities],
+    toolContext: registration.toolContext,
     capabilityBroker,
     activeContentsId: null,
   };
@@ -290,6 +295,7 @@ async function installPluginSessionPolicy(
         requestedCapabilities: policy.declaredCapabilities,
         supportedCapabilities: pluginHostCapabilities,
         grantedCapabilities: policy.grantedCapabilities,
+        tool: policy.toolContext,
       })}`, 200, {
         'Content-Type': 'text/javascript; charset=utf-8',
       });

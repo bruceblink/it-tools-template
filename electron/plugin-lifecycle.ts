@@ -21,6 +21,7 @@ import {
 import type {
   PluginSandboxRegistration,
 } from './plugin-sandbox';
+import type { PluginApiV1ToolContext } from './plugin-api-v1';
 import {
   readInstalledPluginManifest,
   verifyInstalledPluginPackage,
@@ -356,6 +357,7 @@ export class PluginLifecycleManager {
       packageRoot,
       entrypoint: manifest.entrypoint,
       contributionId,
+      toolContext: getPluginToolContext(manifest, contributionId),
       requestedCapabilities: manifest.requestedCapabilities,
       grantedCapabilities,
       executeCapability: call => this.options.executeCapability(manifest, call),
@@ -657,6 +659,28 @@ function validateContribution(
     );
   }
   return contributionId;
+}
+
+function getPluginToolContext(
+  manifest: PluginPackageManifest,
+  contributionId: string | undefined,
+): PluginApiV1ToolContext | undefined {
+  if (contributionId === undefined) {
+    return undefined;
+  }
+  const contribution = manifest.contributions?.tools.find(tool => tool.id === contributionId);
+  if (!contribution) {
+    return undefined;
+  }
+  return {
+    id: contribution.id,
+    title: contribution.title,
+    description: contribution.description,
+    keywords: [...contribution.keywords],
+    dataProcessing: contribution.dataProcessing ?? 'unspecified',
+    offline: contribution.offline ?? 'unknown',
+    capabilities: [...(contribution.capabilities ?? [])],
+  };
 }
 
 function completeResponsivenessProbe(active: ActivePlugin, probeTimeout: ReturnType<typeof setTimeout>): void {
