@@ -92,6 +92,8 @@ export interface PluginLifecycleToolContribution extends PluginPackageToolContri
   dataProcessing: NonNullable<PluginPackageToolContribution['dataProcessing']>;
   offline: NonNullable<PluginPackageToolContribution['offline']>;
   capabilities: NonNullable<PluginPackageToolContribution['capabilities']>;
+  /** Runtime failure recorded for this contribution only. */
+  errorCode?: PluginRuntimeFailureCode;
 }
 
 export interface PluginLifecycleOptions {
@@ -248,7 +250,7 @@ export class PluginLifecycleManager {
       }
       try {
         await this.startVerifiedPlugin(pluginId, version, packageRoot, manifest, grants, selectedContributionId);
-        this.runtimeFailures.delete(getPluginPackageKey(pluginId, version));
+        this.runtimeFailures.delete(getPluginFailureKey(pluginId, version, selectedContributionId));
         this.notifyStateChange(pluginId);
       }
       catch (activationError) {
@@ -292,7 +294,7 @@ export class PluginLifecycleManager {
         return false;
       }
       await this.destroyActivePlugin(active);
-      this.runtimeFailures.delete(getPluginPackageKey(active.pluginId, active.version));
+      this.runtimeFailures.delete(getPluginFailureKey(active.pluginId, active.version, active.contributionId));
       this.notifyStateChange(active.pluginId);
       return true;
     });
@@ -303,7 +305,7 @@ export class PluginLifecycleManager {
       const active = [...this.activePlugins.values()].filter(plugin => plugin.signingKeyId === keyId);
       for (const plugin of active) {
         await this.destroyActivePlugin(plugin);
-        this.runtimeFailures.delete(getPluginPackageKey(plugin.pluginId, plugin.version));
+        this.runtimeFailures.delete(getPluginFailureKey(plugin.pluginId, plugin.version, plugin.contributionId));
         this.notifyStateChange(plugin.pluginId);
       }
       return active.length;
@@ -324,7 +326,7 @@ export class PluginLifecycleManager {
         throw new PluginPackageError('unsafe-archive-entry', 'The plugin uninstall path changed during the operation.');
       }
       await rm(currentPackageRoot, { recursive: true, force: false });
-      this.runtimeFailures.delete(getPluginPackageKey(pluginId, version));
+      this.clearRuntimeFailures(pluginId, version);
       this.notifyStateChange(pluginId);
       const pluginRoot = dirname(currentPackageRoot);
       try {
@@ -442,7 +444,7 @@ export class PluginLifecycleManager {
         this.activePlugins.delete(pluginId);
       }
       if (failureCode !== undefined) {
-        this.runtimeFailures.set(getPluginPackageKey(active.pluginId, active.version), {
+        this.runtimeFailures.set(getPluginFailureKey(active.pluginId, active.version, active.contributionId), {
           code: failureCode,
         });
         this.notifyStateChange(active.pluginId);
@@ -542,7 +544,7 @@ export class PluginLifecycleManager {
   private snapshotFromManifest(manifest: PluginPackageManifest): PluginLifecycleSnapshot {
     const active = this.activePlugins.get(manifest.id);
     const isActive = active?.version === manifest.version && !active.window.isDestroyed();
-    const runtimeFailure = this.runtimeFailures.get(getPluginPackageKey(manifest.id, manifest.version));
+    const runtimeFailure = this.runtimeFailures.get(getPluginFailureKey(manifest.id, manifest.version));
     return {
       pluginId: manifest.id,
       name: manifest.name,
@@ -550,13 +552,17 @@ export class PluginLifecycleManager {
       requestedCapabilities: [...manifest.requestedCapabilities],
       supportedCapabilities: [...pluginLifecycleCapabilities],
       contributions: {
-        tools: (manifest.contributions?.tools ?? []).map(tool => ({
-          ...tool,
-          dataProcessing: tool.dataProcessing ?? 'unspecified',
-          offline: tool.offline ?? 'unknown',
-          capabilities: [...(tool.capabilities ?? [])],
-          route: getExternalPluginToolRoute(manifest.id, manifest.version, tool.id),
-        })),
+        tools: (manifest.contributions?.tools ?? []).map((tool) => {
+          const runtimeFailure = this.runtimeFailures.get(getPluginFailureKey(manifest.id, manifest.version, tool.id));
+          return {
+            ...tool,
+            dataProcessing: tool.dataProcessing ?? 'unspecified',
+            offline: tool.offline ?? 'unknown',
+            capabilities: [...(tool.capabilities ?? [])],
+            route: getExternalPluginToolRoute(manifest.id, manifest.version, tool.id),
+            ...(runtimeFailure ? { errorCode: runtimeFailure.code } : {}),
+          };
+        }),
       },
       grantedCapabilities: isActive ? [...active.grantedCapabilities] : [],
       status: isActive ? 'active' : 'installed',
@@ -601,6 +607,15 @@ export class PluginLifecycleManager {
       }
     }
     return count;
+  }
+
+  private clearRuntimeFailures(pluginId: string, version: string): void {
+    const prefix = `${getPluginPackageKey(pluginId, version)}\u0000`;
+    for (const key of this.runtimeFailures.keys()) {
+      if (key.startsWith(prefix)) {
+        this.runtimeFailures.delete(key);
+      }
+    }
   }
 
   private runExclusive<T>(operation: () => Promise<T>): Promise<T> {
@@ -659,6 +674,10 @@ function sameItems(left: readonly string[], right: readonly string[]): boolean {
 
 function getPluginPackageKey(pluginId: string, version: string): string {
   return `${pluginId}\u0000${version}`;
+}
+
+function getPluginFailureKey(pluginId: string, version: string, contributionId?: string): string {
+  return `${getPluginPackageKey(pluginId, version)}\u0000${contributionId ?? ''}`;
 }
 
 function pushSnapshot(snapshots: PluginLifecycleSnapshot[], snapshot: PluginLifecycleSnapshot): void {

@@ -81,7 +81,7 @@ const anotherContributionActive = computed(() => (
   plugin.value?.status === 'active' && !currentContributionActive.value
 ));
 const runtimeError = computed(() => {
-  switch (plugin.value?.errorCode) {
+  switch (contribution.value?.errorCode ?? plugin.value?.errorCode) {
     case 'renderer-crashed': return text('rendererCrashed');
     case 'renderer-unresponsive': return text('rendererUnresponsive');
     case 'window-closed': return text('windowClosed');

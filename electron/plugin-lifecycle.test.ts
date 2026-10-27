@@ -134,20 +134,58 @@ describe('Electron plugin lifecycle manager', () => {
     windows[0]?.destroy();
 
     expect(stateChanges.at(-1)).toBe(pluginId);
-    expect((await manager.listInstalled())[0]).toMatchObject({
+    const failed = (await manager.listInstalled())[0];
+    expect(failed).toMatchObject({
       status: 'installed',
-      errorCode: 'window-closed',
+      contributions: {
+        tools: expect.arrayContaining([
+          expect.objectContaining({ id: `${pluginId}/lifecycle-tool`, errorCode: 'window-closed' }),
+        ]),
+      },
     });
+    expect(failed?.errorCode).toBeUndefined();
+    expect(failed?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)).toBeDefined();
+    expect(failed?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)?.errorCode).toBeUndefined();
 
     await manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`);
     expect((await manager.listInstalled())[0]).toMatchObject({
       status: 'active',
       activeContributionId: `${pluginId}/lifecycle-tool`,
     });
+    expect((await manager.listInstalled())[0]?.contributions.tools.find(
+      tool => tool.id === `${pluginId}/lifecycle-tool`,
+    )?.errorCode).toBeUndefined();
     expect((await manager.listInstalled())[0]?.errorCode).toBeUndefined();
 
     await manager.disable(pluginId);
     expect((await manager.listInstalled())[0]?.errorCode).toBeUndefined();
+  });
+
+  it('keeps runtime failures isolated between tool contributions', async () => {
+    const { root, manager, windows } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', [], `${pluginId}/lifecycle-tool`);
+
+    windows[0]?.destroy();
+
+    const failed = (await manager.listInstalled())[0];
+    expect(failed?.contributions.tools.find(tool => tool.id === `${pluginId}/lifecycle-tool`)).toMatchObject({
+      errorCode: 'window-closed',
+    });
+    expect(failed?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)).toBeDefined();
+    expect(failed?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)?.errorCode).toBeUndefined();
+
+    await manager.activate(pluginId, '1.0.0', [], `${pluginId}/recovery-tool`);
+    const recovered = (await manager.listInstalled())[0];
+    expect(recovered).toMatchObject({
+      status: 'active',
+      activeContributionId: `${pluginId}/recovery-tool`,
+    });
+    expect(recovered?.contributions.tools.find(tool => tool.id === `${pluginId}/lifecycle-tool`)).toMatchObject({
+      errorCode: 'window-closed',
+    });
+    expect(recovered?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)).toBeDefined();
+    expect(recovered?.contributions.tools.find(tool => tool.id === `${pluginId}/recovery-tool`)?.errorCode).toBeUndefined();
   });
 
   it('disables every active plugin that uses a revoked signing key', async () => {
@@ -369,6 +407,11 @@ function makeSignedArchive(version: string, requestedCapabilities: string[], id:
         title: 'Lifecycle tool',
         description: 'Lifecycle fixture tool.',
         keywords: ['lifecycle'],
+      }, {
+        id: `${id}/recovery-tool`,
+        title: 'Recovery tool',
+        description: 'Recovery fixture tool.',
+        keywords: ['recovery'],
       }],
     },
     files,

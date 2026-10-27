@@ -590,6 +590,9 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await page.goto('app://bundle/extensions/org.it-tools.capability-demo/4.0.0/capability-demo');
   await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run plugin' })).toBeVisible();
+  await page.goto('app://bundle/extensions/org.it-tools.capability-demo/4.0.0/recovery-demo');
+  await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Run plugin' })).toBeVisible();
   await page.goto('app://bundle/settings');
   await page.reload();
   await expect(page.getByTestId(`plugin-package-${pluginId}-4.0.0`).getByText('Installed')).toBeVisible();

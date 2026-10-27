@@ -95,6 +95,8 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 
 2026-10-27 统一插件 API 版本来源：Electron 宿主、独立 SDK 类型和样例清单通过静态回归保持 `1.3.0` 兼容版本一致。Linux/macOS 运行时和公开第三方插件分发仍待验收。
 
+2026-10-27 细化工具贡献级运行时故障：插件窗口的崩溃、无响应和意外关闭按贡献 ID记录；同一插件的其他工具不会继承该故障，重新运行当前贡献只清除当前记录。Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、874 项测试（18 个跳过），插件管理器 Electron E2E 通过 1 项。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 2026-10-27 优化 Math Evaluator Worker：提交 `6692f7f` 只导入实际需要的 Math.js ESM 工厂，Web Worker 从父提交的 681,908 字节降至 278,770 字节，Electron Worker 从 1,705,471 字节降至 726,576 字节；同环境对照分别减少 59.12% 和 57.40%。服务单测 8 项和 Chromium E2E 1 项通过；`pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 个跳过）。Web Worker 已低于 500 KiB 目标，Electron Worker 仍待继续拆分；Linux/macOS 和真实窗口运行时证据仍待验收。
 
 2026-10-27 启用 Electron renderer 生产压缩：使用 Vite 8 Oxc 压缩后，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，完整 Math.js 回退块从 975,994 字节降至 400,040 字节；Electron Worker 达到 500 KiB 目标。Electron smoke 与插件管理器 E2E 共 21 项通过；Linux/macOS 构建和真实窗口性能仍待验收。

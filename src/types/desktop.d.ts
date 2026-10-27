@@ -78,6 +78,8 @@ declare global {
     dataProcessing: ToolDataProcessing;
     offline: ToolOfflineSupport;
     capabilities: readonly ToolCapability[];
+    /** Runtime failure recorded for this tool contribution only. */
+    errorCode?: 'renderer-crashed' | 'renderer-unresponsive' | 'window-closed';
   }
 
   interface DesktopPluginSignerSnapshot {

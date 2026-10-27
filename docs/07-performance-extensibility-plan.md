@@ -752,6 +752,14 @@ SDK 类型、插件 API 单测和插件管理器 Electron E2E 已覆盖版本字
 
 新增 `src/shared/plugin-api-version.ts` 作为 Electron 插件 API v1 的宿主版本来源。Electron 注入脚本不再重复写入版本字面量；独立 SDK 增加同目录的版本类型声明，静态回归会核对宿主版本、SDK 类型和样例清单的 `minInclusive`。版本升级仍需同时更新兼容范围和接口文档，不会改变插件能力授权边界。
 
+### 2026-10-27：工具贡献级运行时故障隔离
+
+生命周期服务把 `renderer-crashed`、`renderer-unresponsive` 和 `window-closed` 记录到具体的工具贡献 ID。插件快照仍保留没有贡献上下文的插件级故障；有贡献上下文的故障只显示在对应工具贡献和工具页面。重新运行同一个贡献只清除它自己的故障记录，运行同一插件的其他贡献不会清除或继承该记录；卸载版本时清理该版本的全部运行时故障。
+
+这样，一个外部工具的隔离窗口失败不会把同一插件的其他工具标记为失败。插件管理器显示贡献级恢复提示，工具页面只显示当前贡献的恢复操作。能力授权、版本回滚和停用流程保持原有边界。
+
+Windows 本机完整 `pnpm check` 通过 140 个测试文件（2 个跳过）、874 项测试（18 项跳过），并通过类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。插件管理器 Electron E2E 通过 1 项，覆盖贡献崩溃后的同插件其他工具页面恢复提示。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
 ### 2026-10-27：Electron renderer 生产压缩
 
 `electron-vite` 默认关闭 renderer 压缩，导致 Electron Worker 的可交付文件保留未压缩代码。现在 Electron renderer 使用 Vite 8 的 Oxc 生产压缩；开发模式保持原有调试输出。相同源码和 Vite 8.3.5 环境下，Math Evaluator Worker 从 726,576 字节降至 278,770 字节，减少 447,806 字节（61.63%）；按需加载的完整 Math.js 回退块从 975,994 字节降至 400,040 字节，减少 575,954 字节（59.01%）。Electron Worker 现在与 Web Worker 一样低于 500 KiB 目标。

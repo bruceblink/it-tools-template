@@ -559,6 +559,9 @@ onUnmounted(() => {
                   <n-text strong>{{ tool.title }}</n-text>
                 </router-link>
                 <n-text depth="3">{{ tool.description }}</n-text>
+                <n-alert v-if="tool.errorCode" type="warning" :show-icon="false">
+                  {{ displayPluginError(tool.errorCode) }}
+                </n-alert>
               </div>
             </div>
             <n-alert v-if="plugin.status === 'invalid'" type="warning" :show-icon="false" mt-3>
