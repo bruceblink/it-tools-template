@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { NAlert, NButton, NCard, NCheckbox, NEmpty, NFormItem, NInput, NSpin, NTag, NText } from 'naive-ui';
+import { createQueuedRefresh } from '@/tools/queued-refresh';
 
 const { locale } = useI18n();
 const language = computed(() => locale.value === 'zh' ? 'zh' : 'en');
@@ -242,7 +243,7 @@ function displayPluginError(error: string): string {
   return `${text('operationFailed')} (${error})`;
 }
 
-async function refresh(): Promise<void> {
+const refresh = createQueuedRefresh(async () => {
   const bridge = getPluginBridge();
   if (!bridge) {
     return;
@@ -286,7 +287,7 @@ async function refresh(): Promise<void> {
   finally {
     isLoading.value = false;
   }
-}
+});
 
 async function installPlugin(): Promise<void> {
   const bridge = getPluginBridge();
