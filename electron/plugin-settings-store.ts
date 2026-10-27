@@ -4,9 +4,8 @@ import { dirname, resolve } from 'node:path';
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const settingKeyPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
-const maximumStoredPlugins = 128;
-
 export const pluginSettingsLimits = Object.freeze({
+  maximumStoredPlugins: 128,
   maximumKeyCharacters: 64,
   maximumStringCharacters: 4_096,
   maximumValuesPerPlugin: 128,
@@ -117,6 +116,9 @@ export class PluginSettingsStore {
 
       const nextValues = new Map(this.values);
       nextValues.set(pluginId, nextPluginValues);
+      if (nextValues.size > pluginSettingsLimits.maximumStoredPlugins) {
+        throw new PluginSettingsStoreError('resource-limit', 'The plugin settings store has too many plugins.');
+      }
       await this.writeState(nextValues);
       this.replaceValues(nextValues);
       return { written: true } as const;
@@ -162,6 +164,9 @@ export class PluginSettingsStore {
   }
 
   private async writeState(values: ReadonlyMap<string, ReadonlyMap<string, PluginSettingValue>>): Promise<void> {
+    if (values.size > pluginSettingsLimits.maximumStoredPlugins) {
+      throw new PluginSettingsStoreError('resource-limit', 'The plugin settings store has too many plugins.');
+    }
     const existing = await lstat(this.statePath).catch((error: unknown) => {
       if (isNodeError(error) && error.code === 'ENOENT') {
         return undefined;
@@ -256,7 +261,7 @@ function validateStoredState(value: unknown): StoredSettingsState {
     throw new PluginSettingsStoreError('invalid-store', 'The plugin settings store has an unsupported format.');
   }
   const pluginIds = Object.keys(value.plugins);
-  if (pluginIds.length > maximumStoredPlugins) {
+  if (pluginIds.length > pluginSettingsLimits.maximumStoredPlugins) {
     throw new PluginSettingsStoreError('resource-limit', 'The plugin settings store has too many plugins.');
   }
   const plugins: Record<string, Record<string, PluginSettingValue>> = {};

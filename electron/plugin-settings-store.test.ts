@@ -70,6 +70,32 @@ describe('PluginSettingsStore', () => {
     }
   });
 
+  it('rejects a new plugin namespace at the store limit without changing persisted state', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-settings-'));
+    try {
+      const statePath = join(root, 'settings.json');
+      const store = new PluginSettingsStore(statePath);
+      await store.load();
+      for (let index = 0; index < pluginSettingsLimits.maximumStoredPlugins; index += 1) {
+        await store.write(`org.example.plugin-${index}`, 'enabled', index % 2 === 0);
+      }
+
+      const before = await readFile(statePath, 'utf8');
+      await expect(store.write('org.example.plugin-overflow', 'enabled', true))
+        .rejects.toMatchObject({ code: 'resource-limit' });
+      await expect(readFile(statePath, 'utf8')).resolves.toBe(before);
+      await expect(store.read('org.example.plugin-127', 'enabled')).resolves.toBe(false);
+
+      const reloaded = new PluginSettingsStore(statePath);
+      await reloaded.load();
+      await expect(reloaded.read('org.example.plugin-127', 'enabled')).resolves.toBe(false);
+      await expect(reloaded.read('org.example.plugin-overflow', 'enabled')).resolves.toBeUndefined();
+    }
+    finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it('does not accept a corrupted store', async () => {
     const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-settings-'));
     try {
