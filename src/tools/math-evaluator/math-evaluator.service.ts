@@ -43,7 +43,7 @@ function parseWithLimits(expression: string, parseExpression: (value: string) =>
 
 function needsFullMathJs(error: unknown): boolean {
   if (!(error instanceof Error)) { return false; }
-  return /Undefined (?:function|symbol)|missing in provided namespace/.test(error.message);
+  return /Undefined (?:function|symbol)|missing in provided namespace|actual: Complex/.test(error.message);
 }
 
 function nodeShape(node: unknown): MathNodeShape {
