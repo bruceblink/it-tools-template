@@ -5,6 +5,7 @@ import { Puzzle } from '@vicons/tabler';
 import type { MaybeRef, Ref } from 'vue';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';
 import { projectExternalPluginTools as projectExternalPluginToolRegistry } from './external-plugin-tools';
+import { createQueuedRefresh } from './queued-refresh';
 import { toolsWithCategory } from './index';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
@@ -19,30 +20,20 @@ export const useToolStore = defineStore('tools', () => {
   const favoriteToolsName = useStorage('favoriteToolsName', []) as Ref<string[]>;
   const { t } = useI18n();
   const externalPluginTools = shallowRef<ToolWithCategory[]>([]);
-  let externalPluginRefresh: Promise<void> | undefined;
-
-  async function refreshExternalPluginTools(): Promise<void> {
+  const refreshExternalPluginTools = createQueuedRefresh(async () => {
     const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
     if (!bridge?.listPlugins) {
       externalPluginTools.value = [];
       return;
     }
-    if (externalPluginRefresh) {
-      return externalPluginRefresh;
+    try {
+      const result = await bridge.listPlugins();
+      externalPluginTools.value = result.ok ? projectDesktopExternalPluginTools(result.value) : [];
     }
-
-    externalPluginRefresh = bridge.listPlugins()
-      .then((result) => {
-        externalPluginTools.value = result.ok ? projectDesktopExternalPluginTools(result.value) : [];
-      })
-      .catch(() => {
-        externalPluginTools.value = [];
-      })
-      .finally(() => {
-        externalPluginRefresh = undefined;
-      });
-    return externalPluginRefresh;
-  }
+    catch {
+      externalPluginTools.value = [];
+    }
+  });
 
   const disposePluginStateChange = typeof window === 'undefined'
     ? undefined
