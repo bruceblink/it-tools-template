@@ -3,6 +3,7 @@ import { NAlert, NButton, NCard, NEmpty, NSpin, NTag, NText } from 'naive-ui';
 import { useHead } from '@unhead/vue';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
+import { createQueuedRefresh } from '@/tools/queued-refresh';
 
 const route = useRoute();
 const { locale } = useI18n();
@@ -109,7 +110,7 @@ function getPluginBridge(): ExternalPluginBridge | undefined {
   };
 }
 
-async function loadContribution(): Promise<void> {
+const loadContribution = createQueuedRefresh(async () => {
   isLoading.value = true;
   loadError.value = undefined;
   plugin.value = undefined;
@@ -142,7 +143,7 @@ async function loadContribution(): Promise<void> {
   finally {
     isLoading.value = false;
   }
-}
+});
 
 async function runPlugin(): Promise<void> {
   const bridge = getPluginBridge();
