@@ -7,7 +7,6 @@ import type { PluginSettingValue } from './plugin-settings-store';
 import {
   isSupportedPluginCapability,
 } from './plugin-capabilities';
-import type { PluginCapability } from './plugin-capabilities';
 
 export {
   filterSupportedPluginCapabilities,
