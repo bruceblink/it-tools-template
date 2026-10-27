@@ -127,6 +127,8 @@ jobs:
 
   docker-release:
     runs-on: ubuntu-latest
+    # A stalled multi-architecture push must fail visibly instead of blocking the release forever.
+    timeout-minutes: 60
     needs:
       - prepare
       - quality
@@ -170,6 +172,7 @@ jobs:
 
   github-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs:
       - prepare
       - quality
