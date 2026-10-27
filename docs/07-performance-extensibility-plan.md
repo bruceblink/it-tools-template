@@ -831,3 +831,11 @@ Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通�
 在同一台 Windows 机器、同一份 Vite 8.3.5 构建环境中，对比父提交 `568bf7a`：Web Worker 从 681,908 字节降至 278,770 字节，减少 403,138 字节（59.12%）；Electron Worker 从 1,705,471 字节降至 726,576 字节，减少 978,895 字节（57.40%）。相对中间提交 `0275dd5`，Web 和 Electron Worker 再分别减少 41.41% 和 37.47%。Web Worker 低于 500 KiB 单工具目标；Electron Worker 仍高于该目标，后续继续评估 Electron 侧资源拆分。完整 Math.js 回退块仍按需加载，当前 Web/Electron 构建输出分别为约 400.04 kB 和 975.99 kB。
 
 验证记录：Math Evaluator 服务单测 8 项通过，Chromium E2E 1 项通过，覆盖普通表达式、复数、矩阵、单位回退和资源限制；完整 `pnpm check` 通过 139 个测试文件（2 个跳过）、864 项测试（18 项跳过），并完成类型检查、零警告 lint、Web/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致本轮失败。没有新增真实窗口交互或 Linux/macOS 运行时证据。
+
+### 2026-10-28：整数进制转换 Worker 化
+
+整数进制转换此前在页面响应式渲染中同步调用 `convertBase` 七次。大输入会重复执行 `BigInt` 解析和除法，导致输入事件占用页面线程。现在使用独立的 `integer-base-converter.worker.ts` 和任务服务：输入只解析一次，再生成固定的二进制、八进制、十进制、十六进制、Base64 及自定义进制输出。这样保持原有小输入结果，同时把高成本计算移到可终止的 Worker。
+
+页面以 150ms 防抖提交任务。每次输入、输入进制或自定义进制改变时，页面取消旧任务、清空旧结果，并用版本号丢弃迟到响应。任务限制为 16 KiB 输入、2 MiB 序列化输出和 10 秒超时；无效数字返回校验错误，超过限制或 Worker 失败返回固定状态。独立 Worker 不加入共享任务 Worker，便于后续按工具测量和回收资源。
+
+模型、任务服务和 TaskRunner 回归共 40 项通过；Windows 本机完整 `pnpm check` 通过 143 个测试文件（2 个跳过）、894 项测试（18 个跳过），并完成类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致失败。打包 Electron 真实窗口显示默认结果，输入 `255` 后固定输出更新正确，并从工具点击 Home 返回主页；过渡完成后工具卡片没有异常边框。Linux/macOS 运行时和公开第三方插件分发仍待验收。

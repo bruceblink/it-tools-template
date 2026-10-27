@@ -208,6 +208,51 @@ describe('TaskRunner', () => {
     });
   });
 
+  it('runs integer base conversions in a replaceable worker task', async () => {
+    const { runner, workers } = createHarness();
+    const first = runner.run('integer-base-converter', 1, {
+      kind: 'integer-base-converter',
+      value: '165',
+      fromBase: 10,
+      customBase: 42,
+    }, taskLimits.integerBaseConverter);
+    const latest = runner.run('integer-base-converter', 2, {
+      kind: 'integer-base-converter',
+      value: '255',
+      fromBase: 10,
+      customBase: 42,
+    }, taskLimits.integerBaseConverter);
+
+    await expect(first).resolves.toEqual({ status: 'cancelled' });
+    expect(workers[0]?.terminated).toBe(true);
+    expect(workers[1]?.request?.task).toEqual({
+      kind: 'integer-base-converter',
+      value: '255',
+      fromBase: 10,
+      customBase: 42,
+    });
+    const result: WorkerTaskResult = {
+      kind: 'integer-base-converter',
+      valid: true,
+      outputs: { base2: '11111111', base8: '377', base10: '255', base16: 'ff', base64: '3/', custom: '63' },
+    };
+    workers[1]?.reply(result);
+    await expect(latest).resolves.toEqual({ status: 'success', result });
+  });
+
+  it('rejects oversized integer base input before creating a worker', async () => {
+    const { runner, workers } = createHarness();
+    const result = await runner.run('integer-base-converter', 1, {
+      kind: 'integer-base-converter',
+      value: 'x'.repeat(taskLimits.integerBaseConverter.maxInputBytes + 1),
+      fromBase: 10,
+      customBase: 42,
+    }, taskLimits.integerBaseConverter);
+
+    expect(result).toEqual({ status: 'input-limit' });
+    expect(workers).toHaveLength(0);
+  });
+
   it('rejects IPv4 CIDR containment inputs above the byte limit before creating a worker', async () => {
     const { runner, workers } = createHarness();
     const result = await runner.run('ipv4-cidr-containment', 1, {

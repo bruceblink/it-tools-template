@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { tryOnBeforeUnmount } from '@vueuse/core';
 import InputCopyable from '../../components/InputCopyable.vue';
-import { convertBase } from './integer-base-converter.model';
-import { getErrorMessageIfThrows } from '@/utils/error';
+import type { IntegerBaseConversionOutputs } from './integer-base-converter.model';
+import { taskRunner } from '@/task-runner/task-runner';
+import { taskLimits } from '@/task-runner/task-runner.types';
+
+type IntegerBaseTaskStatus = 'idle' | 'running' | 'invalid' | 'input-limit' | 'output-limit' | 'timeout' | 'error';
 
 const inputProps = {
   'labelPosition': 'left',
@@ -14,21 +18,63 @@ const inputProps = {
 const input = ref('42');
 const inputBase = ref(10);
 const outputBase = ref(42);
+const taskStatus = ref<IntegerBaseTaskStatus>('idle');
+const errorMessage = ref('');
+const conversionResult = ref<IntegerBaseConversionOutputs>({
+  base2: '',
+  base8: '',
+  base10: '',
+  base16: '',
+  base64: '',
+  custom: '',
+});
 
-function errorlessConvert(...args: Parameters<typeof convertBase>) {
-  try {
-    return convertBase(...args);
-  }
-  catch (err) {
-    return '';
-  }
-}
+const taskKey = 'integer-base-converter:convert';
+let taskVersion = 0;
+let taskTimer: ReturnType<typeof setTimeout> | undefined;
 
-const error = computed(() =>
-  getErrorMessageIfThrows(() =>
-    convertBase({ value: input.value, fromBase: inputBase.value, toBase: outputBase.value }),
-  ),
-);
+const taskStatusMessage = computed(() => {
+  if (taskStatus.value === 'running') { return 'Calculating...'; }
+  if (taskStatus.value === 'input-limit') { return 'Input is too large.'; }
+  if (taskStatus.value === 'output-limit') { return 'Output is too large.'; }
+  if (taskStatus.value === 'timeout') { return 'Conversion timed out.'; }
+  if (taskStatus.value === 'error') { return 'Conversion failed.'; }
+  return errorMessage.value;
+});
+
+watch([input, inputBase, outputBase], () => {
+  const version = ++taskVersion;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+  conversionResult.value = { base2: '', base8: '', base10: '', base16: '', base64: '', custom: '' };
+  errorMessage.value = '';
+  taskStatus.value = 'running';
+
+  // Debounce typing, terminate obsolete conversions, and ignore stale results.
+  taskTimer = setTimeout(async () => {
+    const outcome = await taskRunner.run(taskKey, version, {
+      kind: 'integer-base-converter',
+      value: input.value,
+      fromBase: inputBase.value,
+      customBase: outputBase.value,
+    }, taskLimits.integerBaseConverter);
+    if (version !== taskVersion) { return; }
+    if (outcome.status === 'success' && outcome.result.kind === 'integer-base-converter') {
+      conversionResult.value = outcome.result.outputs;
+      errorMessage.value = outcome.result.errorMessage ?? '';
+      taskStatus.value = outcome.result.valid ? 'idle' : 'invalid';
+      return;
+    }
+    if (outcome.status === 'cancelled') { return; }
+    taskStatus.value = outcome.status === 'success' ? 'error' : outcome.status;
+  }, 150);
+}, { immediate: true });
+
+tryOnBeforeUnmount(() => {
+  taskVersion++;
+  if (taskTimer) { clearTimeout(taskTimer); }
+  taskRunner.cancel(taskKey);
+});
 </script>
 
 <template>
@@ -40,43 +86,46 @@ const error = computed(() =>
         <n-input-number v-model:value="inputBase" max="64" min="2" placeholder="Put your input base here (ex: 10)" w-full />
       </n-form-item>
 
-      <n-alert v-if="error" style="margin-top: 25px" type="error">
-        {{ error }}
+      <div v-if="taskStatus === 'running'" mt-2 text-center op-70>
+        {{ taskStatusMessage }}
+      </div>
+      <n-alert v-else-if="taskStatusMessage" style="margin-top: 25px" type="error">
+        {{ taskStatusMessage }}
       </n-alert>
       <n-divider />
 
       <InputCopyable
         label="Binary (2)"
         v-bind="inputProps"
-        :value="errorlessConvert({ value: input, fromBase: inputBase, toBase: 2 })"
+        :value="conversionResult.base2"
         placeholder="Binary version will be here..."
       />
 
       <InputCopyable
         label="Octal (8)"
         v-bind="inputProps"
-        :value="errorlessConvert({ value: input, fromBase: inputBase, toBase: 8 })"
+        :value="conversionResult.base8"
         placeholder="Octal version will be here..."
       />
 
       <InputCopyable
         label="Decimal (10)"
         v-bind="inputProps"
-        :value="errorlessConvert({ value: input, fromBase: inputBase, toBase: 10 })"
+        :value="conversionResult.base10"
         placeholder="Decimal version will be here..."
       />
 
       <InputCopyable
         label="Hexadecimal (16)"
         v-bind="inputProps"
-        :value="errorlessConvert({ value: input, fromBase: inputBase, toBase: 16 })"
+        :value="conversionResult.base16"
         placeholder="Hexadecimal version will be here..."
       />
 
       <InputCopyable
         label="Base64 (64)"
         v-bind="inputProps"
-        :value="errorlessConvert({ value: input, fromBase: inputBase, toBase: 64 })"
+        :value="conversionResult.base64"
         placeholder="Base64 version will be here..."
       />
 
@@ -89,7 +138,7 @@ const error = computed(() =>
         <InputCopyable
           flex-1
           v-bind="inputProps"
-          :value="errorlessConvert({ value: input, fromBase: inputBase, toBase: outputBase })"
+          :value="conversionResult.custom"
           :placeholder="`Base ${outputBase} will be here...`"
         />
       </div>

@@ -12,6 +12,7 @@ import type { ConvertOptions } from '@/tools/list-converter/list-converter.types
 import type { Message as ComposerizeMessage } from 'composerize-ts';
 import type { FormatOptionsWithLanguage } from 'sql-formatter';
 import type { CurlCodeOutput, CurlRequest } from '@/tools/curl-code-generator/curl-code-generator.service';
+import type { IntegerBaseConversionOutputs } from '@/tools/integer-base-converter/integer-base-converter.model';
 
 export interface JsonLinesTaskOptions extends JsonLinesConverterOptions {
   direction: JsonLinesDirection
@@ -54,6 +55,7 @@ export type WorkerTask =
   | { kind: 'ipv4-cidr-merge'; value: string }
   | { kind: 'ipv4-cidr-overlap'; value: string }
   | { kind: 'ipv4-cidr-containment'; rules: string; targets: string }
+  | { kind: 'integer-base-converter'; value: string; fromBase: number; customBase: number }
   | { kind: 'markdown-render'; value: string }
   | { kind: 'curl-code-generator'; value: string; outputFormat: CurlCodeOutput };
 
@@ -71,6 +73,7 @@ export type WorkerTaskResult =
   | { kind: 'ipv4-cidr-merge'; valid: boolean; output: string; errorMessage?: string }
   | { kind: 'ipv4-cidr-overlap'; valid: boolean; analysis?: Ipv4CidrOverlapAnalysis; errorMessage?: string }
   | { kind: 'ipv4-cidr-containment'; valid: boolean; analysis?: Ipv4CidrContainmentAnalysis; errorMessage?: string }
+  | { kind: 'integer-base-converter'; valid: boolean; outputs: IntegerBaseConversionOutputs; errorMessage?: string }
   | { kind: 'json-lines'; valid: boolean; output: string; summary: JsonLinesSummary; errorMessage?: string }
   | { kind: 'markdown-render'; output: string }
   | { kind: 'curl-code-generator'; valid: false; errorMessage: string }
@@ -236,6 +239,11 @@ export const taskLimits = {
     maxOutputBytes: 2 * 1024 * 1024,
     maxLines: 1_000,
   },
+  integerBaseConverter: {
+    timeoutMs: 10_000,
+    maxInputBytes: 16 * 1024,
+    maxOutputBytes: 2 * 1024 * 1024,
+  },
   markdownRender: {
     timeoutMs: 10_000,
     maxInputBytes: 256 * 1024,
@@ -248,4 +256,4 @@ export const taskLimits = {
     // Selected code is capped at 2 MiB; JSON escaping and the parsed request add transfer overhead.
     maxOutputBytes: 6 * 1024 * 1024,
   },
-} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'dockerRunToCompose' | 'listConverter' | 'ipv4CidrMerge' | 'ipv4CidrOverlap' | 'ipv4CidrContainment' | 'markdownRender' | 'curlCodeGenerator', TaskLimits>;
+} satisfies Record<'regex' | 'textDiff' | 'jsonViewer' | 'jsonKeySorter' | 'jsonPathExtractor' | 'jsonDiff' | 'yamlViewer' | 'sqlFormatter' | 'envVarsParser' | 'bcryptHash' | 'bcryptCompare' | 'mathEvaluator' | 'jsonMinify' | 'csvToJson' | 'csvToMarkdown' | 'jsonToCsv' | 'jsonLines' | 'formatConversion' | 'tomlConversion' | 'dockerRunToCompose' | 'listConverter' | 'ipv4CidrMerge' | 'ipv4CidrOverlap' | 'ipv4CidrContainment' | 'integerBaseConverter' | 'markdownRender' | 'curlCodeGenerator', TaskLimits>;

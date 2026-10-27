@@ -52,6 +52,9 @@ function createWorker(task: WorkerTask): TaskWorker {
   if (task.kind === 'ipv4-cidr-containment') {
     return new Worker(new URL('./ipv4-cidr-containment.worker.ts', import.meta.url), { type: 'module' }) as unknown as TaskWorker;
   }
+  if (task.kind === 'integer-base-converter') {
+    return new Worker(new URL('./integer-base-converter.worker.ts', import.meta.url), { type: 'module' }) as unknown as TaskWorker;
+  }
   return new Worker(new URL('./task-runner.worker.ts', import.meta.url), { type: 'module' }) as unknown as TaskWorker;
 }
 
@@ -78,6 +81,7 @@ export class TaskRunner {
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'ipv4-cidr-merge' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'ipv4-cidr-merge' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'ipv4-cidr-overlap' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'ipv4-cidr-overlap' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'ipv4-cidr-containment' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'ipv4-cidr-containment' }>>>
+  run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'integer-base-converter' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'integer-base-converter' }>>>
   run(taskKey: string, inputVersion: number, task: Extract<WorkerTask, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-diff' | 'yaml-viewer' | 'sql-format' | 'env-vars-parser' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>, limits: TaskLimits): Promise<TaskOutcome<Extract<WorkerTaskResult, { kind: 'json-viewer' | 'json-key-sorter' | 'json-path-extractor' | 'json-diff' | 'yaml-viewer' | 'sql-format' | 'env-vars-parser' | 'json-minify' | 'csv-to-json' | 'csv-to-markdown' | 'json-to-csv' | 'json-lines' | 'xml-format' | 'xml-to-json' | 'json-to-xml' | 'yaml-to-json' | 'json-to-yaml' | 'toml-to-json' | 'toml-to-yaml' | 'json-to-toml' | 'yaml-to-toml' }>>>
   run(taskKey: string, inputVersion: number, task: WorkerTask, limits: TaskLimits): Promise<TaskOutcome<WorkerTaskResult>> {
     this.cancel(taskKey);
