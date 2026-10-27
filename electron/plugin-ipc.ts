@@ -18,6 +18,10 @@ import { createPluginSandboxWindow } from './plugin-sandbox';
 import { PluginSettingsStore } from './plugin-settings-store';
 import { PluginTrustStore, PluginTrustStoreError } from './plugin-trust-store';
 import type { PluginSignerInput } from './plugin-trust-store';
+import type {
+  DesktopPluginErrorCode,
+  DesktopPluginOperationResult,
+} from '../src/shared/desktop-services/plugins';
 
 export interface PluginIpcDependencies {
   userDataRoot: string;
@@ -27,7 +31,7 @@ export interface PluginIpcDependencies {
 }
 
 class PluginIpcInputError extends Error {
-  constructor(readonly code = 'invalid-request', message = 'The plugin management request is invalid.') {
+  constructor(readonly code: DesktopPluginErrorCode = 'invalid-request', message = 'The plugin management request is invalid.') {
     super(message);
     this.name = 'PluginIpcInputError';
   }
@@ -250,7 +254,7 @@ async function runPluginManagementIpc<T>(
   event: IpcMainInvokeEvent,
   dependencies: PluginIpcDependencies,
   operation: () => Promise<T> | T,
-): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+): Promise<DesktopPluginOperationResult<T>> {
   if (!isTrustedDesktopSender(event, dependencies.getTrustedRendererUrl())) {
     return { ok: false, error: 'untrusted-renderer' };
   }
@@ -270,7 +274,7 @@ function getPluginManagementWindow(dependencies: PluginIpcDependencies): Browser
   return window;
 }
 
-function getPluginOperationErrorCode(error: unknown): string {
+function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
   if (error instanceof PluginIpcInputError) {
     return error.code;
   }

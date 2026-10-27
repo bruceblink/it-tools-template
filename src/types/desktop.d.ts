@@ -44,14 +44,18 @@ import type {
 } from '../shared/desktop-services/container-workbench';
 import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../tools/tools.types';
 import type { PluginHostCapability } from '../shared/plugin-capabilities';
+import type {
+  DesktopPluginErrorCode as SharedDesktopPluginErrorCode,
+  DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
+  DesktopPluginRuntimeFailureCode,
+} from '../shared/desktop-services/plugins';
 
 export {};
 
 declare global {
   type DesktopPluginCapability = PluginHostCapability;
-  type DesktopPluginOperationResult<T> =
-    | { ok: true; value: T }
-    | { ok: false; error: string };
+  type DesktopPluginErrorCode = SharedDesktopPluginErrorCode;
+  type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
 
   interface DesktopPluginSnapshot {
     pluginId: string;
@@ -66,7 +70,7 @@ declare global {
     grantedCapabilities: readonly DesktopPluginCapability[];
     status: 'installed' | 'active' | 'invalid';
     activeContributionId?: string;
-    errorCode?: string;
+    errorCode?: DesktopPluginErrorCode | DesktopPluginRuntimeFailureCode;
   }
 
   interface DesktopPluginToolContribution {
@@ -79,7 +83,7 @@ declare global {
     offline: ToolOfflineSupport;
     capabilities: readonly ToolCapability[];
     /** Runtime failure recorded for this tool contribution only. */
-    errorCode?: 'renderer-crashed' | 'renderer-unresponsive' | 'window-closed';
+    errorCode?: DesktopPluginRuntimeFailureCode;
   }
 
   interface DesktopPluginSignerSnapshot {
