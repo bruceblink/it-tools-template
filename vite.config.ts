@@ -67,6 +67,12 @@ export default defineConfig(({ command }) => ({
   build: {
     target: 'esnext',
     manifest: true,
+    // The Rolldown shared-vendor graph currently promotes dependencies of lazy
+    // tool routes to modulepreload links in index.html. That makes the home
+    // page request most of the tool graph before the user clicks anything and
+    // can starve route navigation on slower edge connections. Route chunks are
+    // still loaded by their dynamic imports when a tool is opened.
+    modulePreload: false,
     rolldownOptions: {
       output: {
         codeSplitting: {
