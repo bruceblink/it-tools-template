@@ -10,6 +10,8 @@ import 'virtual:uno.css';
 import App from './App.vue';
 import router, { registerDemoRoutes } from './router';
 import { activateLocale, i18nPlugin, type SupportedLocale } from './plugins/i18n.plugin';
+import { tools } from './tools';
+import { prefetchToolsWhenIdle } from './tools/tool-prefetch';
 
 function readSavedLocale() {
   try {
@@ -52,4 +54,5 @@ export async function mountSharedApp() {
   saveLocale(activeLocale);
 
   app.mount('#app');
+  prefetchToolsWhenIdle(tools);
 }
