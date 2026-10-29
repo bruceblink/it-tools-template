@@ -17,6 +17,27 @@ const favoriteTools = computed(() => toolStore.favoriteTools);
 const repositoryUrl = config.app.repositoryUrl;
 const toolCardHoverEnabled = ref(false);
 const homeGridEntering = ref(false);
+const visibleToolCount = ref(24);
+const visibleTools = computed(() => toolStore.tools.slice(0, visibleToolCount.value));
+
+let revealTimer: number | undefined;
+
+function scheduleMoreTools(delay = 500) {
+  if (visibleToolCount.value >= toolStore.tools.length || revealTimer !== undefined) {
+    return;
+  }
+
+  const reveal = () => {
+    revealTimer = undefined;
+    visibleToolCount.value = Math.min(visibleToolCount.value + 24, toolStore.tools.length);
+    scheduleMoreTools();
+  };
+  revealTimer = window.setTimeout(reveal, delay);
+}
+
+function revealToolsAfterScroll() {
+  scheduleMoreTools(100);
+}
 
 function startHomeGridTransition() {
   homeGridEntering.value = true;
@@ -42,10 +63,16 @@ function enableToolCardHover(event: PointerEvent) {
 
 onMounted(() => {
   window.addEventListener('pointermove', enableToolCardHover, { passive: true });
+  window.addEventListener('scroll', revealToolsAfterScroll, { passive: true });
+  scheduleMoreTools();
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('pointermove', enableToolCardHover);
+  window.removeEventListener('scroll', revealToolsAfterScroll);
+  if (revealTimer !== undefined) {
+    window.clearTimeout(revealTimer);
+  }
 });
 
 // Update favorite tools order when drag is finished
@@ -108,7 +135,7 @@ function onUpdateFavoriteTools() {
           {{ $t('home.categories.allTools') }}
         </h3>
         <div class="grid grid-cols-1 gap-12px lg:grid-cols-3 md:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-          <ToolCard v-for="tool in toolStore.tools" :key="tool.path" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
+          <ToolCard v-for="tool in visibleTools" :key="tool.path" :tool="tool" :hover-enabled="toolCardHoverEnabled" />
         </div>
       </div>
     </Transition>
