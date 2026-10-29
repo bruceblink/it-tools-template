@@ -20,6 +20,7 @@ const theme = useThemeVars();
     class="tool-card-link decoration-none"
     @pointerenter="queueToolPrefetch(tool)"
     @pointerleave="cancelToolPrefetch(tool)"
+    @pointerdown="prefetchTool(tool)"
     @focus="prefetchTool(tool)"
     @touchstart="prefetchTool(tool)"
   >
