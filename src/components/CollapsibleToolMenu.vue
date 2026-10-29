@@ -37,19 +37,24 @@ const collapsedCategories = useStorage<Record<string, boolean>>(
 );
 
 function toggleCategoryCollapse({ name }: { name: string }) {
-  collapsedCategories.value[name] = !collapsedCategories.value[name];
+  const stored = collapsedCategories.value[name];
+  const defaultCollapsed = name !== toolsByCategory.value[0]?.name;
+  collapsedCategories.value[name] = !(stored ?? defaultCollapsed);
 }
 
 const menuOptions = computed(() =>
-  toolsByCategory.value.map(({ name, components }) => ({
+  toolsByCategory.value.map(({ name, components }, index) => {
+    const isCollapsed = collapsedCategories.value[name] ?? index > 0;
+    return {
     name,
-    isCollapsed: collapsedCategories.value[name],
-    tools: components.map(tool => ({
-      label: makeLabel(tool),
-      icon: makeIcon(tool),
-      key: tool.path,
-    })),
-  })),
+    isCollapsed,
+    tools: isCollapsed ? [] : components.map(tool => ({
+        label: makeLabel(tool),
+        icon: makeIcon(tool),
+        key: tool.path,
+      })),
+    };
+  }),
 );
 
 const themeVars = useThemeVars();
@@ -67,7 +72,7 @@ const themeVars = useThemeVars();
       </span>
     </div>
 
-    <n-collapse-transition :show="!isCollapsed">
+    <n-collapse-transition v-if="!isCollapsed" :show="true">
       <div class="menu-wrapper">
         <div class="toggle-bar" @click="toggleCategoryCollapse({ name })" />
 
