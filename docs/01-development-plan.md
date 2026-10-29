@@ -53,6 +53,7 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 |---|---|---|
 | 性能、Web/Electron 边界和插件平台 | [性能与插件平台设计说明](07-performance-extensibility-design.md) | Worker 迁移、构建预算、平台边界和插件平台 v1 的实施记录集中维护；Linux/macOS 前台窗口、真实设备权限和公开第三方分发仍需独立验收 |
 | 外部插件接口 | [包格式](08-electron-plugin-package-format-v1.md)、[能力 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)、[MVP 使用说明](11-electron-plugin-mvp-quickstart.md) | 清单、工具贡献、能力、设置、错误码、生命周期和安装流程已形成版本化接口 |
+| Excalidraw 集成评估 | [Excalidraw 集成评估](18-excalidraw-integration-assessment.md) | 本地绘图可作为第一方页面或静态插件；实时协作需要独立服务，当前外部插件网络边界不支持直接连接 |
 | 数据库与系统监视 | [设计说明](13-database-system-monitor-design.md) | Electron 专属工作台进入维护，跨平台和真实窗口证据按设计说明补齐 |
 | 对象存储与容器 | [对象存储设计说明](15-object-storage-workbench-design.md)、[容器设计说明](17-container-workbench-design.md) | 对象浏览、传输和只读容器列表已合并记录；Web 继续隐藏桌面专属入口 |
 | 双项目边界 | [能力归属矩阵](14-cross-project-capability-matrix.md) | it-tools-template 与 Ramag 不共享进程、运行时、代码包或接口协议 |

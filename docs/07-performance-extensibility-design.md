@@ -871,3 +871,9 @@ Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通�
 同一切片补充 `pnpm plugin:validate`。该命令复用签名打包器的源码校验函数，不需要私钥，不运行插件代码，也不写入源码目录；它在签名前报告清单、API 范围、贡献命名空间、能力、路径、文件类型和资源限制错误，并输出文件数量与展开字节数。`plugin:pack` 在签名时重复该校验，避免校验命令与发布路径出现不同规则。
 
 脚本单测覆盖源码校验 CLI、有效生成、清单字段、命名空间、直接打包和重复目录拒绝。Web、Electron 和插件运行时行为没有改变；Linux/macOS 前台窗口和公开第三方插件分发仍待验收。
+
+### 2026-10-29：Excalidraw 集成边界评估
+
+Excalidraw 编辑器可以作为第一方页面或静态插件，但 `@excalidraw/excalidraw` npm 包不包含协作实现。当前插件沙箱的 `connect-src 'self'` 和协议拦截会阻止 `http/https/ws/wss` 连接，插件能力目录也没有网络能力，因此实时协作不能直接作为当前外部插件功能交付。评估文档见 [18-excalidraw-integration-assessment.md](18-excalidraw-integration-assessment.md)。
+
+推荐先做本地 `.excalidraw` 编辑、导出和受限文件保存，再决定只读分享服务。实时协作需要独立的房间服务、认证、持久化、冲突合并、文件存储和端到端加密设计；只有在这些边界确定并完成本地 Docker 与跨平台验收后，才评估第一方页面或受控网络能力。

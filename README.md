@@ -257,6 +257,8 @@ pnpm plugin:validate -- --source plugins/org.example.my-plugin
 
 The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
 
+Excalidraw integration is under assessment. The current evaluation covers local drawing, read-only sharing, real-time collaboration, React/Vue integration, and the plugin network boundary: [Excalidraw integration assessment](docs/18-excalidraw-integration-assessment.md).
+
 ### Release Flow
 
 Preview the generated changelog without touching any files:
