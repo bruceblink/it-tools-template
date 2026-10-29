@@ -30,7 +30,6 @@ function scheduleMoreTools(delay = 500) {
   const reveal = () => {
     revealTimer = undefined;
     visibleToolCount.value = Math.min(visibleToolCount.value + 24, toolStore.tools.length);
-    scheduleMoreTools();
   };
   revealTimer = window.setTimeout(reveal, delay);
 }
@@ -64,7 +63,6 @@ function enableToolCardHover(event: PointerEvent) {
 onMounted(() => {
   window.addEventListener('pointermove', enableToolCardHover, { passive: true });
   window.addEventListener('scroll', revealToolsAfterScroll, { passive: true });
-  scheduleMoreTools();
 });
 
 onBeforeUnmount(() => {
