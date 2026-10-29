@@ -1,6 +1,7 @@
 import type { Component } from 'vue';
+import { loadToolComponent } from './builtin-tool-components';
 
-/** Load the nested component registry only when a built-in tool route opens. */
+/** Resolve a built-in tool directly from the in-memory loader registry. */
 export function loadBuiltinToolComponent(componentPath: string): Promise<Component> {
-  return import('./builtin-tool-components').then(({ loadToolComponent }) => loadToolComponent(componentPath));
+  return loadToolComponent(componentPath);
 }
