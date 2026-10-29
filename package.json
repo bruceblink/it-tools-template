@@ -74,6 +74,7 @@
     "plugin:create": "node scripts/create-plugin.mjs",
     "plugin:keygen": "node scripts/plugin-pack.mjs keygen",
     "plugin:pack": "node scripts/plugin-pack.mjs pack",
+    "plugin:validate": "node scripts/plugin-pack.mjs validate",
     "test:plugin-scaffold": "node --test scripts/create-plugin.test.mjs",
     "test:tool-scaffold": "node --test scripts/create-tool.test.mjs",
     "script:create:ui": "hygen generator ui-component",

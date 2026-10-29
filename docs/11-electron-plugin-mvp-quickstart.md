@@ -75,6 +75,16 @@ MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系�
 
 插件可以创建同源 Dedicated Worker。每个插件窗口最多运行两个 Worker。宿主会在 Worker 创建 30 秒后终止它；Worker 出错或插件窗口关闭时，宿主也会终止它。Worker 不能创建子 Worker、SharedWorker 或 ServiceWorker。Worker 不能访问外部网络。Worker 仍可处理插件自身的数据，不会获得宿主 IPC 或 Node.js。
 
+## 校验插件源码
+
+在创建签名密钥前，先运行不需要私钥的源码校验：
+
+```powershell
+pnpm run plugin:validate -- --source plugins/capability-demo
+```
+
+该命令只读取插件目录。它校验清单、当前宿主 API 兼容范围、工具贡献命名空间、能力声明、入口文件、路径规则、文件类型和资源上限，并输出文件数量与展开字节数。它不运行插件代码、不安装依赖、不写入源码目录，也不生成 `.itplugin`。`plugin:pack` 在签名时会重复同一校验。
+
 ## 创建签名密钥
 
 使用 Node.js 24 和仓库指定的 pnpm 版本。把密钥放在仓库以外、仅当前用户可访问的目录。密钥目录应有受限 ACL，并保留离线备份。
@@ -86,6 +96,8 @@ pnpm run plugin:keygen -- --key-id capability-demo-publisher --output-directory 
 命令输出私钥文件路径、公钥文件路径和 SHA-256 指纹。命令不会输出私钥内容。它拒绝把密钥写进仓库，并且不会覆盖已有密钥文件。
 
 ## 打包插件
+
+源码校验通过后再创建签名包：
 
 ```powershell
 pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itplugin"
@@ -109,6 +121,6 @@ MVP 的端到端样例会拒绝未授权的剪贴板写入；批准能力后，�
 
 ## 验证
 
-运行 `pnpm test:plugin-pack` 检查密钥路径、文件覆盖保护、确定性 ZIP、清单签名、文件哈希和不支持的能力。运行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts --reporter=list` 检查沙箱、网络、文件、能力授权、版本回退和插件生命周期。`pnpm check` 会运行打包测试。
+运行 `pnpm test:plugin-pack` 检查源码校验、密钥路径、文件覆盖保护、确定性 ZIP、清单签名、文件哈希和不支持的能力。运行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts --reporter=list` 检查沙箱、网络、文件、能力授权、版本回退和插件生命周期。`pnpm check` 会运行打包和源码校验测试。
 
 MVP 不包括插件商店、Web/Docker 外部插件、嵌套 Worker、任意网络代理或生产签名者名单。插件 Worker 的创建数、生命周期、同源范围和跨平台行为由自动化验收。

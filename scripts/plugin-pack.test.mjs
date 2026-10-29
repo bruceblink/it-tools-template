@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
-import { buildPluginPackage, generatePluginSigningKey, getPluginPackageSigningPayload } from './plugin-pack.mjs';
+import { buildPluginPackage, generatePluginSigningKey, getPluginPackageSigningPayload, validatePluginSource } from './plugin-pack.mjs';
 import { crc32 } from './stored-zip.mjs';
 
 const require = createRequire(import.meta.url);
@@ -40,6 +40,18 @@ test('builds a deterministic package that verifies with the documented Ed25519 f
   const publicKeyBytes = await readFile(join(keyDirectory, 'capability-demo-publisher.public.pem'), 'utf8');
   const sourceDirectory = join(temporaryRoot, 'sample');
   await cp(sampleRoot, sourceDirectory, { recursive: true });
+  const validated = await validatePluginSource({ sourceDirectory });
+  assert.equal(validated.manifest.id, 'org.it-tools.capability-demo');
+  assert.equal(validated.files.length, 3);
+  assert.equal(validated.expandedBytes, validated.files.reduce((total, entry) => total + entry.contents.length, 0));
+  const validatedCli = spawnSync(process.execPath, [
+    packageScript,
+    'validate',
+    '--source',
+    sourceDirectory,
+  ], { encoding: 'utf8' });
+  assert.equal(validatedCli.status, 0, validatedCli.stderr);
+  assert.match(validatedCli.stdout, /Valid plugin source: org\.it-tools\.capability-demo 1\.0\.0 \(3 files, \d+ bytes\)/);
   const { archive, manifest } = await buildPluginPackage({
     sourceDirectory,
     signingKey: createPrivateKey(privateKey),
@@ -163,6 +175,15 @@ test('rejects an invalid plugin source manifest before writing an archive', asyn
   const sourceManifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   sourceManifest.requestedCapabilities = ['clipboard.erase'];
   await writeFile(manifestPath, JSON.stringify(sourceManifest));
+  await assert.rejects(validatePluginSource({ sourceDirectory }), /requested plugin capability list/);
+  const invalidCli = spawnSync(process.execPath, [
+    packageScript,
+    'validate',
+    '--source',
+    sourceDirectory,
+  ], { encoding: 'utf8' });
+  assert.notEqual(invalidCli.status, 0);
+  assert.match(invalidCli.stderr, /requested plugin capability list/);
   await assert.rejects(buildPluginPackage({
     sourceDirectory,
     signingKey: createPrivateKey(privateKey),

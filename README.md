@@ -249,7 +249,13 @@ The default output is `plugins/org.example.my-plugin`. Use `--directory` for a p
 pnpm plugin:create -- --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
 ```
 
-The generated package is metadata and UI only. It enters the existing `plugin:pack` validation path and does not grant a capability until the Electron host and user approve it.
+The generated package is metadata and UI only. Validate it before creating signing material:
+
+```sh
+pnpm plugin:validate -- --source plugins/org.example.my-plugin
+```
+
+The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
 
 ### Release Flow
 

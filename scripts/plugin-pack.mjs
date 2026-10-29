@@ -42,17 +42,8 @@ export function getPluginPackageSigningPayload(manifest) {
   return `${signatureDomain}\n${canonicalJson(manifest)}`;
 }
 
-/** Build a bounded signed package from static files without executing package code. */
-export async function buildPluginPackage({
-  sourceDirectory,
-  signingKey,
-  keyId,
-}) {
-  assertKeyId(keyId);
-  if (!signingKey || signingKey.type !== 'private' || signingKey.asymmetricKeyType !== 'ed25519') {
-    throw new Error('The package signer must be an Ed25519 private key.');
-  }
-
+/** Validate a plugin source directory without requiring or creating signing key material. */
+export async function validatePluginSource({ sourceDirectory }) {
   const packageRoot = await assertSourceRoot(sourceDirectory);
   const sourceManifestPath = resolve(packageRoot, 'plugin.source.json');
   const sourceManifestMetadata = await lstat(sourceManifestPath).catch(() => null);
@@ -75,6 +66,26 @@ export async function buildPluginPackage({
   if (!fileEntries.some(entry => entry.path === sourceManifest.entrypoint)) {
     throw new Error('The configured plugin entrypoint is not present in the source directory.');
   }
+  return {
+    sourceDirectory: packageRoot,
+    manifest: sourceManifest,
+    files: fileEntries,
+    expandedBytes: fileEntries.reduce((total, entry) => total + entry.contents.length, 0),
+  };
+}
+
+/** Build a bounded signed package from static files without executing package code. */
+export async function buildPluginPackage({
+  sourceDirectory,
+  signingKey,
+  keyId,
+}) {
+  assertKeyId(keyId);
+  if (!signingKey || signingKey.type !== 'private' || signingKey.asymmetricKeyType !== 'ed25519') {
+    throw new Error('The package signer must be an Ed25519 private key.');
+  }
+
+  const { manifest: sourceManifest, files: fileEntries } = await validatePluginSource({ sourceDirectory });
   const fileManifest = fileEntries
     .map(entry => ({ path: entry.path, sha256: createHash('sha256').update(entry.contents).digest('hex') }))
     .sort((left, right) => left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
@@ -630,6 +641,12 @@ async function runCli(argv) {
     process.stdout.write(`Signed ${result.pluginId} ${result.version} (${result.archiveBytes} bytes): ${result.outputPath}\n`);
     return;
   }
+  if (command === 'validate') {
+    assertFlags(flags, ['source']);
+    const result = await validatePluginSource({ sourceDirectory: flags.source });
+    process.stdout.write(`Valid plugin source: ${result.manifest.id} ${result.manifest.version} (${result.files.length} files, ${result.expandedBytes} bytes)\n`);
+    return;
+  }
   throw new Error('Unknown plugin package command. Run `pnpm run plugin:pack -- --help` for usage.');
 }
 
@@ -637,6 +654,7 @@ function getUsage() {
   return [
     'IT Tools signed Electron plugin package commands',
     '  pnpm run plugin:keygen -- --key-id <publisher> --output-directory <outside-repo-directory>',
+    '  pnpm run plugin:validate -- --source <plugin-directory>',
     '  pnpm run plugin:pack -- --source <plugin-directory> --private-key <external.pem> --key-id <publisher> --output <package.itplugin>',
     '',
   ].join('\n');
