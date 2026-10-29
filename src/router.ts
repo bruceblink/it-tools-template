@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import HomePage from './pages/Home.page.vue';
 import NotFound from './pages/404.page.vue';
+import ToolRoutePage from './pages/ToolRoutePage.vue';
 import { tools } from './tools';
 import { config } from './config';
 import { layouts } from '@/layouts';
@@ -8,9 +9,10 @@ import { layouts } from '@/layouts';
 const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, contentWidth, extensionOwned }) => ({
   path,
   name,
-  component,
+  component: ToolRoutePage,
   meta: {
     isTool: true,
+    toolLoader: component,
     layout: layouts.toolLayout,
     name,
     translationKey,
