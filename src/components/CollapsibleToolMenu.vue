@@ -9,6 +9,7 @@ import { cancelToolPrefetch, prefetchTool, queueToolPrefetch } from '@/tools/too
 const props = withDefaults(defineProps<{ toolsByCategory?: ToolCategory[] }>(), { toolsByCategory: () => [] });
 const { toolsByCategory } = toRefs(props);
 const route = useRoute();
+const collapseCategoriesByDefault = !import.meta.env.ELECTRON;
 
 const makeLabel = (tool: Tool) => () => h(
   RouterLink,
@@ -39,13 +40,13 @@ const collapsedCategories = useStorage<Record<string, boolean>>(
 
 function toggleCategoryCollapse({ name }: { name: string }) {
   const stored = collapsedCategories.value[name];
-  const defaultCollapsed = name !== toolsByCategory.value[0]?.name;
+  const defaultCollapsed = collapseCategoriesByDefault && name !== toolsByCategory.value[0]?.name;
   collapsedCategories.value[name] = !(stored ?? defaultCollapsed);
 }
 
 const menuOptions = computed(() =>
   toolsByCategory.value.map(({ name, components }, index) => {
-    const isCollapsed = collapsedCategories.value[name] ?? index > 0;
+    const isCollapsed = collapsedCategories.value[name] ?? (collapseCategoriesByDefault && index > 0);
     return {
     name,
     isCollapsed,
