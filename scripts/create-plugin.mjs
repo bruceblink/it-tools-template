@@ -1,10 +1,18 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, '..');
 const defaultPluginsDirectory = join(repositoryRoot, 'plugins');
+const sdkDirectory = join(repositoryRoot, 'plugins', 'sdk');
+const sdkTypeFiles = [
+  'it-tools-plugin.d.ts',
+  'it-tools-plugin-package.d.ts',
+  'plugin-api-errors.d.ts',
+  'plugin-api-version.d.ts',
+  'plugin-capabilities.d.ts',
+];
 const pluginApiVersion = '1.4.0';
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const pluginToolIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -124,7 +132,7 @@ function serializeScriptData(value) {
   })[character]);
 }
 
-function buildFiles(config) {
+async function buildFiles(config) {
   const contributionId = `${config.id}/${config.toolId}`;
   const manifest = {
     formatVersion: 1,
@@ -150,7 +158,7 @@ function buildFiles(config) {
   const description = escapeHtml(config.description);
   const pluginContext = serializeScriptData({ id: config.id, name: config.name, version: config.version });
   const toolContext = serializeScriptData({ id: contributionId, title: config.toolTitle });
-  return new Map([
+  const files = new Map([
     ['plugin.source.json', `${JSON.stringify(manifest, null, 2)}\n`],
     ['index.html', `<!doctype html>
 <html lang="en">
@@ -198,17 +206,21 @@ document.querySelector('#tool-context').textContent = toolContext.id;
 This plugin was generated for IT Tools plugin API ${pluginApiVersion}.
 
 1. Review \`plugin.source.json\` and replace the generated page.
-2. Copy the SDK declarations from \`plugins/sdk/\` into your plugin project when using TypeScript.
+2. Use the self-contained SDK declarations in \`types/\` when writing TypeScript.
 3. Generate a signing key outside the repository and run \`pnpm plugin:pack\`.
 
 The generated contribution is metadata only. It does not grant capabilities or execute host operations until the user approves a matching capability in the Electron settings page.
 `],
   ]);
+  for (const fileName of sdkTypeFiles) {
+    files.set(join('types', fileName), await readFile(join(sdkDirectory, fileName), 'utf8'));
+  }
+  return files;
 }
 
 /** Create a non-overwriting plugin source directory that the signed packer accepts. */
 export async function createPluginScaffold(config) {
-  const files = buildFiles(config);
+  const files = await buildFiles(config);
   await mkdir(dirname(config.directory), { recursive: true });
   try {
     await mkdir(config.directory);
@@ -218,7 +230,9 @@ export async function createPluginScaffold(config) {
   }
   try {
     for (const [name, contents] of files) {
-      await writeFile(join(config.directory, name), contents, { encoding: 'utf8', flag: 'wx' });
+      const target = join(config.directory, name);
+      await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, contents, { encoding: 'utf8', flag: 'wx' });
     }
   }
   catch (error) {

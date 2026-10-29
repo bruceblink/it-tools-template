@@ -28,7 +28,17 @@ test('creates a non-overwriting source package accepted by the signed packer', a
     'plugin.js',
     'plugin.source.json',
     'styles.css',
+    'types',
   ]);
+  assert.deepEqual((await readdir(join(directory, 'types'))).sort(), [
+    'it-tools-plugin-package.d.ts',
+    'it-tools-plugin.d.ts',
+    'plugin-api-errors.d.ts',
+    'plugin-api-version.d.ts',
+    'plugin-capabilities.d.ts',
+  ]);
+  const runtimeTypes = await readFile(join(directory, 'types', 'it-tools-plugin.d.ts'), 'utf8');
+  assert.doesNotMatch(runtimeTypes, /src\/shared/);
   const manifest = JSON.parse(await readFile(join(directory, 'plugin.source.json'), 'utf8'));
   const pluginScript = await readFile(join(directory, 'plugin.js'), 'utf8');
   assert.doesNotMatch(pluginScript, /<\/script>/i);
@@ -52,6 +62,7 @@ test('creates a non-overwriting source package accepted by the signed packer', a
   });
   assert.equal(packaged.manifest.id, 'org.example.scaffold');
   assert.equal(packaged.manifest.contributions.tools[0].id, 'org.example.scaffold/hello-world');
+  assert.ok(packaged.manifest.files.some(file => file.path === 'types/it-tools-plugin.d.ts'));
   await assert.rejects(() => createPluginScaffold(config), /already exists or cannot be created/);
 });
 

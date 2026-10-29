@@ -866,7 +866,7 @@ Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通�
 
 `v2026.10.28-1dbc63c` 已发布并作为后续插件平台化版本序列的基线。该 release 的质量检查、Linux/macOS/Windows Electron 构建、Docker 多架构镜像和 GitHub Release 均成功；Web ZIP、三平台桌面包和版本化 Docker 镜像已上传。后续 release 必须以该 tag 为祖先，并以插件清单、SDK、能力边界、生命周期、隔离、验证或开发者工具为主要交付。
 
-本轮新增 `pnpm plugin:create`。脚手架生成版本化 `plugin.source.json`、插件命名空间内的工具贡献、最小隔离页面、样式、运行时示例和开发 README；默认清单覆盖当前 API `1.4.0`，可选能力同时写入包请求和工具贡献元数据。脚手架拒绝非法 ID、版本、工具 slug、能力和已有目录，不覆盖用户文件。生成结果通过现有 `plugin:pack` 签名打包器校验，包内不包含私钥。
+本轮新增 `pnpm plugin:create`。脚手架生成版本化 `plugin.source.json`、插件命名空间内的工具贡献、最小隔离页面、样式、运行时示例、5 个自包含 SDK 类型声明和开发 README；默认清单覆盖当前 API `1.4.0`，可选能力同时写入包请求和工具贡献元数据。脚手架拒绝非法 ID、版本、工具 slug、能力和已有目录，不覆盖用户文件。生成结果通过现有 `plugin:pack` 签名打包器校验，包内不包含私钥。
 
 同一切片补充 `pnpm plugin:validate`。该命令复用签名打包器的源码校验函数，不需要私钥，不运行插件代码，也不写入源码目录；它在签名前报告清单、API 范围、贡献命名空间、能力、路径、文件类型和资源限制错误，并输出文件数量与展开字节数。`plugin:pack` 在签名时重复该校验，避免校验命令与发布路径出现不同规则。
 

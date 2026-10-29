@@ -237,13 +237,13 @@ The script creates the component, a typed `ToolDefinition`, a registry validatio
 
 ### Create a Plugin
 
-Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, and a local README:
+Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, self-contained SDK type declarations, and a local README:
 
 ```sh
 pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
 ```
 
-The default output is `plugins/org.example.my-plugin`. Use `--directory` for a project outside the repository, and review `plugin.source.json` before signing. The scaffold targets the current renderer API `1.4.0`, keeps signing keys outside the source directory, and accepts optional capability declarations:
+The default output is `plugins/org.example.my-plugin`. Use `--directory` for a project outside the repository, and review `plugin.source.json` before signing. The `types/` directory contains the five self-contained SDK declarations for TypeScript projects. The scaffold targets the current renderer API `1.4.0`, keeps signing keys outside the source directory, and accepts optional capability declarations:
 
 ```sh
 pnpm plugin:create -- --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
