@@ -2,7 +2,6 @@
 import { useThemeVars } from 'naive-ui';
 import FavoriteButton from './FavoriteButton.vue';
 import type { Tool } from '@/tools/tools.types';
-import { prefetchTool } from '@/tools/tool-prefetch';
 
 const props = withDefaults(defineProps<{
   tool: Tool & { category: string }
@@ -12,19 +11,10 @@ const props = withDefaults(defineProps<{
 });
 const { tool, hoverEnabled } = toRefs(props);
 const theme = useThemeVars();
-
-function prefetch() {
-  prefetchTool(tool.value);
-}
 </script>
 
 <template>
-  <router-link
-    :to="tool.path"
-    class="tool-card-link decoration-none"
-    @pointerenter="prefetch"
-    @focus="prefetch"
-  >
+  <router-link :to="tool.path" class="tool-card-link decoration-none">
     <c-card class="h-full !border-2px" :class="{ '!hover:border-primary': hoverEnabled }">
       <div flex items-center justify-between>
         <n-icon class="text-neutral-400 dark:text-neutral-600" size="40" :component="tool.icon" />
