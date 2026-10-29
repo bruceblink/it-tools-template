@@ -16,7 +16,6 @@ const makeLabel = (tool: Tool) => () => h(
     to: tool.path,
     onPointerenter: () => prefetchTool(tool),
     onFocus: () => prefetchTool(tool),
-    onTouchstart: () => prefetchTool(tool),
   },
   { default: () => tool.name },
 );

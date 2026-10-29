@@ -877,3 +877,11 @@ Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通�
 Excalidraw 编辑器可以作为第一方页面或静态插件，但 `@excalidraw/excalidraw` npm 包不包含协作实现。当前插件沙箱的 `connect-src 'self'` 和协议拦截会阻止 `http/https/ws/wss` 连接，插件能力目录也没有网络能力，因此实时协作不能直接作为当前外部插件功能交付。评估文档见 [18-excalidraw-integration-assessment.md](18-excalidraw-integration-assessment.md)。
 
 推荐先做本地 `.excalidraw` 编辑、导出和受限文件保存，再决定只读分享服务。实时协作需要独立的房间服务、认证、持久化、冲突合并、文件存储和端到端加密设计；只有在这些边界确定并完成本地 Docker 与跨平台验收后，才评估第一方页面或受控网络能力。
+
+### 2026-10-29：撤销首屏全量路由预加载
+
+线上页面出现首屏加载慢和点击菜单后路由迟滞。回归点是 `mountSharedApp()` 在应用挂载后通过空闲回调分批调用全部工具组件的动态导入。117 个工具路由会在用户没有操作时持续产生请求和模块解析，网络较慢时会与用户点击的路由争用资源。
+
+现在只保留用户对具体工具产生 `pointerenter` 或键盘 `focus` 时的单工具预加载，并移除触摸开始时的预加载。首屏不再遍历全部工具组件；真正导航仍由路由组件的动态导入完成，重复悬停和路由加载继续共享同一个组件请求。这样恢复了首屏和菜单的按需加载边界，避免后台预加载阻塞用户当前导航。
+
+Windows 本机完整 `pnpm check` 通过 144 个测试文件（2 个跳过）、898 项测试（18 个跳过），并完成类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。构建保留既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类、依赖直接 `eval` 和 Rolldown `inlineDynamicImports` 提示；这些提示未导致失败。线上新标签页在清理浏览器缓存后重新加载，首页到 Hash 文本工具的 URL 与页面标题均正确切换；浏览器自动化本身的单次调用耗时不作为页面真实响应时间结论。

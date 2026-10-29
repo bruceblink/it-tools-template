@@ -24,7 +24,6 @@ function prefetch() {
     class="tool-card-link decoration-none"
     @pointerenter="prefetch"
     @focus="prefetch"
-    @touchstart="prefetch"
   >
     <c-card class="h-full !border-2px" :class="{ '!hover:border-primary': hoverEnabled }">
       <div flex items-center justify-between>

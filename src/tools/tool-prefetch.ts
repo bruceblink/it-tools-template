@@ -19,31 +19,3 @@ export function prefetchTool(tool: Tool): void {
   });
   pendingToolLoads.set(tool, load);
 }
-
-function scheduleIdle(callback: () => void): void {
-  const requestIdleCallback = (window as Window & {
-    requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number
-  }).requestIdleCallback;
-  if (requestIdleCallback) {
-    requestIdleCallback(callback, { timeout: 1500 });
-    return;
-  }
-  window.setTimeout(callback, 100);
-}
-
-/** Warm route chunks in small batches after the initial interface is usable. */
-export function prefetchToolsWhenIdle(tools: readonly Tool[]): void {
-  let offset = 0;
-  const batchSize = 6;
-
-  const prefetchBatch = () => {
-    const batch = tools.slice(offset, offset + batchSize);
-    offset += batch.length;
-    batch.forEach(prefetchTool);
-    if (offset < tools.length) {
-      scheduleIdle(prefetchBatch);
-    }
-  };
-
-  scheduleIdle(prefetchBatch);
-}
