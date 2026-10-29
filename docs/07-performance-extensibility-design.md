@@ -861,3 +861,11 @@ Electron `app.smoke.e2e.spec.ts` 与 `plugin-manager.e2e.spec.ts` 共 21 项通�
 页面以 150ms 防抖提交任务。每次输入、输入进制或自定义进制改变时，页面取消旧任务、清空旧结果，并用版本号丢弃迟到响应。任务限制为 16 KiB 输入、2 MiB 序列化输出和 10 秒超时；无效数字返回校验错误，超过限制或 Worker 失败返回固定状态。独立 Worker 不加入共享任务 Worker，便于后续按工具测量和回收资源。
 
 模型、任务服务和 TaskRunner 回归共 40 项通过；Windows 本机完整 `pnpm check` 通过 143 个测试文件（2 个跳过）、894 项测试（18 个跳过），并完成类型检查、零警告 lint、Web/PWA/Electron 构建和 Web 隔离检查。构建仍有既存的 `path`/`tls` 外置、UnoCSS 未匹配工具类和依赖直接 `eval` 提示；这些提示未导致失败。打包 Electron 真实窗口显示默认结果，输入 `255` 后固定输出更新正确，并从工具点击 Home 返回主页；过渡完成后工具卡片没有异常边框。Linux/macOS 运行时和公开第三方插件分发仍待验收。
+
+### 2026-10-29：发布插件平台化基线与插件脚手架
+
+`v2026.10.28-1dbc63c` 已发布并作为后续插件平台化版本序列的基线。该 release 的质量检查、Linux/macOS/Windows Electron 构建、Docker 多架构镜像和 GitHub Release 均成功；Web ZIP、三平台桌面包和版本化 Docker 镜像已上传。后续 release 必须以该 tag 为祖先，并以插件清单、SDK、能力边界、生命周期、隔离、验证或开发者工具为主要交付。
+
+本轮新增 `pnpm plugin:create`。脚手架生成版本化 `plugin.source.json`、插件命名空间内的工具贡献、最小隔离页面、样式、运行时示例和开发 README；默认清单覆盖当前 API `1.4.0`，可选能力同时写入包请求和工具贡献元数据。脚手架拒绝非法 ID、版本、工具 slug、能力和已有目录，不覆盖用户文件。生成结果通过现有 `plugin:pack` 签名打包器校验，包内不包含私钥。
+
+脚本单测覆盖有效生成、清单字段、命名空间、直接打包和重复目录拒绝。Web、Electron 和插件运行时行为没有改变；Linux/macOS 前台窗口和公开第三方插件分发仍待验收。

@@ -4,7 +4,13 @@
 
 ## 插件源码
 
-从 [`plugins/capability-demo/`](../plugins/capability-demo/) 复制样例，再修改 `plugin.source.json`、HTML、CSS 和 JavaScript。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以复制 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts)、`it-tools-plugin-package.d.ts`、`plugin-capabilities.d.ts`、`plugin-api-version.d.ts` 和 `plugin-api-errors.d.ts`；SDK 目录自包含能力、错误码与版本类型，不要求插件项目解析仓库内部的 `src/` 路径。
+可以使用脚手架创建新的插件源目录，再按需参考 [`plugins/capability-demo/`](../plugins/capability-demo/) 修改 `plugin.source.json`、HTML、CSS 和 JavaScript：
+
+```powershell
+pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
+```
+
+脚手架默认写入 `plugins/org.example.my-plugin`，也可以用 `--directory` 指定仓库外目录。它不会覆盖已有目录，并生成一个插件命名空间内的工具贡献。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。TypeScript 插件可以复制 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts)、`it-tools-plugin-package.d.ts`、`plugin-capabilities.d.ts`、`plugin-api-version.d.ts` 和 `plugin-api-errors.d.ts`；SDK 目录自包含能力、错误码与版本类型，不要求插件项目解析仓库内部的 `src/` 路径。
 
 ## 开发手册约定
 

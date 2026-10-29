@@ -154,6 +154,28 @@ pnpm electron:package:mac
 
 Run desktop smoke tests with pnpm test:e2e:electron. The platform matrix is maintained in [.github/workflows/electron-desktop.yml](.github/workflows/electron-desktop.yml).
 
+## Create an external plugin
+
+Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, self-contained SDK type declarations, and a local README:
+
+~~~sh
+pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
+~~~
+
+The default output is `plugins/org.example.my-plugin`. Use `--directory` for a project outside the repository, and review `plugin.source.json` before signing. The `types/` directory contains five self-contained SDK declarations for TypeScript projects. The scaffold targets renderer API `1.4.0`, keeps signing keys outside the source directory, and accepts optional capability declarations:
+
+~~~sh
+pnpm plugin:create -- --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
+~~~
+
+The generated package is metadata and UI only. Validate it before creating signing material:
+
+~~~sh
+pnpm plugin:validate -- --source plugins/org.example.my-plugin
+~~~
+
+The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
+
 ## Architecture and project docs
 
 - [Development plan](docs/01-development-plan.md) — roadmap and release gates
@@ -178,7 +200,63 @@ This runs header consistency checks, script tests, type checks, lint, unit tests
 
 For a local release preview:
 
+<<<<<<< HEAD
 ~~~sh
+=======
+The current execution plan is in [Development Plan](docs/01-development-plan.md). Performance, platform, and plugin design records are in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-design.md); cross-project boundaries remain explicit and independent. This repository owns the Web/PWA product, the Electron workbenches, and the shared tool catalog; `ramag-platform` owns only the native core and GPUI client. The Electron plugin pilot includes signed package installation, capability approval, version fallback, and signer revocation; cross-platform and native-window acceptance is still in progress. The external plugin v1 interfaces are defined in [Electron Plugin Package Format](docs/08-electron-plugin-package-format-v1.md), [Capability API](docs/09-electron-plugin-capability-api-v1.md), [Lifecycle Service](docs/10-electron-plugin-lifecycle-v1.md), and [MVP Quickstart](docs/11-electron-plugin-mvp-quickstart.md). The maintained first-party internal extension interface remains documented in [First-Party Extension SDK v0](docs/extension-sdk-v0.md). Earlier quality work is recorded in [archived Quality Baseline](docs/archive/02-quality-baseline.md).
+
+The Electron database manager and local system monitor are described in [Database Manager and System Monitor Design](docs/13-database-system-monitor-design.md). They are the first product workbenches replacing duplicate scope from `ramag-platform`. The database MVP targets PostgreSQL, MySQL, and SQLite; paginated browsing, saved connections, the other engines, and live system metrics follow the design record. SSH/SFTP/PTY remain outside the current it-tools-template scope and are developed independently by Ramag. Application credentials stay in Electron's system-backed storage.
+
+Electron plugin developers can use the signed package CLI and maintained [Capability demo](plugins/capability-demo/). See [Electron Plugin MVP Quickstart](docs/11-electron-plugin-mvp-quickstart.md) for key storage, package creation, trust, and install steps. External plugins remain Electron-only.
+
+The two security tasks and their acceptance results are in the archived [Random Sources and Sensitive Inputs](docs/archive/03-security-inputs-plan.md).
+
+Content privacy, sanitized rendering, and deployment headers are described in the archived [Content, HTML, and Deployment Boundaries](docs/archive/04-security-boundaries.md). The credential, request, configuration, and document inputs covered there stay in page memory; existing display and processing preferences may still be saved.
+
+The PWA precaches the application shell and caches tool assets after use. It stores only same-origin build resources, with a 160-entry, 30-day limit for each build and service-worker scope. Offline availability depends on those resources remaining in browser storage. The completed cache boundary is documented in the archived [Application Shell and Offline Cache](docs/archive/05-pwa-cache-plan.md); remaining performance work is tracked in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-design.md).
+
+Every production build writes `dist/bundle-report.json` with raw and gzip sizes for the shell, optional entry closures, incremental tool JavaScript, and runtime assets, including workers. Builds fail when the initial precache exceeds 8 MiB, initial JavaScript exceeds 300 KiB gzip, or a tool needs more than 500 KiB of additional static JavaScript after the shell has loaded. Worker scripts load when a task starts and are reported separately. The PWA registration helper loads after the app mounts and is outside the shell. CI uploads the report as an artifact. After building, run the focused offline acceptance with `pnpm test:e2e src/pwa-cache.e2e.spec.ts`.
+
+The Electron desktop app shares the Vue interface and tool routes. Install the local Electron runtime once with `pnpm exec install-electron`, then use `pnpm electron:dev` for development and `pnpm electron:build` for the desktop build. Native runners create a Windows NSIS installer with `pnpm electron:package:win`, Linux AppImage and deb packages with `pnpm electron:package:linux`, or macOS dmg and zip packages with `pnpm electron:package:mac`. Run the Electron smoke checks with `pnpm test:e2e:electron`; [GitHub Actions](.github/workflows/electron-desktop.yml) builds and tests all three platforms. [Release v2026.10.16-08de8e6](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.10.16-08de8e6) includes the Web ZIP and Windows x64, Linux x64, and macOS ARM64 desktop packages, with Docker image tags in its notes. The desktop renderer uses a secure local `app://` origin, skips the Web Service Worker, and exposes a narrow sandboxed preload bridge. Camera Recorder has an explicit consent flow; real-device recovery, signing, notarization, installation, upgrade, and uninstall acceptance remain open.
+
+The shared Web/Electron boundary and its acceptance limits are recorded in [Performance, Extensibility, and Plugins](docs/07-performance-extensibility-design.md).
+
+Deployment headers are generated from `security-headers.json`. Run `pnpm headers:sync` after editing that source and `pnpm headers:check` to detect drift. A custom Plausible API requires the same exact HTTPS origin in `plausibleApiOrigin` and `VITE_PLAUSIBLE_API_HOST`; run the sync/check commands with that build variable set.
+
+After the final production build, `pnpm headers:docker` checks real Nginx responses using local Docker on `127.0.0.1:18080` and removes its container. Start Docker and pull `nginx:stable-alpine` before running this check.
+
+### Create a New Tool
+
+Run the scaffold script to create a tool with an explicit category, platform, data policy, and offline policy:
+
+```sh
+pnpm run script:create:tool my-tool-name --category development --title-zh "我的工具" --data-processing memory-only --offline available --platforms web,electron
+```
+
+The script creates the component, a typed `ToolDefinition`, a registry validation test, and an end-to-end scaffold assertion. It registers the tool in the requested category and adds English and Chinese title and description entries. The generated description is a TODO. Replace it and review all declared metadata before implementing the tool. Add `--capabilities clipboard.write,file.save` only when the tool requires those capabilities.
+
+### Create a Plugin
+
+Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, and a local README:
+
+```sh
+pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
+```
+
+The default output is `plugins/org.example.my-plugin`. Use `--directory` for a project outside the repository, and review `plugin.source.json` before signing. The scaffold targets the current renderer API `1.4.0`, keeps signing keys outside the source directory, and accepts optional capability declarations:
+
+```sh
+pnpm plugin:create -- --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
+```
+
+The generated package is metadata and UI only. It enters the existing `plugin:pack` validation path and does not grant a capability until the Electron host and user approve it.
+
+### Release Flow
+
+Preview the generated changelog without touching any files:
+
+```sh
+>>>>>>> 686457d (feat(plugin): add plugin project scaffold)
 pnpm release:dry-run
 ~~~
 
