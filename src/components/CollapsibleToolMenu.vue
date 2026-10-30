@@ -4,7 +4,6 @@ import { useThemeVars } from 'naive-ui';
 import { RouterLink, useRoute } from 'vue-router';
 import MenuIconItem from './MenuIconItem.vue';
 import type { Tool, ToolCategory } from '@/tools/tools.types';
-import { cancelToolPrefetch, prefetchTool, queueToolPrefetch } from '@/tools/tool-prefetch';
 
 const props = withDefaults(defineProps<{ toolsByCategory?: ToolCategory[] }>(), { toolsByCategory: () => [] });
 const { toolsByCategory } = toRefs(props);
@@ -15,11 +14,6 @@ const makeLabel = (tool: Tool) => () => h(
   RouterLink,
   {
     to: tool.path,
-    onPointerenter: () => queueToolPrefetch(tool),
-    onPointerleave: () => cancelToolPrefetch(tool),
-    onPointerdown: () => prefetchTool(tool),
-    onFocus: () => prefetchTool(tool),
-    onTouchstart: () => prefetchTool(tool),
   },
   { default: () => tool.name },
 );

@@ -263,6 +263,8 @@ declare module 'vue' {
     TomlToYaml: typeof import('./src/tools/toml-to-yaml/toml-to-yaml.vue')['default']
     'Tool.layout': typeof import('./src/layouts/tool.layout.vue')['default']
     ToolCard: typeof import('./src/components/ToolCard.vue')['default']
+    ToolRouteLoading: typeof import('./src/components/ToolRouteLoading.vue')['default']
+    ToolRoutePage: typeof import('./src/pages/ToolRoutePage.vue')['default']
     UlidGenerator: typeof import('./src/tools/ulid-generator/ulid-generator.vue')['default']
     UrlEncoder: typeof import('./src/tools/url-encoder/url-encoder.vue')['default']
     UrlParser: typeof import('./src/tools/url-parser/url-parser.vue')['default']
