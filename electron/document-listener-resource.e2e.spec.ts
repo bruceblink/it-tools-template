@@ -40,6 +40,15 @@ test('releases the Keycode Info document listener after repeated route changes',
 
   for (let cycle = 0; cycle < 20; cycle += 1) {
     await openKeycodeInfo(page);
+    // Tool routes intentionally commit their lightweight shell before the lazy
+    // tool component is mounted. Wait for the Keycode Info component to attach
+    // its listener instead of racing the async route component resolution.
+    await expect
+      .poll(() => readDocumentKeydownListenerCount(cdp), {
+        timeout: 10_000,
+        message: 'Keycode Info did not attach its document keydown listener',
+      })
+      .toBe(initialCount + 1);
     const activeCount = await readDocumentKeydownListenerCount(cdp);
     maximumCount = Math.max(maximumCount, activeCount);
     expect(activeCount).toBe(initialCount + 1);
