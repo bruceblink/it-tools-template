@@ -1,5 +1,7 @@
 # build stage
-FROM node:24-alpine AS build-stage
+# The Vite output is platform independent. Keep the Node build on the native
+# BuildKit worker so the arm64 image does not run the compiler through QEMU.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS build-stage
 # Set environment variables for non-interactive npm installs
 ENV NPM_CONFIG_LOGLEVEL warn
 ENV CI true
