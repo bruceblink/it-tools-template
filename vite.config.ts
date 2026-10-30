@@ -67,9 +67,13 @@ export default defineConfig(({ command }) => ({
   build: {
     target: 'esnext',
     manifest: true,
-    // Keep lazy route dependencies out of the initial document. The default
-    // Rolldown graph preserves dynamic route boundaries; forcing shared vendor
-    // groups can turn those dependencies into static imports of the home entry.
-    modulePreload: false,
+    // Keep lazy route dependencies out of the initial document. Dynamic route
+    // imports still preload their calculated JS closure after navigation starts,
+    // so the route does not wait for a chain of sequential module requests.
+    modulePreload: {
+      polyfill: false,
+      resolveDependencies: (_filename, dependencies, { hostType }) =>
+        hostType === 'html' ? [] : dependencies,
+    },
   },
 }));
