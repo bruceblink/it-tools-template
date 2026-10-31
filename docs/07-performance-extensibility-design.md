@@ -897,3 +897,7 @@ Windows 本机完整 `pnpm check` 通过 144 个测试文件（2 个跳过）、
 线上冷点击仍会先下载工具入口，再逐级发现输入控件、共享组件和工具服务。这个依赖链会把多个网络往返叠加到首个工具打开时间。
 
 现在使用 Vite `build.modulePreload.resolveDependencies`。HTML 入口返回空依赖列表，因此首页不会提前加载所有工具资源；JavaScript 动态导入返回构建器计算的依赖列表，因此用户开始导航后，路由入口及其 JavaScript 依赖可以并行请求。该配置不启动后台工具导入，也不改变路由组件的按需边界。
+
+### 2026-10-31：前端工具链稳定版核对
+
+根据 Vite 与 pnpm 的官方发布信息，当前稳定版本为 Vite `8.3.5` 和 pnpm `12.16.1`。仓库原本已使用 Vite `8.3.5`；本轮保留其现有兼容范围并更新 pnpm `packageManager`、锁文件、README 和 Docker 构建阶段到 `12.16.1`。更新后需要继续验证 Vite 插件 peer 范围、Web/Electron 构建和冻结安装。

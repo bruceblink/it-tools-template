@@ -158,12 +158,14 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          cache-from: type=gha,scope=it-tools-release
+          cache-to: type=gha,mode=max,scope=it-tools-release
           tags: |
             bruceblink/it-tools:latest
             bruceblink/it-tools:${{ needs.prepare.outputs.release_version }}

@@ -67,7 +67,7 @@ The production output is the dist directory.
 | Vercel | pnpm build | dist |
 | Netlify | pnpm build | dist |
 
-Use Node.js 24 and pnpm 12.15.0. The repository contains the SPA fallback and header configuration for the supported static hosts. For a local production check:
+Use Node.js 24, pnpm 12.16.1, and Vite 8.3.5. The repository contains the SPA fallback and header configuration for the supported static hosts. For a local production check:
 
 ~~~sh
 pnpm build
@@ -81,7 +81,7 @@ The build also writes dist/bundle-report.json, which records shell, route, worke
 ### Requirements
 
 - Node.js 24 LTS or newer
-- pnpm 12.15.0 (Corepack can activate the version declared in package.json)
+- pnpm 12.16.1 (Corepack can activate the version declared in package.json)
 
 ### Install and run
 
