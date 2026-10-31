@@ -108,4 +108,4 @@ Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPU
 - 默认在 `main` 开发；每个插件平台化切片完成验证后独立提交，发布由已验证的版本序列触发。
 - 项目继续采用客户端优先、无需后端的默认部署模式。
 - 117 个现有工具作为兼容基线，不进行大规模删除或重命名。
-- 项目已采用 AGPLv3，Vue 3、Vite、Naive UI、Pinia 和 pnpm 继续作为基础技术栈。
+- 项目采用 GPLv3。Vue 3、Vite、Naive UI、Pinia 和 pnpm 继续作为基础技术栈。

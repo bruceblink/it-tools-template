@@ -279,4 +279,4 @@ Please keep changes focused, include meaningful tests for behavior changes, and 
 
 ## License
 
-This project is distributed under the [GNU Affero General Public License v3.0](LICENSE).
+This project is distributed under the [GNU General Public License v3.0 (GPLv3)](LICENSE).
