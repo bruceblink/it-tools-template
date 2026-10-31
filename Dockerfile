@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1.7
-
 # build stage
 # The Vite output is platform independent. Keep the Node build on the native
 # BuildKit worker so the arm64 image does not run the compiler through QEMU.

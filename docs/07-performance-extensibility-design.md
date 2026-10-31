@@ -901,3 +901,9 @@ Windows 本机完整 `pnpm check` 通过 144 个测试文件（2 个跳过）、
 ### 2026-10-31：前端工具链稳定版核对
 
 根据 Vite 与 pnpm 的官方发布信息，当前稳定版本为 Vite `8.3.5` 和 pnpm `12.16.1`。仓库原本已使用 Vite `8.3.5`；本轮保留其现有兼容范围并更新 pnpm `packageManager`、锁文件、README 和 Docker 构建阶段到 `12.16.1`。更新后需要继续验证 Vite 插件 peer 范围、Web/Electron 构建和冻结安装。
+
+### 2026-10-31：WSL Docker 多架构构建验收
+
+WSL 中的 Docker Buildx 默认 builder 使用 BuildKit `v0.26.2`。本地构建验证覆盖 `linux/amd64` 和 `linux/arm64`，构建阶段只执行一次 `linux/amd64` 的 Web 编译，pnpm store 层命中缓存，最终成功导出 OCI 多架构 manifest。构建时间受本机 npm registry 代理速度影响，但没有在 arm64 QEMU 中重复执行 Vite 编译。
+
+本轮同时修正 Docker 上下文：保留 `docs/licenses/**`，因为 OUI 数据生成器需要读取 BSD 许可文件；其他文档仍不进入上下文。Dockerfile 使用 BuildKit 内置 parser 解析 `RUN --mount=type=cache`，避免依赖额外的 Dockerfile frontend 镜像。WSL 真实构建输出和既存的 `path`、`tls`、UnoCSS、依赖 `eval` 警告均不影响构建成功。

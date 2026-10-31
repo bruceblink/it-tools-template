@@ -1,7 +1,9 @@
 node_modules
 .git
 .github
-docs
+docs/*
+!docs/licenses/
+!docs/licenses/**
 release
 playwright-report
 coverage
