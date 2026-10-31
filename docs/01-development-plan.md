@@ -1,111 +1,113 @@
-# IT Tools 最新开发计划
+# IT Tools 主线开发计划
 
-> 状态：现行计划
-> 更新日期：2026-10-29
-> 当前基线：`v2026.10.28-1dbc63c`（已发布）；后续 release 进入插件平台化版本序列
-> 产品定位：Web/PWA 与 Electron 的通用工具产品和桌面工作台
-> 配套项目：[ramag-platform](F:/project/ramag-platform/) 负责少量原生核心能力和 GPUI 客户端
+> 状态：唯一开发计划
+> 更新日期：2026-10-31
+> 仓库版本：`2026.10.30-e60c009`（来自 `package.json`，不代表本次完成发布验收）
+> 插件平台化起点：`v2026.10.28-1dbc63c`；后续版本保留该 tag 的祖先关系
+> 适用范围：本仓库的 Web/PWA、Electron、插件接口和发布维护
 
-本计划把“好钢用在刀刃上”落实为清晰的产品所有者。it-tools-template 负责用户可见的通用工具、
-Electron 工作台、Web/PWA 入口、桌面分发和插件产品；ramag-platform 独立负责少量
-Electron 实现成本高或收益低的 Rust/GPUI 原生能力。两个项目不共享进程、运行时、代码包或接口协议。
+本文集中维护未完成工作、执行顺序和验收条件。设计说明只维护接口、实现边界和验证方法，不再单独排期。已完成计划和逐次开发日志从当前文档中删除；历史细节通过 Git 查询，已有性能 JSON 和许可证文件继续保留。
 
-P0 的共同边界记录见
-[双项目能力归属矩阵](14-cross-project-capability-matrix.md)。两个仓库的矩阵必须保持同一
-能力 ID、所有者、平台范围和回滚条件。
+## 1. 产品范围与维护基线
 
-## 1. 双项目职责
+it-tools-template 独立负责 Web/PWA 工具、Electron 工作台、桌面分发和插件平台。ramag-platform 独立维护自身原生能力。两个项目不共享进程、运行时、代码包、接口协议或发布产物；本计划不安排修改 Ramag。
 
-| 范围 | it-tools-template 的责任 | ramag-platform 的责任 |
-|---|---|---|
-| Web/PWA | 完整承载可移植工具、WASM 和离线策略 | 不提供 Web UI |
-| Electron | 完整承载工具路由、数据库、API、Git、消息、容器、对象存储、剪贴板和普通系统监控 | 提供受控原生能力适配 |
-| 通用计算 | 117 个工具、格式转换、编码、数据处理和测试样例 | 不复制工具入口；必要时提供可移植核心 |
-| SSH/SFTP/PTY | 当前不纳入 it-tools-template 的统一功能范围 | 由 Ramag 独立提供 Rust 会话、PTY、隧道和安全边界 |
-| 本地安全存储 | 独立管理应用配置和凭据；不暴露通用 Node 或文件接口 | 独立管理 Ramag 的连接和会话秘密 |
-| 高精度系统诊断 | 普通 CPU、内存、磁盘、网络和进程页面 | 只在基准证明 Electron/Node 不满足时提供采集能力 |
-| GPUI | 不实现 | 只实现原生核心工作区，不恢复通用工具箱 |
+| 范围 | 当前基线 | 维护边界 |
+| --- | --- | --- |
+| 通用工具 | 117 个工具、9 个语言包、按需路由、平台化工具注册 | 保持现有 URL、收藏和输入输出；只处理有证据的问题 |
+| Web/PWA | 应用壳缓存、访问后资源缓存、构建体积检查 | 默认客户端处理；不新增账号、同步或后端服务 |
+| Electron 工作台 | 三引擎数据库、系统监视、API、Git、S3 兼容对象浏览与传输、只读容器列表 | 已交付功能进入维护；不把模块名称解释为完整协议或全部操作均已支持 |
+| 第一方扩展 | SDK v0、按需激活、命令、设置迁移和数据提供器 | 仅运行项目维护的受信任代码 |
+| 外部插件 | 签名包、信任管理、能力授权、工具贡献、设置、升级回退与停用恢复 | 仅支持 Electron；当前宿主 API 为 `1.4.0`，跨平台和真实窗口证据仍需补齐 |
+| 项目边界 | [能力归属矩阵](14-cross-project-capability-matrix.md) | 该矩阵用于说明边界，不表示其中的目标能力已进入排期 |
 
-Web、Electron 和 GPUI 的平台范围必须在工具定义中明确。it-tools-template 独立维护
-Web/Electron 的参数、权限、错误和资源限制；Ramag 独立维护 GPUI 的原生能力。
-两个项目只对照用户场景，不共享实现和运行时。
+不在当前主线新增 Redis、MongoDB、Kafka、MQTT、剪贴板历史、容器写操作或其他内置工具。SSH/SFTP/PTY 不属于本仓库范围。Excalidraw 本地绘图、分享和协作仅保留为[评估结论](18-excalidraw-integration-assessment.md)，未批准实施。插件商店、生产签名者分发、自动更新服务及 macOS Intel 支持需另行确认范围。
 
-## 2. 当前主线：平台稳定性与插件开发接口
+## 2. 执行顺序
 
-详细性能、扩展和插件设计见 [07-performance-extensibility-design.md](07-performance-extensibility-design.md)。
-数据库和系统监视的具体页面与服务边界见 [13-database-system-monitor-design.md](13-database-system-monitor-design.md)。已交付工具和工作台功能进入维护状态；只有已知缺陷或性能数据支持时才改动这些功能。
+每次选择一个可独立验收的范围。优先修复已确认的问题；接口、隔离、性能和发布工作按依赖推进。下面的 P0–P4 是本计划唯一的优先级编号，不沿用已删除的历史阶段编号。
 
-| 顺序 | ID | 范围 | 完成标志 |
-|---|---|---|---|
-| P0 | PLATFORM-ISSUES-001 | 修复平台已知问题并补齐跨平台证据 | 每个问题有复现条件、回归测试和平台覆盖记录 |
-| P1 | PLUGIN-API-V1-001 | 设计并验证版本化插件开发接口 | 样例插件使用稳定的清单、工具贡献、能力和设置接口 |
-| P2 | PLUGIN-ISOLATION-001 | 完成插件资源、生命周期和平台隔离 | 权限、Worker、失败恢复和停用边界在 Windows/Linux/macOS 通过回归 |
-| P3 | PERFORMANCE-BASELINE-001 | 维护性能基线并修复有数据支持的回退 | 固定输入和运行环境可复现；有明确平台与测量范围 |
-| P4 | RELEASE-WEB-ELECTRON-001 | 按维护需要发布 Web、PWA 和 Electron 版本 | 发布包含已验证的构建、权限拒绝、升级和回滚证据 |
+| 顺序 | ID | 当前状态 | 下一项工作 | 完成条件 |
+| --- | --- | --- | --- | --- |
+| P0 | PLATFORM-ISSUES-001 | 维护中；有已确认缺陷和验收缺口 | 从第 3 节选择一个问题，记录复现条件并补充回归 | 问题有对应修复、验证结果和适用平台；未验证项明确保留 |
+| P1 | PLUGIN-API-V1-001 | API、SDK 类型、脚手架和源码校验已具备 | 在独立插件项目复核文档、生成结果和当前 API 的一致性 | 插件作者仅依靠公开文档和 SDK 即可完成创建、校验、打包、安装、调用和错误处理 |
+| P2 | PLUGIN-ISOLATION-001 | Windows 自动化已有证据；跨平台和完整窗口流程未完成 | 补齐 Linux/macOS 隔离、资源计数和真实窗口流程 | 各目标平台覆盖权限拒绝、撤销、停用、卡死、崩溃、Worker 限额、升级回退和卸载；宿主继续可用 |
+| P3 | PERFORMANCE-BASELINE-001 | Windows 历史测量已保留；当前版本和其他平台需复核 | 复测启动、首个工具导航、Worker 与系统监视器资源 | 同一构建、环境和输入可复现；有中位数、p95、资源口径和未覆盖范围；只修复数据支持的回退 |
+| P4 | RELEASE-WEB-ELECTRON-001 | 构建与分发流程已有实现；安装和权限证据不完整 | 为实际发布版本完成第 4 节适用检查 | 目标提交的 CI、Web/Docker 产物、桌面包、校验和及安装升级证据齐全；回滚方法可执行 |
 
-不在当前主线上增加新的内置工具或工作台协议。跨项目仍保持独立，不共享进程、运行时、代码包或接口协议。
+P1 维护现有版本化接口，不重复开发已交付 API。新增能力、协议或兼容行为必须先明确用途、权限、资源限制和失败处理，再进入本表。
 
-### 当前状态（2026-10-29）
+## 3. 待处理问题与证据缺口
 
-内置工具、数据库、系统监视、对象存储和容器工作台进入维护状态。后续只在有已知缺陷、性能数据或平台验收证据时修改；具体设计和验证记录集中在相关设计文档。
+以下事项来自现有文档和本次源码核对。历史报告只证明报告中的版本和环境，不作为当前版本通过验收的证据。
 
-| 领域 | 当前入口 | 当前状态 |
-|---|---|---|
-| 性能、Web/Electron 边界和插件平台 | [性能与插件平台设计说明](07-performance-extensibility-design.md) | Worker 迁移、构建预算、平台边界和插件平台 v1 的实施记录集中维护；Linux/macOS 前台窗口、真实设备权限和公开第三方分发仍需独立验收 |
-| 外部插件接口 | [包格式](08-electron-plugin-package-format-v1.md)、[能力 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)、[MVP 使用说明](11-electron-plugin-mvp-quickstart.md) | 清单、工具贡献、能力、设置、错误码、生命周期和安装流程已形成版本化接口 |
-| Excalidraw 集成评估 | [Excalidraw 集成评估](18-excalidraw-integration-assessment.md) | 本地绘图可作为第一方页面或静态插件；实时协作需要独立服务，当前外部插件网络边界不支持直接连接 |
-| 数据库与系统监视 | [设计说明](13-database-system-monitor-design.md) | Electron 专属工作台进入维护，跨平台和真实窗口证据按设计说明补齐 |
-| 对象存储与容器 | [对象存储设计说明](15-object-storage-workbench-design.md)、[容器设计说明](17-container-workbench-design.md) | 对象浏览、传输和只读容器列表已合并记录；Web 继续隐藏桌面专属入口 |
-| 双项目边界 | [能力归属矩阵](14-cross-project-capability-matrix.md) | it-tools-template 与 Ramag 不共享进程、运行时、代码包或接口协议 |
+### P0：已知问题与现有工作台
 
-`v2026.10.28-1dbc63c` 是当前插件平台化工作的发布基线。后续版本必须以该 tag 为祖先，并把插件清单、SDK、能力边界、生命周期、隔离、验证或开发者工具作为主要交付；普通内置工具只有在平台缺陷或性能证据要求时才进入 release。发布前继续使用同一套 Web、Electron、Docker 和跨平台 GitHub Actions 验收。
+- 元标签生成器仍直接调用 `@it-tools/oggen@1.3.0`。本次本地执行 `generateMeta({ type: 'music.song' })` 仍得到 `<meta property="og:type" value="music.song" />`。后续修复应验证输出属性语义、现有类型选项及复制结果。
+- 数据库、系统监视、对象存储和容器工作台的完整真实窗口流程尚未统一验收。覆盖连接、分页、筛选、查询、编辑冲突、文件选择、传输确认、取消、断开和关闭；按模块实际支持范围执行。
+- 系统监视器需要睡眠恢复、PID 重用和更完整的服务、连接、订阅、监听器及缓存点计数。Windows 已有 30 分钟与 20 次路由切换报告，不能据此推断所有计数均已覆盖。
+- PDF 检查已有合成签名与篡改样例；真实外部签名文件和证书链仍缺验证。摄像头需逐平台验证真实设备、授权拒绝后的恢复和设备切换。
+- Firefox 曾出现本机启动失败。后续三浏览器验收需重新确认运行环境；启动失败或环境跳过均不计为通过。非中英文语言包的完整性仍需单独审查。
 
-## 3. 当前基线
+### P1：插件开发接口
 
-项目已有 117 个工具、9 个语言包、Web/PWA 构建、Electron 三平台打包、数据库管理器、
-系统监视器和受限插件能力。现有性能、PWA、安全、插件和数据库验收记录继续有效，
-但它们不改变新的职责边界。打包成功不等于签名、公证、安装升级、真实设备权限和
-完整原生窗口验收完成。
+- 复核 `plugin:create` 生成项目中的 5 个 SDK 声明、API 兼容范围、贡献 ID、能力声明、错误码和使用说明。
+- 验证独立项目不依赖仓库内部 `src/` 路径；`plugin:validate` 与 `plugin:pack` 使用一致校验规则。
+- 使用签名样例覆盖不兼容 API、未声明能力、未授权调用、设置迁移、工具级故障、整包停用和恢复；保持第一方 SDK v0 与外部插件 v1 的边界。
 
-归档质量基线见 [02-quality-baseline.md](archive/02-quality-baseline.md)，Web/Electron 边界与性能、插件细节见
-[07-performance-extensibility-design.md](07-performance-extensibility-design.md)。
-历史实施只保留索引，不作为新的并行产品路线。
+### P2：插件隔离与生命周期
 
-## 历史与归档索引
+- Windows 真实窗口已有部分安装、拒绝授权、剪贴板代理和撤销签名者记录，不能代表完整安装到卸载流程。补齐 `runtime.info` 授权、真实系统剪贴板、升级失败回退和卸载操作。
+- Linux/macOS 需独立验证插件来源、存储、网络、导航、下载、Worker、卡死和崩溃清理。强制崩溃测试只证明该注入路径；自然故障结果按实际观测记录。
+- 资源检查按目标平台记录进程、Worker、定时器、监听器和内存；停用或退出后回到可解释的基线。公开第三方分发前完成目标平台安装与升级验证。
 
-历史计划只保留索引。详细实施记录已归档，当前主线不重复维护同一组任务。
+### P3：性能复测与优化
 
-| 范围 | 状态 | 记录 |
-|---|---|---|
-| 质量基线 | 已完成 | [归档质量基线](archive/02-quality-baseline.md) |
-| 安全随机源与敏感输入 | 已完成 | [归档安全输入计划](archive/03-security-inputs-plan.md) |
-| 内容、HTML 与部署边界 | 已完成 | [归档安全边界](archive/04-security-boundaries.md) |
-| PWA 应用壳与离线缓存 | 已完成 | [归档 PWA 计划](archive/05-pwa-cache-plan.md) |
-| Web/Electron 平台评估 | 已合并到性能与插件设计 | [归档原始评估](archive/06-web-electron-assessment.md) |
-| 依赖安全补丁 | 已完成 | [归档依赖补丁记录](archive/12-dependency-security-patches.md) |
+- 当前构建重新测量冷启动、首次和重复工具导航、输入处理、渲染更新、空闲 CPU、进程组内存和安装体积。Web 使用生产构建，Electron 使用同一提交的解包应用，各至少运行 20 次。
+- Linux/macOS 缺少与 Windows 对应的固定环境基线。真实窗口响应时间与自动化输入耗时分别记录，不能相互替代。
+- 系统监视器历史工作集峰值约 115.33 MiB，高于原定 64 MiB 附加内存目标。先明确附加内存计算口径，再定位缓存或采集开销；不能把两种口径直接等同。
+- Electron Math Evaluator Worker 历史构建仍高于 500 KiB 候选目标。先测当前产物和实际加载成本，再决定是否继续拆分；Worker 资源单列，不混入工具静态入口预算。
+- 继续验证首个工具导航与延后 PWA 注册、懒路由依赖并行加载的实际效果。保留构建检查：8 MiB 应用壳预缓存、300 KiB 首屏 JavaScript gzip、500 KiB 工具新增静态 JavaScript gzip。
 
-历史性能报告和构建报告保留在 `docs/`，只作为当时的测量证据。它们不构成新的开发计划。第一方内部扩展 SDK v0 与外部插件 v1 的职责不同，分别见 [第一方 SDK v0](extension-sdk-v0.md) 和 [08–11 接口说明](08-electron-plugin-package-format-v1.md)。
+### P4：发布与安装
 
-## 长期边界
+- 按 Windows、Linux、macOS 分别记录构建、实际包格式、安装、升级、回滚、卸载和设备权限结果。构建或 smoke 通过不能替代安装和真实窗口验收。
+- 复核 Windows NSIS、macOS 签名与公证的实际配置和结果。缺少证书或目标系统时保留未完成状态，不扩大平台支持结论。
+- 发布版本保留插件平台化起点的祖先关系；优先交付插件接口、隔离、验证和开发者工具，以及有证据的平台缺陷或性能修复。
 
-- 保持隐私优先和客户端优先部署；云端同步、账号和后端服务只有在出现明确需求后才作为独立能力评估。
-- 117 个现有工具作为兼容基线，不进行大规模删除或重命名。
-- 共享 Web/Electron 界面、工具注册、翻译和平台适配层；桌面原生能力只通过受限接口提供。
-- Ramag 继续独立维护 SSH/SFTP/PTY、隧道和 GPUI 原生能力；两个项目不建立运行时调用关系。
+## 4. 验证与交付
 
-新增工作必须先写清平台范围、权限、错误、取消、资源上限、验证范围和回滚边界。
+| 变更范围 | 验证命令或方法 |
+| --- | --- |
+| 仅 Markdown 整理 | `git diff --check`；检查本地链接、标题锚点、冲突标记、UTF-8 和 LF；运行时和 UI 检查不适用 |
+| 应用、构建或接口变更 | `pnpm check`，再执行受影响的定向回归 |
+| 插件 CLI 与 SDK | `pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`；复核独立生成项目 |
+| Web/PWA | `pnpm test:e2e`；离线定向检查 `pnpm test:e2e src/pwa-cache.e2e.spec.ts` |
+| Electron 与插件 | `pnpm test:e2e:electron`；真实窗口优先使用 Computer Use，不可用时记录有限启动、恢复检查和无头测试范围 |
+| 数据库集成 | `pnpm test:e2e:postgres`、`pnpm test:e2e:mysql`、`pnpm test:e2e:sqlite`；PostgreSQL 17+、MySQL 8.4+ 使用本地 Docker，SQLite 使用临时文件 |
+| 对象存储与容器 | `pnpm test:e2e:object-storage`、`pnpm test:e2e:container-workbench`；使用本地 Docker，记录服务、镜像版本、端口、启动和清理 |
+| 系统监视器长时资源 | `pnpm test:e2e:electron electron/system-monitor-resource.e2e.spec.ts`，设置 `IT_TOOLS_SYSTEM_MONITOR_SOAK_MS=1800000`；检查 30 分钟采样和 20 次路由切换 |
+| 性能基线 | 先构建当前平台解包应用，再执行 `pnpm perf:baseline -- --runs 20 --platform all --output docs/performance-baseline-YYYY-MM-DD-main.json`；新建报告，不覆盖历史报告 |
+| Docker 与响应头 | 构建实际目标镜像，执行 `pnpm headers:check`、`pnpm headers:docker`；记录镜像和容器清理 |
+| 发布 | 使用仓库 release 流程；核对目标提交、CI 任务、包和校验和，按 tag 提交范围生成发布说明 |
 
-## 测试与发布要求
+外部服务集成无法使用 Docker 时，标记未完成。自动化、隐藏窗口、真实窗口、打包、安装和发布证据分别记录。报告包含提交、平台、命令、结果与限制；没有执行的检查写明“不适用”或“未完成”。
 
-- 每个阶段先通过单元测试、类型检查、lint 和构建，再提交代码。
-- UI 变更使用真实浏览器流程验证首页、搜索、收藏、主题切换、移动菜单和关键工具；无法使用真实窗口时，记录 headless 覆盖范围。
-- 发布前执行三浏览器 E2E、PWA 离线验证、Docker 镜像构建和安全响应头检查。
-- 每个独立功能完成验证后保持独立提交。提交和推送需由用户请求或明确的仓库流程要求；本轮开发不自动发布。
+## 5. 文档与回滚规则
 
-## 默认假设
+- 后续任务只在本文维护状态和验收条件。完成事项从待办中移除，必要的使用方法和实现约束更新到对应设计或接口说明；不恢复历史计划副本。
+- 每个独立功能完成规定验证后，在当前分支创建一个聚焦的 Conventional Commit。只暂存本功能文件；未经用户要求不推送或发布。
+- 每项改动先明确可回退的代码、接口和配置。保留用户数据、凭据、连接和收藏；数据库已提交写入、客户端已安装缓存及已发布版本不能通过 Git 回退自动撤销。
+- 文档整理可撤销对应提交。需要追溯旧计划时使用 Git，不在当前目录恢复第二份开发路线。
 
-- 后续优先级是性能基线、性能改善、扩展接入和受控插件试点；质量与稳定性贯穿各阶段。
-- 默认在 `main` 开发；每个插件平台化切片完成验证后独立提交，发布由已验证的版本序列触发。
-- 项目继续采用客户端优先、无需后端的默认部署模式。
-- 117 个现有工具作为兼容基线，不进行大规模删除或重命名。
-- 项目采用 GPLv3。Vue 3、Vite、Naive UI、Pinia 和 pnpm 继续作为基础技术栈。
+## 6. 配套技术文档
+
+| 文档 | 职责 |
+| --- | --- |
+| [性能与插件平台设计说明](07-performance-extensibility-design.md) | 平台边界、加载与缓存、任务执行器、插件架构和资源口径 |
+| [插件包格式](08-electron-plugin-package-format-v1.md)、[开发 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)、[使用说明](11-electron-plugin-mvp-quickstart.md) | 外部插件版本化接口和操作方法 |
+| [第一方扩展 SDK v0](extension-sdk-v0.md) | 仓库内受信任扩展的接口和限制 |
+| [数据库与系统监视器设计](13-database-system-monitor-design.md) | 页面、数据、查询、采集和清理边界 |
+| [能力归属矩阵](14-cross-project-capability-matrix.md) | 双项目能力范围和独立实现边界 |
+| [对象存储设计](15-object-storage-workbench-design.md)、[容器设计](17-container-workbench-design.md) | 现有工作台范围、资源限制和回退方法 |
+| [Excalidraw 集成评估](18-excalidraw-integration-assessment.md) | 方案与前提，不构成开发排期 |
