@@ -35,7 +35,11 @@ registerRoute(
   }),
 );
 
-self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    void self.skipWaiting();
+  }
+});
 self.addEventListener('activate', (event) => {
   event.waitUntil(caches.keys().then(names => Promise.all(
     names.filter(name => name.startsWith(runtimeCachePrefix) && name !== runtimeCacheName).map(name => caches.delete(name)),

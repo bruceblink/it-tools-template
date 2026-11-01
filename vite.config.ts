@@ -13,7 +13,7 @@ export default defineConfig(({ command }) => ({
   plugins: [
     ...createRendererPlugins({ componentDeclarations: command === 'serve' }),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',

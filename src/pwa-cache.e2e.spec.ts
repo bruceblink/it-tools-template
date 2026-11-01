@@ -5,7 +5,7 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test as base, type Page } from '@playwright/test';
 
-type StaticSite = { url: string; disconnect: () => void; hideAsset: (file: string) => void };
+type StaticSite = { url: string; disconnect: () => void; hideAsset: (file: string) => void; deployUpdate: () => void };
 
 // A real network cutoff avoids engine-specific setOffline behavior and HTTP-cache false positives.
 const test = base.extend<{ staticSite: StaticSite }>({
@@ -22,6 +22,7 @@ const test = base.extend<{ staticSite: StaticSite }>({
     };
     const missingAssets = new Set<string>();
     let online = true;
+    let updateDeployed = false;
     const server = createServer(async (request, response) => {
       if (!online) {
         request.destroy();
@@ -44,6 +45,9 @@ const test = base.extend<{ staticSite: StaticSite }>({
         file = resolve(directory, 'index.html');
         content = await readFile(file);
       }
+      if (path === '/sw.js' && updateDeployed) {
+        content = Buffer.concat([content, Buffer.from('\n// New deployment for update acceptance.\n')]);
+      }
       response.writeHead(200, { ...headers, 'Content-Type': mime[extname(file)] ?? 'text/plain', 'Cache-Control': 'no-store' });
       response.end(content);
     });
@@ -64,6 +68,9 @@ const test = base.extend<{ staticSite: StaticSite }>({
         },
         hideAsset(file) {
           missingAssets.add(file);
+        },
+        deployUpdate() {
+          updateDeployed = true;
         },
       });
     }
@@ -140,6 +147,26 @@ test.describe('Production PWA caching', () => {
     await expect.poll(async () => (await cacheContents(page, true)).map(url => new URL(url).pathname))
       .toContain(`/${file}`);
   }
+
+  test('a waiting update keeps input until the user chooses to refresh', async ({ page, staticSite }) => {
+    await startWithControlledHome(page);
+    await page.evaluate(() => history.pushState({}, '', '/text-diff'));
+    await page.evaluate(() => window.dispatchEvent(new PopStateEvent('popstate')));
+    const input = page.locator('textarea').first();
+    await input.fill('unsaved update acceptance');
+    staticSite.deployUpdate();
+    await page.evaluate(async () => (await navigator.serviceWorker.getRegistration())?.update());
+    const notice = page.getByTestId('update-notice');
+    await expect(notice).toBeVisible();
+    await expect(input).toHaveValue('unsaved update acceptance');
+    await page.waitForTimeout(1500);
+    await expect(input).toHaveValue('unsaved update acceptance');
+    await Promise.all([
+      page.waitForNavigation(),
+      notice.getByRole('button', { name: 'Refresh to update' }).click(),
+    ]);
+    await expect(page.getByTestId('update-notice')).toHaveCount(0);
+  });
 
   test('first install caches only the shell; home reloads offline without downloading heavy tools', async ({ page, context, staticSite }) => {
     const requested: string[] = [];

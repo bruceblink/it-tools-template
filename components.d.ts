@@ -267,6 +267,7 @@ declare module 'vue' {
     ToolRouteLoading: typeof import('./src/components/ToolRouteLoading.vue')['default']
     ToolRoutePage: typeof import('./src/pages/ToolRoutePage.vue')['default']
     UlidGenerator: typeof import('./src/tools/ulid-generator/ulid-generator.vue')['default']
+    UpdateNotice: typeof import('./src/components/UpdateNotice.vue')['default']
     UrlEncoder: typeof import('./src/tools/url-encoder/url-encoder.vue')['default']
     UrlParser: typeof import('./src/tools/url-parser/url-parser.vue')['default']
     UrlQueryBuilder: typeof import('./src/tools/url-query-builder/url-query-builder.vue')['default']

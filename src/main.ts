@@ -1,4 +1,5 @@
 import { mountSharedApp } from './app';
+import { registerWebUpdates } from './web-updates';
 
 const serviceWorkerRegistrationDelayMs = 8_000;
 
@@ -11,7 +12,7 @@ function scheduleServiceWorkerRegistration() {
   // its precache entries. The service worker remains available for later visits.
   window.setTimeout(() => {
     void import('virtual:pwa-register')
-      .then(({ registerSW }) => registerSW())
+      .then(({ registerSW }) => registerWebUpdates(registerSW))
       .catch((error: unknown) => {
         console.warn('[pwa] Failed to load the service worker registration helper.', error);
       });

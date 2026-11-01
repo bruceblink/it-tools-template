@@ -15,6 +15,7 @@ import type { ToolCategory } from '@/tools/tools.types';
 import { useToolStore } from '@/tools/tools.store';
 import { useTracker } from '@/modules/tracker/tracker.services';
 import CollapsibleToolMenu from '@/components/CollapsibleToolMenu.vue';
+import UpdateNotice from '@/components/UpdateNotice.vue';
 
 const CommandPalette = defineAsyncComponent(() => import('@/modules/command-palette/command-palette.vue'));
 const commandPaletteLoaded = ref(false);
@@ -194,6 +195,7 @@ const tools = computed<ToolCategory[]>(() => [
           </c-button>
         </c-tooltip>
       </div>
+      <UpdateNotice />
     </template>
 
     <template #content>
