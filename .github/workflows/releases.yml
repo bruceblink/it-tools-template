@@ -4,10 +4,21 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to build and publish
+        required: true
+        type: string
+      artifact_run_id:
+        description: Completed release run to reuse after a publishing-only failure
+        required: false
+        type: string
 
 permissions:
   contents: write
   packages: write
+  actions: read
 
 jobs:
   prepare:
@@ -16,20 +27,38 @@ jobs:
       release_tag: ${{ steps.release.outputs.release_tag }}
       release_version: ${{ steps.release.outputs.release_version }}
     steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+          fetch-depth: 0
+
+      - name: Check tag and package version
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          git show-ref --verify "refs/tags/${RELEASE_TAG}"
+          node -e 'const { version } = require("./package.json"); if (process.env.RELEASE_TAG !== `v${version}`) throw new Error("Release tag does not match package version");'
+
       - id: release
         name: Resolve release metadata
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          echo "release_tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          echo "release_version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "release_version=${RELEASE_TAG#v}" >> $GITHUB_OUTPUT
 
   # Gate release publishing on the shared checks and reuse their app build for the archive.
   # Docker still performs its own multi-architecture image build after this gate.
   quality:
+    if: ${{ !inputs.artifact_run_id }}
     runs-on: ubuntu-latest
     needs: prepare
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - run: corepack enable
 
@@ -57,6 +86,7 @@ jobs:
           if-no-files-found: error
 
   electron-release:
+    if: ${{ !inputs.artifact_run_id }}
     name: ${{ matrix.platform }} desktop release
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -79,6 +109,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
 
       - name: Enable pnpm
         run: corepack enable
@@ -128,6 +160,7 @@ jobs:
           retention-days: 7
 
   docker-release:
+    if: ${{ !inputs.artifact_run_id }}
     runs-on: ubuntu-latest
     # A stalled multi-architecture push must fail visibly instead of blocking the release forever.
     timeout-minutes: 60
@@ -138,6 +171,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
 
       - name: Login to GitHub Container Registry
@@ -175,6 +209,7 @@ jobs:
             ghcr.io/bruceblink/it-tools:${{ needs.prepare.outputs.release_version }}
 
   github-release:
+    if: ${{ always() && needs.prepare.result == 'success' && (inputs.artifact_run_id || (needs.quality.result == 'success' && needs.docker-release.result == 'success' && needs.electron-release.result == 'success')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs:
@@ -186,19 +221,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
         with:
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
 
       - name: Download validated app
         uses: actions/download-artifact@v4
         with:
+          run-id: ${{ inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           name: it-tools-${{ needs.prepare.outputs.release_version }}
 
       - name: Download desktop packages
         uses: actions/download-artifact@v4
         with:
+          run-id: ${{ inputs.artifact_run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           pattern: desktop-*
           path: desktop
           merge-multiple: false
+
+      - name: Remove packaging logs from recovered artifacts
+        run: find desktop -type f -name 'builder-debug.yml' -delete
+
+      - name: Check out current publishing checks
+        if: inputs.artifact_run_id
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tools
+          sparse-checkout: scripts/verify-release-run.mjs
+          sparse-checkout-cone-mode: false
+
+      - name: Verify recovered run
+        if: inputs.artifact_run_id
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_RUN_ID: ${{ inputs.artifact_run_id }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.release_tag }}
+        run: node .release-tools/scripts/verify-release-run.mjs "$SOURCE_RUN_ID" prepare quality "macos desktop release" "windows desktop release" docker-release "linux desktop release"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -217,6 +277,11 @@ jobs:
 
       - name: Verify desktop update metadata and checksums
         run: node scripts/verify-update-assets.mjs desktop
+
+      - name: Include Web archive checksum
+        env:
+          RELEASE_VERSION: ${{ needs.prepare.outputs.release_version }}
+        run: sha256sum "it-tools-${RELEASE_VERSION}.zip" >> desktop/SHA256SUMS.txt
 
       - name: Generate release notes
         env:

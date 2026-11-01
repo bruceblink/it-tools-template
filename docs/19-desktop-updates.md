@@ -33,6 +33,8 @@ Release 必须包含安装包、`latest.yml`、`latest-mac.yml`、`latest-linux.
 
 日期版本遵循可比较的 SemVer，例如 `2026.11.1-1793491200.gabcdef0`。月、日不补零；Unix 秒数保证同一天的不同发布有顺序。哈希前加 `g`，避免全数字哈希触发数字标识符的前导零限制。GitHub Release 标记为正式发布，更新通道固定为 `latest`，不把提交短哈希当作通道名。
 
+发布流程支持手动指定已有 `release_tag`。仅发布汇总失败时，可同时指定 `artifact_run_id` 复用原构建文件。流程必须确认原运行的提交与标签一致，并确认质量检查、三平台桌面构建及 Docker 发布全部成功，再核对更新文件。已有标签不改写；构建或测试失败时不能使用此恢复方式。
+
 ## 验证与回退
 
 `pnpm test:updates` 验证日期版本和发布文件；`pnpm check` 包含更新控制器状态测试及构建。`pnpm test:e2e:electron electron/updates.e2e.spec.ts` 验证设置和持久化。真实旧版下载、取消、完整包回退、差分下载、退出安装、重启版本及数据保留要用隔离用户目录记录；构建通过不等于升级通过。
