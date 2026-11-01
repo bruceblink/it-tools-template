@@ -18,6 +18,7 @@ let archivePath: string;
 let upgradeArchivePath: string;
 let unresponsiveArchivePath: string;
 let crashArchivePath: string;
+const pluginStartupErrors: string[] = [];
 
 test.beforeAll(async () => {
   temporaryDirectory = await mkdtemp(join(tmpdir(), 'it-tools-plugin-manager-e2e-'));
@@ -41,6 +42,19 @@ test.beforeAll(async () => {
     args: ['--no-sandbox', `--user-data-dir=${userDataDirectory}`, '.'],
     env: { ...process.env, ELECTRON_DISABLE_SECURITY_WARNINGS: 'true' },
     timeout: 60_000,
+  });
+  electronApp.on('window', (window) => {
+    window.on('requestfailed', (request) => {
+      if (request.url().includes('__it_tools_internal=plugin-bootstrap')) {
+        pluginStartupErrors.push(`bootstrap request: ${request.failure()?.errorText ?? 'unknown error'}`);
+      }
+    });
+    window.on('response', (response) => {
+      if (response.url().includes('__it_tools_internal=plugin-bootstrap') && !response.ok()) {
+        pluginStartupErrors.push(`bootstrap response: ${response.status()}`);
+      }
+    });
+    window.on('pageerror', error => pluginStartupErrors.push(`page error: ${error.message}`));
   });
   page = await electronApp.firstWindow();
   await page.waitForLoadState('load');
@@ -176,6 +190,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   );
   await futureContributionLink.click();
   await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/future-capability-demo');
+  pluginStartupErrors.length = 0;
   await page.getByRole('button', { name: 'Run plugin' }).click();
   await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
   await expect.poll(async () => (
@@ -186,9 +201,22 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!futurePluginWindow) {
     throw new Error('The plugin window for the unsupported capability contribution was not created.');
   }
-  await expect.poll(async () => futurePluginWindow.evaluate(() => (
-    (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
-  ))).toBe('org.it-tools.capability-demo/future-capability-demo');
+  try {
+    await expect.poll(async () => futurePluginWindow.evaluate(() => (
+      (globalThis as unknown as { itTools?: { toolId?: string } }).itTools?.toolId
+    ))).toBe('org.it-tools.capability-demo/future-capability-demo');
+  }
+  catch (error) {
+    const documentState = await futurePluginWindow.evaluate(() => ({
+      url: location.href,
+      readyState: document.readyState,
+      hasApi: 'itTools' in globalThis,
+      runtimeProof: document.querySelector('#runtime-proof')?.textContent,
+      scripts: [...document.scripts].map(script => script.src),
+    })).catch(() => null);
+    console.error('Plugin startup diagnostics:', JSON.stringify({ documentState, pluginStartupErrors }));
+    throw error;
+  }
   await expect(futurePluginWindow.locator('#runtime-proof')).toHaveText('Not authorized');
   const futurePluginWindowClosed = futurePluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();

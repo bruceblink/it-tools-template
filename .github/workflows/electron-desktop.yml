@@ -93,6 +93,10 @@ jobs:
         if: matrix.platform != 'linux'
         run: pnpm test:e2e:electron
 
+      - name: Repeat plugin lifecycle test on macOS
+        if: matrix.platform == 'macos'
+        run: pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts --repeat-each=5
+
       - name: Upload platform packages
         uses: actions/upload-artifact@v4
         with:
