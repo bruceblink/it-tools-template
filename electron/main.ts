@@ -37,6 +37,7 @@ import { registerApiIpc } from './api/api-ipc';
 import { registerGitIpc } from './git/git-ipc';
 import { registerStorageIpc } from './object-storage/storage-ipc';
 import { registerContainerWorkbenchIpc } from './container-workbench/container-ipc';
+import { registerUpdateIpc } from './updates/update-ipc';
 
 const APP_BASE_URL = 'app://bundle/';
 const APP_SCHEME = 'app';
@@ -73,6 +74,7 @@ let apiIpc: ReturnType<typeof registerApiIpc> | null = null;
 let gitIpc: ReturnType<typeof registerGitIpc> | null = null;
 let storageIpc: ReturnType<typeof registerStorageIpc> | null = null;
 let containerWorkbenchIpc: ReturnType<typeof registerContainerWorkbenchIpc> | null = null;
+let updateIpc: Awaited<ReturnType<typeof registerUpdateIpc>> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -125,6 +127,7 @@ else {
       getTrustedRendererUrl: () => trustedRendererUrl,
       onPluginWebContentsCreated: (contents, pluginId) => pluginRendererIds.set(contents, pluginId),
     });
+    updateIpc = await registerUpdateIpc({ getMainWindow: () => mainWindow, trustedRendererUrl: () => trustedRendererUrl });
     await createMainWindow();
     if (!app.isPackaged && process.env.IT_TOOLS_PLUGIN_SANDBOX_TEST === '1') {
       await openPluginSandboxProof();
@@ -147,6 +150,8 @@ else {
   });
 
   app.on('before-quit', () => {
+    updateIpc?.shutdown();
+    updateIpc = null;
     databaseIpc?.shutdown();
     databaseIpc = null;
     systemMonitorIpc?.shutdown();

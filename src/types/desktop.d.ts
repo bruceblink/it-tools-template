@@ -35,6 +35,7 @@ import type {
   GitRepositoryInfo,
   GitStatus,
 } from '../shared/desktop-services/git';
+import type { DesktopUpdateBridge } from '../shared/desktop-services/updates';
 
 import type { StorageConnectInput, StorageConnection, StorageListInput, StoragePage, StoragePreviewInput, StoragePreview, StorageResult, StorageUploadInput, StorageTransferResult, StorageProgress } from '../shared/desktop-services/object-storage';
 import type {
@@ -102,6 +103,7 @@ declare global {
 
   interface Window {
     itToolsDesktop?: {
+      updates?: DesktopUpdateBridge;
       connectStorage?(input: StorageConnectInput): Promise<StorageResult<StorageConnection>>;
       listStorageObjects?(input: StorageListInput): Promise<StorageResult<StoragePage>>;
       previewStorageObject?(input: StoragePreviewInput): Promise<StorageResult<StoragePreview>>;

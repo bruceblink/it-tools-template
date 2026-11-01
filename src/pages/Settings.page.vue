@@ -2,6 +2,7 @@
 import { NAlert, NButton, NCard, NEmpty, NFormItem, NInput, NInputNumber, NSpin, NSwitch, NText } from 'naive-ui';
 import { useHead } from '@unhead/vue';
 import ExtensionPluginManager from '@/components/ExtensionPluginManager.vue';
+import DesktopUpdates from '@/components/DesktopUpdates.vue';
 import type { ExtensionSettingSnapshot, ExtensionSettingValue, ExtensionSettingsPackageSnapshot } from '@/extensions';
 import type { FirstPartyExtensionHost } from '@/extensions';
 import { useStyleStore } from '@/stores/style.store';
@@ -319,6 +320,7 @@ onMounted(() => {
       </div>
     </n-spin>
 
+    <DesktopUpdates />
     <ExtensionPluginManager />
   </div>
 </template>

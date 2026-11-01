@@ -83,6 +83,7 @@ declare module 'vue' {
     DateTimeConverter: typeof import('./src/tools/date-time-converter/date-time-converter.vue')['default']
     'DemoHome.page': typeof import('./src/ui/demo/demo-home.page.vue')['default']
     DemoWrapper: typeof import('./src/ui/demo/demo-wrapper.vue')['default']
+    DesktopUpdates: typeof import('./src/components/DesktopUpdates.vue')['default']
     DeviceInformation: typeof import('./src/tools/device-information/device-information.vue')['default']
     DiffViewer: typeof import('./src/tools/json-diff/diff-viewer/diff-viewer.vue')['default']
     DockerRunToDockerComposeConverter: typeof import('./src/tools/docker-run-to-docker-compose-converter/docker-run-to-docker-compose-converter.vue')['default']

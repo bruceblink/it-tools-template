@@ -68,7 +68,8 @@
     "perf:baseline": "node scripts/performance-baseline.mjs",
     "test:performance-baseline": "node --test scripts/performance-baseline.test.mjs",
     "test:web:isolation": "node --test scripts/web-platform-isolation.test.mjs",
-    "check": "pnpm headers:check && pnpm test:pwa:build && pnpm test:oui:build && pnpm test:dependency-security && pnpm test:heap-snapshot && pnpm test:plugin-pack && pnpm test:plugin-sdk && pnpm test:plugin-scaffold && pnpm test:performance-baseline && pnpm test:tool-scaffold && pnpm typecheck && pnpm typecheck:electron && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build && pnpm test:web:isolation && pnpm electron:build",
+    "test:updates": "node --test scripts/verify-update-assets.test.mjs scripts/release-version.test.mjs",
+    "check": "pnpm headers:check && pnpm test:updates && pnpm test:pwa:build && pnpm test:oui:build && pnpm test:dependency-security && pnpm test:heap-snapshot && pnpm test:plugin-pack && pnpm test:plugin-sdk && pnpm test:plugin-scaffold && pnpm test:performance-baseline && pnpm test:tool-scaffold && pnpm typecheck && pnpm typecheck:electron && pnpm typecheck:app && pnpm lint --max-warnings 0 && pnpm test:unit --run && pnpm build && pnpm test:web:isolation && pnpm electron:build",
     "validate": "pnpm check",
     "script:create:tool": "node scripts/create-tool.mjs",
     "plugin:create": "node scripts/create-plugin.mjs",
@@ -85,6 +86,15 @@
     "appId": "org.it-tools.desktop",
     "productName": "IT Tools",
     "asar": true,
+    "publish": {
+      "provider": "github",
+      "owner": "bruceblink",
+      "repo": "it-tools-template",
+      "channel": "latest"
+    },
+    "detectUpdateChannel": false,
+    "generateUpdatesFilesForAllChannels": false,
+    "artifactName": "IT-Tools-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -159,6 +169,7 @@
     "date-fns": "^4.4.0",
     "diff": "^9.0.0",
     "dompurify": "^3.4.17",
+    "electron-updater": "6.8.11",
     "email-normalizer": "^1.0.0",
     "emojilib": "^4.0.3",
     "figlet": "^1.12.0",

@@ -122,6 +122,8 @@ jobs:
             release/*.dmg
             release/*.zip
             release/*.exe
+            release/*.yml
+            release/*.blockmap
           if-no-files-found: error
           retention-days: 7
 
@@ -202,6 +204,19 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
+      - name: Set up Node.js for update metadata validation
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - run: corepack enable
+
+      - name: Install release metadata dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Verify desktop update metadata and checksums
+        run: node scripts/verify-update-assets.mjs desktop
 
       - name: Generate release notes
         env:

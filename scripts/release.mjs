@@ -2,6 +2,7 @@ import { $, argv, usePowerShell } from 'zx';
 import { consola } from 'consola';
 import { rawCommitsToMarkdown } from './shared/commits.mjs';
 import { addToChangelog } from './shared/changelog.mjs';
+import { releaseVersion } from './shared/release-version.mjs';
 
 if (process.platform === 'win32') {
   usePowerShell();
@@ -16,8 +17,7 @@ const skipChecks = argv['skip-checks'] ?? false;
 const now = new Date();
 const currentShortSha = (await $`git rev-parse --short HEAD`).stdout.trim();
 
-const calver = now.toISOString().slice(0, 10).replace(/-/g, '.');
-const version = `${calver}-${currentShortSha}`;
+const version = releaseVersion(now, currentShortSha);
 
 const { stdout: workingTreeStatus } = await $`git status --short`;
 

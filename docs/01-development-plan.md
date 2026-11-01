@@ -1,7 +1,7 @@
 # IT Tools 主线开发计划
 
 > 状态：唯一开发计划
-> 更新日期：2026-10-31
+> 更新日期：2026-11-01
 > 仓库版本：`2026.10.30-e60c009`（来自 `package.json`，不代表本次完成发布验收）
 > 插件平台化起点：`v2026.10.28-1dbc63c`；后续版本保留该 tag 的祖先关系
 > 适用范围：本仓库的 Web/PWA、Electron、插件接口和发布维护
@@ -21,7 +21,15 @@ it-tools-template 独立负责 Web/PWA 工具、Electron 工作台、桌面分�
 | 外部插件 | 签名包、信任管理、能力授权、工具贡献、设置、升级回退与停用恢复 | 仅支持 Electron；当前宿主 API 为 `1.4.0`，跨平台和真实窗口证据仍需补齐 |
 | 项目边界 | [能力归属矩阵](14-cross-project-capability-matrix.md) | 该矩阵用于说明边界，不表示其中的目标能力已进入排期 |
 
-不在当前主线新增 Redis、MongoDB、Kafka、MQTT、剪贴板历史、容器写操作或其他内置工具。SSH/SFTP/PTY 不属于本仓库范围。Excalidraw 本地绘图、分享和协作仅保留为[评估结论](18-excalidraw-integration-assessment.md)，未批准实施。插件商店、生产签名者分发、自动更新服务及 macOS Intel 支持需另行确认范围。
+不在当前主线新增 Redis、MongoDB、Kafka、MQTT、剪贴板历史、容器写操作或其他内置工具。SSH/SFTP/PTY 不属于本仓库范围。Excalidraw 本地绘图、分享和协作仅保留为[评估结论](18-excalidraw-integration-assessment.md)，未批准实施。插件商店、生产签名者分发及 macOS Intel 支持需另行确认范围。
+
+### 当前批准的改动：桌面自动更新
+
+2026-11-01 用户批准为本项目和 LatestNews 分别添加自动更新。两个项目各自维护实现和发布资产。使用现有 GitHub Release，不新增更新服务器。Electron 主进程使用 `electron-updater`，默认自动检查；下载和退出安装由用户操作确认。Windows NSIS、macOS 更新 ZIP 和 Linux AppImage 尝试差分下载，不能使用差分时回退完整包；DEB 下载完整包。
+
+验收：更新状态、设置持久化、重复操作、取消和错误恢复有测试；发布任务保存更新清单和 `.blockmap`，多架构清单不互相覆盖；完成 `pnpm check`、相关 Electron E2E、Windows 打包和真实窗口检查。签名、公证、其他系统安装及真实发布升级按实际证据记录。回退范围是更新入口、依赖和发布配置；不删除用户数据、旧版本安装包或已发布资产。
+
+当前结果：`pnpm check` 已通过，含 902 项单元测试；20 项既有 Electron smoke 和新增更新设置 E2E 均通过。Windows 打包正在处理下载超时；真实窗口、正式 Release 和旧版本升级待完成。其他系统安装和签名验收未执行。
 
 ## 2. 执行顺序
 
@@ -111,3 +119,4 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 | [能力归属矩阵](14-cross-project-capability-matrix.md) | 双项目能力范围和独立实现边界 |
 | [对象存储设计](15-object-storage-workbench-design.md)、[容器设计](17-container-workbench-design.md) | 现有工作台范围、资源限制和回退方法 |
 | [Excalidraw 集成评估](18-excalidraw-integration-assessment.md) | 方案与前提，不构成开发排期 |
+| [桌面应用更新](19-desktop-updates.md) | 自动检查、差分下载、确认安装和发布文件 |

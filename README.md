@@ -191,6 +191,7 @@ The [main development plan](docs/01-development-plan.md) is the only document th
 - [Object storage workbench](docs/15-object-storage-workbench-design.md): S3-compatible browsing and transfers
 - [Container workbench](docs/17-container-workbench-design.md): read-only local Docker container list
 - [Excalidraw assessment](docs/18-excalidraw-integration-assessment.md): integration options and prerequisites, without an implementation schedule
+- [Desktop updates](docs/19-desktop-updates.md): update checks, differential downloads, installation confirmation, and release files
 
 The application is organized around Vue route pages, a typed tool registry, Pinia stores, local i18n resources, and platform adapters. Route components and heavy workers are loaded only when needed. The service worker caches same-origin build assets with a bounded per-build cache.
 

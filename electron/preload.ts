@@ -37,8 +37,22 @@ import type {
   GitStatus,
 } from '../src/shared/desktop-services/git';
 import { isDesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
+import type { DesktopUpdateState } from '../src/shared/desktop-services/updates';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
+  updates: Object.freeze({
+    getState: () => ipcRenderer.invoke('desktop:updates:state'),
+    setAutoCheck: (enabled: boolean) => ipcRenderer.invoke('desktop:updates:auto-check', enabled),
+    check: () => ipcRenderer.invoke('desktop:updates:check'),
+    download: () => ipcRenderer.invoke('desktop:updates:download'),
+    cancel: () => ipcRenderer.invoke('desktop:updates:cancel'),
+    install: () => ipcRenderer.invoke('desktop:updates:install'),
+    onState: (callback: (state: DesktopUpdateState) => void) => {
+      const listener = (_event: IpcRendererEvent, state: DesktopUpdateState) => callback(state);
+      ipcRenderer.on('desktop:updates:changed', listener);
+      return () => ipcRenderer.removeListener('desktop:updates:changed', listener);
+    },
+  }),
   getRuntimeInfo: () => ipcRenderer.invoke('desktop:get-runtime-info'),
   connectStorage: (input: StorageConnectInput): Promise<StorageResult<StorageConnection>> =>
     ipcRenderer.invoke('desktop:object-storage:connect', input),
