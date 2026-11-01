@@ -2,7 +2,7 @@
 
 > 状态：唯一开发计划
 > 更新日期：2026-11-01
-> 仓库版本：`2026.10.30-e60c009`（来自 `package.json`，不代表本次完成发布验收）
+> 仓库版本：`2026.11.1-1793495127.gca55a2c`；Windows 更新验收已通过，其他系统安装另行验收
 > 插件平台化起点：`v2026.10.28-1dbc63c`；后续版本保留该 tag 的祖先关系
 > 适用范围：本仓库的 Web/PWA、Electron、插件接口和发布维护
 
@@ -23,13 +23,17 @@ it-tools-template 独立负责 Web/PWA 工具、Electron 工作台、桌面分�
 
 不在当前主线新增 Redis、MongoDB、Kafka、MQTT、剪贴板历史、容器写操作或其他内置工具。SSH/SFTP/PTY 不属于本仓库范围。Excalidraw 本地绘图、分享和协作仅保留为[评估结论](18-excalidraw-integration-assessment.md)，未批准实施。插件商店、生产签名者分发及 macOS Intel 支持需另行确认范围。
 
-### 当前批准的改动：桌面自动更新
+### 桌面自动更新结果
 
 2026-11-01 用户批准为本项目和 LatestNews 分别添加自动更新。两个项目各自维护实现和发布资产。使用现有 GitHub Release，不新增更新服务器。Electron 主进程使用 `electron-updater`，默认自动检查；下载和退出安装由用户操作确认。Windows NSIS、macOS 更新 ZIP 和 Linux AppImage 尝试差分下载，不能使用差分时回退完整包；DEB 下载完整包。
 
 验收：更新状态、设置持久化、重复操作、取消和错误恢复有测试；发布任务保存更新清单和 `.blockmap`，多架构清单不互相覆盖；完成 `pnpm check`、相关 Electron E2E、Windows 打包和真实窗口检查。签名、公证、其他系统安装及真实发布升级按实际证据记录。回退范围是更新入口、依赖和发布配置；不删除用户数据、旧版本安装包或已发布资产。
 
-当前结果：`pnpm check` 已通过，含 902 项单元测试；20 项既有 Electron smoke 和新增更新设置 E2E 均通过。Windows 打包正在处理下载超时；真实窗口、正式 Release 和旧版本升级待完成。其他系统安装和签名验收未执行。
+2026-11-01 结果：`pnpm check` 已通过，含 902 项单元测试；20 项既有 Electron smoke、新增更新设置 E2E 和 Windows NSIS 打包均通过。[正式 Release](https://github.com/bruceblink/it-tools-template/releases/tag/v2026.11.1-1793495127.gca55a2c) 已公开，13 个资产齐全，12 条 SHA-256 与发布资产摘要一致。原构建运行 `41259619285` 的源码、三平台和 Docker 均成功；发布汇总排除打包日志后，由运行 `41263517486` 复用相同标签产物完成发布。
+
+Windows x64 集成使用本次源码构建的旧版本基线 `2026.10.30-e60c009`，并非旧官方安装包原已支持更新。安装到隔离目录后，从正式 Release 完成自动检查、完整包回退、下载取消与重试。准备匹配的旧安装包缓存后，实际差分下载 34,369,889 字节，完整包为 146,205,183 字节，减少约 76.5%；重建包的 SHA-256 为 `808446facb8e877bfe22971dccb7585203155e453d16e9e22fbcd901aadf02cd`，与正式资产一致。
+
+真实窗口确认默认取消有效，普通退出不会安装；再次确认安装后，NSIS 静默替换并自动重启到新版本。更新器重启使用默认用户目录；随后显式使用原隔离用户目录启动，确认两项收藏、文件标记和 `autoCheck=false` 保留，手动检查返回无新版本。原始日志位于本机临时目录 `desktop-update-integration-20261101` 的 `it-tools-report`、`it-tools-restart-report`。这些结果只覆盖 Windows x64；签名、公证及其他系统安装未执行。
 
 ## 2. 执行顺序
 

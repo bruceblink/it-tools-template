@@ -29,6 +29,8 @@
 
 `app-update-preferences.json` 只保存检查开关。用户数据、收藏和插件数据不写入更新缓存。应用每次启动重新检查，因此重启不会因为只有检查时间而丢失新版本提示。
 
+Windows NSIS 更新完成后会启动新程序。使用 `--user-data-dir` 做隔离测试时，安装器启动新程序不会继承原进程的该参数；需关闭自动重启的窗口，再用原参数启动以核对测试数据。正常安装使用默认用户目录。数据保留结果和差分传输量记录在主线开发计划。
+
 Release 必须包含安装包、`latest.yml`、`latest-mac.yml`、`latest-linux.yml` 及 EXE/ZIP 对应的 `.blockmap`。上一版本清单和文件保留在原标签下。发布前由 `scripts/verify-update-assets.mjs` 核对文件、版本、大小、SHA-512 和分块文件，并生成 `SHA256SUMS.txt`。普通构建命令继续使用 `--publish never`。
 
 日期版本遵循可比较的 SemVer，例如 `2026.11.1-1793491200.gabcdef0`。月、日不补零；Unix 秒数保证同一天的不同发布有顺序。哈希前加 `g`，避免全数字哈希触发数字标识符的前导零限制。GitHub Release 标记为正式发布，更新通道固定为 `latest`，不把提交短哈希当作通道名。
