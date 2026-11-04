@@ -197,33 +197,41 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
     catch {
       throw new PluginApiError('transport-error', 0);
     }
+
+    try {
+      let payload;
+      try {
+        payload = await response.json();
+      }
+      catch {
+        if (controller?.signal.aborted) {
+          throw new PluginApiError('transport-error', 0);
+        }
+        throw new PluginApiError('invalid-response', response.status);
+      }
+      if (controller?.signal.aborted) {
+        throw new PluginApiError('transport-error', 0);
+      }
+      if (typeof payload !== 'object' || payload === null || Array.isArray(payload)
+        || (payload.id !== undefined && payload.id !== id)) {
+        throw new PluginApiError('invalid-response', response.status);
+      }
+      if (!response.ok || payload.ok !== true) {
+        const code = typeof payload.error === 'string' && pluginApiErrorCodeSet.has(payload.error)
+          ? payload.error
+          : 'request-failed';
+        throw new PluginApiError(code, response.status);
+      }
+      if (!Object.prototype.hasOwnProperty.call(payload, 'result')) {
+        throw new PluginApiError('invalid-response', response.status);
+      }
+      return payload.result;
+    }
     finally {
       if (timeout !== undefined) {
         nativeClearTimeout(timeout);
       }
     }
-
-    let payload;
-    try {
-      payload = await response.json();
-    }
-    catch {
-      throw new PluginApiError('invalid-response', response.status);
-    }
-    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)
-      || (payload.id !== undefined && payload.id !== id)) {
-      throw new PluginApiError('invalid-response', response.status);
-    }
-    if (!response.ok || payload.ok !== true) {
-      const code = typeof payload.error === 'string' && pluginApiErrorCodeSet.has(payload.error)
-        ? payload.error
-        : 'request-failed';
-      throw new PluginApiError(code, response.status);
-    }
-    if (!Object.prototype.hasOwnProperty.call(payload, 'result')) {
-      throw new PluginApiError('invalid-response', response.status);
-    }
-    return payload.result;
   }
 
   Object.freeze(PluginApiError.prototype);

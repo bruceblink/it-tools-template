@@ -62,7 +62,7 @@ if (canReadRuntime) {
 
 能力 ID 的共享目录位于 [`src/shared/plugin-capabilities.ts`](../src/shared/plugin-capabilities.ts)。它只定义稳定标识和各层允许的子集，不授予任何权限：清单声明仍需经过签名校验，宿主支持仍需经过能力代理校验，用户授权仍决定本次窗口可以调用的能力。
 
-`PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。每个能力请求最多等待 10 秒；没有得到网络层响应时由客户端通过 `AbortController` 终止请求，并返回 `transport-error`。宿主执行器也有 10 秒上限；执行器超时返回 `capability-failed` 并释放并发槽位。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
+`PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。每个能力请求最多等待 10 秒；客户端通过 `AbortController` 覆盖请求、响应体读取和 JSON 解析，超时返回 `transport-error`。宿主执行器也有 10 秒上限；执行器超时返回 `capability-failed` 并释放并发槽位。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
 
 | 错误代码 | 含义 |
 | --- | --- |
