@@ -42,7 +42,7 @@ export type PluginCapabilityCall =
   | { id: string; capability: 'settings.write'; operation: 'set'; input: { key: string; value: PluginSettingValue } }
   | { id: string; capability: 'settings.write'; operation: 'delete'; input: { key: string } };
 
-export type PluginCapabilityExecutor = (call: PluginCapabilityCall) => Promise<unknown> | unknown;
+export type PluginCapabilityExecutor = (call: PluginCapabilityCall, signal: AbortSignal) => Promise<unknown> | unknown;
 
 export interface PluginCapabilityBrokerOptions {
   pluginId: string;
@@ -82,6 +82,7 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
   const now = options.now ?? Date.now;
   let activeRequests = 0;
   let active = true;
+  const activeControllers = new Set<AbortController>();
 
   return {
     async handle(request) {
@@ -124,6 +125,8 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
       }
       timestamps.push(timestamp);
       activeRequests += 1;
+      const controller = new AbortController();
+      activeControllers.add(controller);
 
       try {
         let bytes: Uint8Array;
@@ -150,7 +153,7 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
           return jsonResponse(403, { id: call.id, ok: false, error: 'permission-denied' });
         }
 
-        const result = await executeWithTimeout(options.execute, call);
+        const result = await executeWithTimeout(options.execute, call, controller);
         if (!active) {
           return jsonResponse(410, { id: call.id, ok: false, error: 'plugin-inactive' });
         }
@@ -169,15 +172,22 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
         return jsonResponseBody(200, serializedResponse);
       }
       catch {
-        return jsonResponse(500, { ok: false, error: active ? 'capability-failed' : 'plugin-inactive' });
+        return active
+          ? jsonResponse(500, { ok: false, error: 'capability-failed' })
+          : jsonResponse(410, { ok: false, error: 'plugin-inactive' });
       }
       finally {
+        activeControllers.delete(controller);
         activeRequests -= 1;
       }
     },
     revoke() {
       active = false;
       granted.clear();
+      for (const controller of activeControllers) {
+        controller.abort('plugin-inactive');
+      }
+      activeControllers.clear();
     },
   };
 }
@@ -185,14 +195,29 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
 async function executeWithTimeout(
   execute: PluginCapabilityExecutor,
   call: PluginCapabilityCall,
+  controller: AbortController,
 ): Promise<unknown> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let onAbort: (() => void) | undefined;
+  const { signal } = controller;
   try {
+    const aborted = new Promise<never>((_resolve, reject) => {
+      onAbort = () => reject(new Error('The plugin capability request was aborted.'));
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+    });
     return await Promise.race([
-      Promise.resolve().then(() => execute(call)),
+      Promise.resolve().then(() => execute(call, signal)),
+      aborted,
       new Promise<never>((_resolve, reject) => {
         timeout = setTimeout(
-          () => reject(new CapabilityExecutionTimeoutError()),
+          () => {
+            controller.abort('timeout');
+            reject(new CapabilityExecutionTimeoutError());
+          },
           pluginCapabilityLimits.maximumExecutionDurationMs,
         );
       }),
@@ -201,6 +226,9 @@ async function executeWithTimeout(
   finally {
     if (timeout !== undefined) {
       clearTimeout(timeout);
+    }
+    if (onAbort !== undefined) {
+      signal.removeEventListener('abort', onAbort);
     }
   }
 }

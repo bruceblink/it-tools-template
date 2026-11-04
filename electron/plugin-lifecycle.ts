@@ -104,7 +104,7 @@ export interface PluginLifecycleOptions {
   hostApiVersion: string;
   trustedSigningKeys: ReadonlyMap<string, PluginPackageSigningKey>;
   createWindow: (registration: PluginSandboxRegistration) => Promise<BrowserWindow>;
-  executeCapability: (manifest: PluginPackageManifest, call: PluginCapabilityCall) => Promise<unknown> | unknown;
+  executeCapability: (manifest: PluginPackageManifest, call: PluginCapabilityCall, signal: AbortSignal) => Promise<unknown> | unknown;
   /** Notify trusted renderers after an unexpected plugin window exit. */
   onStateChange?: (event: DesktopPluginStateChangeEvent) => void;
 }
@@ -423,7 +423,7 @@ export class PluginLifecycleManager {
       toolContext: getPluginToolContext(manifest, contributionId),
       requestedCapabilities: manifest.requestedCapabilities,
       grantedCapabilities,
-      executeCapability: call => this.options.executeCapability(manifest, call),
+      executeCapability: (call, signal) => this.options.executeCapability(manifest, call, signal),
     };
     const window = await this.options.createWindow(registration);
     if (window.isDestroyed()) {
