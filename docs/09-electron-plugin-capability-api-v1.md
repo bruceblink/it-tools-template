@@ -62,7 +62,7 @@ if (canReadRuntime) {
 
 能力 ID 的共享目录位于 [`src/shared/plugin-capabilities.ts`](../src/shared/plugin-capabilities.ts)。它只定义稳定标识和各层允许的子集，不授予任何权限：清单声明仍需经过签名校验，宿主支持仍需经过能力代理校验，用户授权仍决定本次窗口可以调用的能力。
 
-`PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
+`PluginApiError` 提供稳定的 `code` 和 HTTP `status`。本地参数错误和传输失败使用状态 `0`。每个能力请求最多等待 10 秒；没有得到网络层响应时由客户端通过 `AbortController` 终止请求，并返回 `transport-error`。宿主错误只返回错误代码，不包含执行器异常文本。插件可以按错误代码显示用户可理解的状态，不需要依赖宿主内部错误消息。
 
 | 错误代码 | 含义 |
 | --- | --- |
@@ -154,4 +154,4 @@ Electron Session 只接受插件自身主框架对其 `it-plugin://<pluginId>` �
 
 ## 验证
 
-`electron/plugin-api-v1.test.ts` 检查 API 版本、运行时查询、授权错误、设置键和值限制、本地输入限制和响应结构。`electron/plugin-capability-broker.test.ts` 检查来源、请求结构、四类能力授权、响应边界、大小限制、频率、并发和撤销。`electron/plugin-settings-store.test.ts` 检查插件命名空间、并发写入、持久化、删除、损坏文件和资源限制。`electron/plugin-manager.e2e.spec.ts` 验证签名样例使用 `window.itTools`，并通过授权前后的运行时查询、剪贴板写入和跨版本设置读取。关闭沙箱窗口时，宿主在销毁前保存 `webContents.id`，以避免关闭事件读取已销毁对象。
+`electron/plugin-api-v1.test.ts` 检查 API 版本、运行时查询、授权错误、设置键和值限制、本地输入限制、响应结构和能力请求超时。`electron/plugin-capability-broker.test.ts` 检查来源、请求结构、四类能力授权、响应边界、大小限制、频率、并发和撤销。`electron/plugin-settings-store.test.ts` 检查插件命名空间、并发写入、持久化、删除、损坏文件和资源限制。`electron/plugin-manager.e2e.spec.ts` 验证签名样例使用 `window.itTools`，并通过授权前后的运行时查询、剪贴板写入和跨版本设置读取。关闭沙箱窗口时，宿主在销毁前保存 `webContents.id`，以避免关闭事件读取已销毁对象。
