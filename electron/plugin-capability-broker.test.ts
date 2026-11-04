@@ -241,6 +241,42 @@ describe('Electron plugin capability broker', () => {
     }
   });
 
+  it('cancels a request body that never finishes and releases its concurrency slot', async () => {
+    vi.useFakeTimers();
+    try {
+      let pullStarted = false;
+      let cancelReason: unknown;
+      const body = new ReadableStream<Uint8Array>({
+        pull() {
+          pullStarted = true;
+          return new Promise(() => {});
+        },
+        cancel(reason) {
+          cancelReason = reason;
+        },
+      });
+      const execute = vi.fn(() => ({ ok: true }));
+      const broker = createPluginCapabilityBroker({
+        pluginId,
+        requestedCapabilities: ['runtime.info'],
+        grantedCapabilities: ['runtime.info'],
+        execute,
+      });
+      const timedOut = broker.handle(makeStreamRequest(body));
+      await vi.waitFor(() => expect(pullStarted).toBe(true));
+      await vi.advanceTimersByTimeAsync(pluginCapabilityLimits.maximumRequestBodyReadDurationMs);
+      await expect(timedOut).resolves.toMatchObject({ status: 408 });
+      await expect((await timedOut).json()).resolves.toMatchObject({ error: 'request-timeout' });
+      expect(cancelReason).toContain('timed out');
+      expect(execute).not.toHaveBeenCalled();
+
+      expect((await broker.handle(makeRequest(validCall('after-body-timeout')))).status).toBe(200);
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('revokes outstanding and future requests when the plugin is disabled', async () => {
     let finish!: (value: unknown) => void;
     const broker = createPluginCapabilityBroker({
@@ -288,6 +324,23 @@ function makeRequest(
   Object.defineProperties(request, {
     url: { value: overrides.url ?? `${pluginOrigin}${PLUGIN_CAPABILITY_API_PATH}` },
     initiatorOrigin: { value: overrides.initiatorOrigin ?? pluginOrigin },
+  });
+  return request;
+}
+
+function makeStreamRequest(body: ReadableStream<Uint8Array>): Request {
+  const request = new Request('https://example.test/call', {
+    method: 'POST',
+    headers: {
+      origin: pluginOrigin,
+      'content-type': 'application/json',
+    },
+    body,
+    duplex: 'half',
+  } as RequestInit & { duplex: 'half' });
+  Object.defineProperties(request, {
+    url: { value: `${pluginOrigin}${PLUGIN_CAPABILITY_API_PATH}` },
+    initiatorOrigin: { value: pluginOrigin },
   });
   return request;
 }

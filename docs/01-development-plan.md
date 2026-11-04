@@ -91,7 +91,7 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 - Electron 应用退出前由生命周期管理器显式停止活动插件并等待窗口关闭，释放能力代理和响应探测定时器；退出路径不记录误报的运行时故障。
 - 能力代理为宿主执行器设置 10 秒上限；超时响应为 `capability-failed`，并发槽位会释放，避免失控执行器阻塞后续插件调用。
 - 代码审查发现宿主执行器超时或撤销后仍可能继续产生副作用；下一项把 `AbortSignal` 传入可取消执行器，对不可取消操作保留 in-flight drain 和上限记录。
-- 能力代理读取请求体目前没有独立 deadline；下一项在慢速或永不结束的 `ReadableStream` 上调用 `reader.cancel()`，避免占满并发槽位。
+- 能力代理读取请求体现在有 9 秒绝对 deadline；慢速或永不结束的 `ReadableStream` 会调用 `reader.cancel()` 并返回 `request-timeout`，并发槽位可恢复。
 - 生命周期 shutdown 目前没有关闭闸门；下一项阻止 shutdown 期间新的 activate/disable 排队，并让关闭超时后的 active map 保持可解释状态。
 - `electron/plugin-manager.e2e.spec.ts` 在正常停止签名插件后记录渲染器内存和进程 ID，并确认该 ID 从 `app.getAppMetrics()` 消失；资源报告随三平台 Electron 矩阵生成。
 - 关闭宿主主窗口时也会复用插件 shutdown，并清理未纳入生命周期管理器的插件窗口，避免桌面进程留下孤立的插件渲染器；沙箱回归覆盖该路径。
