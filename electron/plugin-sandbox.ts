@@ -28,6 +28,7 @@ const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const pluginContributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const maximumPluginAssetBytes = 16 * 1024 * 1024;
 const pluginEntrypointLoadTimeoutMs = 15_000;
+const pluginImmutableAssetCacheControl = 'private, max-age=31536000, immutable';
 const blockedNetworkProtocols = new Set(['http:', 'https:', 'ws:', 'wss:', 'ftp:']);
 
 interface PluginSessionPolicy {
@@ -133,6 +134,11 @@ export function getPluginContentSecurityPolicy(): string {
 /** A Worker response may import same-origin scripts but cannot create descendants. */
 export function getPluginWorkerContentSecurityPolicy(): string {
   return buildPluginContentSecurityPolicy("'none'");
+}
+
+/** Cache signed, version-scoped assets while keeping HTML and bootstrap state fresh. */
+export function getPluginAssetCacheControl(extension: string): string {
+  return extension === '.html' ? 'no-store' : pluginImmutableAssetCacheControl;
 }
 
 function buildPluginContentSecurityPolicy(workerSource: string): string {
@@ -342,7 +348,7 @@ async function installPluginSessionPolicy(
         'Content-Type': contentTypes[extension] ?? 'application/octet-stream',
       }, extension === '.js' || extension === '.mjs'
         ? getPluginWorkerContentSecurityPolicy()
-        : getPluginContentSecurityPolicy());
+        : getPluginContentSecurityPolicy(), getPluginAssetCacheControl(extension));
     }
     catch {
       return pluginResponse('Not found', 404);
@@ -416,12 +422,13 @@ function pluginResponse(
   status: number,
   extraHeaders: Record<string, string> = {},
   contentSecurityPolicy = getPluginContentSecurityPolicy(),
+  cacheControl = 'no-store',
 ): Response {
   return new Response(body, {
     status,
     headers: {
       ...extraHeaders,
-      'Cache-Control': 'no-store',
+      'Cache-Control': cacheControl,
       'Content-Security-Policy': contentSecurityPolicy,
       'Cross-Origin-Resource-Policy': 'same-origin',
       'Referrer-Policy': 'no-referrer',
