@@ -35,6 +35,10 @@ class FakePluginWindow extends EventEmitter {
 
   private destroyed = false;
 
+  constructor(private readonly closeOnDestroy = true) {
+    super();
+  }
+
   isDestroyed(): boolean {
     return this.destroyed;
   }
@@ -42,7 +46,9 @@ class FakePluginWindow extends EventEmitter {
   destroy(): void {
     if (!this.destroyed) {
       this.destroyed = true;
-      this.emit('closed');
+      if (this.closeOnDestroy) {
+        this.emit('closed');
+      }
     }
   }
 }
@@ -280,6 +286,27 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.uninstall(pluginId, '1.0.0')).rejects.toMatchObject({ code: 'shutting-down' });
   });
 
+  it('continues shutdown after a window close timeout and clears the active map', async () => {
+    try {
+      const { root, manager, windows } = await createManager({ hangClose: true });
+      await manager.installArchive(await writeArchive(root, '1.0.0'));
+      await manager.activate(pluginId, '1.0.0', []);
+
+      vi.useFakeTimers();
+      const shutdown = manager.shutdown();
+      const shutdownRejection = expect(shutdown).rejects.toMatchObject({ code: 'window-close-timeout' });
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(windows[0]?.isDestroyed()).toBe(true);
+      await vi.advanceTimersByTimeAsync(5_000);
+      await shutdownRejection;
+      expect((await manager.listInstalled())[0]).toMatchObject({ status: 'installed' });
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  }, 10_000);
+
   it('restores the previous version when an upgrade window fails to load', async () => {
     const { root, manager, createWindow, windows, stateChanges } = await createManager({
       failVersion: '2.0.0',
@@ -429,7 +456,7 @@ describe('Electron plugin lifecycle manager', () => {
   });
 });
 
-async function createManager(options: { failVersion?: string } = {}) {
+async function createManager(options: { failVersion?: string; hangClose?: boolean } = {}) {
   const root = await createTemporaryDirectory();
   const installRoot = join(root, 'installed');
   const windows: FakePluginWindow[] = [];
@@ -438,7 +465,7 @@ async function createManager(options: { failVersion?: string } = {}) {
     if (options.failVersion && registration.packageRoot.endsWith(options.failVersion)) {
       throw new Error('The test plugin did not load.');
     }
-    const window = new FakePluginWindow();
+    const window = new FakePluginWindow(!options.hangClose);
     windows.push(window);
     return window as unknown as import('electron').BrowserWindow;
   });

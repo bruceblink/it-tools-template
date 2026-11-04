@@ -362,8 +362,24 @@ export class PluginLifecycleManager {
     }
     this.shuttingDown = true;
     this.shutdownPromise = this.runExclusive(async () => {
+      const failures: unknown[] = [];
       for (const active of [...this.activePlugins.values()]) {
-        await this.destroyActivePlugin(active);
+        try {
+          await this.destroyActivePlugin(active);
+        }
+        catch (error) {
+          failures.push(error);
+          if (this.activePlugins.get(active.pluginId) === active) {
+            this.activePlugins.delete(active.pluginId);
+          }
+        }
+      }
+      if (failures.length > 0) {
+        throw new PluginLifecycleError(
+          'window-close-timeout',
+          'One or more plugin windows did not close during shutdown.',
+          { cause: new AggregateError(failures) },
+        );
       }
     });
     return this.shutdownPromise;
