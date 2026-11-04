@@ -245,6 +245,28 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.disableSignedByKey('test-key')).resolves.toBe(0);
   });
 
+  it('shuts down active plugins without recording a runtime failure', async () => {
+    const { root, manager, windows, stateChanges } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', []);
+
+    await expect(manager.shutdown()).resolves.toBeUndefined();
+
+    expect(windows[0]?.isDestroyed()).toBe(true);
+    const snapshot = (await manager.listInstalled())[0];
+    expect(snapshot).toMatchObject({
+      status: 'installed',
+      grantedCapabilities: [],
+    });
+    expect(snapshot?.errorCode).toBeUndefined();
+    expect(snapshot?.contributions.tools.every(tool => tool.errorCode === undefined)).toBe(true);
+    expect(stateChanges).toEqual([
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'installed' },
+      { schemaVersion: 1, pluginId, version: '1.0.0', reason: 'activated' },
+    ]);
+    await expect(manager.shutdown()).resolves.toBeUndefined();
+  });
+
   it('restores the previous version when an upgrade window fails to load', async () => {
     const { root, manager, createWindow, windows, stateChanges } = await createManager({
       failVersion: '2.0.0',
