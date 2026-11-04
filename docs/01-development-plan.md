@@ -86,6 +86,7 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 - Linux/macOS 需独立验证插件来源、存储、网络、导航、下载、Worker、卡死和崩溃清理。强制崩溃测试只证明该注入路径；自然故障结果按实际观测记录。
 - `electron/plugin-sandbox.e2e.spec.ts` 现在在真实沙箱页面中保留一个 Worker，关闭页面后确认 Worker 列表归零；该回归随 Linux、macOS 和 Windows Electron 矩阵执行。
 - Electron 应用退出前由生命周期管理器显式停止活动插件并等待窗口关闭，释放能力代理和响应探测定时器；退出路径不记录误报的运行时故障。
+- 能力代理为宿主执行器设置 10 秒上限；超时响应为 `capability-failed`，并发槽位会释放，避免失控执行器阻塞后续插件调用。
 - `electron/plugin-manager.e2e.spec.ts` 在正常停止签名插件后记录渲染器内存和进程 ID，并确认该 ID 从 `app.getAppMetrics()` 消失；资源报告随三平台 Electron 矩阵生成。
 - 关闭宿主主窗口时也会复用插件 shutdown，并清理未纳入生命周期管理器的插件窗口，避免桌面进程留下孤立的插件渲染器；沙箱回归覆盖该路径。
 - 插件包的 JS、CSS、字体和数据资源按签名版本使用长期不可变缓存；HTML 与能力 bootstrap 保持 `no-store`，避免权限上下文被缓存。

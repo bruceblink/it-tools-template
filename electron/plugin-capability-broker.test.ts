@@ -207,6 +207,40 @@ describe('Electron plugin capability broker', () => {
     expect((await Promise.all(operations)).every(response => response.status === 200)).toBe(true);
   });
 
+  it('times out a host operation and releases its concurrency slot', async () => {
+    vi.useFakeTimers();
+    try {
+      let executionCount = 0;
+      const execute = vi.fn(() => {
+        executionCount += 1;
+        return executionCount === 1
+          ? new Promise(() => {})
+          : { ok: true };
+      });
+      const broker = createPluginCapabilityBroker({
+        pluginId,
+        requestedCapabilities: ['runtime.info'],
+        grantedCapabilities: ['runtime.info'],
+        execute,
+      });
+      const timedOut = broker.handle(makeRequest(validCall('timeout')));
+      await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
+      await vi.advanceTimersByTimeAsync(pluginCapabilityLimits.maximumExecutionDurationMs);
+      await expect(timedOut).resolves.toMatchObject({ status: 500 });
+
+      const recovered = await broker.handle(makeRequest(validCall('after-timeout')));
+      expect(recovered.status).toBe(200);
+      await expect(recovered.json()).resolves.toMatchObject({
+        id: 'after-timeout',
+        ok: true,
+        result: { ok: true },
+      });
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('revokes outstanding and future requests when the plugin is disabled', async () => {
     let finish!: (value: unknown) => void;
     const broker = createPluginCapabilityBroker({
