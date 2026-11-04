@@ -176,9 +176,43 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await routePluginWindow.locator('#clipboard-text').fill('least privilege check');
   await routePluginWindow.getByRole('button', { name: 'Copy to clipboard' }).click();
   await expect(routePluginWindow.locator('#clipboard-proof')).toHaveText('Not authorized');
+  const routePluginRendererPid = await electronApp.evaluate(({ app, BrowserWindow }, targetPluginId) => {
+    const pluginWindow = BrowserWindow.getAllWindows().find(window => (
+      window.webContents.getURL().startsWith(`it-plugin://${targetPluginId}/`)
+    ));
+    if (!pluginWindow) {
+      throw new Error('The plugin BrowserWindow disappeared before normal-stop resource sampling.');
+    }
+    const pluginRendererPid = pluginWindow.webContents.getOSProcessId();
+    const metric = app.getAppMetrics().find(candidate => candidate.pid === pluginRendererPid);
+    if (!metric) {
+      throw new Error('Electron did not return a metric for the plugin renderer before normal stop.');
+    }
+    return {
+      pid: pluginRendererPid,
+      memoryKiB: metric.memory,
+      processCount: app.getAppMetrics().length,
+    };
+  }, pluginId);
   const routePluginWindowClosed = routePluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await routePluginWindowClosed;
+  await expect.poll(async () => electronApp.evaluate(({ app }, processId) => (
+    app.getAppMetrics().some(metric => metric.pid === processId)
+  ), routePluginRendererPid.pid)).toBe(false);
+  await testInfo.attach('plugin-normal-stop-resource.json', {
+    body: JSON.stringify({
+      scenario: 'signed plugin renderer after normal stop',
+      platform: process.platform,
+      architecture: process.arch,
+      electronVersion: process.versions.electron,
+      rendererPid: routePluginRendererPid.pid,
+      rendererMemoryKiBBeforeStop: routePluginRendererPid.memoryKiB,
+      appProcessCountBeforeStop: routePluginRendererPid.processCount,
+      rendererProcessPresentAfterStop: false,
+    }, null, 2),
+    contentType: 'application/json',
+  });
   await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
 
   await page.goto('app://bundle/settings');
