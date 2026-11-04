@@ -178,7 +178,7 @@ The command checks the source manifest, API range, contribution namespace, capab
 
 ## Architecture and project docs
 
-The [main development plan](docs/01-development-plan.md) is the only document that tracks priorities, unfinished work, and acceptance conditions. The documents below describe current interfaces, design boundaries, or an assessment. Completed plans and duplicate development logs have been removed; Git retains their history. Dated performance reports and licenses remain in `docs/`.
+The [main development plan](docs/01-development-plan.md) is the only document that tracks priorities, unfinished work, code review findings, and acceptance conditions. The documents below are technical references only; they do not contain a second roadmap or schedule. Completed plans and duplicate development logs have been removed; Git retains their history. The unapproved Excalidraw assessment is archived under `docs/archive/`. Dated performance reports and licenses remain in `docs/`.
 
 - [Performance and plugin architecture](docs/07-performance-extensibility-design.md): loading, caching, platform boundaries, workers, and evidence limits
 - [Electron plugin package format](docs/08-electron-plugin-package-format-v1.md): signed archive format
@@ -190,7 +190,7 @@ The [main development plan](docs/01-development-plan.md) is the only document th
 - [Cross-project capability matrix](docs/14-cross-project-capability-matrix.md): independent project scope
 - [Object storage workbench](docs/15-object-storage-workbench-design.md): S3-compatible browsing and transfers
 - [Container workbench](docs/17-container-workbench-design.md): read-only local Docker container list
-- [Excalidraw assessment](docs/18-excalidraw-integration-assessment.md): integration options and prerequisites, without an implementation schedule
+- [Archived Excalidraw assessment](docs/archive/18-excalidraw-integration-assessment.md): historical options and prerequisites; not approved for implementation
 - [Desktop updates](docs/19-desktop-updates.md): update checks, differential downloads, installation confirmation, and release files
 
 The application is organized around Vue route pages, a typed tool registry, Pinia stores, local i18n resources, and platform adapters. Route components and heavy workers are loaded only when needed. The service worker caches same-origin build assets with a bounded per-build cache.

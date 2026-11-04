@@ -89,7 +89,7 @@ Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Nod
 7. 工具贡献与包身份由宿主校验并注入。工具级故障、整包停用、签名者撤销及升级失败有各自恢复边界；旧窗口和旧请求不能保留授权。
 8. 宿主限制插件窗口和 Worker，探测无响应与渲染器退出，并清理资源。现有自动化覆盖不能直接扩大为全部目标平台均已通过。
 
-外部插件没有网络能力，不能直接承载实时协作服务。[Excalidraw 评估](18-excalidraw-integration-assessment.md)仅说明集成选项及其前提。
+外部插件没有网络能力，不能直接承载实时协作服务。[归档的 Excalidraw 评估](archive/18-excalidraw-integration-assessment.md)仅说明集成选项及其前提。
 
 ## 7. 输入、渲染与依赖维护
 
