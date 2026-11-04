@@ -86,6 +86,7 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 - `electron/plugin-sandbox.e2e.spec.ts` 现在在真实沙箱页面中保留一个 Worker，关闭页面后确认 Worker 列表归零；该回归随 Linux、macOS 和 Windows Electron 矩阵执行。
 - Electron 应用退出前由生命周期管理器显式停止活动插件并等待窗口关闭，释放能力代理和响应探测定时器；退出路径不记录误报的运行时故障。
 - `electron/plugin-manager.e2e.spec.ts` 在正常停止签名插件后记录渲染器内存和进程 ID，并确认该 ID 从 `app.getAppMetrics()` 消失；资源报告随三平台 Electron 矩阵生成。
+- 关闭宿主主窗口时也会复用插件 shutdown，并清理未纳入生命周期管理器的插件窗口，避免桌面进程留下孤立的插件渲染器；沙箱回归覆盖该路径。
 - 资源检查按目标平台记录进程、Worker、定时器、监听器和内存；停用或退出后回到可解释的基线。公开第三方分发前完成目标平台安装与升级验证。
 
 ### P3：性能复测与优化
