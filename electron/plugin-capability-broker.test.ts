@@ -211,8 +211,10 @@ describe('Electron plugin capability broker', () => {
     vi.useFakeTimers();
     try {
       let executionCount = 0;
-      const execute = vi.fn(() => {
+      let executionSignal!: AbortSignal;
+      const execute = vi.fn((_call: PluginCapabilityCall, signal: AbortSignal) => {
         executionCount += 1;
+        executionSignal = signal;
         return executionCount === 1
           ? new Promise(() => {})
           : { ok: true };
@@ -227,6 +229,7 @@ describe('Electron plugin capability broker', () => {
       await vi.waitFor(() => expect(execute).toHaveBeenCalledOnce());
       await vi.advanceTimersByTimeAsync(pluginCapabilityLimits.maximumExecutionDurationMs);
       await expect(timedOut).resolves.toMatchObject({ status: 500 });
+      expect(executionSignal.aborted).toBe(true);
 
       const recovered = await broker.handle(makeRequest(validCall('after-timeout')));
       expect(recovered.status).toBe(200);
@@ -279,15 +282,20 @@ describe('Electron plugin capability broker', () => {
 
   it('revokes outstanding and future requests when the plugin is disabled', async () => {
     let finish!: (value: unknown) => void;
+    let executionSignal!: AbortSignal;
     const broker = createPluginCapabilityBroker({
       pluginId,
       requestedCapabilities: ['runtime.info'],
       grantedCapabilities: ['runtime.info'],
-      execute: () => new Promise(resolve => finish = resolve),
+      execute: (_call, signal) => {
+        executionSignal = signal;
+        return new Promise(resolve => finish = resolve);
+      },
     });
     const outstanding = broker.handle(makeRequest(validCall('in-flight')));
     await vi.waitFor(() => expect(finish).toBeTypeOf('function'));
     broker.revoke();
+    expect(executionSignal.aborted).toBe(true);
     finish({ platform: 'win32' });
 
     expect((await outstanding).status).toBe(410);

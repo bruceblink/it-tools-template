@@ -65,7 +65,7 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     hostApiVersion: pluginHostApiVersion,
     trustedSigningKeys: signingKeys,
     createWindow: registration => createPluginSandboxWindow(registration, dependencies.onPluginWebContentsCreated),
-    executeCapability: (manifest, call) => executePluginCapability(manifest, call, pluginSettingsStore),
+    executeCapability: (manifest, call, signal) => executePluginCapability(manifest, call, pluginSettingsStore, signal),
     onStateChange: event => {
       const mainWindow = dependencies.getMainWindow();
       if (!mainWindow || mainWindow.isDestroyed()) {
@@ -237,7 +237,11 @@ async function executePluginCapability(
   manifest: PluginPackageManifest,
   call: PluginCapabilityCall,
   settingsStore: PluginSettingsStore,
+  signal: AbortSignal,
 ): Promise<unknown> {
+  if (signal.aborted) {
+    throw new Error('The plugin capability request was aborted.');
+  }
   if (call.capability === 'runtime.info') {
     return { platform: process.platform, version: app.getVersion() };
   }
@@ -248,13 +252,24 @@ async function executePluginCapability(
   }
   if (call.capability === 'settings.read') {
     const value = await settingsStore.read(manifest.id, call.input.key);
+    if (signal.aborted) {
+      throw new Error('The plugin capability request was aborted.');
+    }
     return value === undefined ? { found: false } : { found: true, value };
   }
   if (call.capability === 'settings.write' && call.operation === 'set') {
-    return settingsStore.write(manifest.id, call.input.key, call.input.value);
+    const result = await settingsStore.write(manifest.id, call.input.key, call.input.value);
+    if (signal.aborted) {
+      throw new Error('The plugin capability request was aborted.');
+    }
+    return result;
   }
   if (call.capability === 'settings.write' && call.operation === 'delete') {
-    return settingsStore.delete(manifest.id, call.input.key);
+    const result = await settingsStore.delete(manifest.id, call.input.key);
+    if (signal.aborted) {
+      throw new Error('The plugin capability request was aborted.');
+    }
+    return result;
   }
   throw new Error('The host does not implement this plugin capability.');
 }
