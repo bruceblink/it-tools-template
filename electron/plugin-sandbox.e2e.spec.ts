@@ -97,6 +97,21 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
     (await fetch('/worker.js')).headers.get('cache-control')
   ));
   expect(workerCacheControl).toBe('private, max-age=31536000, immutable');
+  const downloadOutcome = pluginPage.waitForEvent('download', { timeout: 3_000 })
+    .then(async download => ({ started: true, failure: await download.failure() }))
+    .catch(() => ({ started: false, failure: null }));
+  await pluginPage.evaluate(() => {
+    const link = document.createElement('a');
+    link.href = '/worker.js';
+    link.download = 'plugin-worker.js';
+    document.body.append(link);
+    link.click();
+    link.remove();
+  });
+  const downloadResult = await downloadOutcome;
+  expect(['canceled', 'not-started']).toContain(
+    downloadResult.started ? downloadResult.failure : 'not-started',
+  );
 
   let localServerRequests = 0;
   const server = createServer((_request, response) => {
