@@ -42,7 +42,7 @@
 
 `electron/plugin-sandbox.e2e.spec.ts` 还在真实插件渲染器中启动受限 Worker，并在关闭插件页面后确认 Worker 资源已清零；该测试随后关闭宿主主窗口并确认剩余插件窗口也关闭。`electron/plugin-manager.e2e.spec.ts` 在正常停用插件后确认渲染器进程从 `app.getAppMetrics()` 移除；这些检查随三平台 Electron 矩阵执行。应用退出前，主进程通过生命周期管理器停止所有活动插件并等待窗口关闭，避免能力代理和响应探测定时器留在退出路径中。
 
-插件包资源使用版本作用域隔离的内存缓存：静态资源返回 `private, max-age=31536000, immutable`，入口 HTML 和能力 bootstrap 继续返回 `no-store`。升级到新包版本会得到新的插件会话分区，不复用旧版本资源。
+插件包资源使用版本作用域隔离的内存缓存：非持久化插件会话启用内存缓存，静态资源返回 `private, max-age=31536000, immutable`，入口 HTML 和能力 bootstrap 继续返回 `no-store`。升级到新包版本会得到新的插件会话分区，不复用旧版本资源。
 
 沙箱会话默认取消 `will-download`，插件无法把包内资源写入桌面文件系统；真实沙箱回归覆盖下载触发和取消结果。
 

@@ -172,7 +172,9 @@ export async function createPluginSandboxWindow(
   }
 
   const partition = getPluginSessionPartition(registration.pluginId, packageRoot);
-  const pluginSession = electronSession.fromPartition(partition, { cache: false });
+  // Keep the partition non-persistent while allowing version-scoped assets to
+  // stay in the renderer's memory cache for repeat plugin navigation.
+  const pluginSession = electronSession.fromPartition(partition, { cache: true });
   // Package manifests may declare known capabilities that this host cannot execute yet.
   // Only the currently supported subset enters the broker; unsupported declarations remain unavailable.
   const declaredCapabilities = registration.requestedCapabilities ?? [];
