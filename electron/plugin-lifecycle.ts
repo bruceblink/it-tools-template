@@ -341,6 +341,22 @@ export class PluginLifecycleManager {
     });
   }
 
+  /**
+   * Stop every active plugin before the Electron process exits.
+   *
+   * The host must close plugin windows explicitly so that renderer-owned
+   * workers, capability brokers and lifecycle probes are released before the
+   * main window is torn down. Closing through the same path as disable keeps
+   * shutdown free of runtime-failure records.
+   */
+  async shutdown(): Promise<void> {
+    return this.runExclusive(async () => {
+      for (const active of [...this.activePlugins.values()]) {
+        await this.destroyActivePlugin(active);
+      }
+    });
+  }
+
   async uninstall(pluginId: string, version: string): Promise<boolean> {
     return this.runExclusive(async () => {
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
@@ -470,10 +486,7 @@ export class PluginLifecycleManager {
       );
     }, rendererResponsivenessProbeIntervalMs);
     window.once('closed', () => {
-      clearTimeout(active.unresponsiveTimer);
-      clearInterval(active.responsivenessProbeInterval);
-      clearTimeout(active.responsivenessProbeTimeout);
-      active.responsivenessProbePending = false;
+      clearActivePluginTimers(active);
       const failureCode = active.terminationFailureCode
         ?? (active.terminationRequested ? undefined : 'window-closed');
       if (this.activePlugins.get(pluginId) === active) {
@@ -494,6 +507,7 @@ export class PluginLifecycleManager {
   }
 
   private async destroyActivePlugin(active: ActivePlugin): Promise<void> {
+    clearActivePluginTimers(active);
     if (active.window.isDestroyed()) {
       if (this.activePlugins.get(active.pluginId) === active) {
         this.activePlugins.delete(active.pluginId);
@@ -738,6 +752,16 @@ function completeResponsivenessProbe(active: ActivePlugin, probeTimeout: ReturnT
     return;
   }
   clearTimeout(probeTimeout);
+  active.responsivenessProbeTimeout = undefined;
+  active.responsivenessProbePending = false;
+}
+
+function clearActivePluginTimers(active: ActivePlugin): void {
+  clearTimeout(active.unresponsiveTimer);
+  clearInterval(active.responsivenessProbeInterval);
+  clearTimeout(active.responsivenessProbeTimeout);
+  active.unresponsiveTimer = undefined;
+  active.responsivenessProbeInterval = undefined;
   active.responsivenessProbeTimeout = undefined;
   active.responsivenessProbePending = false;
 }
