@@ -12,6 +12,22 @@ pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
 
 脚手架默认写入 `plugins/org.example.my-plugin`，也可以用 `--directory` 指定仓库外目录。它不会覆盖已有目录，并生成一个插件命名空间内的工具贡献和 `types/` 目录。`types/` 包含 5 个自包含的 SDK 声明文件，TypeScript 插件不需要解析仓库内部的 `src/` 路径。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。
 
+仓库外的 TypeScript 项目可以直接引用生成目录中的声明：
+
+```ts
+import type { ITToolsPluginApiV1, PluginApiErrorCode } from './types/it-tools-plugin';
+import type { PluginPackageManifestV1 } from './types/it-tools-plugin-package';
+
+declare const api: ITToolsPluginApiV1;
+const denied: PluginApiErrorCode = 'permission-denied';
+const manifest: PluginPackageManifestV1 | undefined = undefined;
+void api.capabilities.settings.get('example');
+void denied;
+void manifest;
+```
+
+`pnpm test:plugin-project` 会在临时的仓库外目录编译这条 TypeScript 引用链，并继续执行源码校验和签名打包回归。生成的 SDK 声明只引用同目录文件，不依赖宿主仓库的 `src/` 路径。
+
 ## 开发手册约定
 
 ### 1. 先确定包身份和 API 范围

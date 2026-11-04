@@ -54,7 +54,7 @@ Windows x64 集成使用本次源码构建的旧版本基线 `2026.10.30-e60c009
 | 顺序 | ID | 当前状态 | 下一项工作 | 完成条件 |
 | --- | --- | --- | --- | --- |
 | P0 | PLATFORM-ISSUES-001 | 维护中；有已确认缺陷和验收缺口 | 从第 3 节选择一个问题，记录复现条件并补充回归 | 问题有对应修复、验证结果和适用平台；未验证项明确保留 |
-| P1 | PLUGIN-API-V1-001 | API、SDK 类型、脚手架和源码校验已具备 | 在独立插件项目复核文档、生成结果和当前 API 的一致性 | 插件作者仅依靠公开文档和 SDK 即可完成创建、校验、打包、安装、调用和错误处理 |
+| P1 | PLUGIN-API-V1-001 | API、SDK 类型、脚手架、源码校验和仓库外项目回归已具备 | 维护版本化接口，并在新增能力时同步公开声明、文档和错误处理 | 插件作者仅依靠公开文档和 SDK 即可完成创建、校验、打包、安装、调用和错误处理 |
 | P2 | PLUGIN-ISOLATION-001 | Windows 自动化已有证据；跨平台和完整窗口流程未完成 | 补齐 Linux/macOS 隔离、资源计数和真实窗口流程 | 各目标平台覆盖权限拒绝、撤销、停用、卡死、崩溃、Worker 限额、升级回退和卸载；宿主继续可用 |
 | P3 | PERFORMANCE-BASELINE-001 | Windows 历史测量已保留；当前版本和其他平台需复核 | 复测启动、首个工具导航、Worker 与系统监视器资源 | 同一构建、环境和输入可复现；有中位数、p95、资源口径和未覆盖范围；只修复数据支持的回退 |
 | P4 | RELEASE-WEB-ELECTRON-001 | 构建与分发流程已有实现；安装和权限证据不完整 | 为实际发布版本完成第 4 节适用检查 | 目标提交的 CI、Web/Docker 产物、桌面包、校验和及安装升级证据齐全；回滚方法可执行 |
@@ -75,8 +75,8 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 
 ### P1：插件开发接口
 
-- 复核 `plugin:create` 生成项目中的 5 个 SDK 声明、API 兼容范围、贡献 ID、能力声明、错误码和使用说明。
-- 验证独立项目不依赖仓库内部 `src/` 路径；`plugin:validate` 与 `plugin:pack` 使用一致校验规则。
+- 复核 `plugin:create` 生成项目中的 5 个 SDK 声明、API 兼容范围、贡献 ID、能力声明、错误码和使用说明。`scripts/plugin-project.test.mjs` 会在仓库外生成独立项目，使用 TypeScript 编译公开声明，再执行源码校验和签名打包。
+- 独立项目回归确认生成的声明只使用相对 SDK 引用，不依赖仓库内部 `src/` 路径；`plugin:validate` 与 `plugin:pack` 使用一致校验规则。
 - 使用签名样例覆盖不兼容 API、未声明能力、未授权调用、设置迁移、工具级故障、整包停用和恢复；保持第一方 SDK v0 与外部插件 v1 的边界。
 
 ### P2：插件隔离与生命周期
@@ -105,7 +105,7 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 | --- | --- |
 | 仅 Markdown 整理 | `git diff --check`；检查本地链接、标题锚点、冲突标记、UTF-8 和 LF；运行时和 UI 检查不适用 |
 | 应用、构建或接口变更 | `pnpm check`，再执行受影响的定向回归 |
-| 插件 CLI 与 SDK | `pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`；复核独立生成项目 |
+| 插件 CLI 与 SDK | `pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`、`pnpm test:plugin-project`；复核独立生成项目 |
 | Web/PWA | `pnpm test:e2e`；离线定向检查 `pnpm test:e2e src/pwa-cache.e2e.spec.ts` |
 | Electron 与插件 | `pnpm test:e2e:electron`；真实窗口优先使用 Computer Use，不可用时记录有限启动、恢复检查和无头测试范围 |
 | 数据库集成 | `pnpm test:e2e:postgres`、`pnpm test:e2e:mysql`、`pnpm test:e2e:sqlite`；PostgreSQL 17+、MySQL 8.4+ 使用本地 Docker，SQLite 使用临时文件 |
