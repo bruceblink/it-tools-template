@@ -41,6 +41,7 @@
 `electron/plugin-lifecycle.test.ts` 覆盖签名包安装、启用前完整性检查、能力授权、活动插件数量上限、版本启动失败后的恢复、无响应探测超时、渲染器退出事件，以及停用活动窗口后按版本卸载。`electron/plugin-settings-store.test.ts` 覆盖设置文件的命名空间、并发写入、损坏处理和资源上限。`electron/plugin-manager.e2e.spec.ts` 验证签名者信任、包安装、拒绝和授予能力、跨版本设置读取、升级失败恢复旧版、同步无限循环插件被关闭、宿主设置页继续响应、撤销活动插件的签名者与卸载。包签名和 ZIP 安全边界由 `electron/plugin-package.test.ts` 另行覆盖。
 
 `electron/plugin-sandbox.e2e.spec.ts` 还在真实插件渲染器中启动受限 Worker，并在关闭插件页面后确认 Worker 资源已清零；该测试随后关闭宿主主窗口并确认剩余插件窗口也关闭。`electron/plugin-manager.e2e.spec.ts` 在正常停用插件后确认渲染器进程从 `app.getAppMetrics()` 移除；这些检查随三平台 Electron 矩阵执行。应用退出前，主进程通过生命周期管理器停止所有活动插件并等待窗口关闭，避免能力代理和响应探测定时器留在退出路径中。
+生命周期管理器进入 shutdown 后拒绝新的安装、激活、停用和卸载操作，并让重复 shutdown 复用同一个 Promise；窗口关闭超时后的残留状态仍需按目标平台单独验证。
 
 插件包资源使用版本作用域隔离的内存缓存：非持久化插件会话启用内存缓存，静态资源返回 `private, max-age=31536000, immutable`，入口 HTML 和能力 bootstrap 继续返回 `no-store`。升级到新包版本会得到新的插件会话分区，不复用旧版本资源。
 
