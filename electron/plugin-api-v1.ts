@@ -9,6 +9,7 @@ import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../
 export const pluginRendererApiVersion = pluginApiV1Version;
 export const pluginHostApiVersion = pluginApiV1Version;
 export const pluginApiMaximumClipboardTextCharacters = 16_384;
+export const pluginApiRequestTimeoutMs = 10_000;
 
 /** Stable error codes exposed by the versioned renderer API. */
 export const pluginApiErrorCodes = Object.freeze([
@@ -103,11 +104,19 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
 
   const apiEndpoint = '/__it_tools/v1/call';
   const nativeFetch = globalThis.fetch.bind(globalThis);
+  const NativeAbortController = globalThis.AbortController;
   const maximumClipboardTextCharacters = ${pluginApiMaximumClipboardTextCharacters};
+  const requestTimeoutMs = ${pluginApiRequestTimeoutMs};
   const maximumSettingsKeyCharacters = ${pluginSettingsLimits.maximumKeyCharacters};
   const maximumSettingsStringCharacters = ${pluginSettingsLimits.maximumStringCharacters};
   const pluginApiErrorCodeSet = new Set(${JSON.stringify(pluginApiErrorCodes)});
   const settingKeyPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
+  const nativeSetTimeout = typeof globalThis.setTimeout === 'function'
+    ? globalThis.setTimeout.bind(globalThis)
+    : null;
+  const nativeClearTimeout = typeof globalThis.clearTimeout === 'function'
+    ? globalThis.clearTimeout.bind(globalThis)
+    : null;
   let requestSequence = 0;
 
   function getToolId() {
@@ -161,9 +170,17 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
 
   async function request(capability, operation, input) {
     const id = 'plugin-api-' + (++requestSequence).toString(36);
+    const controller = typeof NativeAbortController === 'function'
+      && nativeSetTimeout !== null
+      && nativeClearTimeout !== null
+      ? new NativeAbortController()
+      : null;
+    const timeout = controller === null
+      ? undefined
+      : nativeSetTimeout(() => controller.abort(), requestTimeoutMs);
     let response;
     try {
-      response = await nativeFetch(apiEndpoint, {
+      const requestOptions = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, capability, operation, input }),
@@ -171,10 +188,19 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
         credentials: 'omit',
         redirect: 'error',
         referrerPolicy: 'no-referrer',
-      });
+      };
+      if (controller !== null) {
+        requestOptions.signal = controller.signal;
+      }
+      response = await nativeFetch(apiEndpoint, requestOptions);
     }
     catch {
       throw new PluginApiError('transport-error', 0);
+    }
+    finally {
+      if (timeout !== undefined) {
+        nativeClearTimeout(timeout);
+      }
     }
 
     let payload;

@@ -1,6 +1,11 @@
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
-import { getPluginApiV1Script, pluginRendererApiVersion, pluginHostApiVersion } from './plugin-api-v1';
+import {
+  getPluginApiV1Script,
+  pluginApiRequestTimeoutMs,
+  pluginRendererApiVersion,
+  pluginHostApiVersion,
+} from './plugin-api-v1';
 
 describe('plugin renderer API v1', () => {
   it('exposes frozen versioned methods and sends a bounded runtime capability request', async () => {
@@ -220,6 +225,37 @@ describe('plugin renderer API v1', () => {
       code: 'request-failed',
       status: 500,
     });
+  });
+
+  it('aborts a capability call that never receives a transport response', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = vi.fn((_input: string, init: RequestInit) => new Promise((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      }));
+      const context = {
+        fetch,
+        AbortController,
+        setTimeout,
+        clearTimeout,
+      };
+      runInNewContext(getPluginApiV1Script(), context);
+      const api = (context as unknown as {
+        itTools: { capabilities: { runtime: { getInfo: () => Promise<unknown> } } };
+      }).itTools;
+      const request = api.capabilities.runtime.getInfo();
+      const rejection = expect(request).rejects.toMatchObject({
+        name: 'PluginApiError',
+        code: 'transport-error',
+        status: 0,
+      });
+      await vi.advanceTimersByTimeAsync(pluginApiRequestTimeoutMs);
+      await rejection;
+      expect(fetch).toHaveBeenCalledOnce();
+    }
+    finally {
+      vi.useRealTimers();
+    }
   });
 
   it('bounds and maps persistent plugin settings operations', async () => {
