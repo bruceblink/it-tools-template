@@ -75,7 +75,9 @@ let gitIpc: ReturnType<typeof registerGitIpc> | null = null;
 let storageIpc: ReturnType<typeof registerStorageIpc> | null = null;
 let containerWorkbenchIpc: ReturnType<typeof registerContainerWorkbenchIpc> | null = null;
 let updateIpc: Awaited<ReturnType<typeof registerUpdateIpc>> | null = null;
+let pluginLifecycleIpc: Awaited<ReturnType<typeof registerPluginLifecycleIpc>> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
+let quitting = false;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
 const pendingMediaPrompts = new WeakMap<WebContents, Map<string, Promise<boolean>>>();
@@ -121,7 +123,7 @@ else {
     });
     storageIpc = registerStorageIpc({ trustedRendererUrl: () => trustedRendererUrl });
     containerWorkbenchIpc = registerContainerWorkbenchIpc({ trustedRendererUrl: () => trustedRendererUrl });
-    await registerPluginLifecycleIpc({
+    pluginLifecycleIpc = await registerPluginLifecycleIpc({
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
       getTrustedRendererUrl: () => trustedRendererUrl,
@@ -149,7 +151,19 @@ else {
     }
   });
 
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
+    if (!quitting && pluginLifecycleIpc) {
+      event.preventDefault();
+      quitting = true;
+      void pluginLifecycleIpc.shutdown()
+        .catch(error => console.error('Failed to stop external plugins before quit.', error))
+        .finally(() => {
+          pluginLifecycleIpc = null;
+          app.quit();
+        });
+      return;
+    }
+    pluginLifecycleIpc = null;
     updateIpc?.shutdown();
     updateIpc = null;
     databaseIpc?.shutdown();

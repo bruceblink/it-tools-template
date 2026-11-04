@@ -30,6 +30,11 @@ export interface PluginIpcDependencies {
   onPluginWebContentsCreated: (contents: WebContents, pluginId: string) => void;
 }
 
+export interface PluginLifecycleIpc {
+  /** Stop active plugin renderers before the Electron app exits. */
+  shutdown: () => Promise<void>;
+}
+
 class PluginIpcInputError extends Error {
   constructor(readonly code: DesktopPluginErrorCode = 'invalid-request', message = 'The plugin management request is invalid.') {
     super(message);
@@ -38,7 +43,7 @@ class PluginIpcInputError extends Error {
 }
 
 /** Load signer trust and expose a narrow IPC surface to the trusted desktop renderer. */
-export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependencies): Promise<void> {
+export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependencies): Promise<PluginLifecycleIpc> {
   const signingKeys = new Map<string, PluginPackageSigningKey>();
   const trustStore = new PluginTrustStore(resolve(dependencies.userDataRoot, 'plugins', 'trusted-keys.json'), signingKeys);
   const pluginSettingsStore = new PluginSettingsStore(resolve(dependencies.userDataRoot, 'plugins', 'settings.json'));
@@ -184,6 +189,10 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     await lifecycleManager.disableSignedByKey(keyId);
     return trustStore.remove(keyId);
   }));
+
+  return {
+    shutdown: () => lifecycleManager.shutdown(),
+  };
 }
 
 async function confirmPluginCapabilities(

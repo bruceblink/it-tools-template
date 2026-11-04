@@ -40,6 +40,6 @@
 
 `electron/plugin-lifecycle.test.ts` 覆盖签名包安装、启用前完整性检查、能力授权、活动插件数量上限、版本启动失败后的恢复、无响应探测超时、渲染器退出事件，以及停用活动窗口后按版本卸载。`electron/plugin-settings-store.test.ts` 覆盖设置文件的命名空间、并发写入、损坏处理和资源上限。`electron/plugin-manager.e2e.spec.ts` 验证签名者信任、包安装、拒绝和授予能力、跨版本设置读取、升级失败恢复旧版、同步无限循环插件被关闭、宿主设置页继续响应、撤销活动插件的签名者与卸载。包签名和 ZIP 安全边界由 `electron/plugin-package.test.ts` 另行覆盖。
 
-`electron/plugin-sandbox.e2e.spec.ts` 还在真实插件渲染器中启动受限 Worker，并在关闭插件页面后确认 Worker 资源已清零；该检查随三平台 Electron 矩阵执行。
+`electron/plugin-sandbox.e2e.spec.ts` 还在真实插件渲染器中启动受限 Worker，并在关闭插件页面后确认 Worker 资源已清零；该检查随三平台 Electron 矩阵执行。应用退出前，主进程通过生命周期管理器停止所有活动插件并等待窗口关闭，避免能力代理和响应探测定时器留在退出路径中。
 
 无限循环验证由 Windows Electron 自动化测试运行。该测试还调用 Electron `forcefullyCrashRenderer()` 终止插件渲染进程，并确认插件窗口从主进程窗口列表移除、宿主设置页仍可用、已安装包仍保留。该自动化不代替人工真实窗口验收，也不覆盖自然发生的 Chromium 崩溃或 Linux/macOS 行为。
