@@ -24,12 +24,14 @@ export const pluginCapabilityLimits = Object.freeze({
   maximumSettingsStringCharacters: pluginSettingsLimits.maximumStringCharacters,
   maximumRequestsPerMinute: 30,
   maximumConcurrentRequests: 4,
+  maximumExecutionDurationMs: 10_000,
 });
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const requestIdPattern = /^[a-zA-Z0-9_-]{1,64}$/;
 
 class RequestBodyTooLargeError extends Error {}
+class CapabilityExecutionTimeoutError extends Error {}
 
 export type PluginCapabilityCall =
   | { id: string; capability: 'runtime.info'; operation: 'read'; input: Record<string, never> }
@@ -143,7 +145,7 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
           return jsonResponse(403, { id: call.id, ok: false, error: 'permission-denied' });
         }
 
-        const result = await options.execute(call);
+        const result = await executeWithTimeout(options.execute, call);
         if (!active) {
           return jsonResponse(410, { id: call.id, ok: false, error: 'plugin-inactive' });
         }
@@ -173,6 +175,29 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
       granted.clear();
     },
   };
+}
+
+async function executeWithTimeout(
+  execute: PluginCapabilityExecutor,
+  call: PluginCapabilityCall,
+): Promise<unknown> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(() => execute(call)),
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(
+          () => reject(new CapabilityExecutionTimeoutError()),
+          pluginCapabilityLimits.maximumExecutionDurationMs,
+        );
+      }),
+    ]);
+  }
+  finally {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+  }
 }
 
 function parseCapabilityCall(bytes: Uint8Array): PluginCapabilityCall | null {
