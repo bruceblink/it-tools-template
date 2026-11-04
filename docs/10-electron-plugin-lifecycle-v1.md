@@ -44,4 +44,6 @@
 
 插件包资源使用版本作用域隔离的内存缓存：静态资源返回 `private, max-age=31536000, immutable`，入口 HTML 和能力 bootstrap 继续返回 `no-store`。升级到新包版本会得到新的插件会话分区，不复用旧版本资源。
 
+沙箱会话默认取消 `will-download`，插件无法把包内资源写入桌面文件系统；真实沙箱回归覆盖下载触发和取消结果。
+
 无限循环验证由 Windows Electron 自动化测试运行。该测试还调用 Electron `forcefullyCrashRenderer()` 终止插件渲染进程，并确认插件窗口从主进程窗口列表移除、宿主设置页仍可用、已安装包仍保留。该自动化不代替人工真实窗口验收，也不覆盖自然发生的 Chromium 崩溃或 Linux/macOS 行为。
