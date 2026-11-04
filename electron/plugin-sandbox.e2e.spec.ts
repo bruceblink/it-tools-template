@@ -93,6 +93,10 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(response?.headers()['content-security-policy']).toContain("connect-src 'self'");
   expect(response?.headers()['content-security-policy']).toContain("script-src 'self'");
   expect(response?.headers()['content-security-policy']).toContain("worker-src 'self'");
+  const workerCacheControl = await pluginPage.evaluate(async () => (
+    (await fetch('/worker.js')).headers.get('cache-control')
+  ));
+  expect(workerCacheControl).toBe('private, max-age=31536000, immutable');
 
   let localServerRequests = 0;
   const server = createServer((_request, response) => {

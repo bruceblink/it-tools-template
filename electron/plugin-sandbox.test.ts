@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   getPluginContentSecurityPolicy,
   getPluginWorkerContentSecurityPolicy,
+  getPluginAssetCacheControl,
   getPluginEntryUrl,
   assertPluginSessionRoot,
   getPluginSessionPartition,
@@ -66,6 +67,13 @@ describe('Electron plugin renderer boundary', () => {
     expect(policy).not.toContain('unsafe-inline');
     expect(policy).not.toContain('https:');
     expect(getPluginWorkerContentSecurityPolicy()).toContain("worker-src 'none'");
+  });
+
+  it('caches only version-scoped plugin assets', () => {
+    expect(getPluginAssetCacheControl('.html')).toBe('no-store');
+    expect(getPluginAssetCacheControl('.js')).toBe('private, max-age=31536000, immutable');
+    expect(getPluginAssetCacheControl('.css')).toBe('private, max-age=31536000, immutable');
+    expect(getPluginAssetCacheControl('.json')).toBe('private, max-age=31536000, immutable');
   });
 
   it('resolves only package-local files and rejects symlink escapes', async () => {
