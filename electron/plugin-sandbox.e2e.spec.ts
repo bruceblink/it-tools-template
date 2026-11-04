@@ -276,4 +276,10 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   await pluginPage.close({ runBeforeUnload: false });
   await expect.poll(() => pluginPage.workers().length).toBe(0);
 
+  const peerPluginPageClosed = peerPluginPage.waitForEvent('close');
+  await hostPage.close({ runBeforeUnload: false });
+  await peerPluginPageClosed;
+  await expect.poll(async () => (
+    (await electronApp.windows()).filter(window => window.url().startsWith('it-plugin://')).length
+  )).toBe(0);
 });

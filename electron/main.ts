@@ -78,6 +78,7 @@ let updateIpc: Awaited<ReturnType<typeof registerUpdateIpc>> | null = null;
 let pluginLifecycleIpc: Awaited<ReturnType<typeof registerPluginLifecycleIpc>> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 let quitting = false;
+let pluginShutdownPromise: Promise<void> | null = null;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
 const pendingMediaPrompts = new WeakMap<WebContents, Map<string, Promise<boolean>>>();
@@ -155,8 +156,7 @@ else {
     if (!quitting && pluginLifecycleIpc) {
       event.preventDefault();
       quitting = true;
-      void pluginLifecycleIpc.shutdown()
-        .catch(error => console.error('Failed to stop external plugins before quit.', error))
+      void stopExternalPlugins()
         .finally(() => {
           pluginLifecycleIpc = null;
           app.quit();
@@ -487,6 +487,7 @@ async function createMainWindow() {
     containerWorkbenchIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
+      void stopExternalPlugins();
     }
   });
 
@@ -496,5 +497,27 @@ async function createMainWindow() {
   }
   else {
     await window.loadURL(APP_BASE_URL);
+  }
+}
+
+/** Stop managed plugins and close any remaining plugin windows with the host. */
+function stopExternalPlugins(): Promise<void> {
+  if (pluginShutdownPromise) {
+    return pluginShutdownPromise;
+  }
+  pluginShutdownPromise = (pluginLifecycleIpc?.shutdown() ?? Promise.resolve())
+    .catch(error => console.error('Failed to stop external plugins before host close.', error))
+    .finally(() => {
+      closePluginWindows();
+      pluginShutdownPromise = null;
+    });
+  return pluginShutdownPromise;
+}
+
+function closePluginWindows(): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed() && pluginRendererIds.has(window.webContents)) {
+      window.destroy();
+    }
   }
 }
