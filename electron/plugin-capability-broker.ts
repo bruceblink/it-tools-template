@@ -24,6 +24,7 @@ export const pluginCapabilityLimits = Object.freeze({
   maximumSettingsStringCharacters: pluginSettingsLimits.maximumStringCharacters,
   maximumRequestsPerMinute: 30,
   maximumConcurrentRequests: 4,
+  maximumRequestBodyReadDurationMs: 9_000,
   maximumExecutionDurationMs: 10_000,
 });
 
@@ -31,6 +32,7 @@ const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const requestIdPattern = /^[a-zA-Z0-9_-]{1,64}$/;
 
 class RequestBodyTooLargeError extends Error {}
+class RequestBodyReadTimeoutError extends Error {}
 class CapabilityExecutionTimeoutError extends Error {}
 
 export type PluginCapabilityCall =
@@ -131,6 +133,9 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
         catch (error) {
           if (error instanceof RequestBodyTooLargeError) {
             return jsonResponse(413, { ok: false, error: 'request-too-large' });
+          }
+          if (error instanceof RequestBodyReadTimeoutError) {
+            return jsonResponse(408, { ok: false, error: 'request-timeout' });
           }
           throw error;
         }
@@ -283,9 +288,10 @@ async function readBoundedBody(request: Request, maximumBytes: number): Promise<
 
   const chunks: Uint8Array[] = [];
   let totalBytes = 0;
+  const deadline = Date.now() + pluginCapabilityLimits.maximumRequestBodyReadDurationMs;
   try {
     while (true) {
-      const { done, value } = await reader.read();
+      const { done, value } = await readBodyChunkWithDeadline(reader, deadline);
       if (done) {
         break;
       }
@@ -296,6 +302,12 @@ async function readBoundedBody(request: Request, maximumBytes: number): Promise<
       }
       chunks.push(value);
     }
+  }
+  catch (error) {
+    if (error instanceof RequestBodyReadTimeoutError) {
+      void reader.cancel('The plugin capability request body read timed out.').catch(() => undefined);
+    }
+    throw error;
   }
   finally {
     reader.releaseLock();
@@ -308,6 +320,36 @@ async function readBoundedBody(request: Request, maximumBytes: number): Promise<
     offset += chunk.byteLength;
   }
   return bytes;
+}
+
+async function readBodyChunkWithDeadline(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  deadline: number,
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) {
+    throw new RequestBodyReadTimeoutError('The plugin capability request body read timed out.');
+  }
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const read = reader.read();
+  read.catch(() => undefined);
+  try {
+    return await Promise.race([
+      read,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new RequestBodyReadTimeoutError('The plugin capability request body read timed out.')),
+          remaining,
+        );
+      }),
+    ]);
+  }
+  finally {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 function jsonResponse(status: number, value: unknown, extraHeaders: Record<string, string> = {}): Response {

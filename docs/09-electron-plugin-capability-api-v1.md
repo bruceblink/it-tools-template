@@ -79,6 +79,7 @@ if (canReadRuntime) {
 | `untrusted-origin-header` | `Origin` 请求头与插件来源不匹配。 |
 | `content-type-required` | 请求没有使用 `application/json`。 |
 | `request-too-large` | 请求体超过 16 KiB。 |
+| `request-timeout` | 请求体读取超过 9 秒。 |
 | `rate-limit-exceeded` | 每分钟调用次数超过限制。 |
 | `too-many-requests` | 同时执行的调用超过限制。 |
 | `invalid-request` | 请求字段或能力操作结构无效。 |
