@@ -266,4 +266,14 @@ test('runs a first-party proof in a sandboxed, network-denied plugin renderer', 
   expect(await pluginPage.evaluate(() => window.open('https://example.invalid'))).toBeNull();
   expect(await pluginPage.evaluate(() => window.open('app://bundle/settings'))).toBeNull();
 
+  // Keep one worker alive until the page closes so the real sandbox lifecycle
+  // proves that pagehide tears down renderer-owned worker resources.
+  await pluginPage.evaluate(() => {
+    const worker = new Worker('/worker.js');
+    Reflect.set(globalThis, '__itToolsCleanupWorker', worker);
+  });
+  await expect.poll(() => pluginPage.workers().length).toBe(1);
+  await pluginPage.close({ runBeforeUnload: false });
+  await expect.poll(() => pluginPage.workers().length).toBe(0);
+
 });
