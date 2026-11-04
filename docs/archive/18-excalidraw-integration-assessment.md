@@ -3,7 +3,7 @@
 > 状态：评估结论，不代表已批准实施
 > 评估日期：2026-10-29
 > 文档整理日期：2026-10-31
-> 唯一执行计划：[主线开发计划](01-development-plan.md)
+> 唯一执行计划：[主线开发计划](../01-development-plan.md)
 > 适用范围：Web/PWA、Electron、外部插件平台和实时协作服务
 
 ## 1. 术语和评估假设
@@ -102,4 +102,4 @@ Excalidraw 编辑器可以作为第一方页面或独立插件的静态资源交
 - [Excalidraw App 房间链接、加密数据和持久化接口](https://github.com/excalidraw/excalidraw/blob/master/excalidraw-app/data/index.ts)
 - [Excalidraw App 协作实现：房间 ID、房间密钥和 Socket.IO](https://github.com/excalidraw/excalidraw/blob/master/excalidraw-app/collab/Collab.tsx)
 - [官方协作服务器示例 `excalidraw-room`](https://github.com/excalidraw/excalidraw-room)
-- [当前插件沙箱实现](../electron/plugin-sandbox.ts) 和 [插件能力目录](../src/shared/plugin-capabilities.ts)
+- [当前插件沙箱实现](../../electron/plugin-sandbox.ts) 和 [插件能力目录](../../src/shared/plugin-capabilities.ts)
