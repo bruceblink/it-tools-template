@@ -258,6 +258,41 @@ describe('plugin renderer API v1', () => {
     }
   });
 
+  it('aborts a capability call whose response body never finishes', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetch = vi.fn((_input: string, init: RequestInit) => ({
+        ok: true,
+        status: 200,
+        json: () => new Promise((_resolve, reject) => {
+          init.signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+        }),
+      }));
+      const context = {
+        fetch,
+        AbortController,
+        setTimeout,
+        clearTimeout,
+      };
+      runInNewContext(getPluginApiV1Script(), context);
+      const api = (context as unknown as {
+        itTools: { capabilities: { runtime: { getInfo: () => Promise<unknown> } } };
+      }).itTools;
+      const request = api.capabilities.runtime.getInfo();
+      const rejection = expect(request).rejects.toMatchObject({
+        name: 'PluginApiError',
+        code: 'transport-error',
+        status: 0,
+      });
+      await vi.advanceTimersByTimeAsync(pluginApiRequestTimeoutMs);
+      await rejection;
+      expect(fetch).toHaveBeenCalledOnce();
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('bounds and maps persistent plugin settings operations', async () => {
     const fetch = vi.fn(async (_input: string, init: RequestInit) => {
       const request = JSON.parse(String(init.body)) as { id: string; capability: string; operation: string };
