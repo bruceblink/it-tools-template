@@ -11,6 +11,7 @@ export type PluginApiErrorCode =
   | 'plugin-inactive'
   | 'content-type-required'
   | 'request-too-large'
+  | 'request-timeout'
   | 'rate-limit-exceeded'
   | 'too-many-requests'
   | 'invalid-request'
