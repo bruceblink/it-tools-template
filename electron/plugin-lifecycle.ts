@@ -58,7 +58,8 @@ export type PluginLifecycleErrorCode =
   | 'unsupported-capability'
   | 'activation-failed'
   | 'activation-rollback-failed'
-  | 'window-close-timeout';
+  | 'window-close-timeout'
+  | 'shutting-down';
 
 export class PluginLifecycleError extends Error {
   constructor(
@@ -134,6 +135,8 @@ export class PluginLifecycleManager {
   private readonly activePlugins = new Map<string, ActivePlugin>();
   private readonly runtimeFailures = new Map<string, PluginRuntimeFailure>();
   private operationQueue: Promise<void> = Promise.resolve();
+  private shuttingDown = false;
+  private shutdownPromise: Promise<void> | null = null;
 
   constructor(private readonly options: PluginLifecycleOptions) {
     this.installRoot = resolve(options.installRoot);
@@ -198,6 +201,7 @@ export class PluginLifecycleManager {
 
   async installArchive(archivePath: string): Promise<PluginLifecycleSnapshot> {
     return this.runExclusive(async () => {
+      this.assertOperational();
       const root = await this.ensureInstallRoot();
       const installedCount = await this.countInstalledPackages(root);
       if (installedCount >= maximumInstalledPackages) {
@@ -227,6 +231,7 @@ export class PluginLifecycleManager {
     contributionId?: string,
   ): Promise<PluginLifecycleSnapshot> {
     return this.runExclusive(async () => {
+      this.assertOperational();
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
       const manifest = await verifyInstalledPluginPackage({
         installRoot: this.installRoot,
@@ -308,6 +313,7 @@ export class PluginLifecycleManager {
 
   async disable(pluginId: string): Promise<boolean> {
     return this.runExclusive(async () => {
+      this.assertOperational();
       const active = this.activePlugins.get(pluginId);
       if (!active) {
         return false;
@@ -326,6 +332,7 @@ export class PluginLifecycleManager {
 
   async disableSignedByKey(keyId: string): Promise<number> {
     return this.runExclusive(async () => {
+      this.assertOperational();
       const active = [...this.activePlugins.values()].filter(plugin => plugin.signingKeyId === keyId);
       for (const plugin of active) {
         await this.destroyActivePlugin(plugin);
@@ -350,15 +357,21 @@ export class PluginLifecycleManager {
    * shutdown free of runtime-failure records.
    */
   async shutdown(): Promise<void> {
-    return this.runExclusive(async () => {
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
+    }
+    this.shuttingDown = true;
+    this.shutdownPromise = this.runExclusive(async () => {
       for (const active of [...this.activePlugins.values()]) {
         await this.destroyActivePlugin(active);
       }
     });
+    return this.shutdownPromise;
   }
 
   async uninstall(pluginId: string, version: string): Promise<boolean> {
     return this.runExclusive(async () => {
+      this.assertOperational();
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
       const active = this.activePlugins.get(pluginId);
       if (active?.version === version) {
@@ -680,6 +693,15 @@ export class PluginLifecycleManager {
     const result = this.operationQueue.then(operation);
     this.operationQueue = result.then(() => undefined, () => undefined);
     return result;
+  }
+
+  private assertOperational(): void {
+    if (this.shuttingDown) {
+      throw new PluginLifecycleError(
+        'shutting-down',
+        'The plugin lifecycle manager is shutting down.',
+      );
+    }
   }
 }
 

@@ -267,6 +267,19 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.shutdown()).resolves.toBeUndefined();
   });
 
+  it('gates lifecycle mutations after shutdown begins and makes shutdown idempotent', async () => {
+    const { root, manager } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', []);
+
+    const firstShutdown = manager.shutdown();
+    await expect(manager.shutdown()).resolves.toBeUndefined();
+    await expect(firstShutdown).resolves.toBeUndefined();
+    await expect(manager.activate(pluginId, '1.0.0', [])).rejects.toMatchObject({ code: 'shutting-down' });
+    await expect(manager.disable(pluginId)).rejects.toMatchObject({ code: 'shutting-down' });
+    await expect(manager.uninstall(pluginId, '1.0.0')).rejects.toMatchObject({ code: 'shutting-down' });
+  });
+
   it('restores the previous version when an upgrade window fails to load', async () => {
     const { root, manager, createWindow, windows, stateChanges } = await createManager({
       failVersion: '2.0.0',

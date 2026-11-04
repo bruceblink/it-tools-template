@@ -14,6 +14,7 @@ export const desktopPluginErrorCodes = Object.freeze([
   'activation-failed',
   'activation-rollback-failed',
   'window-close-timeout',
+  'shutting-down',
   'store-unavailable',
   'invalid-store',
   'invalid-key',
