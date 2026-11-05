@@ -129,18 +129,20 @@ test.describe('CSP-compatible tool behavior', () => {
     const allToolsHeading = page.getByRole('heading', { name: 'All the tools' });
     await expect(allToolsHeading).toBeVisible();
     const allToolsGrid = allToolsHeading.locator('xpath=following-sibling::div[1]');
-    const mathToolCard = allToolsGrid.locator('a[href="/math-evaluator"]');
-    await expect(mathToolCard).toHaveCount(1);
-    await mathToolCard.getByRole('button').click();
+    const toolCard = allToolsGrid.locator('a.tool-card-link').first();
+    await expect(toolCard).toBeVisible();
+    const toolPath = await toolCard.getAttribute('href');
+    expect(toolPath).toBeTruthy();
+    await toolCard.getByRole('button').click();
 
     const favoritesHeading = page.getByRole('heading', { name: 'Your favorite tools' });
     await expect(favoritesHeading).toBeVisible();
     const favoritesSection = favoritesHeading.locator('xpath=..');
-    const favoriteMathToolCard = favoritesSection.locator('a[href="/math-evaluator"]');
-    await expect(favoriteMathToolCard).toBeVisible();
-    await favoriteMathToolCard.getByRole('button').click();
+    const favoriteToolCard = favoritesSection.locator(`a[href="${toolPath}"]`);
+    await expect(favoriteToolCard).toBeVisible();
+    await favoriteToolCard.getByRole('button').click();
     await expect(favoritesHeading).toHaveCount(0);
-    await expect(favoriteMathToolCard).toHaveCount(0);
+    await expect(favoriteToolCard).toHaveCount(0);
 
     await securityAudit.expectClean();
   });
