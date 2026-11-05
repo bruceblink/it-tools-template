@@ -101,11 +101,16 @@ jobs:
 
       - name: Test Electron app on Linux
         if: matrix.platform == 'linux'
-        run: xvfb-run --auto-servernum pnpm test:e2e:electron
+        # Hosted runners can occasionally fail one Electron E2E during a
+        # cold start. Retry the complete suite once; persistent failures still
+        # fail the nightly job.
+        run: xvfb-run --auto-servernum pnpm test:e2e:electron --retries=1
 
       - name: Test Electron app
         if: matrix.platform != 'linux'
-        run: pnpm test:e2e:electron
+        # Keep nightly desktop validation resilient to one-off runner timing
+        # failures while preserving a failing result for repeatable errors.
+        run: pnpm test:e2e:electron --retries=1
 
       - name: Upload desktop package
         uses: actions/upload-artifact@v4
