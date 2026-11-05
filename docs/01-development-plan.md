@@ -1,8 +1,8 @@
 # IT Tools 主线开发计划
 
 > 状态：唯一开发计划
-> 更新日期：2026-11-04
-> 当前主线提交：`9c378c2`；插件平台三平台 CI 运行 `41909808822` 已通过
+> 更新日期：2026-11-05
+> 当前主线提交：`da2c576`；插件平台三平台 CI 运行 `41909808822` 已通过
 > 正式发布基线：`v2026.11.1-1793495127.gca55a2c`；后续发布与当前主线提交分开记录
 > 完整验证基线：`pnpm check` 在 `ff7f43e` 通过 145 个测试文件、911 项测试（18 项 skipped），Web 与 Electron 构建通过；之后的 P2 切片均通过受影响测试、类型检查和构建验证
 > 插件平台化起点：`v2026.10.28-1dbc63c`；后续版本保留该 tag 的祖先关系
@@ -103,7 +103,7 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 
 ### P3：性能复测与优化
 
-- 当前构建重新测量冷启动、首次和重复工具导航、输入处理、渲染更新、空闲 CPU、进程组内存和安装体积。Web 使用生产构建，Electron 使用同一提交的解包应用，各至少运行 20 次。2026-11-05 的尝试只取得 1 次 Web 样本，Electron 因当前环境没有显示服务而启动失败；该结果不计为基线，需在 Xvfb 或真实桌面环境重跑。
+- 当前构建重新测量冷启动、首次和重复工具导航、输入处理、渲染更新、空闲 CPU、进程组内存和安装体积。Web 使用生产构建，Electron 使用同一提交的解包应用，各至少运行 20 次。2026-11-05 已在无显示服务环境使用 headless Chromium 完成 Web 性能 E2E 20 次，报告为 [`docs/performance-baseline-2026-11-05-web.json`](performance-baseline-2026-11-05-web.json)：启动中位数 1127.35 ms、p95 1358.4 ms；首次工具导航中位数 153.1–347.58 ms、p95 197.72–440.89 ms；重复导航中位数 134.77–341.74 ms、p95 165.92–433.6 ms。功能 E2E 同时通过 15/15 项。Electron 仍因当前环境没有显示服务未测量；headless Web E2E 替代了当前可执行的 Web 验证，但不替代 Electron 20 次基线，后续在 Xvfb 或真实桌面环境补测。
 - Linux/macOS 缺少与 Windows 对应的固定环境基线。真实窗口响应时间与自动化输入耗时分别记录，不能相互替代。
 - 系统监视器历史工作集峰值约 115.33 MiB，高于原定 64 MiB 附加内存目标。先明确附加内存计算口径，再定位缓存或采集开销；不能把两种口径直接等同。
 - Electron Math Evaluator Worker 历史构建仍高于 500 KiB 候选目标。先测当前产物和实际加载成本，再决定是否继续拆分；Worker 资源单列，不混入工具静态入口预算。
@@ -127,7 +127,7 @@ P1 维护现有版本化接口，不重复开发已交付 API。新增能力、�
 | 数据库集成 | `pnpm test:e2e:postgres`、`pnpm test:e2e:mysql`、`pnpm test:e2e:sqlite`；PostgreSQL 17+、MySQL 8.4+ 使用本地 Docker，SQLite 使用临时文件 |
 | 对象存储与容器 | `pnpm test:e2e:object-storage`、`pnpm test:e2e:container-workbench`；使用本地 Docker，记录服务、镜像版本、端口、启动和清理 |
 | 系统监视器长时资源 | `pnpm test:e2e:electron electron/system-monitor-resource.e2e.spec.ts`，设置 `IT_TOOLS_SYSTEM_MONITOR_SOAK_MS=1800000`；检查 30 分钟采样和 20 次路由切换 |
-| 性能基线 | 先构建当前平台解包应用，再执行 `node scripts/performance-baseline.mjs --runs 20 --platform all --electron-app-dir . --output docs/performance-baseline-YYYY-MM-DD-main.json`；新建报告，不覆盖历史报告 |
+| 性能基线 | 先构建当前平台解包应用，再执行 `node scripts/performance-baseline.mjs --runs 20 --platform all --electron-app-dir . --output docs/performance-baseline-YYYY-MM-DD-main.json`；无显示服务时先执行 `pnpm test:e2e --project=chromium src/app.e2e.spec.ts src/pwa-cache.e2e.spec.ts`，再用 `--platform web` 运行同一性能脚本；新建报告，不覆盖历史报告 |
 | Docker 与响应头 | 构建实际目标镜像，执行 `pnpm headers:check`、`pnpm headers:docker`；记录镜像和容器清理 |
 | 发布 | 使用仓库 release 流程；核对目标提交、CI 任务、包和校验和，按 tag 提交范围生成发布说明 |
 

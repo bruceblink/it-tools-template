@@ -1,0 +1,2388 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-11-05T00:12:34.667Z",
+  "status": "measured",
+  "configuration": {
+    "runsRequested": 20,
+    "idleWindowMs": 3000,
+    "selectedPlatforms": [
+      "web"
+    ],
+    "webSource": "dist served by Vite preview on loopback",
+    "webAutomation": "headless Chrome with a fresh profile per run",
+    "electronAutomation": "packaged application with a fresh user-data directory per run",
+    "electronWindowVisibility": null,
+    "electronAppDirectory": null,
+    "syntheticInputIsolation": "renderer reload between interaction workloads",
+    "routeCases": [
+      {
+        "id": "jsonMinify",
+        "path": "/json-minify",
+        "query": "JSON minify"
+      },
+      {
+        "id": "regexTester",
+        "path": "/regex-tester",
+        "query": "Regex Tester"
+      },
+      {
+        "id": "macLookup",
+        "path": "/mac-address-lookup",
+        "query": "MAC address lookup"
+      },
+      {
+        "id": "textDiff",
+        "path": "/text-diff",
+        "query": "Text diff"
+      },
+      {
+        "id": "pdfSignatureChecker",
+        "path": "/pdf-signature-checker",
+        "query": "PDF signature checker"
+      },
+      {
+        "id": "mathEvaluator",
+        "path": "/math-evaluator",
+        "query": "Math evaluator"
+      },
+      {
+        "id": "rsaKeyPairGenerator",
+        "path": "/rsa-key-pair-generator",
+        "query": "RSA key pair generator"
+      },
+      {
+        "id": "cameraRecorder",
+        "path": "/camera-recorder",
+        "query": "Camera recorder"
+      }
+    ],
+    "syntheticInputs": {
+      "json": [
+        {
+          "name": "small",
+          "inputBytes": 1379,
+          "outputBytes": 963,
+          "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db"
+        },
+        {
+          "name": "large",
+          "inputBytes": 42099,
+          "outputBytes": 31891,
+          "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d"
+        },
+        {
+          "name": "stress",
+          "inputBytes": 89199,
+          "outputBytes": 68791,
+          "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe"
+        }
+      ],
+      "regex": {
+        "name": "large-safe-mismatch",
+        "pattern": "^Z$",
+        "inputBytes": 262144
+      },
+      "math": {
+        "name": "sum-200-values",
+        "inputBytes": 406,
+        "expectedResult": "200"
+      }
+    },
+    "chromeExecutable": "chromium",
+    "electronExecutable": null,
+    "webBaseUrl": "http://127.0.0.1:45841"
+  },
+  "environment": {
+    "os": {
+      "platform": "linux",
+      "name": "linux",
+      "release": "6.18.57",
+      "version": "#1 SMP Tue Oct 20 21:56:04 UTC 2026",
+      "architecture": "x64"
+    },
+    "hardware": {
+      "cpuModel": "AMD EPYC 9V74 80-Core Processor",
+      "logicalCores": 3,
+      "totalMemoryBytes": 10452459520
+    },
+    "runtime": {
+      "node": "v24.19.0",
+      "packageManager": "pnpm@12.16.1",
+      "electronDeclared": "44.8.0",
+      "electronRuntime": null,
+      "electronChrome": null,
+      "electronNode": null,
+      "appVersion": null,
+      "chrome": "154.0.8037.57"
+    },
+    "source": {
+      "commit": "da2c5761ac8992cf9a6906127fefaf910edd7ad3",
+      "dirty": false,
+      "dirtyPaths": [],
+      "workingTreeFingerprint": "0ecef5e1d0c2aa6498e66eb4bbdfc7276b541036a02e39aa5822eada568ff59a",
+      "lockfileSha256": "1c98a1b0c2f0ae089f7367b7eaeeb49f3e393474e18d7c51dce1779e39ba5123"
+    },
+    "artifacts": {
+      "web": {
+        "path": "dist",
+        "bytes": 14310991,
+        "files": 386,
+        "available": true,
+        "mode": "production Vite build"
+      },
+      "electron": {
+        "available": false,
+        "reason": "Electron runtime was not selected."
+      },
+      "installers": [],
+      "bundleBudgets": {
+        "precacheBytes": 8388608,
+        "initialJavaScriptGzipBytes": 307200,
+        "toolJavaScriptGzipBytes": 512000
+      },
+      "bundlePrecacheBytes": 1046610,
+      "bundleInitialJavaScriptGzipBytes": 297251,
+      "bundlePendingOptimizations": {
+        "initialJavaScript": false,
+        "entries": [],
+        "assets": []
+      }
+    }
+  },
+  "samples": {
+    "web": [
+      {
+        "iteration": 1,
+        "startupMs": 1266.06,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 347.23,
+            "regexTester": 269.25,
+            "macLookup": 214.65,
+            "textDiff": 165.46,
+            "pdfSignatureChecker": 173.02,
+            "mathEvaluator": 128.61,
+            "rsaKeyPairGenerator": 331.82,
+            "cameraRecorder": 166.86
+          },
+          "warmOpen": {
+            "jsonMinify": 151.73,
+            "regexTester": 165.17,
+            "macLookup": 150.65,
+            "textDiff": 148.91,
+            "pdfSignatureChecker": 200.05,
+            "mathEvaluator": 151.69,
+            "rsaKeyPairGenerator": 383.6,
+            "cameraRecorder": 132.78
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 262.88
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 62.99,
+                "outputUpdateMs": 184.78,
+                "durationMs": 247.82,
+                "inputEventMs": 28.73,
+                "inputEventOutputUpdateMs": 187.96
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3382.75,
+                "outputUpdateMs": 229.96,
+                "durationMs": 3612.73,
+                "inputEventMs": 72.56,
+                "inputEventOutputUpdateMs": 193.05
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13973.59,
+                "outputUpdateMs": 341.57,
+                "durationMs": 14315.18,
+                "inputEventMs": 73.13,
+                "inputEventOutputUpdateMs": 219.09
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 115.75,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 70163173,
+          "totalBytes": 116216465,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 29216,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1194774528,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1158815744,
+            "privateBytes": null,
+            "cpuSeconds": 33,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3011,
+          "normalizedIdleCpuPercent": 22.14
+        }
+      },
+      {
+        "iteration": 2,
+        "startupMs": 1259.01,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 421.77,
+            "regexTester": 231.26,
+            "macLookup": 201.36,
+            "textDiff": 165.36,
+            "pdfSignatureChecker": 200.87,
+            "mathEvaluator": 150.92,
+            "rsaKeyPairGenerator": 334.09,
+            "cameraRecorder": 197.72
+          },
+          "warmOpen": {
+            "jsonMinify": 190.76,
+            "regexTester": 184.46,
+            "macLookup": 191.59,
+            "textDiff": 200.18,
+            "pdfSignatureChecker": 168.5,
+            "mathEvaluator": 169.79,
+            "rsaKeyPairGenerator": 379.89,
+            "cameraRecorder": 116.13
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 247.93
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 65.28,
+                "outputUpdateMs": 184.16,
+                "durationMs": 249.46,
+                "inputEventMs": 23.96,
+                "inputEventOutputUpdateMs": 176.28
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3515.79,
+                "outputUpdateMs": 230.43,
+                "durationMs": 3746.23,
+                "inputEventMs": 43.18,
+                "inputEventOutputUpdateMs": 204.63
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13434.29,
+                "outputUpdateMs": 279.28,
+                "durationMs": 13713.59,
+                "inputEventMs": 61.33,
+                "inputEventOutputUpdateMs": 217.72
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 117.72,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 70855793,
+          "totalBytes": 105992849,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 29385,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1282760704,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1251840000,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3010,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 3,
+        "startupMs": 1131.49,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 324.78,
+            "regexTester": 218.84,
+            "macLookup": 180.95,
+            "textDiff": 150.07,
+            "pdfSignatureChecker": 134.01,
+            "mathEvaluator": 134.36,
+            "rsaKeyPairGenerator": 302.45,
+            "cameraRecorder": 147.4
+          },
+          "warmOpen": {
+            "jsonMinify": 135.55,
+            "regexTester": 163.64,
+            "macLookup": 151.61,
+            "textDiff": 165.76,
+            "pdfSignatureChecker": 183.97,
+            "mathEvaluator": 167.15,
+            "rsaKeyPairGenerator": 282.57,
+            "cameraRecorder": 150.74
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 261.92
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 54.85,
+                "outputUpdateMs": 179.1,
+                "durationMs": 233.98,
+                "inputEventMs": 27.3,
+                "inputEventOutputUpdateMs": 185.84
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3295.8,
+                "outputUpdateMs": 227.39,
+                "durationMs": 3523.21,
+                "inputEventMs": 97.98,
+                "inputEventOutputUpdateMs": 182.27
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13803.02,
+                "outputUpdateMs": 302.74,
+                "durationMs": 14105.86,
+                "inputEventMs": 63.21,
+                "inputEventOutputUpdateMs": 219.91
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 119.67,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 65752878,
+          "totalBytes": 104054274,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 29549,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1330151424,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1304465408,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3013,
+          "normalizedIdleCpuPercent": 11.06
+        }
+      },
+      {
+        "iteration": 4,
+        "startupMs": 1116.79,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 324.83,
+            "regexTester": 249.8,
+            "macLookup": 201.05,
+            "textDiff": 150.21,
+            "pdfSignatureChecker": 180.49,
+            "mathEvaluator": 137.22,
+            "rsaKeyPairGenerator": 313.79,
+            "cameraRecorder": 177.19
+          },
+          "warmOpen": {
+            "jsonMinify": 141.06,
+            "regexTester": 147.96,
+            "macLookup": 150.94,
+            "textDiff": 132.44,
+            "pdfSignatureChecker": 183.1,
+            "mathEvaluator": 136.84,
+            "rsaKeyPairGenerator": 396.96,
+            "cameraRecorder": 135.86
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 247.5
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 52.97,
+                "outputUpdateMs": 180.87,
+                "durationMs": 233.86,
+                "inputEventMs": 27.03,
+                "inputEventOutputUpdateMs": 175.81
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3271.34,
+                "outputUpdateMs": 226.52,
+                "durationMs": 3497.86,
+                "inputEventMs": 46.99,
+                "inputEventOutputUpdateMs": 192.78
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 14307.61,
+                "outputUpdateMs": 325.12,
+                "durationMs": 14632.73,
+                "inputEventMs": 59.49,
+                "inputEventOutputUpdateMs": 220.29
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 132.75,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 64565206,
+          "totalBytes": 110669290,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 29716,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1181810688,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1158336512,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3009,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 5,
+        "startupMs": 1053.61,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 331.54,
+            "regexTester": 248.96,
+            "macLookup": 184.78,
+            "textDiff": 165.1,
+            "pdfSignatureChecker": 150.01,
+            "mathEvaluator": 134.95,
+            "rsaKeyPairGenerator": 315.52,
+            "cameraRecorder": 153.14
+          },
+          "warmOpen": {
+            "jsonMinify": 165.16,
+            "regexTester": 148.11,
+            "macLookup": 150.04,
+            "textDiff": 134.75,
+            "pdfSignatureChecker": 151.13,
+            "mathEvaluator": 147.33,
+            "rsaKeyPairGenerator": 351.14,
+            "cameraRecorder": 115.69
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 265.71
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 56.99,
+                "outputUpdateMs": 180.96,
+                "durationMs": 237.95,
+                "inputEventMs": 22.58,
+                "inputEventOutputUpdateMs": 179.18
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3357.66,
+                "outputUpdateMs": 237.02,
+                "durationMs": 3594.69,
+                "inputEventMs": 57.69,
+                "inputEventOutputUpdateMs": 178.2
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 12674.25,
+                "outputUpdateMs": 305.13,
+                "durationMs": 12979.38,
+                "inputEventMs": 55.24,
+                "inputEventOutputUpdateMs": 202.73
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 116.93,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 65369022,
+          "totalBytes": 105688554,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 29887,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1177583616,
+            "privateBytes": null,
+            "cpuSeconds": 29,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1149591552,
+            "privateBytes": null,
+            "cpuSeconds": 29,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3014,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 6,
+        "startupMs": 1353.97,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 362.47,
+            "regexTester": 234.09,
+            "macLookup": 199.29,
+            "textDiff": 165.21,
+            "pdfSignatureChecker": 150.22,
+            "mathEvaluator": 135.24,
+            "rsaKeyPairGenerator": 347.97,
+            "cameraRecorder": 167.68
+          },
+          "warmOpen": {
+            "jsonMinify": 186.74,
+            "regexTester": 179.68,
+            "macLookup": 149.88,
+            "textDiff": 150.03,
+            "pdfSignatureChecker": 133.84,
+            "mathEvaluator": 166.79,
+            "rsaKeyPairGenerator": 283.25,
+            "cameraRecorder": 132.57
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 264.65
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 51.88,
+                "outputUpdateMs": 183.8,
+                "durationMs": 235.68,
+                "inputEventMs": 20.76,
+                "inputEventOutputUpdateMs": 177.52
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3526.5,
+                "outputUpdateMs": 230.51,
+                "durationMs": 3757.01,
+                "inputEventMs": 41.95,
+                "inputEventOutputUpdateMs": 197.56
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13031.98,
+                "outputUpdateMs": 316.15,
+                "durationMs": 13348.13,
+                "inputEventMs": 60.58,
+                "inputEventOutputUpdateMs": 196.25
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 133.58,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 52750376,
+          "totalBytes": 70909728,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30074,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1492369408,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1465761792,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3013,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 7,
+        "startupMs": 1119.25,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 426.02,
+            "regexTester": 316.32,
+            "macLookup": 199.58,
+            "textDiff": 166.75,
+            "pdfSignatureChecker": 150.23,
+            "mathEvaluator": 168.37,
+            "rsaKeyPairGenerator": 466.41,
+            "cameraRecorder": 184.95
+          },
+          "warmOpen": {
+            "jsonMinify": 151.07,
+            "regexTester": 179.4,
+            "macLookup": 184.4,
+            "textDiff": 149.25,
+            "pdfSignatureChecker": 150.47,
+            "mathEvaluator": 150.77,
+            "rsaKeyPairGenerator": 317.15,
+            "cameraRecorder": 151.38
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 262.72
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 65.4,
+                "outputUpdateMs": 183.71,
+                "durationMs": 249.12,
+                "inputEventMs": 27.87,
+                "inputEventOutputUpdateMs": 175.78
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3244.09,
+                "outputUpdateMs": 244.65,
+                "durationMs": 3488.74,
+                "inputEventMs": 193.86,
+                "inputEventOutputUpdateMs": 188.19
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13085.14,
+                "outputUpdateMs": 297.06,
+                "durationMs": 13382.21,
+                "inputEventMs": 56.13,
+                "inputEventOutputUpdateMs": 217.71
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 112.75,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 71510966,
+          "totalBytes": 109400722,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30264,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1261002752,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1231552512,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3010,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 8,
+        "startupMs": 1114.87,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 343.78,
+            "regexTester": 248.27,
+            "macLookup": 183.62,
+            "textDiff": 132.43,
+            "pdfSignatureChecker": 150.41,
+            "mathEvaluator": 152.07,
+            "rsaKeyPairGenerator": 248.11,
+            "cameraRecorder": 147.3
+          },
+          "warmOpen": {
+            "jsonMinify": 171.34,
+            "regexTester": 147.87,
+            "macLookup": 152.67,
+            "textDiff": 135.9,
+            "pdfSignatureChecker": 146.15,
+            "mathEvaluator": 166.82,
+            "rsaKeyPairGenerator": 265.31,
+            "cameraRecorder": 135.13
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 265.8
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 54.05,
+                "outputUpdateMs": 181.51,
+                "durationMs": 235.56,
+                "inputEventMs": 23.88,
+                "inputEventOutputUpdateMs": 177.05
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3359.4,
+                "outputUpdateMs": 249.15,
+                "durationMs": 3608.55,
+                "inputEventMs": 101.78,
+                "inputEventOutputUpdateMs": 169.96
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 12259.5,
+                "outputUpdateMs": 320.94,
+                "durationMs": 12580.44,
+                "inputEventMs": 72.52,
+                "inputEventOutputUpdateMs": 212.61
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 120.3,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 72414719,
+          "totalBytes": 109361523,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30446,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1190686720,
+            "privateBytes": null,
+            "cpuSeconds": 29,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1158692864,
+            "privateBytes": null,
+            "cpuSeconds": 29,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3013,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 9,
+        "startupMs": 975.02,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 315.77,
+            "regexTester": 234.48,
+            "macLookup": 198.62,
+            "textDiff": 150.26,
+            "pdfSignatureChecker": 151.58,
+            "mathEvaluator": 151.75,
+            "rsaKeyPairGenerator": 281.53,
+            "cameraRecorder": 126.19
+          },
+          "warmOpen": {
+            "jsonMinify": 256.81,
+            "regexTester": 152.29,
+            "macLookup": 147.55,
+            "textDiff": 137.98,
+            "pdfSignatureChecker": 193.46,
+            "mathEvaluator": 151.65,
+            "rsaKeyPairGenerator": 282.22,
+            "cameraRecorder": 133.5
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 247.7
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 64.23,
+                "outputUpdateMs": 186.29,
+                "durationMs": 250.53,
+                "inputEventMs": 33.85,
+                "inputEventOutputUpdateMs": 180.96
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3372.22,
+                "outputUpdateMs": 236,
+                "durationMs": 3608.22,
+                "inputEventMs": 59.84,
+                "inputEventOutputUpdateMs": 179.06
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 12862.41,
+                "outputUpdateMs": 312.08,
+                "durationMs": 13174.49,
+                "inputEventMs": 85.98,
+                "inputEventOutputUpdateMs": 250.77
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 131.41,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 66039239,
+          "totalBytes": 109882859,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30600,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1183985664,
+            "privateBytes": null,
+            "cpuSeconds": 29,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1159151616,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3010,
+          "normalizedIdleCpuPercent": 11.07
+        }
+      },
+      {
+        "iteration": 10,
+        "startupMs": 1015.2,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 440.89,
+            "regexTester": 250.1,
+            "macLookup": 199.46,
+            "textDiff": 208.19,
+            "pdfSignatureChecker": 178.42,
+            "mathEvaluator": 147.44,
+            "rsaKeyPairGenerator": 333.71,
+            "cameraRecorder": 152.85
+          },
+          "warmOpen": {
+            "jsonMinify": 150.89,
+            "regexTester": 162.53,
+            "macLookup": 165.18,
+            "textDiff": 134.24,
+            "pdfSignatureChecker": 166.17,
+            "mathEvaluator": 152.75,
+            "rsaKeyPairGenerator": 263.74,
+            "cameraRecorder": 135.8
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 265.19
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 61.48,
+                "outputUpdateMs": 188.78,
+                "durationMs": 250.26,
+                "inputEventMs": 21.22,
+                "inputEventOutputUpdateMs": 179.21
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3341.78,
+                "outputUpdateMs": 196.08,
+                "durationMs": 3537.86,
+                "inputEventMs": 41.1,
+                "inputEventOutputUpdateMs": 197.01
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 15118.82,
+                "outputUpdateMs": 547.35,
+                "durationMs": 15666.18,
+                "inputEventMs": 72.76,
+                "inputEventOutputUpdateMs": 218.38
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 162.94,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 50102431,
+          "totalBytes": 79036371,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30766,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1449005056,
+            "privateBytes": null,
+            "cpuSeconds": 34,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1427582976,
+            "privateBytes": null,
+            "cpuSeconds": 34,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3012,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 11,
+        "startupMs": 1272.07,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 370.73,
+            "regexTester": 398.25,
+            "macLookup": 219.47,
+            "textDiff": 146.94,
+            "pdfSignatureChecker": 153.05,
+            "mathEvaluator": 150.79,
+            "rsaKeyPairGenerator": 297.16,
+            "cameraRecorder": 149.4
+          },
+          "warmOpen": {
+            "jsonMinify": 137.71,
+            "regexTester": 145.9,
+            "macLookup": 149.37,
+            "textDiff": 149.45,
+            "pdfSignatureChecker": 185.58,
+            "mathEvaluator": 165.72,
+            "rsaKeyPairGenerator": 365.92,
+            "cameraRecorder": 117.01
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 263.97
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 55.25,
+                "outputUpdateMs": 179.25,
+                "durationMs": 234.5,
+                "inputEventMs": 24.04,
+                "inputEventOutputUpdateMs": 172.58
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3654.6,
+                "outputUpdateMs": 234.87,
+                "durationMs": 3889.47,
+                "inputEventMs": 62.78,
+                "inputEventOutputUpdateMs": 185.45
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13590.03,
+                "outputUpdateMs": 308.62,
+                "durationMs": 13898.66,
+                "inputEventMs": 72.96,
+                "inputEventOutputUpdateMs": 215.58
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 128.39,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 71740281,
+          "totalBytes": 118012305,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 30943,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1192497152,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1162113024,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3015,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 12,
+        "startupMs": 1358.4,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 433.67,
+            "regexTester": 328.92,
+            "macLookup": 268.5,
+            "textDiff": 180.75,
+            "pdfSignatureChecker": 217.38,
+            "mathEvaluator": 303.56,
+            "rsaKeyPairGenerator": 331.68,
+            "cameraRecorder": 182.47
+          },
+          "warmOpen": {
+            "jsonMinify": 136.76,
+            "regexTester": 179.1,
+            "macLookup": 183.93,
+            "textDiff": 150.07,
+            "pdfSignatureChecker": 233.74,
+            "mathEvaluator": 164.8,
+            "rsaKeyPairGenerator": 468.11,
+            "cameraRecorder": 168.53
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 282.85
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 112.64,
+                "outputUpdateMs": 190.95,
+                "durationMs": 303.59,
+                "inputEventMs": 25.08,
+                "inputEventOutputUpdateMs": 175.47
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3902.83,
+                "outputUpdateMs": 235.58,
+                "durationMs": 4138.41,
+                "inputEventMs": 54.3,
+                "inputEventOutputUpdateMs": 196.09
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 14744,
+                "outputUpdateMs": 341.13,
+                "durationMs": 15085.13,
+                "inputEventMs": 54.26,
+                "inputEventOutputUpdateMs": 225.45
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 163.86,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 65953071,
+          "totalBytes": 111717867,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 31125,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1192886272,
+            "privateBytes": null,
+            "cpuSeconds": 36,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1152827392,
+            "privateBytes": null,
+            "cpuSeconds": 36,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3010,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 13,
+        "startupMs": 1171.3,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 343.1,
+            "regexTester": 247.35,
+            "macLookup": 183.82,
+            "textDiff": 150.83,
+            "pdfSignatureChecker": 165.69,
+            "mathEvaluator": 136.22,
+            "rsaKeyPairGenerator": 264.24,
+            "cameraRecorder": 165.11
+          },
+          "warmOpen": {
+            "jsonMinify": 138.12,
+            "regexTester": 146.04,
+            "macLookup": 150.84,
+            "textDiff": 134.8,
+            "pdfSignatureChecker": 163.87,
+            "mathEvaluator": 135.36,
+            "rsaKeyPairGenerator": 414.6,
+            "cameraRecorder": 133.67
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 263.52
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 51.97,
+                "outputUpdateMs": 201.22,
+                "durationMs": 253.19,
+                "inputEventMs": 28.75,
+                "inputEventOutputUpdateMs": 173.61
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3287.19,
+                "outputUpdateMs": 237.31,
+                "durationMs": 3524.5,
+                "inputEventMs": 66.23,
+                "inputEventOutputUpdateMs": 174.61
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13448.11,
+                "outputUpdateMs": 382.45,
+                "durationMs": 13830.55,
+                "inputEventMs": 60.22,
+                "inputEventOutputUpdateMs": 222.25
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 135.11,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 64684708,
+          "totalBytes": 115650020,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 31326,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1187774464,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1158811648,
+            "privateBytes": null,
+            "cpuSeconds": 30,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3009,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 14,
+        "startupMs": 1189.48,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 339.6,
+            "regexTester": 233.76,
+            "macLookup": 200.67,
+            "textDiff": 165.14,
+            "pdfSignatureChecker": 153.14,
+            "mathEvaluator": 149.15,
+            "rsaKeyPairGenerator": 264.47,
+            "cameraRecorder": 152.11
+          },
+          "warmOpen": {
+            "jsonMinify": 149.3,
+            "regexTester": 149.7,
+            "macLookup": 150.31,
+            "textDiff": 148.53,
+            "pdfSignatureChecker": 168.94,
+            "mathEvaluator": 133.29,
+            "rsaKeyPairGenerator": 332.34,
+            "cameraRecorder": 133.16
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 262.64
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 55.92,
+                "outputUpdateMs": 180.02,
+                "durationMs": 235.95,
+                "inputEventMs": 22.29,
+                "inputEventOutputUpdateMs": 174.85
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3303.39,
+                "outputUpdateMs": 228.62,
+                "durationMs": 3532.01,
+                "inputEventMs": 51.39,
+                "inputEventOutputUpdateMs": 184.14
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 14893.9,
+                "outputUpdateMs": 336.39,
+                "durationMs": 15230.29,
+                "inputEventMs": 72.39,
+                "inputEventOutputUpdateMs": 218.45
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 152.67,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 73092248,
+          "totalBytes": 109361296,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 31500,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1185783808,
+            "privateBytes": null,
+            "cpuSeconds": 32,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 11,
+            "workingSetBytes": 1168121856,
+            "privateBytes": null,
+            "cpuSeconds": 33,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3018,
+          "normalizedIdleCpuPercent": 11.04
+        }
+      },
+      {
+        "iteration": 15,
+        "startupMs": 1497.15,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 512.54,
+            "regexTester": 350.01,
+            "macLookup": 334.82,
+            "textDiff": 212.34,
+            "pdfSignatureChecker": 233.02,
+            "mathEvaluator": 199.74,
+            "rsaKeyPairGenerator": 369.15,
+            "cameraRecorder": 257.93
+          },
+          "warmOpen": {
+            "jsonMinify": 209.22,
+            "regexTester": 197.03,
+            "macLookup": 216.47,
+            "textDiff": 156.34,
+            "pdfSignatureChecker": 210.74,
+            "mathEvaluator": 282.88,
+            "rsaKeyPairGenerator": 433.6,
+            "cameraRecorder": 166.94
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 282.73
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 63.71,
+                "outputUpdateMs": 201.13,
+                "durationMs": 264.85,
+                "inputEventMs": 28.27,
+                "inputEventOutputUpdateMs": 187.61
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 4027.78,
+                "outputUpdateMs": 253.63,
+                "durationMs": 4281.41,
+                "inputEventMs": 53.23,
+                "inputEventOutputUpdateMs": 215.01
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 17016.24,
+                "outputUpdateMs": 324.56,
+                "durationMs": 17340.8,
+                "inputEventMs": 60.93,
+                "inputEventOutputUpdateMs": 244.27
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 137,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 50799906,
+          "totalBytes": 76677086,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 31699,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1437863936,
+            "privateBytes": null,
+            "cpuSeconds": 39,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1418444800,
+            "privateBytes": null,
+            "cpuSeconds": 39,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3011,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 16,
+        "startupMs": 1110.32,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 341.87,
+            "regexTester": 248.21,
+            "macLookup": 183.07,
+            "textDiff": 166.68,
+            "pdfSignatureChecker": 151.32,
+            "mathEvaluator": 134.88,
+            "rsaKeyPairGenerator": 382.29,
+            "cameraRecorder": 150.56
+          },
+          "warmOpen": {
+            "jsonMinify": 233.81,
+            "regexTester": 183.88,
+            "macLookup": 147.02,
+            "textDiff": 152.54,
+            "pdfSignatureChecker": 131.12,
+            "mathEvaluator": 169.18,
+            "rsaKeyPairGenerator": 247.21,
+            "cameraRecorder": 151.59
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 247.93
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 54.25,
+                "outputUpdateMs": 182.13,
+                "durationMs": 236.39,
+                "inputEventMs": 27.39,
+                "inputEventOutputUpdateMs": 187.61
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3552.19,
+                "outputUpdateMs": 329.08,
+                "durationMs": 3881.28,
+                "inputEventMs": 76.45,
+                "inputEventOutputUpdateMs": 203.04
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13495.19,
+                "outputUpdateMs": 340.45,
+                "durationMs": 13835.65,
+                "inputEventMs": 61.45,
+                "inputEventOutputUpdateMs": 228.62
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 118.52,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 70331289,
+          "totalBytes": 114865049,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 31879,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1188302848,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1160302592,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3013,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 17,
+        "startupMs": 1093.3,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 347.93,
+            "regexTester": 253.06,
+            "macLookup": 198.14,
+            "textDiff": 148.48,
+            "pdfSignatureChecker": 168.08,
+            "mathEvaluator": 150.45,
+            "rsaKeyPairGenerator": 400.15,
+            "cameraRecorder": 151.33
+          },
+          "warmOpen": {
+            "jsonMinify": 165.29,
+            "regexTester": 148.66,
+            "macLookup": 151.53,
+            "textDiff": 164.62,
+            "pdfSignatureChecker": 134.28,
+            "mathEvaluator": 134.3,
+            "rsaKeyPairGenerator": 314.58,
+            "cameraRecorder": 134.41
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 261.96
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 48.57,
+                "outputUpdateMs": 184.96,
+                "durationMs": 233.53,
+                "inputEventMs": 22.16,
+                "inputEventOutputUpdateMs": 179.99
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3411,
+                "outputUpdateMs": 241.48,
+                "durationMs": 3652.48,
+                "inputEventMs": 43.31,
+                "inputEventOutputUpdateMs": 240.23
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 14369.88,
+                "outputUpdateMs": 333.72,
+                "durationMs": 14703.6,
+                "inputEventMs": 68.08,
+                "inputEventOutputUpdateMs": 215.68
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 120.18,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 75381004,
+          "totalBytes": 117004300,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 32045,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1289994240,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1256620032,
+            "privateBytes": null,
+            "cpuSeconds": 33,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3009,
+          "normalizedIdleCpuPercent": 22.16
+        }
+      },
+      {
+        "iteration": 18,
+        "startupMs": 1033.91,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 357.76,
+            "regexTester": 248.02,
+            "macLookup": 200.41,
+            "textDiff": 164.27,
+            "pdfSignatureChecker": 150.73,
+            "mathEvaluator": 151.13,
+            "rsaKeyPairGenerator": 365.75,
+            "cameraRecorder": 151.37
+          },
+          "warmOpen": {
+            "jsonMinify": 186.64,
+            "regexTester": 163.58,
+            "macLookup": 165.38,
+            "textDiff": 165.92,
+            "pdfSignatureChecker": 151.64,
+            "mathEvaluator": 151.29,
+            "rsaKeyPairGenerator": 398.62,
+            "cameraRecorder": 149.05
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 260.39
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 52.01,
+                "outputUpdateMs": 183.72,
+                "durationMs": 235.74,
+                "inputEventMs": 23.42,
+                "inputEventOutputUpdateMs": 184.15
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3905.39,
+                "outputUpdateMs": 245.87,
+                "durationMs": 4151.27,
+                "inputEventMs": 41.69,
+                "inputEventOutputUpdateMs": 202.47
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 14084.53,
+                "outputUpdateMs": 340.48,
+                "durationMs": 14425.02,
+                "inputEventMs": 65.27,
+                "inputEventOutputUpdateMs": 253.23
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 138,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 52622566,
+          "totalBytes": 72482586,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 32212,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1592967168,
+            "privateBytes": null,
+            "cpuSeconds": 32,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1548951552,
+            "privateBytes": null,
+            "cpuSeconds": 33,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3010,
+          "normalizedIdleCpuPercent": 11.08
+        }
+      },
+      {
+        "iteration": 19,
+        "startupMs": 1146.39,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 328.39,
+            "regexTester": 265.09,
+            "macLookup": 200.4,
+            "textDiff": 164.62,
+            "pdfSignatureChecker": 150.3,
+            "mathEvaluator": 150.26,
+            "rsaKeyPairGenerator": 335.09,
+            "cameraRecorder": 134.47
+          },
+          "warmOpen": {
+            "jsonMinify": 181.34,
+            "regexTester": 183.35,
+            "macLookup": 152.41,
+            "textDiff": 164.98,
+            "pdfSignatureChecker": 184.02,
+            "mathEvaluator": 132.84,
+            "rsaKeyPairGenerator": 317.28,
+            "cameraRecorder": 133.11
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 247.3
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 70.43,
+                "outputUpdateMs": 183.11,
+                "durationMs": 253.54,
+                "inputEventMs": 24.12,
+                "inputEventOutputUpdateMs": 208.13
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3481.17,
+                "outputUpdateMs": 226.2,
+                "durationMs": 3707.38,
+                "inputEventMs": 42.09,
+                "inputEventOutputUpdateMs": 207.03
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 14054.96,
+                "outputUpdateMs": 329.84,
+                "durationMs": 14384.8,
+                "inputEventMs": 58.77,
+                "inputEventOutputUpdateMs": 277.53
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 128.4,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 52545456,
+          "totalBytes": 74317600,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 32376,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1396350976,
+            "privateBytes": null,
+            "cpuSeconds": 32,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1361850368,
+            "privateBytes": null,
+            "cpuSeconds": 32,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3025,
+          "normalizedIdleCpuPercent": 0
+        }
+      },
+      {
+        "iteration": 20,
+        "startupMs": 1123.21,
+        "browserVersion": "154.0.8037.57",
+        "routeOpenMs": {
+          "firstOpen": {
+            "jsonMinify": 364.27,
+            "regexTester": 281.64,
+            "macLookup": 232.9,
+            "textDiff": 181.71,
+            "pdfSignatureChecker": 234.94,
+            "mathEvaluator": 165.6,
+            "rsaKeyPairGenerator": 315.97,
+            "cameraRecorder": 166.22
+          },
+          "warmOpen": {
+            "jsonMinify": 183.96,
+            "regexTester": 166.81,
+            "macLookup": 149.15,
+            "textDiff": 134.96,
+            "pdfSignatureChecker": 164.96,
+            "mathEvaluator": 167.46,
+            "rsaKeyPairGenerator": 400.5,
+            "cameraRecorder": 149.06
+          },
+          "interactions": {
+            "mathEvaluation": {
+              "name": "sum-200-values",
+              "inputBytes": 406,
+              "durationMs": 297.47
+            },
+            "jsonTransform": [
+              {
+                "name": "small",
+                "inputBytes": 1379,
+                "outputBytes": 963,
+                "outputSha256": "e6ead57ffd184e8a49ee745bc550d5d1f909eb4b25c38fb5c71958699b5261db",
+                "inputFillMs": 65.56,
+                "outputUpdateMs": 185.44,
+                "durationMs": 251.01,
+                "inputEventMs": 24.24,
+                "inputEventOutputUpdateMs": 176.19
+              },
+              {
+                "name": "large",
+                "inputBytes": 42099,
+                "outputBytes": 31891,
+                "outputSha256": "7b4035f46340fc95cba89e9595b47c95f67986dd5d273d51eb08141ce1da2d6d",
+                "inputFillMs": 3467.63,
+                "outputUpdateMs": 252.51,
+                "durationMs": 3720.15,
+                "inputEventMs": 49.63,
+                "inputEventOutputUpdateMs": 259.69
+              },
+              {
+                "name": "stress",
+                "inputBytes": 89199,
+                "outputBytes": 68791,
+                "outputSha256": "a418f7b9cb609ed27949407e57894c790bd04930e718f24db48777325770c1fe",
+                "inputFillMs": 13566.62,
+                "outputUpdateMs": 336.48,
+                "durationMs": 13903.1,
+                "inputEventMs": 62.63,
+                "inputEventOutputUpdateMs": 228.24
+              }
+            ],
+            "regexMatch": {
+              "name": "large-safe-mismatch",
+              "pattern": "^Z$",
+              "inputBytes": 262144,
+              "durationMs": 132.61,
+              "riskPolicy": "linear anchored literal mismatch; catastrophic-backtracking patterns are excluded"
+            }
+          }
+        },
+        "rendererHeap": {
+          "usedBytes": 66098067,
+          "totalBytes": 107785707,
+          "limitBytes": 4395630592
+        },
+        "processGroup": {
+          "rootPid": 32545,
+          "beforeIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1184448512,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "afterIdle": {
+            "processCount": 10,
+            "workingSetBytes": 1154162688,
+            "privateBytes": null,
+            "cpuSeconds": 31,
+            "cpuTimeResolution": "ps cumulative CPU time rounded to seconds"
+          },
+          "idleWindowMs": 3011,
+          "normalizedIdleCpuPercent": 0
+        }
+      }
+    ],
+    "electron": []
+  },
+  "failures": [],
+  "summary": {
+    "web": {
+      "startupMs": {
+        "samples": 20,
+        "median": 1127.35,
+        "p95": 1358.4
+      },
+      "normalizedIdleCpuPercent": {
+        "samples": 20,
+        "median": 0,
+        "p95": 22.14
+      },
+      "workingSetBytes": {
+        "samples": 20,
+        "median": 1165117440,
+        "p95": 1465761792
+      },
+      "privateBytes": {
+        "samples": 0,
+        "median": null,
+        "p95": null
+      },
+      "rendererHeapUsedBytes": {
+        "samples": 20,
+        "median": 65996155,
+        "p95": 73092248
+      },
+      "toolFirstOpenMs": {
+        "jsonMinify": {
+          "samples": 20,
+          "median": 347.58,
+          "p95": 440.89
+        },
+        "regexTester": {
+          "samples": 20,
+          "median": 249.38,
+          "p95": 350.01
+        },
+        "macLookup": {
+          "samples": 20,
+          "median": 199.99,
+          "p95": 268.5
+        },
+        "textDiff": {
+          "samples": 20,
+          "median": 165.12,
+          "p95": 208.19
+        },
+        "pdfSignatureChecker": {
+          "samples": 20,
+          "median": 153.1,
+          "p95": 233.02
+        },
+        "mathEvaluator": {
+          "samples": 20,
+          "median": 150.35,
+          "p95": 199.74
+        },
+        "rsaKeyPairGenerator": {
+          "samples": 20,
+          "median": 331.75,
+          "p95": 400.15
+        },
+        "cameraRecorder": {
+          "samples": 20,
+          "median": 153,
+          "p95": 197.72
+        }
+      },
+      "toolWarmOpenMs": {
+        "jsonMinify": {
+          "samples": 20,
+          "median": 165.23,
+          "p95": 233.81
+        },
+        "regexTester": {
+          "samples": 20,
+          "median": 163.61,
+          "p95": 184.46
+        },
+        "macLookup": {
+          "samples": 20,
+          "median": 151.24,
+          "p95": 191.59
+        },
+        "textDiff": {
+          "samples": 20,
+          "median": 149.35,
+          "p95": 165.92
+        },
+        "pdfSignatureChecker": {
+          "samples": 20,
+          "median": 167.33,
+          "p95": 210.74
+        },
+        "mathEvaluator": {
+          "samples": 20,
+          "median": 152.22,
+          "p95": 169.79
+        },
+        "rsaKeyPairGenerator": {
+          "samples": 20,
+          "median": 341.74,
+          "p95": 433.6
+        },
+        "cameraRecorder": {
+          "samples": 20,
+          "median": 134.77,
+          "p95": 166.94
+        }
+      },
+      "interactions": {
+        "jsonInputFill": {
+          "small": {
+            "samples": 20,
+            "median": 56.46,
+            "p95": 70.43
+          },
+          "large": {
+            "samples": 20,
+            "median": 3396.88,
+            "p95": 3905.39
+          },
+          "stress": {
+            "samples": 20,
+            "median": 13696.53,
+            "p95": 15118.82
+          }
+        },
+        "jsonOutputUpdate": {
+          "small": {
+            "samples": 20,
+            "median": 183.76,
+            "p95": 201.13
+          },
+          "large": {
+            "samples": 20,
+            "median": 235.79,
+            "p95": 253.63
+          },
+          "stress": {
+            "samples": 20,
+            "median": 327.48,
+            "p95": 382.45
+          }
+        },
+        "jsonBulkInputEvent": {
+          "small": {
+            "samples": 20,
+            "median": 24.18,
+            "p95": 28.75
+          },
+          "large": {
+            "samples": 20,
+            "median": 53.77,
+            "p95": 101.78
+          },
+          "stress": {
+            "samples": 20,
+            "median": 62.04,
+            "p95": 73.13
+          }
+        },
+        "jsonBulkInputEventOutputUpdate": {
+          "small": {
+            "samples": 20,
+            "median": 178.35,
+            "p95": 187.96
+          },
+          "large": {
+            "samples": 20,
+            "median": 194.57,
+            "p95": 240.23
+          },
+          "stress": {
+            "samples": 20,
+            "median": 219.5,
+            "p95": 253.23
+          }
+        },
+        "json.small": {
+          "samples": 20,
+          "median": 242.89,
+          "p95": 264.85
+        },
+        "json.large": {
+          "samples": 20,
+          "median": 3632.61,
+          "p95": 4151.27
+        },
+        "json.stress": {
+          "samples": 20,
+          "median": 14004.48,
+          "p95": 15666.18
+        },
+        "regexMatch": {
+          "samples": 20,
+          "median": 129.91,
+          "p95": 162.94
+        },
+        "mathEvaluation": {
+          "samples": 20,
+          "median": 262.8,
+          "p95": 282.85
+        }
+      }
+    },
+    "electron": null
+  },
+  "coverage": {
+    "measuredHost": "linux",
+    "selectedRuntimes": [
+      "web"
+    ],
+    "repetitionsPerRuntime": {
+      "web": 20
+    },
+    "meetsTwentyRunTarget": true,
+    "unmeasuredPlatforms": [
+      "windows",
+      "macos"
+    ],
+    "gaps": [
+      "Signed PDF file parsing was not measured; the baseline measures PDF dependency and page readiness.",
+      "Camera and microphone permissions or capture were not requested; only Camera Recorder page readiness was measured.",
+      "Catastrophic regex-backtracking payloads were excluded until P2 provides bounded, cancellable execution.",
+      "Native-window timing and user-visible interaction require a separate Computer Use run; these samples use automated browser control.",
+      "No measurements were taken on: windows, macos."
+    ]
+  }
+}
