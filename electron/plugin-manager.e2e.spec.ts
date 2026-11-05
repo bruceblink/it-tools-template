@@ -434,6 +434,8 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     '/extensions/org.it-tools.capability-demo/1.0.0/capability-demo',
   );
   await page.goto('app://bundle/settings');
+  const rollbackDiagnosticsStartedAt = Date.now();
+  const rollbackStartupErrorIndex = pluginStartupErrors.length;
   await electronApp.evaluate(({ BrowserWindow }, targetPluginId) => {
     const originalLoadURL = BrowserWindow.prototype.loadURL as (
       this: BrowserWindowType,
@@ -465,8 +467,42 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   if (!rolledBackWindow) {
     throw new Error('The previous plugin version was not restored.');
   }
-  await expect(rolledBackWindow.locator('#runtime-proof')).toHaveText('Available');
-  await expect(rolledBackWindow.locator('#settings-proof')).toHaveText('Available');
+  const readRollbackReadiness = () => rolledBackWindow.evaluate(() => ({
+    readyState: document.readyState,
+    runtimeProof: document.querySelector('#runtime-proof')?.textContent ?? null,
+    settingsProof: document.querySelector('#settings-proof')?.textContent ?? null,
+    url: location.href,
+  })).catch(() => null);
+  try {
+    await expect.poll(readRollbackReadiness, { timeout: 20_000 }).toMatchObject({
+      readyState: 'complete',
+      runtimeProof: 'Available',
+      settingsProof: 'Available',
+    });
+  }
+  catch (error) {
+    const diagnostics = {
+      scenario: 'plugin upgrade rollback readiness',
+      elapsedMs: Date.now() - rollbackDiagnosticsStartedAt,
+      window: await readRollbackReadiness(),
+      startupErrors: pluginStartupErrors.slice(rollbackStartupErrorIndex),
+    };
+    await testInfo.attach('plugin-rollback-readiness-failure.json', {
+      body: JSON.stringify(diagnostics, null, 2),
+      contentType: 'application/json',
+    });
+    console.error('Plugin rollback readiness diagnostics:', JSON.stringify(diagnostics));
+    throw error;
+  }
+  await testInfo.attach('plugin-rollback-readiness.json', {
+    body: JSON.stringify({
+      scenario: 'plugin upgrade rollback readiness',
+      elapsedMs: Date.now() - rollbackDiagnosticsStartedAt,
+      window: await readRollbackReadiness(),
+      startupErrors: pluginStartupErrors.slice(rollbackStartupErrorIndex),
+    }, null, 2),
+    contentType: 'application/json',
+  });
   await expect(rolledBackWindow.locator('#settings-value')).toHaveValue('version-one');
   await expect.poll(async () => rolledBackWindow.evaluate(() => localStorage.getItem('rollback-proof'))).toBe('version-1');
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`).getByText('Running')).toBeVisible();
