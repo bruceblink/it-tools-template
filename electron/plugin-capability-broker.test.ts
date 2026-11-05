@@ -244,6 +244,32 @@ describe('Electron plugin capability broker', () => {
     }
   });
 
+  it('limits unresolved executions that remain after timeout', async () => {
+    vi.useFakeTimers();
+    try {
+      const execute = vi.fn(() => new Promise(() => {}));
+      const broker = createPluginCapabilityBroker({
+        pluginId,
+        requestedCapabilities: ['runtime.info'],
+        grantedCapabilities: ['runtime.info'],
+        execute,
+      });
+      for (let index = 0; index < pluginCapabilityLimits.maximumDrainingExecutions; index += 1) {
+        const pending = broker.handle(makeRequest(validCall(`drain-${index}`)));
+        await vi.waitFor(() => expect(execute).toHaveBeenCalledTimes(index + 1));
+        await vi.advanceTimersByTimeAsync(pluginCapabilityLimits.maximumExecutionDurationMs);
+        await expect(pending).resolves.toMatchObject({ status: 500 });
+      }
+
+      const rejected = await broker.handle(makeRequest(validCall('drain-limit')));
+      expect(rejected.status).toBe(429);
+      await expect(rejected.json()).resolves.toMatchObject({ error: 'too-many-requests' });
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cancels a request body that never finishes and releases its concurrency slot', async () => {
     vi.useFakeTimers();
     try {

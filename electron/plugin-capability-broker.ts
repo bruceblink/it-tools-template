@@ -24,6 +24,7 @@ export const pluginCapabilityLimits = Object.freeze({
   maximumSettingsStringCharacters: pluginSettingsLimits.maximumStringCharacters,
   maximumRequestsPerMinute: 30,
   maximumConcurrentRequests: 4,
+  maximumDrainingExecutions: 8,
   maximumRequestBodyReadDurationMs: 9_000,
   maximumExecutionDurationMs: 10_000,
 });
@@ -83,6 +84,7 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
   let activeRequests = 0;
   let active = true;
   const activeControllers = new Set<AbortController>();
+  const drainingExecutions = new Set<Promise<unknown>>();
 
   return {
     async handle(request) {
@@ -152,8 +154,11 @@ export function createPluginCapabilityBroker(options: PluginCapabilityBrokerOpti
         if (!granted.has(call.capability)) {
           return jsonResponse(403, { id: call.id, ok: false, error: 'permission-denied' });
         }
+        if (drainingExecutions.size >= pluginCapabilityLimits.maximumDrainingExecutions) {
+          return jsonResponse(429, { id: call.id, ok: false, error: 'too-many-requests' });
+        }
 
-        const result = await executeWithTimeout(options.execute, call, controller);
+        const result = await executeWithTimeout(options.execute, call, controller, drainingExecutions);
         if (!active) {
           return jsonResponse(410, { id: call.id, ok: false, error: 'plugin-inactive' });
         }
@@ -196,10 +201,15 @@ async function executeWithTimeout(
   execute: PluginCapabilityExecutor,
   call: PluginCapabilityCall,
   controller: AbortController,
+  drainingExecutions: Set<Promise<unknown>>,
 ): Promise<unknown> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let onAbort: (() => void) | undefined;
   const { signal } = controller;
+  const execution = Promise.resolve().then(() => execute(call, signal));
+  let trackedExecution!: Promise<unknown>;
+  trackedExecution = execution.finally(() => drainingExecutions.delete(trackedExecution));
+  drainingExecutions.add(trackedExecution);
   try {
     const aborted = new Promise<never>((_resolve, reject) => {
       onAbort = () => reject(new Error('The plugin capability request was aborted.'));
@@ -210,7 +220,7 @@ async function executeWithTimeout(
       signal.addEventListener('abort', onAbort, { once: true });
     });
     return await Promise.race([
-      Promise.resolve().then(() => execute(call, signal)),
+      trackedExecution,
       aborted,
       new Promise<never>((_resolve, reject) => {
         timeout = setTimeout(
