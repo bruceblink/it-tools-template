@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { generateMeta } from '@it-tools/oggen';
-import _ from 'lodash';
+import { generateMetaTags } from './meta-tag-generator.service';
 import { image, ogSchemas, twitter, website } from './og-schemas';
 import type { OGSchemaType, OGSchemaTypeElementSelect } from './OGSchemaType.type';
 import type { CSelectOption } from '@/ui/c-select/c-select.types';
@@ -14,9 +13,9 @@ const metadata = ref<{ type: string; [k: string]: any }>({
 });
 
 watch(
-  () => ref(metadata.value.type),
-  (_ignored, prevSection) => {
-    const section = ogSchemas[prevSection.value];
+  () => metadata.value.type,
+  (_newType, previousType) => {
+    const section = ogSchemas[previousType];
 
     if (!section) {
       return;
@@ -64,14 +63,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 const metaTags = computed(() => {
-  const twitterMeta = _.chain(metadata.value)
-    .pickBy((_value, k) => k.startsWith('twitter:'))
-    .mapKeys((_value, k) => k.replace(/^twitter:/, ''))
-    .value();
-
-  const otherMeta = _.pickBy(metadata.value, (_value, k) => !k.startsWith('twitter:'));
-
-  return generateMeta({ ...otherMeta, twitter: twitterMeta }, { generateTwitterCompatibleMeta: true });
+  return generateMetaTags(metadata.value);
 });
 </script>
 
