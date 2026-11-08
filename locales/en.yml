@@ -30,6 +30,8 @@ home:
     darkMode: 'Dark mode'
     lightMode: 'Light mode'
     mode: 'Toggle dark/light mode'
+    more: 'More'
+    navigation: 'Main navigation'
 pluginMarketplace:
   eyebrow: 'Community plugins'
   title: 'Plugin marketplace'

@@ -3,7 +3,7 @@ import { computed, defineAsyncComponent, ref } from 'vue';
 import { NIcon, useThemeVars } from 'naive-ui';
 
 import { RouterLink } from 'vue-router';
-import { ArrowUp, Heart, Home2, Menu2 } from '@vicons/tabler';
+import { ArrowUp, Home2, Menu2 } from '@vicons/tabler';
 
 import { storeToRefs } from 'pinia';
 import HeroGradient from '../assets/hero-gradient.svg?component';
@@ -13,7 +13,6 @@ import { useStyleStore } from '@/stores/style.store';
 import { config } from '@/config';
 import type { ToolCategory } from '@/tools/tools.types';
 import { useToolStore } from '@/tools/tools.store';
-import { useTracker } from '@/modules/tracker/tracker.services';
 import CollapsibleToolMenu from '@/components/CollapsibleToolMenu.vue';
 import UpdateNotice from '@/components/UpdateNotice.vue';
 
@@ -21,7 +20,6 @@ const CommandPalette = defineAsyncComponent(() => import('@/modules/command-pale
 const commandPaletteLoaded = ref(false);
 const commandPaletteOpen = ref(false);
 const isMac = computed(() => window.navigator.userAgent.toLowerCase().includes('mac'));
-const showUiLibrary = import.meta.env.DEV;
 const commandPaletteKeys = useMagicKeys({
   passive: false,
   onEventFired(event) {
@@ -43,7 +41,6 @@ const themeVars = useThemeVars();
 const styleStore = useStyleStore();
 const version = config.app.version;
 const authorUrl = config.app.authorUrl;
-const sponsoringUrl = config.app.sponsoringUrl;
 const repositoryUrl = config.app.repositoryUrl;
 const fullCommitSha = config.app.lastCommitSha;
 const commitSha = fullCommitSha.slice(0, 7);
@@ -61,7 +58,6 @@ const versionTag = computed(() => {
   ].join('-');
 });
 
-const { tracker } = useTracker();
 const { t } = useI18n();
 
 const toolStore = useToolStore();
@@ -92,12 +88,8 @@ const tools = computed<ToolCategory[]>(() => [
       </RouterLink>
 
       <div class="sider-content">
-        <div v-if="styleStore.isSmallScreen" flex flex-col items-center>
+        <div v-if="styleStore.isSmallScreen" class="sider-preferences">
           <locale-selector w="90%" />
-
-          <div flex justify-center>
-            <NavbarButtons />
-          </div>
         </div>
 
         <CollapsibleToolMenu :tools-by-category="tools" />
@@ -128,73 +120,45 @@ const tools = computed<ToolCategory[]>(() => [
     </template>
 
     <template #header="{ scrollToTop }">
-      <div class="top-navigation" :class="{ 'is-dark-theme': styleStore.isDarkTheme }" flex items-center gap-2>
-        <c-button
-          circle
-          variant="text"
-          :aria-label="$t('home.toggleMenu')"
-          @click="styleStore.isMenuCollapsed = !styleStore.isMenuCollapsed"
-        >
-          <NIcon size="25" :component="Menu2" />
-        </c-button>
-
-        <c-tooltip :tooltip="$t('home.home')" position="bottom">
-          <c-button to="/" circle variant="text" :aria-label="$t('home.home')">
-            <NIcon size="25" :component="Home2" />
-          </c-button>
-        </c-tooltip>
-
-        <c-tooltip :tooltip="$t('home.nav.backToTop')" position="bottom">
-          <c-button circle variant="text" :aria-label="$t('home.nav.backToTop')" @click="scrollToTop">
-            <NIcon size="25" :component="ArrowUp" />
-          </c-button>
-        </c-tooltip>
-
-        <c-tooltip :tooltip="$t('home.uiLib')" position="bottom">
+      <nav class="top-navigation" :aria-label="$t('home.nav.navigation')">
+        <div class="navigation-start">
           <c-button
-            v-if="showUiLibrary"
-            to="/c-lib"
             circle
             variant="text"
-            :aria-label="$t('home.uiLib')"
+            :aria-label="$t('home.toggleMenu')"
+            @click="styleStore.isMenuCollapsed = !styleStore.isMenuCollapsed"
           >
-            <icon-mdi:brush-variant text-20px />
+            <NIcon size="22" :component="Menu2" />
           </c-button>
-        </c-tooltip>
 
-        <c-button flex-1 w-full important:justify-start :aria-label="$t('search.label')" @click="openCommandPalette">
-          <span flex items-center gap-3 op-40>
+          <c-tooltip :tooltip="$t('home.home')" position="bottom">
+            <c-button to="/" circle variant="text" :aria-label="$t('home.home')">
+              <NIcon size="22" :component="Home2" />
+            </c-button>
+          </c-tooltip>
+        </div>
+
+        <c-button class="navigation-search" :aria-label="$t('search.label')" @click="openCommandPalette">
+          <span class="navigation-search-label">
             <icon-mdi-search />
             {{ $t('search.label') }}
-
-            <span hidden flex-1 border border-current border-op-40 rounded border-solid px-5px py-3px sm:inline>
-              {{ isMac ? 'Cmd' : 'Ctrl' }}&nbsp;+&nbsp;K
-            </span>
           </span>
+          <kbd class="navigation-shortcut">{{ isMac ? 'Cmd' : 'Ctrl' }} + K</kbd>
         </c-button>
         <CommandPalette v-if="commandPaletteLoaded" v-model:open="commandPaletteOpen" />
 
-        <locale-selector v-if="!styleStore.isSmallScreen" />
-
-        <div>
-          <NavbarButtons v-if="!styleStore.isSmallScreen" />
-        </div>
-
-        <c-tooltip position="bottom" :tooltip="$t('home.support')">
+        <NavbarButtons />
+        <c-tooltip class="navigation-back-to-top" :tooltip="$t('home.nav.backToTop')" position="bottom">
           <c-button
-            round
-            :href="`${sponsoringUrl}`"
-            rel="noopener"
-            target="_blank"
-            class="support-button"
-            :bordered="false"
-            @click="() => tracker.trackEvent({ eventName: 'Support button clicked' })"
+            circle
+            variant="text"
+            :aria-label="$t('home.nav.backToTop')"
+            @click="scrollToTop"
           >
-            {{ $t('home.buyMeACoffee') }}
-            <NIcon v-if="!styleStore.isSmallScreen" :component="Heart" ml-2 />
+            <NIcon size="22" :component="ArrowUp" />
           </c-button>
         </c-tooltip>
-      </div>
+      </nav>
       <UpdateNotice />
     </template>
 
@@ -205,41 +169,82 @@ const tools = computed<ToolCategory[]>(() => [
 </template>
 
 <style lang="less" scoped>
-// ::v-deep(.n-layout-scroll-container) {
-//     @percent: 4%;
-//     @position: 25px;
-//     @size: 50px;
-//     @color: #eeeeee25;
-//     background-image: radial-gradient(@color @percent, transparent @percent),
-//         radial-gradient(@color @percent, transparent @percent);
-//     background-position: 0 0, @position @position;
-//     background-size: @size @size;
-// }
-
-.support-button {
-  background: rgb(37, 99, 108);
-  background: linear-gradient(48deg, rgba(37, 99, 108, 1) 0%, rgba(59, 149, 111, 1) 60%, rgba(20, 160, 88, 1) 100%);
-  color: #fff !important;
-  transition: padding ease 0.2s !important;
-
-  &:hover {
-    color: #fff;
-    padding-left: 30px;
-    padding-right: 30px;
-  }
-}
-
 .top-navigation {
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   box-sizing: border-box;
   min-height: 64px;
   padding: 8px var(--layout-scroll-padding, 26px);
   background: v-bind('themeVars.bodyColor');
   border-bottom: 1px solid v-bind('themeVars.borderColor');
 
-  &.is-dark-theme {
-    border-bottom: none;
+  :deep(.c-button.circle) {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
   }
+
+  @media (max-width: 700px) {
+    gap: 4px;
+    padding-inline: 8px;
+  }
+}
+
+.navigation-start {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.navigation-search {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 36px;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 8px;
+}
+
+.navigation-search-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0.65;
+}
+
+.navigation-shortcut {
+  flex: 0 0 auto;
+  padding: 3px 5px;
+  border: 1px solid v-bind('themeVars.borderColor');
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  opacity: 0.6;
+
+  @media (max-width: 900px) {
+    display: none;
+  }
+}
+
+.navigation-back-to-top {
+  flex: 0 0 auto;
+  padding-left: 8px;
+  border-left: 1px solid v-bind('themeVars.borderColor');
+
+  @media (max-width: 700px) {
+    padding-left: 4px;
+  }
+}
+
+.sider-preferences {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
 .footer {

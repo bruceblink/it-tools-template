@@ -17,7 +17,8 @@ test('manages tool settings from the global settings page', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'General' }).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Tool settings' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'About', exact: true }).click();
+  await page.getByRole('button', { name: 'More', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'About', exact: true }).click();
   await expect(page.getByRole('link', { name: 'Settings', exact: true })).toHaveCount(1);
   await expect(page).toHaveURL(/\/about$/);
 

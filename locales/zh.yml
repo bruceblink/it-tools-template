@@ -30,6 +30,8 @@ home:
     darkMode: '深色模式'
     lightMode: '浅色模式'
     mode: '颜色模式'
+    more: '更多'
+    navigation: '主导航'
 pluginMarketplace:
   eyebrow: '社区插件'
   title: '插件市场'
