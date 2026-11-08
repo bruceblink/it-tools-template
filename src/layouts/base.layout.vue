@@ -126,6 +126,9 @@ const tools = computed<ToolCategory[]>(() => [
             circle
             variant="text"
             :aria-label="$t('home.toggleMenu')"
+            aria-controls="tool-navigation"
+            :aria-expanded="!styleStore.isMenuCollapsed"
+            :title="$t('home.toggleMenu')"
             @click="styleStore.isMenuCollapsed = !styleStore.isMenuCollapsed"
           >
             <NIcon size="22" :component="Menu2" />
@@ -138,10 +141,10 @@ const tools = computed<ToolCategory[]>(() => [
           </c-tooltip>
         </div>
 
-        <c-button class="navigation-search" :aria-label="$t('search.label')" @click="openCommandPalette">
+        <c-button class="navigation-search" :aria-label="$t('search.label')" :title="$t('search.label')" @click="openCommandPalette">
           <span class="navigation-search-label">
             <icon-mdi-search />
-            {{ $t('search.label') }}
+            <span class="navigation-search-text">{{ $t('search.label') }}</span>
           </span>
           <kbd class="navigation-shortcut">{{ isMac ? 'Cmd' : 'Ctrl' }} + K</kbd>
         </c-button>
@@ -186,7 +189,7 @@ const tools = computed<ToolCategory[]>(() => [
     border-radius: 8px;
   }
 
-  @media (max-width: 700px) {
+  @container navigation (max-width: 700px) {
     gap: 4px;
     padding-inline: 8px;
   }
@@ -201,11 +204,16 @@ const tools = computed<ToolCategory[]>(() => [
 
 .navigation-search {
   flex: 1 1 0;
-  min-width: 0;
+  min-width: 36px;
   height: 36px;
   justify-content: space-between;
   gap: 12px;
   border-radius: 8px;
+
+  @container navigation (max-width: 520px) {
+    justify-content: center;
+    padding-inline: 0;
+  }
 }
 
 .navigation-search-label {
@@ -215,6 +223,20 @@ const tools = computed<ToolCategory[]>(() => [
   overflow: hidden;
   white-space: nowrap;
   opacity: 0.65;
+
+  svg {
+    flex: 0 0 auto;
+  }
+
+  @container navigation (max-width: 520px) {
+    gap: 0;
+  }
+}
+
+.navigation-search-text {
+  @container navigation (max-width: 520px) {
+    display: none;
+  }
 }
 
 .navigation-shortcut {
@@ -226,7 +248,7 @@ const tools = computed<ToolCategory[]>(() => [
   font-size: 12px;
   opacity: 0.6;
 
-  @media (max-width: 900px) {
+  @container navigation (max-width: 800px) {
     display: none;
   }
 }
@@ -236,7 +258,7 @@ const tools = computed<ToolCategory[]>(() => [
   padding-left: 8px;
   border-left: 1px solid v-bind('themeVars.borderColor');
 
-  @media (max-width: 700px) {
+  @container navigation (max-width: 700px) {
     padding-left: 4px;
   }
 }

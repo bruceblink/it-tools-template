@@ -15,6 +15,7 @@ function scrollContentToTop() {
 <template>
   <n-layout has-sider>
     <n-layout-sider
+      id="tool-navigation"
       bordered
       collapse-mode="width"
       :collapsed-width="0"
@@ -77,6 +78,8 @@ function scrollContentToTop() {
 
 .content-header {
   flex: 0 0 auto;
+  container-name: navigation;
+  container-type: inline-size;
 }
 
 .content-scroll {

@@ -107,6 +107,7 @@ function selectMore(key: string) {
         aria-haspopup="menu"
         :aria-expanded="moreOpen"
         @keydown.down.prevent="moreOpen = true"
+        @keydown.tab="moreOpen = false"
       >
         <NIcon size="22" :component="IconDots" />
       </c-button>

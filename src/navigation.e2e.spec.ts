@@ -7,6 +7,14 @@ test('groups navigation actions and keeps back to top last on the right', async 
   await page.goto('/settings');
   await expect(page).toHaveTitle(/Settings/);
   const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  const menuToggle = navigation.getByRole('button', { name: 'Toggle menu', exact: true });
+  await expect(menuToggle).toHaveAttribute('aria-controls', 'tool-navigation');
+  await expect(page.locator('#tool-navigation')).toHaveCount(1);
+  await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
+  await menuToggle.click();
+  await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
+  await menuToggle.click();
+  await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
   const controls = navigation.locator('a, button');
   await expect(controls).toHaveCount(8);
   expect(await controls.evaluateAll(elements => elements.map(element => element.getAttribute('aria-label')))).toEqual([
@@ -50,8 +58,58 @@ test('keeps compact navigation usable without horizontal overflow', async ({ pag
   expect(await navigation.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await expect(navigation.getByRole('link', { name: 'Plugin marketplace', exact: true })).toBeVisible();
   await navigation.getByRole('button', { name: 'More', exact: true }).click();
-  await expect(page.getByRole('menuitem', { name: /^(Light|Dark) mode$/ })).toBeVisible();
-  await page.keyboard.press('Escape');
+  const themeOption = page.getByRole('menuitem', { name: /^(Light|Dark) mode$/ });
+  await expect(themeOption).toBeVisible();
+  const wasDark = await page.locator('html').evaluate(element => element.classList.contains('dark'));
+  await themeOption.click();
+  await expect.poll(() => page.locator('html').evaluate(element => element.classList.contains('dark'))).toBe(!wasDark);
   await navigation.getByRole('button', { name: 'Search', exact: true }).click();
   await expect(page.getByPlaceholder('Type to search a tool or a command...')).toBeVisible();
 });
+
+test('closes More when keyboard focus moves to the next control', async ({ page }) => {
+  await page.goto('/settings');
+  const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+  const more = navigation.getByRole('button', { name: 'More', exact: true });
+  await more.focus();
+  await page.keyboard.press('Enter');
+  await expect(more).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Tab');
+  await expect(more).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('menuitem', { name: 'About', exact: true })).toBeHidden();
+  await expect(navigation.getByRole('button', { name: 'Back to top', exact: true })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/settings$/);
+});
+
+for (const width of [320, 701, 768, 1024]) {
+  test(`keeps navigation controls separate at ${width}px with the sidebar ${width > 700 ? 'open' : 'closed'}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.addInitScript(collapsed => localStorage.setItem('isMenuCollapsed', String(collapsed)), width <= 700);
+    await page.goto('/settings');
+    const navigation = page.getByRole('navigation', { name: 'Main navigation' });
+    await expect(navigation).toBeVisible();
+    await expect(navigation.getByRole('button', { name: 'Back to top', exact: true })).toBeInViewport();
+    const search = navigation.getByRole('button', { name: 'Search', exact: true });
+    await expect(search).toBeInViewport();
+    expect((await search.boundingBox())!.width).toBeGreaterThanOrEqual(36);
+    if (width <= 701) {
+      await expect(search.locator('.navigation-search-text')).toBeHidden();
+    }
+    else {
+      await expect(search.locator('.navigation-search-text')).toBeVisible();
+      expect(await search.locator('.navigation-search-label').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    }
+    expect(await navigation.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+    const bounds = await navigation.locator('a, button, .c-select-input').evaluateAll(elements => elements
+      .map(element => element.getBoundingClientRect())
+      .filter(rect => rect.width > 0)
+      .map(rect => ({ left: rect.left, right: rect.right })));
+    for (let index = 1; index < bounds.length; index++) {
+      expect(bounds[index]!.left).toBeGreaterThanOrEqual(bounds[index - 1]!.right);
+    }
+    await search.click();
+    await expect(page.getByPlaceholder('Type to search a tool or a command...')).toBeVisible();
+  });
+}
