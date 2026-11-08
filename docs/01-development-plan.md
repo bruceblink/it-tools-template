@@ -1,10 +1,11 @@
 # IT Tools 主线开发计划
 
 > 状态：唯一开发计划
-> 更新日期：2026-11-07
-> 本次审查源码基线：`210dd9f`；当前提交只更新本计划，不改变该基线的运行时代码
+> 更新日期：2026-11-08
+> 本次审查源码基线：`210dd9f`；插件市场目录在该基线上作为独立功能交付，仍遵守本计划的插件平台边界
 > 历史安装更新验收基线：`v2026.11.1-1793495127.gca55a2c`；不是当前主线或最新发布状态的证明
 > 完整验证基线：2026-11-07 在 Windows、Node `v24.15.0`、pnpm `12.16.1` 执行 `pnpm check`，退出码为 0；147 个测试文件通过、2 个跳过，917 项测试通过、18 项跳过，Web 与 Electron 构建通过
+> 本次交付验证：2026-11-08 在 Linux、Node `v24.22.1`、pnpm `12.16.1` 执行 `corepack pnpm check`，退出码为 0；148 个测试文件通过、2 个跳过，922 项测试通过、18 项跳过，Web 与 Electron 构建通过；插件市场 Chromium API mock E2E 通过
 > 插件平台化起点：`v2026.10.28-1dbc63c`；后续版本保留该 tag 的祖先关系
 > 适用范围：本仓库的 Web/PWA、Electron、插件接口和发布维护
 
@@ -63,7 +64,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | P1 | PLUGIN-HOST-UX-001 | Electron 管理器已支持安装、信任、能力授权、贡献工具、停用和卸载；首次使用引导、状态解释和诊断仍较分散 | 打磨插件管理器的状态模型、能力展示、签名者流程、失败提示和恢复动作；补齐中英文路径 | 安装、信任、授权、运行、停止、升级回退和卸载均有清晰可见状态；失败后可按提示恢复；宿主设置和内置工具继续可用 |
 | P2 | PLUGIN-SDK-API-001 | API `1.4.0`、五个自包含声明、四项宿主能力和独立项目回归已具备；SDK 交付方式与能力兼容矩阵尚未定型 | 固化 SDK 交付和版本策略，补充 API/错误码示例与契约回归；明确 `file`、`camera`、`data.oui` 等已声明能力的实现或暂缓边界 | 仓库外项目无需引用内部 `src/` 即可类型检查和打包；版本兼容、能力状态和错误处理有可复制的示例 |
 | P3 | PLUGIN-RUNTIME-VALIDATION-001 | 沙箱、签名信任、能力代理、资源上限和生命周期基础实现已存在；目标平台真实窗口验收仍不完整 | 在平台建设稳定后补取消边界、资源诊断、关闭恢复、安装升级和自然故障验证；只扩展有明确权限和资源口径的能力 | Linux、macOS、Windows 的权限、停用、崩溃、卡死、Worker 限额、升级回退和卸载流程都有可追溯证据 |
-| P4 | PLUGIN-PUBLISHING-001 | 包格式和本地签名工具可用；当前仍是 experimental，没有生产签名者、公共包目录或自动更新 | 整理发布者密钥、可复现构建、包校验和版本兼容流程；再决定公共目录和自动更新是否进入范围 | 可复现生成并审查插件包，发布资产、签名者和回滚步骤可核对；未批准的分发能力不提前承诺 |
+| P4 | PLUGIN-PUBLISHING-001 | 包格式和本地签名工具可用；只读 GitHub 插件导航目录已交付，当前仍没有生产签名者、公共包目录或自动更新 | 整理发布者密钥、可复现构建、包校验和版本兼容流程；再决定公共包分发和自动更新是否进入范围 | 可复现生成并审查插件包，发布资产、签名者和回滚步骤可核对；目录只提供仓库和清单参考，不提前承诺插件包分发 |
 
 执行规则：先完成 P0 的开发闭环，再完成 P1 的宿主管理体验；P2 与 P0/P1 联动验收，P3 使用同一套稳定流程补目标平台证据，P4 最后整理发布。维护队列中的问题可在相关代码触及时处理；若影响安全边界、数据完整性或宿主继续使用，立即提升优先级。
 
@@ -101,9 +102,9 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 ### P4：发布者与分发准备（PLUGIN-PUBLISHING-001）
 
-- 现有基础：Ed25519 本地密钥生成、签名包、校验和和版本化安装路径已具备；当前文档明确没有生产签名者、预构建包、自动更新或公共插件目录。
+- 现有基础：Ed25519 本地密钥生成、签名包、校验和和版本化安装路径已具备；`/plugin-marketplace` 已提供基于 GitHub topic 的只读仓库导航、清单摘要和源码跳转，但不保存、代理或执行插件包。当前仍没有生产签名者、预构建包、自动更新或公共包分发目录。
 - 主要缺口：发布者密钥托管、包复现、资产命名、兼容性检查和回滚清单尚未形成插件专用流程。
-- 下一步：整理本地/CI 发布者边界、可复现打包和签名审查清单；在 P0–P3 稳定后再单独评估公共目录、更新和分发策略。
+- 下一步：先打磨目录的发现规则、仓库质量信号和与 Electron 安装流程的衔接；再整理本地/CI 发布者边界、可复现打包和签名审查清单，在 P0–P3 稳定后单独评估公共包目录、更新和分发策略。
 - 验收：同一源码和工具链可复现包内容与签名输入；发布资产、支持的宿主 API、签名者范围和回滚步骤可核对；未批准的分发能力不进入默认流程。
 
 ### 维护队列：已确认缺陷与工作台证据
@@ -175,6 +176,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | --- | --- |
 | 仅 Markdown 整理 | `git diff --check`；检查本地链接、标题锚点、冲突标记、UTF-8 和 LF；运行时和 UI 检查不适用 |
 | 应用、构建或接口变更 | `pnpm check`，再执行受影响的定向回归 |
+| 插件市场目录 | `pnpm exec vitest run src/modules/plugin-marketplace/plugin-marketplace.service.test.ts`、`pnpm typecheck:app`、`pnpm headers:check`、`pnpm build`；页面通过 GitHub API mock 验证仓库分页、清单摘要、速率限制和不下载插件包 |
 | 插件平台 P0 开发闭环 | `pnpm plugin:create -- --id org.example.demo --name "Demo" --directory <external-dir>`；`pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`、`pnpm test:plugin-project`；在仓库外完成类型检查、`pnpm plugin:validate -- --source <external-dir>`、`pnpm plugin:pack -- --source <external-dir> --private-key <external.pem> --key-id <publisher> --output <package.itplugin>` 和 Electron 安装运行回归 |
 | 插件平台 P1/P3 宿主与运行时 | `pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts electron/plugin-sandbox.e2e.spec.ts`；记录安装、信任、能力授权、贡献工具、停止、升级回退、崩溃和清理的真实窗口范围 |
 | 维护队列中的三个缺陷 | `MAC-REOPEN-001`：macOS 执行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts`，补重开窗口流程；`MONITOR-SORT-001`：`pnpm exec vitest run electron/system-monitor/system-info.test.ts`；`API-TIMER-001`：`pnpm exec vitest run electron/plugin-api-v1.test.ts`；按维护优先级执行，发布前仍需纳入适用的 `pnpm check` |
@@ -211,3 +213,4 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | [对象存储设计](15-object-storage-workbench-design.md)、[容器设计](17-container-workbench-design.md) | 现有工作台范围、资源限制和回退方法 |
 | `docs/archive/18-excalidraw-integration-assessment.md` | 已归档的未批准评估，不属于当前开发路线 |
 | [桌面应用更新](19-desktop-updates.md) | 自动检查、差分下载、确认安装和发布文件 |
+| [插件市场目录](20-plugin-marketplace.md) | GitHub 仓库导航、元数据读取和不存储插件包的边界 |

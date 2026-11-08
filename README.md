@@ -186,6 +186,12 @@ pnpm plugin:validate -- --source plugins/org.example.my-plugin
 
 The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
 
+## Plugin marketplace
+
+Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. It does not store, proxy, execute, or distribute plugin packages.
+
+Plugin authors should add the it-tools-plugin topic, keep a clear README, and commit a plugin.source.json manifest. The page reads that manifest only as reference data; signing, trust, capability approval, and installation remain part of the Electron workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md for API configuration and publishing guidance.
+
 ## Architecture and project docs
 
 The [main development plan](docs/01-development-plan.md) is the only document that tracks priorities, unfinished work, code review findings, and acceptance conditions. The documents below are technical references only; they do not contain a second roadmap or schedule. Completed plans and duplicate development logs have been removed; Git retains their history. The unapproved Excalidraw assessment is archived under `docs/archive/`. Dated performance reports and licenses remain in `docs/`.

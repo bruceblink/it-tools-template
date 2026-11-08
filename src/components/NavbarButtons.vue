@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { IconBrandGithub, IconInfoCircle, IconMoon, IconSettings, IconSun } from '@tabler/icons-vue';
+import { IconBrandGithub, IconInfoCircle, IconMoon, IconPuzzle, IconSettings, IconSun } from '@tabler/icons-vue';
 import { useStyleStore } from '@/stores/style.store';
 import { config } from '@/config';
 
@@ -24,6 +24,17 @@ const repositoryUrl = config.app.repositoryUrl;
       :aria-label="$t('home.nav.settings')"
     >
       <n-icon size="25" :component="IconSettings" />
+    </c-button>
+  </c-tooltip>
+
+  <c-tooltip :tooltip="$t('home.nav.pluginMarketplace')" position="bottom">
+    <c-button
+      circle
+      variant="text"
+      to="/plugin-marketplace"
+      :aria-label="$t('home.nav.pluginMarketplace')"
+    >
+      <n-icon size="25" :component="IconPuzzle" />
     </c-button>
   </c-tooltip>
 

@@ -6,7 +6,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://unpkg.com; worker-src 'self' blob:; media-src 'self' blob:; frame-src 'none'; manifest-src 'self'"
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; frame-ancestors 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://unpkg.com https://api.github.com; worker-src 'self' blob:; media-src 'self' blob:; frame-src 'none'; manifest-src 'self'"
         },
         {
           "key": "X-Content-Type-Options",

@@ -40,6 +40,12 @@ const router = createRouter({
       component: () => import('./pages/About.vue'),
     },
     {
+      path: '/plugin-marketplace',
+      name: 'plugin-marketplace',
+      component: () => import('./pages/PluginMarketplace.page.vue'),
+      meta: { layout: layouts.base },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('./pages/Settings.page.vue'),

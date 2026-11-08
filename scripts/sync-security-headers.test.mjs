@@ -30,11 +30,11 @@ test('baseline CSP permits only reviewed runtime sources and excludes unsafe-eva
   assert.deepEqual(directives['script-src'], ["'self'"]);
   assert.deepEqual(directives['style-src'], ["'self'", "'unsafe-inline'"]);
   assert.deepEqual(directives['img-src'], ["'self'", 'data:', 'https:']);
-  assert.deepEqual(directives['connect-src'], ["'self'", 'https://unpkg.com']);
+  assert.deepEqual(directives['connect-src'], ["'self'", 'https://unpkg.com', 'https://api.github.com']);
   assert.deepEqual(directives['worker-src'], ["'self'", 'blob:']);
   assert.deepEqual(directives['media-src'], ["'self'", 'blob:']);
   assert.doesNotMatch(buildCsp(config), /unsafe-eval/);
-  assert.ok(directives['connect-src'].every(source => source === "'self'" || source === 'https://unpkg.com'));
+  assert.ok(directives['connect-src'].every(source => ["'self'", 'https://unpkg.com', 'https://api.github.com'].includes(source)));
   assert.ok(!directives['img-src'].includes('blob:'));
 
   const unsafeConfig = structuredClone(config);
@@ -47,7 +47,7 @@ test('custom Plausible API host is added as one exact HTTPS origin', async () =>
   config.plausibleApiOrigin = 'https://metrics.example.test:8443';
 
   const csp = buildCsp(validateSecurityHeaderConfig(config));
-  assert.match(csp, /connect-src 'self' https:\/\/unpkg\.com https:\/\/metrics\.example\.test:8443/);
+  assert.match(csp, /connect-src 'self' https:\/\/unpkg\.com https:\/\/api\.github\.com https:\/\/metrics\.example\.test:8443/);
   assert.doesNotMatch(csp, /connect-src[^;]*https:(?:\s|;)/);
   assert.throws(() => validateConfiguredPlausibleHost(config, undefined), /pass --plausible-api-host/);
   assert.throws(() => validateConfiguredPlausibleHost(config, 'https://other.example.test'), /must match/);
