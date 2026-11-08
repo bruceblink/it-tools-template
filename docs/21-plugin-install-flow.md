@@ -10,7 +10,7 @@
 2. Electron 用户点击“安装最新 Release”后，宿主重新读取仓库元数据，固定到一个 release asset 和 commit/tag，不使用可变的默认分支内容。
 3. 宿主在主进程通过 HTTPS 下载 `.itplugin`，限制大小和重定向，校验包清单、文件哈希、API 兼容范围和签名。
 4. 签名者未受信任时，流程停在“需要核对发布者指纹”；信任签名者不会自动授予插件能力。
-5. 安装完成后，市场提示包 ID、版本和 Release tag，管理器显示能力摘要；用户选择能力并确认桌面授权提示后才运行插件。
+5. 安装完成后，市场提示包 ID、版本和 Release tag；管理器持久化显示仓库、tag、commit 和 SHA-256 来源摘要。用户选择能力并确认桌面授权提示后才运行插件。
 
 市场只提供仓库和发布资产的参考链接。安装过程不把包写回市场，也不让 Web 页面直接访问本机文件系统。
 
@@ -22,7 +22,8 @@
 
 - 下载在主进程执行，渲染器只传递经过校验的仓库身份。
 - 允许的来源限定为 GitHub API、匹配仓库和 tag 的 GitHub Release asset，以及 GitHub 的下载重定向域名。
-- 下载完成后先写入随机临时目录；验证失败或安装失败都会清理临时文件。
+- 下载完成后先写入随机临时目录；验证失败、安装失败或取消都会清理临时文件。
+- 同一时间只允许一个直装任务；页面显示发现、固定、下载、校验和安装进度，并支持取消。
 - 安装器拒绝已归档、fork、缺少 `it-tools-plugin` topic、草稿/预发布 Release、多个或超出大小上限的资产，以及已经存在的插件版本。
 - 签名、哈希、能力授权和隔离窗口规则与本地 `.itplugin` 安装完全一致。
 
@@ -47,6 +48,8 @@ Electron 不在普通模式下直接加载 GitHub 原始 HTML/JavaScript。直�
 | `pinned` | 已固定仓库、版本和 commit/tag | 查看来源摘要 |
 | `downloading` | 正在下载临时资产 | 等待或取消 |
 | `verifying` | 正在校验包、哈希、API 和签名 | 等待 |
+| `installing` | 正在调用宿主生命周期安装器 | 等待完成 |
+| `cancelled` | 用户取消了下载或校验 | 查看提示后重试 |
 | `awaiting-trust` | 包有效但签名者尚未受信任 | 核对指纹并添加公钥 |
 | `installed` | 包已写入版本目录，尚未运行 | 选择能力并运行 |
 | `active` | 插件窗口正在运行 | 停止或查看能力 |
@@ -67,7 +70,7 @@ Electron 不在普通模式下直接加载 GitHub 原始 HTML/JavaScript。直�
 ## 当前交付状态
 
 1. **已完成基础**：市场只读 GitHub 目录、Electron 本地包安装、信任、能力授权和生命周期管理；`plugin:build` 将源码校验、可选 TypeScript 检查和签名打包收敛为一个命令。
-2. **已完成 Release 直装**：`electron/plugin-marketplace-installer.ts` 和 `desktop:plugins:install-from-marketplace` IPC 负责重新校验仓库、固定 tag/commit、限制下载、清理临时文件，并复用生命周期安装器；市场卡片在 Electron 中提供按钮和失败重试。
-3. **后续开发模式**：固定 commit 的源码下载和显式本地构建，补充来源摘要、取消、进度和构建签名者显示；不开放普通模式的原始源码直载。
+2. **已完成 Release 直装**：`electron/plugin-marketplace-installer.ts`、单飞控制器和 `desktop:plugins:install-from-marketplace` IPC 负责重新校验仓库、固定 tag/commit、限制下载、流式校验、进度/取消、清理临时文件，并复用生命周期安装器。来源摘要保存到 `.plugin-provenance.json`，只用于诊断，不参与签名包校验。
+3. **源码快照基础已完成**：`electron/plugin-source-snapshot.ts` 可固定完整 commit、校验仓库身份并下载受限的 gzip 快照，但当前不解压、不执行仓库脚本；后续再接入用户明确触发的本地构建和签名流程。不开放普通模式的原始源码直载。
 
-验收必须覆盖仓库身份伪造、可变分支、重定向、超大资产、下载清理、签名不受信任、重复安装、能力拒绝和安装后运行恢复。当前直装回归覆盖身份/topic、唯一资产、commit 固定、GitHub 重定向主机、哈希和临时目录清理；取消与真实窗口安装仍属于后续平台验收。
+验收必须覆盖仓库身份伪造、可变分支、重定向、超大资产、下载清理、取消、签名不受信任、重复安装、能力拒绝和安装后运行恢复。当前直装回归覆盖身份/topic、唯一资产、commit 固定、GitHub 重定向主机、流式大小/哈希、单飞取消、来源持久化和临时目录清理；真实 Electron 窗口安装仍待有显示环境时验收。
