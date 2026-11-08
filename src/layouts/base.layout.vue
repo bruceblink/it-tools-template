@@ -150,17 +150,18 @@ const tools = computed<ToolCategory[]>(() => [
         </c-button>
         <CommandPalette v-if="commandPaletteLoaded" v-model:open="commandPaletteOpen" />
 
-        <NavbarButtons />
         <c-tooltip class="navigation-back-to-top" :tooltip="$t('home.nav.backToTop')" position="bottom">
           <c-button
             circle
             variant="text"
             :aria-label="$t('home.nav.backToTop')"
+            :title="$t('home.nav.backToTop')"
             @click="scrollToTop"
           >
             <NIcon size="22" :component="ArrowUp" />
           </c-button>
         </c-tooltip>
+        <NavbarButtons />
       </nav>
       <UpdateNotice />
     </template>
@@ -193,6 +194,10 @@ const tools = computed<ToolCategory[]>(() => [
     gap: 4px;
     padding-inline: 8px;
   }
+
+  @container navigation (max-width: 360px) {
+    gap: 0;
+  }
 }
 
 .navigation-start {
@@ -210,7 +215,7 @@ const tools = computed<ToolCategory[]>(() => [
   gap: 12px;
   border-radius: 8px;
 
-  @container navigation (max-width: 520px) {
+  @container navigation (max-width: 600px) {
     justify-content: center;
     padding-inline: 0;
   }
@@ -228,13 +233,13 @@ const tools = computed<ToolCategory[]>(() => [
     flex: 0 0 auto;
   }
 
-  @container navigation (max-width: 520px) {
+  @container navigation (max-width: 600px) {
     gap: 0;
   }
 }
 
 .navigation-search-text {
-  @container navigation (max-width: 520px) {
+  @container navigation (max-width: 600px) {
     display: none;
   }
 }
@@ -255,12 +260,6 @@ const tools = computed<ToolCategory[]>(() => [
 
 .navigation-back-to-top {
   flex: 0 0 auto;
-  padding-left: 8px;
-  border-left: 1px solid v-bind('themeVars.borderColor');
-
-  @container navigation (max-width: 700px) {
-    padding-left: 4px;
-  }
 }
 
 .sider-preferences {
