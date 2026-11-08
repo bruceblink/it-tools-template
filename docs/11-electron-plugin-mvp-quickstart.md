@@ -123,6 +123,14 @@ pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secur
 
 包字段、签名输入、路径规则和安装上限见[插件包格式 v1](08-electron-plugin-package-format-v1.md)。
 
+如果源码项目另有 TypeScript 配置，可以用 `plugin:build` 收敛校验、类型检查和签名打包。`--tsconfig` 可以指向源码包目录之外的项目配置，避免把开发源码和配置误放进最终静态包：
+
+```powershell
+pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin-project\tsconfig.json" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itplugin"
+```
+
+该命令先执行与 `plugin:validate` 相同的源码检查；存在 `tsconfig.json` 时使用仓库固定的 TypeScript 编译器执行 `--noEmit`，失败时不会写入包。没有 TypeScript 配置时会明确报告跳过类型检查。输出包已存在时仍会失败，不覆盖旧包。
+
 签名只证明包与该公钥匹配。它不证明插件代码安全。发布者应通过独立渠道提供公钥指纹，并审查插件源码。
 
 ## 安装和运行

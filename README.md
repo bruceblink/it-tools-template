@@ -186,6 +186,14 @@ pnpm plugin:validate -- --source plugins/org.example.my-plugin
 
 The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
 
+For a repeatable external-project build, run one command. It validates the source, runs the repository TypeScript compiler when you provide an external `tsconfig.json`, and signs without overwriting an existing package:
+
+~~~sh
+pnpm plugin:build -- --source ./dist/plugin --tsconfig ./tsconfig.json \
+  --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
+  --key-id plugin-publisher --output ./artifacts/plugin.itplugin
+~~~
+
 In Electron Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
 
 ## Plugin marketplace
@@ -210,6 +218,7 @@ The [main development plan](docs/01-development-plan.md) is the only document th
 - [Container workbench](docs/17-container-workbench-design.md): read-only local Docker container list
 - [Archived Excalidraw assessment](docs/archive/18-excalidraw-integration-assessment.md): historical options and prerequisites; not approved for implementation
 - [Desktop updates](docs/19-desktop-updates.md): update checks, differential downloads, installation confirmation, and release files
+- [Plugin install flow](docs/21-plugin-install-flow.md): read-only GitHub discovery, signed release installation, and explicit developer source builds
 
 The application is organized around Vue route pages, a typed tool registry, Pinia stores, local i18n resources, and platform adapters. Route components and heavy workers are loaded only when needed. The service worker caches same-origin build assets with a bounded per-build cache.
 

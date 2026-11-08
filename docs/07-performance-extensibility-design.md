@@ -81,7 +81,8 @@ Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Nod
 外部插件接口分别由[包格式](08-electron-plugin-package-format-v1.md)、[开发 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)和[使用说明](11-electron-plugin-mvp-quickstart.md)定义，不在本文复制字段和完整限额。当前实现如下：
 
 1. `plugin:create` 生成源码清单、命名空间工具贡献、静态页面和 5 个自包含 SDK 声明；`plugin:validate` 在不读取私钥、不执行插件和不写包的情况下检查源码。
-2. `plugin:pack` 复用校验逻辑，使用 Ed25519 签名清单和资源哈希。安装器限制归档大小、文件数量、路径和展开资源；验证后从随机暂存目录切换到版本目录，不执行脚本或 `npm install`。
+2. `plugin:build` 将源码校验、可选的外部 TypeScript `--noEmit` 检查和 `plugin:pack` 签名打包串成一个命令；它仍要求签名私钥位于仓库外，并拒绝覆盖已有输出。
+3. `plugin:pack` 复用校验逻辑，使用 Ed25519 签名清单和资源哈希。安装器限制归档大小、文件数量、路径和展开资源；验证后从随机暂存目录切换到版本目录，不执行脚本或 `npm install`。
 3. 用户信任签名者后仍需单独授权能力。声明、宿主支持与用户授权是三个集合，签名不证明代码安全。
 4. `it-plugin://<plugin-id>/` 使用按包版本隔离的非持久 Session。插件窗口无 Node、无应用 preload，拒绝外部导航、新窗口、下载和直接外部网络。
 5. 宿主在插件运行前注入冻结的 `window.itTools`。API 版本来自[统一版本定义](../src/shared/plugin-api-version.ts)，当前为 `1.4.0`。
