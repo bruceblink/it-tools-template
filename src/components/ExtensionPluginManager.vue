@@ -617,17 +617,17 @@ onUnmounted(() => {
         <h2 id="electron-plugin-manager-title">{{ text('title') }}</h2>
         <p>{{ text('intro') }}</p>
       </div>
-      <n-space>
+      <div class="plugin-section-actions">
+        <n-button v-if="isDesktop" class="plugin-install-action" type="primary" :disabled="isBusy" @click="installPlugin">
+          {{ text('install') }}
+        </n-button>
         <n-button tag="a" href="/plugin-marketplace" secondary>
           {{ text('browseMarketplace') }}
         </n-button>
         <n-button v-if="isDesktop" :disabled="isLoading || isBusy" @click="refresh">
           {{ text('refresh') }}
         </n-button>
-        <n-button v-if="isDesktop" type="primary" :disabled="isBusy" @click="installPlugin">
-          {{ text('install') }}
-        </n-button>
-      </n-space>
+      </div>
     </div>
 
     <n-alert v-if="!isDesktop" type="info" :show-icon="false" mb-4>
@@ -834,7 +834,6 @@ onUnmounted(() => {
   margin-top: 32px;
 }
 
-.plugin-section-heading,
 .plugin-package-meta,
 .plugin-package-actions,
 .trusted-signer-row,
@@ -843,6 +842,30 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.plugin-section-heading {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.plugin-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .plugin-section-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plugin-install-action {
+    grid-column: 1 / -1;
+  }
 }
 
 .plugin-contribution-link {
