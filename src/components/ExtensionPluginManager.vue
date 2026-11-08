@@ -98,6 +98,12 @@ const messages = {
     diagnostics: 'Diagnostics',
     packageId: 'Package ID',
     packageVersion: 'Package version',
+    source: 'Install source',
+    localPackage: 'Local signed package',
+    sourceRepository: 'Repository',
+    sourceRelease: 'Release',
+    sourceCommit: 'Commit',
+    sourceHash: 'SHA-256',
     activeContribution: 'Active contribution',
     errorCode: 'Error code',
     pluginError: 'Plugin operation failed.',
@@ -165,6 +171,12 @@ const messages = {
     diagnostics: '诊断信息',
     packageId: '插件包 ID',
     packageVersion: '插件包版本',
+    source: '安装来源',
+    localPackage: '本地已签名插件包',
+    sourceRepository: '仓库',
+    sourceRelease: 'Release',
+    sourceCommit: 'Commit',
+    sourceHash: 'SHA-256',
     activeContribution: '当前贡献项',
     errorCode: '错误码',
     pluginError: '插件操作失败。',
@@ -669,6 +681,13 @@ onUnmounted(() => {
             <div class="plugin-diagnostics" :aria-label="text('diagnostics')">
               <span>{{ text('packageId') }}: <code>{{ plugin.pluginId }}</code></span>
               <span>{{ text('packageVersion') }}: <code>{{ plugin.version }}</code></span>
+              <template v-if="plugin.source">
+                <span>{{ text('sourceRepository') }}: <code>{{ plugin.source.repository }}</code></span>
+                <span>{{ text('sourceRelease') }}: <code>{{ plugin.source.tagName }}</code></span>
+                <span>{{ text('sourceCommit') }}: <code>{{ plugin.source.commitSha }}</code></span>
+                <span>{{ text('sourceHash') }}: <code>{{ plugin.source.sha256 }}</code></span>
+              </template>
+              <span v-else>{{ text('source') }}: <code>{{ text('localPackage') }}</code></span>
               <span v-if="plugin.activeContributionId">
                 {{ text('activeContribution') }}: <code>{{ plugin.activeContributionId }}</code>
               </span>

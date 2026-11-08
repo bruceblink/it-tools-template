@@ -27,7 +27,14 @@ import {
   verifyInstalledPluginPackage,
 } from './plugin-package-integrity';
 import { getExternalPluginToolRoute } from '../src/shared/plugin-tool-route';
-import type { DesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
+import type {
+  DesktopPluginMarketplaceInstallSource,
+  DesktopPluginStateChangeEvent,
+} from '../src/shared/desktop-services/plugins';
+import {
+  PluginProvenanceStore,
+  PluginProvenanceStoreError,
+} from './plugin-provenance-store';
 
 export { verifyInstalledPluginPackage } from './plugin-package-integrity';
 
@@ -83,6 +90,8 @@ export interface PluginLifecycleSnapshot {
     tools: readonly PluginLifecycleToolContribution[];
   };
   grantedCapabilities: readonly PluginCapability[];
+  /** Source metadata recorded when this version was installed from a marketplace Release. */
+  source?: DesktopPluginMarketplaceInstallSource;
   status: 'installed' | 'active' | 'invalid';
   /** The contribution currently selected for the active isolated window. */
   activeContributionId?: string;
@@ -132,6 +141,7 @@ interface PluginRuntimeFailure {
 /** Own the installed package lifecycle while keeping all windows inside Electron's sandbox. */
 export class PluginLifecycleManager {
   private readonly installRoot: string;
+  private readonly provenanceStore: PluginProvenanceStore;
   private readonly activePlugins = new Map<string, ActivePlugin>();
   private readonly runtimeFailures = new Map<string, PluginRuntimeFailure>();
   private operationQueue: Promise<void> = Promise.resolve();
@@ -140,11 +150,13 @@ export class PluginLifecycleManager {
 
   constructor(private readonly options: PluginLifecycleOptions) {
     this.installRoot = resolve(options.installRoot);
+    this.provenanceStore = new PluginProvenanceStore(resolve(this.installRoot, '.plugin-provenance.json'));
   }
 
   async listInstalled(): Promise<PluginLifecycleSnapshot[]> {
     return this.runExclusive(async () => {
       const root = await this.ensureInstallRoot();
+      await this.loadProvenanceStore();
       const snapshots: PluginLifecycleSnapshot[] = [];
       for await (const pluginDirectory of await opendir(root)) {
         if (!isValidPluginId(pluginDirectory.name)) {
@@ -199,10 +211,14 @@ export class PluginLifecycleManager {
     });
   }
 
-  async installArchive(archivePath: string): Promise<PluginLifecycleSnapshot> {
+  async installArchive(
+    archivePath: string,
+    source?: DesktopPluginMarketplaceInstallSource,
+  ): Promise<PluginLifecycleSnapshot> {
     return this.runExclusive(async () => {
       this.assertOperational();
       const root = await this.ensureInstallRoot();
+      await this.loadProvenanceStore();
       const installedCount = await this.countInstalledPackages(root);
       if (installedCount >= maximumInstalledPackages) {
         throw new PluginPackageError('resource-limit', 'The host has reached its installed plugin limit.');
@@ -213,6 +229,7 @@ export class PluginLifecycleManager {
         hostApiVersion: this.options.hostApiVersion,
         trustedSigningKeys: this.options.trustedSigningKeys,
       });
+      await this.updateProvenance(staged.manifest.id, staged.manifest.version, source);
       const snapshot = this.snapshotFromManifest(staged.manifest);
       this.notifyStateChange({
         pluginId: staged.manifest.id,
@@ -232,6 +249,7 @@ export class PluginLifecycleManager {
   ): Promise<PluginLifecycleSnapshot> {
     return this.runExclusive(async () => {
       this.assertOperational();
+      await this.loadProvenanceStore();
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
       const manifest = await verifyInstalledPluginPackage({
         installRoot: this.installRoot,
@@ -388,6 +406,7 @@ export class PluginLifecycleManager {
   async uninstall(pluginId: string, version: string): Promise<boolean> {
     return this.runExclusive(async () => {
       this.assertOperational();
+      await this.loadProvenanceStore();
       const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
       const active = this.activePlugins.get(pluginId);
       if (active?.version === version) {
@@ -401,6 +420,7 @@ export class PluginLifecycleManager {
       }
       await rm(currentPackageRoot, { recursive: true, force: false });
       this.clearRuntimeFailures(pluginId, version);
+      await this.removeProvenance(pluginId, version);
       this.notifyStateChange({
         pluginId,
         version,
@@ -632,6 +652,7 @@ export class PluginLifecycleManager {
     const active = this.activePlugins.get(manifest.id);
     const isActive = active?.version === manifest.version && !active.window.isDestroyed();
     const runtimeFailure = this.runtimeFailures.get(getPluginFailureKey(manifest.id, manifest.version));
+    const source = this.provenanceStore.get(manifest.id, manifest.version);
     return {
       pluginId: manifest.id,
       name: manifest.name,
@@ -652,10 +673,53 @@ export class PluginLifecycleManager {
         }),
       },
       grantedCapabilities: isActive ? [...active.grantedCapabilities] : [],
+      ...(source ? { source } : {}),
       status: isActive ? 'active' : 'installed',
       ...(isActive && active.contributionId !== undefined ? { activeContributionId: active.contributionId } : {}),
       ...(runtimeFailure ? { errorCode: runtimeFailure.code } : {}),
     };
+  }
+
+  private async loadProvenanceStore(): Promise<void> {
+    try {
+      await this.provenanceStore.load();
+    }
+    catch (error) {
+      // Provenance is advisory metadata. A damaged or unavailable sidecar
+      // must not hide an otherwise valid installed package.
+      if (!(error instanceof PluginProvenanceStoreError)) {
+        console.error('Failed to load plugin provenance.', error);
+      }
+    }
+  }
+
+  private async updateProvenance(
+    pluginId: string,
+    version: string,
+    source: DesktopPluginMarketplaceInstallSource | undefined,
+  ): Promise<void> {
+    try {
+      if (source) {
+        await this.provenanceStore.set(pluginId, version, source);
+      }
+      else {
+        await this.provenanceStore.remove(pluginId, version);
+      }
+    }
+    catch (error) {
+      // Keep installation successful when only the optional provenance sidecar
+      // cannot be persisted. The signed package remains the source of truth.
+      console.error('Failed to persist plugin provenance.', error);
+    }
+  }
+
+  private async removeProvenance(pluginId: string, version: string): Promise<void> {
+    try {
+      await this.provenanceStore.remove(pluginId, version);
+    }
+    catch (error) {
+      console.error('Failed to remove plugin provenance.', error);
+    }
   }
 
   private invalidSnapshot(pluginId: string, version: string, errorCode: string): PluginLifecycleSnapshot {

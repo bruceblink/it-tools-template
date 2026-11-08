@@ -18,7 +18,10 @@ import {
   verifyInstalledPluginPackage,
 } from './plugin-lifecycle';
 import type { PluginSandboxRegistration } from './plugin-sandbox';
-import type { DesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
+import type {
+  DesktopPluginMarketplaceInstallSource,
+  DesktopPluginStateChangeEvent,
+} from '../src/shared/desktop-services/plugins';
 
 const pluginId = 'org.example.sandbox';
 const pluginIds = [pluginId, 'org.example.plugin-1', 'org.example.plugin-2', 'org.example.plugin-3', 'org.example.plugin-4'];
@@ -78,6 +81,37 @@ describe('Electron plugin lifecycle manager', () => {
       reason: 'installed',
     }]);
     expect(await manager.listInstalled()).toEqual([installed]);
+  });
+
+  it('persists marketplace provenance outside the signed package and removes it on uninstall', async () => {
+    const { root, installRoot, manager, createWindow } = await createManager();
+    const source: DesktopPluginMarketplaceInstallSource = {
+      repository: 'example/demo-plugin',
+      tagName: 'v1.0.0',
+      commitSha: 'a'.repeat(40),
+      assetName: 'demo.itplugin',
+      assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+      archiveBytes: 128,
+      sha256: 'b'.repeat(64),
+    };
+    const archivePath = await writeArchive(root, '1.0.0');
+
+    const installed = await manager.installArchive(archivePath, source);
+    expect(installed.source).toEqual(source);
+
+    const reloaded = createManagerForRoot({
+      installRoot,
+      trustedSigningKeys,
+      createWindow,
+    });
+    await expect(reloaded.listInstalled()).resolves.toEqual([expect.objectContaining({
+      pluginId,
+      version: '1.0.0',
+      source,
+    })]);
+
+    await expect(reloaded.uninstall(pluginId, '1.0.0')).resolves.toBe(true);
+    expect((await reloaded.listInstalled())).toEqual([]);
   });
 
   it('starts a package that declares a known capability not implemented by this host', async () => {
