@@ -31,6 +31,7 @@ describe('PluginMarketplaceInstallController', () => {
     const controller = new PluginMarketplaceInstallController({
       tempRoot,
       fetch: fetcher,
+      fetchReleaseAsset: fetcher,
       installArchive: async () => ({ installed: true }),
     });
     const progress: string[] = [];
@@ -61,6 +62,7 @@ describe('PluginMarketplaceInstallController', () => {
     const controller = new PluginMarketplaceInstallController({
       tempRoot,
       fetch: fetcher,
+      fetchReleaseAsset: fetcher,
       installArchive: async () => ({ installed: true }),
     });
     const first = controller.start(

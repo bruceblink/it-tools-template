@@ -9,12 +9,6 @@ import type {
 import { pluginPackageLimits } from './plugin-package';
 
 const githubApiOrigin = 'https://api.github.com';
-const githubDownloadHosts = new Set([
-  'github.com',
-  'objects.githubusercontent.com',
-  'github-releases.githubusercontent.com',
-  'release-assets.githubusercontent.com',
-]);
 const githubOwnerPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 const githubRepositoryPattern = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/;
 const shaPattern = /^[a-f0-9]{40}$/i;
@@ -50,6 +44,8 @@ export interface PluginMarketplaceInstallResult<TSnapshot> {
 export interface PluginMarketplaceInstallDependencies<TSnapshot> {
   readonly tempRoot: string;
   readonly fetch: (url: string, init?: RequestInit) => Promise<Response>;
+  /** Fetch the asset only after validating every redirect before following it. */
+  readonly fetchReleaseAsset: (url: string, init?: Pick<RequestInit, 'signal'>) => Promise<Response>;
   readonly installArchive: (archivePath: string, source?: PluginMarketplaceReleaseSource) => Promise<TSnapshot>;
   readonly signal?: AbortSignal;
   readonly onProgress?: (progress: PluginMarketplaceInstallProgress) => void;
@@ -335,47 +331,27 @@ async function downloadReleaseAsset<TSnapshot>(
   throwIfAborted(dependencies.signal);
   let response: Response;
   try {
-    response = await dependencies.fetch(release.asset.url, {
-      redirect: 'follow',
+    response = await dependencies.fetchReleaseAsset(release.asset.url, {
       signal: dependencies.signal,
-      headers: { Accept: 'application/octet-stream' },
     });
   }
-  catch (error) {
+  catch {
     if (dependencies.signal?.aborted) {
       throw marketplaceCancelled();
     }
-    throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release asset could not be downloaded.', { cause: error });
+    throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release asset could not be downloaded.');
   }
   if (!response.ok) {
+    await response.body?.cancel();
     throw new PluginMarketplaceInstallError('marketplace-download-failed', `The plugin release asset returned status ${response.status}.`);
-  }
-  let finalUrl: URL;
-  try {
-    if (!response.url) {
-      throw new Error('The release response did not expose its final URL.');
-    }
-    finalUrl = new URL(response.url);
-  }
-  catch (error) {
-    throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release redirect was invalid.', { cause: error });
-  }
-  if (
-    finalUrl.protocol !== 'https:'
-    || !githubDownloadHosts.has(finalUrl.hostname.toLowerCase())
-    || finalUrl.port
-    || finalUrl.username
-    || finalUrl.password
-    || finalUrl.search
-    || finalUrl.hash
-  ) {
-    throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release redirected to an unapproved host.');
   }
   const contentLength = getContentLength(response.headers);
   if (contentLength !== undefined && (contentLength <= 0 || contentLength > pluginPackageLimits.maximumArchiveBytes)) {
+    await response.body?.cancel();
     throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release asset exceeds the archive size limit.');
   }
   if (contentLength !== undefined && contentLength !== release.asset.size) {
+    await response.body?.cancel();
     throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The downloaded plugin release size does not match the published asset.');
   }
   const totalBytes = release.asset.size;
@@ -416,11 +392,11 @@ async function downloadReleaseAsset<TSnapshot>(
       try {
         next = await reader.read();
       }
-      catch (error) {
+      catch {
         if (dependencies.signal?.aborted) {
           throw marketplaceCancelled();
         }
-        throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release asset could not be read.', { cause: error });
+        throw new PluginMarketplaceInstallError('marketplace-download-failed', 'The plugin release asset could not be read.');
       }
       if (next.done) {
         break;

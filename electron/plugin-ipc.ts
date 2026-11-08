@@ -21,6 +21,7 @@ import { PluginTrustStore, PluginTrustStoreError } from './plugin-trust-store';
 import type { PluginSignerInput } from './plugin-trust-store';
 import { PluginMarketplaceInstallError } from './plugin-marketplace-installer';
 import { PluginMarketplaceInstallController } from './plugin-marketplace-controller';
+import { createMarketplaceReleaseFetcher } from './plugin-marketplace-download';
 import type {
   DesktopPluginErrorCode,
   DesktopPluginMarketplaceInstallInput,
@@ -81,9 +82,11 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       mainWindow.webContents.send('desktop:plugins:changed', event);
     },
   });
+  const fetchReleaseAsset = createMarketplaceReleaseFetcher(net);
   const marketplaceController = new PluginMarketplaceInstallController({
     tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
     fetch: (url, init) => net.fetch(url, init),
+    fetchReleaseAsset,
     installArchive: (archivePath, source) => lifecycleManager.installArchive(archivePath, source),
   });
 
