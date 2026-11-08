@@ -87,14 +87,24 @@ The build also writes dist/bundle-report.json, which records shell, route, worke
 
 ~~~sh
 corepack enable
-pnpm install
-pnpm dev
+corepack pnpm setup:dev
+corepack pnpm dev
+~~~
+
+`setup:dev` installs the locked dependencies and verifies the Electron runtime used by the desktop app and Electron tests. If `HTTP_PROXY` or `HTTPS_PROXY` is configured, the setup command enables proxy support only for the Electron download. Use `corepack pnpm env:check` to check the toolchain without changing files. Browser acceptance tests need one additional download:
+
+~~~sh
+corepack pnpm setup:browsers
 ~~~
 
 ### Useful commands
 
 | Command | Purpose |
 |---|---|
+| corepack pnpm setup:dev | Install locked dependencies and the Electron runtime |
+| corepack pnpm setup:electron | Install or verify the Electron runtime |
+| corepack pnpm setup:browsers | Install Playwright browsers for browser E2E tests |
+| corepack pnpm env:check | Check Node.js, pnpm, and Electron without downloading |
 | pnpm dev | Start Vite with hot reload |
 | pnpm build | Build the production web/PWA bundle |
 | pnpm preview | Serve dist locally |
@@ -139,9 +149,9 @@ Tool metadata controls platform visibility, route registration, search, offline 
 The desktop app shares the tool catalog and Vue UI while adding local capabilities through a sandboxed preload bridge. External .itplugin packages are currently Electron-only.
 
 ~~~sh
-pnpm exec install-electron
-pnpm electron:dev
-pnpm electron:build
+corepack pnpm setup:electron
+corepack pnpm electron:dev
+corepack pnpm electron:build
 ~~~
 
 Create installers with:

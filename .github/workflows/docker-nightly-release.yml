@@ -80,7 +80,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Electron runtime
-        run: pnpm exec install-electron
+        run: pnpm setup:electron
 
       - name: Build desktop package
         run: pnpm ${{ matrix.package-script }}
