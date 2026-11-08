@@ -11,10 +11,10 @@ tools:
       network: 网络
   api-client:
     title: API 客户端
-    description: 在 Electron 桌面应用中发送受限 HTTP 请求并查看响应。
+    description: 在桌面应用中发送受限 HTTP 请求并查看响应。
   git-workbench:
     title: Git 工作台
-    description: 在 Electron 桌面应用中查看本地 Git 仓库。
+    description: 在桌面应用中查看本地 Git 仓库。
   object-storage:
     title: 对象存储
     description: 查看 S3 兼容 Bucket 的对象和文本预览。

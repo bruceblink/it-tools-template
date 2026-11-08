@@ -209,7 +209,7 @@ This plugin was generated for IT Tools plugin API ${pluginApiVersion}.
 2. Use the self-contained SDK declarations in \`types/\` when writing TypeScript.
 3. Generate a signing key outside the repository and run \`pnpm plugin:pack\`.
 
-The generated contribution is metadata only. It does not grant capabilities or execute host operations until the user approves a matching capability in the Electron settings page.
+The generated contribution is metadata only. It does not grant capabilities or execute host operations until the user approves a matching capability in the desktop settings page.
 `],
   ]);
   for (const fileName of sdkTypeFiles) {

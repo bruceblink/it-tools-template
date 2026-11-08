@@ -41,7 +41,7 @@ topic:it-tools-plugin archived:false fork:false
 - Web 和 Electron 共用目录页面；Electron 卡片提供“安装最新 Release”，Web 页面只提供导航和参考信息；自定义 API 代理不会显示固定 GitHub 直装按钮；
 - Electron 页面显示发现、下载、校验和安装进度，支持取消和重试；直装失败时显示稳定错误类型，用户可回到插件设置核对签名者或改用仓库说明中的开发者构建流程。
 
-## Electron 直装约定
+## 桌面直装约定
 
 直装按钮只接受符合以下条件的仓库和 Release：
 

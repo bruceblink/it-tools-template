@@ -26,7 +26,7 @@ const messages = {
   en: {
     title: 'External plugin tool',
     loading: 'Loading signed tool metadata…',
-    unavailable: 'External plugin tools are available only in the Electron desktop app.',
+    unavailable: 'External plugin tools are available only in the desktop app.',
     notFound: 'This signed plugin tool is not installed or is no longer available.',
     loadError: 'The signed plugin metadata could not be loaded.',
     package: 'Plugin package',
@@ -49,7 +49,7 @@ const messages = {
   zh: {
     title: '外部插件工具',
     loading: '正在加载已签名的工具元数据…',
-    unavailable: '外部插件工具只支持 Electron 桌面应用。',
+    unavailable: '外部插件工具只支持桌面应用。',
     notFound: '此签名插件工具尚未安装，或已经不可用。',
     loadError: '无法加载已签名的插件元数据。',
     package: '插件包',

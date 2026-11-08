@@ -150,7 +150,7 @@ function printReport(report, json) {
     `Validated ${report.pluginId} ${report.version} (${report.fileCount} files, ${report.expandedBytes} bytes)`,
     `TypeScript check: ${typecheckLine}`,
     `Signed package (${report.package.archiveBytes} bytes): ${report.package.outputPath}`,
-    'Next step: install the package in Electron Settings, verify the signer fingerprint, and approve only the capabilities you need.',
+    'Next step: install the package in desktop Settings, verify the signer fingerprint, and approve only the capabilities you need.',
     '',
   ].join('\n'));
 }
@@ -171,7 +171,7 @@ export function getUsage() {
     '  pnpm run plugin:build -- --source <plugin-directory> --private-key <external.pem> --key-id <publisher> --output <package.itplugin> [--tsconfig <project.json>] [--json]',
     '',
     'The command validates the source before signing, optionally runs the repository TypeScript compiler against an external project configuration, and never overwrites an existing package.',
-    'Keep private keys outside the repository and treat the generated package as untrusted until the Electron host verifies its signer.',
+    'Keep private keys outside the repository and treat the generated package as untrusted until the desktop host verifies its signer.',
     '',
   ].join('\n');
 }

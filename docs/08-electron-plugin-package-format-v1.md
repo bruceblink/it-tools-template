@@ -1,6 +1,6 @@
-# Electron Plugin Package Format v1
+# Desktop Plugin Package Format v1
 
-Status: experimental. The package validator, staging service, capability broker, lifecycle service, local signer trust store, desktop management UI, signing and packaging CLI, and maintained capability demo source exist. The repository ships no production signing key, prebuilt signed package, automatic updater, or public plugin catalog. See the [Electron Plugin MVP Quickstart](11-electron-plugin-mvp-quickstart.md).
+Status: experimental. The package validator, staging service, capability broker, lifecycle service, local signer trust store, desktop management UI, signing and packaging CLI, and maintained capability demo source exist. The repository ships no production signing key, prebuilt signed package, automatic updater, or public plugin catalog. See the [Desktop Plugin MVP Quickstart](11-electron-plugin-mvp-quickstart.md).
 
 ## Scope
 

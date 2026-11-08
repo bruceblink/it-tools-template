@@ -21,7 +21,7 @@
 | 能力代理 | Capability Broker | 校验来源、输入、宿主支持和用户授权，再执行受限操作 |
 | 应用壳 | Application Shell | 启动 HTML、静态依赖、样式、字体和图标；不含全部动态工具 |
 
-## 2. Web 与 Electron 平台边界
+## 2. Web 与桌面平台边界
 
 Web/PWA 与 Electron 共享 Vue 组件、工具注册、路由、校验、主题和翻译。平台启动、文件对话框、原生权限、存储、窗口生命周期和发布分别实现。Ramag 是独立产品；两项目不共享运行时、代码、接口协议或发布产物，能力范围见[归属矩阵](14-cross-project-capability-matrix.md)。
 

@@ -15,14 +15,14 @@
   <img alt="Tech stack" src="https://img.shields.io/badge/stack-Vue%203%20%2B%20Vite%20%2B%20Naive%20UI-42b883">
 </p>
 
-IT Tools is a privacy-friendly collection of browser-based utilities. The web app processes normal tool input locally in the browser, works as a PWA, and does not require an application server for the built-in tools. The same Vue interface also powers an Electron desktop app with local database, system, storage, and container workbenches.
+IT Tools is a privacy-friendly collection of browser-based utilities. The web app processes normal tool input locally in the browser, works as a PWA, and does not require an application server for the built-in tools. The same Vue interface also powers a desktop app with local database, system, storage, and container workbenches.
 
-This repository is a maintained fork of [CorentinTh/it-tools](https://github.com/CorentinTh/it-tools). It adds more tools, broader translations, lazy route loading, offline caching, platform-aware tool registration, and an Electron extension surface.
+This repository is a maintained fork of [CorentinTh/it-tools](https://github.com/CorentinTh/it-tools). It adds more tools, broader translations, lazy route loading, offline caching, platform-aware tool registration, and a desktop extension surface.
 
 ## What is included
 
 - **117 web tools** in Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, and Data.
-- **Electron-only workbenches** for database management, system monitoring, API requests, Git, object storage, and containers.
+- **Desktop workbenches** for database management, system monitoring, API requests, Git, object storage, and containers.
 - **Nine web languages:** English, Chinese, German, French, Spanish, Portuguese, Ukrainian, Vietnamese, and Norwegian.
 - **PWA support:** the application shell is precached; visited tool assets are cached by the service worker for later offline use.
 - **On-demand navigation:** tool routes and heavy dependencies load when needed; the web app delays service-worker registration to reduce contention with the first tool navigation.
@@ -144,9 +144,9 @@ pnpm run script:create:tool my-tool-name \
 
 Tool metadata controls platform visibility, route registration, search, offline labels, and the Web/Electron build boundary. Web builds must not include Electron-only drivers or IPC modules.
 
-## Electron desktop app
+## Desktop app
 
-The desktop app shares the tool catalog and Vue UI while adding local capabilities through a sandboxed preload bridge. External .itplugin packages are currently Electron-only.
+The desktop app shares the tool catalog and Vue UI while adding local capabilities through a sandboxed preload bridge. External .itplugin packages are currently desktop-only.
 
 ~~~sh
 corepack pnpm setup:electron
@@ -184,7 +184,7 @@ The generated package is metadata and UI only. Validate it before creating signi
 pnpm plugin:validate -- --source plugins/org.example.my-plugin
 ~~~
 
-The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
+The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the desktop host and user approve it.
 
 For a repeatable external-project build, run one command. It validates the source, runs the repository TypeScript compiler when you provide an external `tsconfig.json`, and signs without overwriting an existing package:
 
@@ -194,20 +194,20 @@ pnpm plugin:build -- --source ./dist/plugin --tsconfig ./tsconfig.json \
   --key-id plugin-publisher --output ./artifacts/plugin.itplugin
 ~~~
 
-In Electron Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
+In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
 
 ## Plugin marketplace
 
-Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In Electron, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
+Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In the desktop app, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
 
-Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a plugin.source.json manifest, and publish exactly one signed `.itplugin` asset in the latest stable Release for Electron direct install. The page reads source metadata only as reference data; signing, trust, capability approval, and installation remain part of the Electron workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
+Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a plugin.source.json manifest, and publish exactly one signed `.itplugin` asset in the latest stable Release for desktop direct install. The page reads source metadata only as reference data; signing, trust, capability approval, and installation remain part of the desktop workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
 
 ## Architecture and project docs
 
 The [main development plan](docs/01-development-plan.md) is the only document that tracks priorities, unfinished work, code review findings, and acceptance conditions. The documents below are technical references only; they do not contain a second roadmap or schedule. Completed plans and duplicate development logs have been removed; Git retains their history. The unapproved Excalidraw assessment is archived under `docs/archive/`. Dated performance reports and licenses remain in `docs/`.
 
 - [Performance and plugin architecture](docs/07-performance-extensibility-design.md): loading, caching, platform boundaries, workers, and evidence limits
-- [Electron plugin package format](docs/08-electron-plugin-package-format-v1.md): signed archive format
+- [Desktop plugin package format](docs/08-electron-plugin-package-format-v1.md): signed archive format
 - [Plugin development API](docs/09-electron-plugin-capability-api-v1.md): versioned runtime interface
 - [Plugin lifecycle](docs/10-electron-plugin-lifecycle-v1.md): install, enable, disable, rollback, and uninstall
 - [Plugin quickstart](docs/11-electron-plugin-mvp-quickstart.md): development and local validation

@@ -1,4 +1,4 @@
-# Electron 插件 MVP 使用说明
+# 桌面插件 MVP 使用说明
 
 本文面向维护 IT Tools 插件的开发者和桌面应用用户。当前 MVP 只支持 Electron 桌面版的本地 `.itplugin` 包。Web 和 Docker 版继续使用仓库内置工具与第一方扩展，不加载外部包。
 

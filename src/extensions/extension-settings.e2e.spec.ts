@@ -23,7 +23,7 @@ test('manages tool settings from the global settings page', async ({ page }) => 
 
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await expect(page).toHaveURL(/\/settings$/);
-  await expect(page.getByText('External plugin packages are available only in the Electron desktop app. The web version continues to use built-in and first-party extensions.')).toBeVisible();
+  await expect(page.getByText('External plugin packages are available only in the desktop app. The web version continues to use built-in and first-party extensions.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Install signed package' })).toHaveCount(0);
 
   const maxRecords = page.getByRole('textbox', { name: 'Maximum JSON Lines records' });

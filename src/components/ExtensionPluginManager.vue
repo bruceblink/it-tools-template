@@ -66,9 +66,9 @@ const capabilities = computed(() => language.value === 'zh'
 
 const messages = {
   en: {
-    title: 'Electron plugin packages',
+    title: 'Desktop plugin packages',
     intro: 'Install signed packages, review requested capabilities, and run each package in an isolated window.',
-    webOnly: 'External plugin packages are available only in the Electron desktop app. The web version continues to use built-in and first-party extensions.',
+    webOnly: 'External plugin packages are available only in the desktop app. The web version continues to use built-in and first-party extensions.',
     refresh: 'Refresh',
     install: 'Install signed package',
     browseMarketplace: 'Browse plugin marketplace',
@@ -139,9 +139,9 @@ const messages = {
     operationFailed: 'The operation could not be completed.',
   },
   zh: {
-    title: 'Electron 插件包',
+    title: '桌面插件包',
     intro: '安装已签名的插件包，检查能力请求，并在隔离窗口中运行插件。',
-    webOnly: '外部插件包只支持 Electron 桌面应用。Web 版本继续使用内置和第一方扩展。',
+    webOnly: '外部插件包只支持桌面应用。Web 版本继续使用内置和第一方扩展。',
     refresh: '刷新',
     install: '安装已签名的插件包',
     browseMarketplace: '浏览插件市场',

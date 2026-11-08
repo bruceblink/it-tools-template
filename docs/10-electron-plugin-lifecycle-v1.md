@@ -1,4 +1,4 @@
-# Electron 插件生命周期服务 v1
+# 桌面插件生命周期服务 v1
 
 本文记录 `electron/plugin-lifecycle.ts`、`electron/plugin-trust-store.ts` 和 `electron/plugin-ipc.ts` 的职责和运行边界。该实现属于 P5 隔离试点。桌面设置页通过受限 IPC 使用生命周期服务；Web 版本不加载外部插件。
 

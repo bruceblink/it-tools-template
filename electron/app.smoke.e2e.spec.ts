@@ -239,11 +239,11 @@ test('migrates and persists first-party extension settings on the app origin', a
   await expect(page.getByRole('textbox', { name: 'Maximum JSON Lines records' })).toHaveValue('140');
 });
 
-test('loads the Electron plugin manager through the trusted desktop bridge', async () => {
+test('loads the desktop plugin manager through the trusted desktop bridge', async () => {
   await page.goto('app://bundle/settings');
-  await expect(page.getByRole('heading', { name: 'Electron plugin packages' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Desktop plugin packages' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Install signed package' })).toBeVisible();
-  await expect(page.getByText('No external plugin packages are installed.')).toBeVisible();
+  await expect(page.getByTestId('plugin-manager-onboarding')).toBeVisible();
 
   const results = await page.evaluate(async () => ({
     plugins: await window.itToolsDesktop!.listPlugins!(),

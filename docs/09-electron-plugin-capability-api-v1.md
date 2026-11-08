@@ -1,4 +1,4 @@
-# Electron 插件开发 API v1
+# 桌面插件开发 API v1
 
 本文定义 Electron 插件渲染器使用的稳定 JavaScript API v1。它只适用于 Electron 插件窗口。Web 插件和内置工具不能使用此接口。插件包 `formatVersion` 负责 ZIP 和签名格式；清单的 `apiVersion` 负责宿主 API 兼容范围；`window.itTools.apiVersion` 负责渲染器 JavaScript API 版本。这三项版本互不替代。
 

@@ -464,7 +464,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   const originalWindowClosed = pluginWindow.waitForEvent('close');
   await page.getByTestId(`plugin-package-${pluginId}-2.0.0`).getByRole('button', { name: 'Run plugin' }).click();
   await originalWindowClosed;
-  const pluginManager = page.getByRole('region', { name: 'Electron plugin packages' });
+  const pluginManager = page.getByRole('region', { name: 'Desktop plugin packages' });
   await expect(pluginManager.getByRole('alert')).toContainText('The package did not start. The previous version remains available.');
   await expect.poll(async () => (
     await electronApp.windows()

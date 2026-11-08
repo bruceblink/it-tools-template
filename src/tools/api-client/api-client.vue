@@ -40,8 +40,8 @@ const responseBodyLabel = computed(() => isChinese.value ? '响应正文' : 'Res
 const requestLabel = computed(() => isChinese.value ? '发送请求' : 'Send request');
 const cancelLabel = computed(() => isChinese.value ? '取消请求' : 'Cancel request');
 const idleText = computed(() => isChinese.value
-  ? '请求只在 Electron 主进程中执行。请求头、正文和响应均受大小限制。'
-  : 'Requests run in the Electron main process. Headers, bodies, and responses are size limited.');
+  ? '请求由桌面应用执行。请求头、正文和响应均受大小限制。'
+  : 'Requests run in the desktop app. Headers, bodies, and responses are size limited.');
 const errorText = computed(() => {
   if (!error.value) {
     return '';
