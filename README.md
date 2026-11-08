@@ -22,7 +22,9 @@ This repository is a maintained fork of [CorentinTh/it-tools](https://github.com
 ## What is included
 
 - **117 web tools** in Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, and Data.
-- **Desktop workbenches** for database management, system monitoring, API requests, Git, object storage, and containers.
+- **Desktop workbenches** for PostgreSQL, MySQL, and SQLite databases; system monitoring; API requests; Git; S3-compatible object storage; and read-only Docker container browsing.
+- **Extensions and plugins:** trusted first-party extensions and signed external desktop plugins with separate signer trust and capability approval.
+- **Desktop updates:** optional automatic checks and user-confirmed download and installation from GitHub Releases.
 - **Nine web languages:** English, Chinese, German, French, Spanish, Portuguese, Ukrainian, Vietnamese, and Norwegian.
 - **PWA support:** the application shell is precached; visited tool assets are cached by the service worker for later offline use.
 - **On-demand navigation:** tool routes and heavy dependencies load when needed; the web app delays service-worker registration to reduce contention with the first tool navigation.
@@ -204,6 +206,22 @@ Plugin authors should add the it-tools-plugin topic, keep a clear README, commit
 
 ## Architecture and project docs
 
+The web and desktop apps share the same Vue application, tool catalog, routes, translations, and UI. The two entry points differ at the platform boundary:
+
+| Component | Responsibility |
+|---|---|
+| Shared app (`src/app.ts`, `src/router.ts`) | Mounts Vue, Pinia, routing, translations, and the UI providers. Routes load tool pages on demand. |
+| Tool registry (`src/tools/`) | Defines tool identity, category, supported platforms, data-processing mode, offline availability, and required capabilities. |
+| Web entry (`src/main.ts`) | Runs browser-supported tools and registers the PWA service worker after startup. |
+| Desktop host (`electron/`, `electron-renderer/`) | Reuses the shared UI and exposes local workbenches through a narrow preload and IPC interface. Main-process services own native operations and their resources. |
+| Extension host (`src/extensions/`, `electron/plugin-*`) | Loads trusted first-party extensions and manages signed external plugins in isolated desktop windows. |
+
+For example, a tool route is selected from the registry, filtered for the current platform, and loaded when the user opens it. Browser operations use the platform adapter. Desktop-only workbenches call the preload bridge, which forwards the request to the responsible host service. The web build must not include desktop drivers or IPC modules.
+
+The interface is designed for repeated practical work: tools are searchable and grouped by category, favorites remain available across sessions, and larger workbenches keep their own controls close to their data. The shared interface supports light and dark themes and adapts to narrow windows. Tool input is processed locally unless a tool explicitly needs network access; its declared data-processing and capability metadata describe that boundary.
+
+The plugin marketplace is a read-only GitHub directory, not a package host. A desktop installation downloads a signed package and passes it to the existing verifier. Trusting a signer and granting capabilities are separate user decisions. Release metadata records where the package was obtained; it does not prove that the package was built from the displayed commit.
+
 The [main development plan](docs/01-development-plan.md) is the only document that tracks priorities, unfinished work, code review findings, and acceptance conditions. The documents below are technical references only; they do not contain a second roadmap or schedule. Completed plans and duplicate development logs have been removed; Git retains their history. The unapproved Excalidraw assessment is archived under `docs/archive/`. Dated performance reports and licenses remain in `docs/`.
 
 - [Performance and plugin architecture](docs/07-performance-extensibility-design.md): loading, caching, platform boundaries, workers, and evidence limits
@@ -220,7 +238,7 @@ The [main development plan](docs/01-development-plan.md) is the only document th
 - [Desktop updates](docs/19-desktop-updates.md): update checks, differential downloads, installation confirmation, and release files
 - [Plugin install flow](docs/21-plugin-install-flow.md): read-only GitHub discovery, signed release installation, and explicit developer source builds
 
-The application is organized around Vue route pages, a typed tool registry, Pinia stores, local i18n resources, and platform adapters. Route components and heavy workers are loaded only when needed. The service worker caches same-origin build assets with a bounded per-build cache.
+Route components and heavy workers are loaded only when needed. The service worker caches same-origin build assets with a bounded per-build cache. See the performance and plugin architecture document for the limits and platform-specific details.
 
 ## Release and contribution workflow
 
