@@ -74,3 +74,67 @@ test('plugin marketplace lists repositories and opens manifest reference details
   expect(apiRequests.every(url => !url.includes('.itplugin'))).toBe(true);
   expect(pageErrors).toEqual([]);
 });
+
+test('desktop marketplace can install a repository release through the host bridge', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, {
+      itToolsDesktop: {
+        installPluginFromMarketplace: async () => ({
+          ok: true,
+          value: {
+            snapshot: {
+              pluginId: 'org.example.demo',
+              name: 'Demo plugin',
+              version: '1.0.0',
+            },
+            source: {
+              repository: 'example/demo-plugin',
+              tagName: 'v1.0.0',
+              commitSha: 'a'.repeat(40),
+              assetName: 'demo.itplugin',
+              assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+              archiveBytes: 128,
+              sha256: 'b'.repeat(64),
+            },
+          },
+        }),
+      },
+    });
+  });
+  await page.route('https://api.github.com/search/repositories**', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        total_count: 1,
+        incomplete_results: false,
+        items: [{
+          id: 42,
+          full_name: 'example/demo-plugin',
+          name: 'demo-plugin',
+          owner: { login: 'example' },
+          html_url: 'https://github.com/example/demo-plugin',
+          description: 'A demo plugin',
+          topics: ['it-tools-plugin'],
+          language: 'TypeScript',
+          license: { spdx_id: 'MIT' },
+          stargazers_count: 7,
+          forks_count: 2,
+          open_issues_count: 0,
+          updated_at: '2026-01-01T00:00:00Z',
+          pushed_at: '2026-01-01T00:00:00Z',
+          default_branch: 'main',
+          archived: false,
+          disabled: false,
+        }],
+      }),
+    });
+  });
+
+  await page.goto('/plugin-marketplace');
+  const repositoryCard = page.getByTestId('plugin-repository-42');
+  await expect(repositoryCard.getByRole('button', { name: 'Install latest release' })).toBeVisible();
+  await repositoryCard.getByRole('button', { name: 'Install latest release' }).click();
+  await expect(page.getByText('Installed Demo plugin 1.0.0 from release v1.0.0.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Open plugin settings' })).toHaveAttribute('href', '/settings');
+});

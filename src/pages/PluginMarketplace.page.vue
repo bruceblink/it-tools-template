@@ -29,6 +29,19 @@ const selectedManifest = ref<PluginManifestSummary | null>();
 const manifestLoading = ref(false);
 const manifestError = ref('');
 const detailsVisible = ref(false);
+const installingRepositoryId = ref<number>();
+const installNotice = ref('');
+const installError = ref('');
+const installErrorCode = ref<string>();
+const installErrorRepository = ref<PluginMarketplaceRepository>();
+
+const canInstallFromMarketplace = computed(() => (
+  typeof window !== 'undefined' && typeof window.itToolsDesktop?.installPluginFromMarketplace === 'function'
+));
+
+const installErrorNeedsSettings = computed(() => (
+  installErrorCode.value === 'untrusted-signature' || installErrorCode.value === 'already-installed'
+));
 
 let repositoryController: AbortController | undefined;
 let manifestController: AbortController | undefined;
@@ -82,6 +95,63 @@ function getErrorMessage(error: unknown): string {
     }
   }
   return t('pluginMarketplace.errors.unavailable');
+}
+
+function getInstallErrorMessage(error: string): string {
+  if (error === 'untrusted-signature') {
+    return t('pluginMarketplace.installErrors.untrustedSignature');
+  }
+  if (error === 'marketplace-release-not-found') {
+    return t('pluginMarketplace.installErrors.releaseNotFound');
+  }
+  if (error === 'marketplace-download-failed') {
+    return t('pluginMarketplace.installErrors.downloadFailed');
+  }
+  if (error === 'marketplace-invalid-repository') {
+    return t('pluginMarketplace.installErrors.invalidRepository');
+  }
+  if (error === 'already-installed') {
+    return t('pluginMarketplace.installErrors.alreadyInstalled');
+  }
+  return t('pluginMarketplace.installErrors.unavailable');
+}
+
+function isInstalling(repository: PluginMarketplaceRepository): boolean {
+  return installingRepositoryId.value === repository.id;
+}
+
+async function installRepository(repository: PluginMarketplaceRepository): Promise<void> {
+  const install = window.itToolsDesktop?.installPluginFromMarketplace;
+  if (!install || installingRepositoryId.value !== undefined) {
+    return;
+  }
+  installingRepositoryId.value = repository.id;
+  installNotice.value = '';
+  installError.value = '';
+  installErrorCode.value = undefined;
+  installErrorRepository.value = undefined;
+  try {
+    const result = await install({ owner: repository.ownerLogin, name: repository.name });
+    if (!result.ok) {
+      installErrorCode.value = result.error;
+      installError.value = getInstallErrorMessage(result.error);
+      installErrorRepository.value = repository;
+      return;
+    }
+    installNotice.value = t('pluginMarketplace.installSuccess', {
+      name: result.value.snapshot.name,
+      version: result.value.snapshot.version,
+      tag: result.value.source.tagName,
+    });
+  }
+  catch {
+    installErrorCode.value = 'operation-failed';
+    installError.value = t('pluginMarketplace.installErrors.unavailable');
+    installErrorRepository.value = repository;
+  }
+  finally {
+    installingRepositoryId.value = undefined;
+  }
 }
 
 async function loadRepositories(append = false): Promise<void> {
@@ -217,6 +287,32 @@ onBeforeUnmount(() => {
       {{ sourceDescription }}
     </n-alert>
 
+    <n-alert v-if="installNotice" class="marketplace-install-notice" type="success" :show-icon="false" role="status">
+      <div class="marketplace-error-content">
+        <span>{{ installNotice }}</span>
+        <n-button tag="a" href="/settings" size="small" secondary>
+          {{ t('pluginMarketplace.openSettings') }}
+        </n-button>
+      </div>
+    </n-alert>
+    <n-alert v-if="installError" class="marketplace-install-error" type="error" :show-icon="false" role="alert">
+      <div class="marketplace-error-content">
+        <span>{{ installError }}</span>
+        <n-button
+          v-if="installErrorRepository"
+          size="small"
+          secondary
+          :loading="isInstalling(installErrorRepository)"
+          @click="installRepository(installErrorRepository)"
+        >
+          {{ t('pluginMarketplace.retryInstall') }}
+        </n-button>
+        <n-button v-if="installErrorNeedsSettings" tag="a" href="/settings" size="small" secondary>
+          {{ t('pluginMarketplace.openSettings') }}
+        </n-button>
+      </div>
+    </n-alert>
+
     <form class="marketplace-toolbar" role="search" @submit.prevent="submitSearch">
       <n-input
         v-model:value="searchInput"
@@ -293,6 +389,16 @@ onBeforeUnmount(() => {
             <div class="repository-actions">
               <n-button size="small" @click="showDetails(repository)">
                 {{ t('pluginMarketplace.details') }}
+              </n-button>
+              <n-button
+                v-if="canInstallFromMarketplace"
+                size="small"
+                secondary
+                :loading="isInstalling(repository)"
+                :disabled="installingRepositoryId !== undefined && !isInstalling(repository)"
+                @click="installRepository(repository)"
+              >
+                {{ t('pluginMarketplace.installRelease') }}
               </n-button>
               <n-button
                 tag="a"
@@ -385,6 +491,15 @@ onBeforeUnmount(() => {
 
       <template #footer>
         <div v-if="selectedRepository" class="repository-actions">
+          <n-button
+            v-if="canInstallFromMarketplace"
+            secondary
+            :loading="isInstalling(selectedRepository)"
+            :disabled="installingRepositoryId !== undefined && !isInstalling(selectedRepository)"
+            @click="installRepository(selectedRepository)"
+          >
+            {{ t('pluginMarketplace.installRelease') }}
+          </n-button>
           <n-button
             tag="a"
             :href="selectedRepository.htmlUrl + '#readme'"

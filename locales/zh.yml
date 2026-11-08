@@ -34,8 +34,8 @@ pluginMarketplace:
   eyebrow: '社区插件'
   title: '插件市场'
   pageTitle: '插件市场 - IT-Tools'
-  intro: '浏览由社区维护的 GitHub 插件仓库。这里仅读取公开元数据并跳转到源码仓库，不存储或分发插件包。'
-  sourceDescription: '当前展示带有 GitHub topic “{topic}” 的公开仓库。安装前请自行检查源码、签名者、权限和插件包。'
+  intro: '浏览由社区维护的 GitHub 插件仓库。这里读取公开元数据并跳转到源码仓库；Electron 也可以通过宿主临时获取符合条件的已签名 Release 并在本机安装。'
+  sourceDescription: '当前展示带有 GitHub topic “{topic}” 的公开仓库。安装前请检查源码、签名者、权限和插件包；Electron 直装只接受已签名 Release。'
   openApi: '打开 API'
   searchLabel: '搜索插件'
   searchPlaceholder: '按插件名称、说明或 topic 搜索'
@@ -52,6 +52,10 @@ pluginMarketplace:
   updatedAt: '更新于 {date}'
   details: '详情'
   openRepository: '打开仓库'
+  installRelease: '安装最新 Release'
+  installSuccess: '已从 Release {tag} 安装 {name} {version}。运行前请到设置页检查能力。'
+  openSettings: '打开插件设置'
+  retryInstall: '重试安装'
   readReadme: '阅读 README'
   detailRepository: '仓库'
   detailLicense: '许可证'
@@ -71,6 +75,13 @@ pluginMarketplace:
     notFound: '找不到请求的插件元数据。'
     rateLimit: 'GitHub API 已达到速率限制，请稍后重试。'
     rateLimitUntil: 'GitHub API 已达到速率限制，请在 {time} 后重试。'
+  installErrors:
+    unavailable: 'Electron 宿主无法完成 GitHub Release 安装。'
+    invalidRepository: '此仓库不是符合条件的 IT Tools 插件来源。'
+    releaseNotFound: '最新 Release 没有恰好一个受大小限制的 .itplugin 资产。'
+    downloadFailed: 'Release 资产下载失败，或下载内容的哈希不匹配。'
+    untrustedSignature: '此 Release 使用了未受信任的发布者签名。请先在插件设置中核对并信任签名者，再重试。'
+    alreadyInstalled: '此插件版本已经安装。请打开插件设置运行或移除它。'
 about:
   content: >
     # 关于 IT-Tools

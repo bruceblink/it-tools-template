@@ -4,6 +4,7 @@ import {
   clipboard,
   dialog,
   ipcMain,
+  net,
   type BrowserWindow,
   type IpcMainInvokeEvent,
   type WebContents,
@@ -18,6 +19,11 @@ import { createPluginSandboxWindow } from './plugin-sandbox';
 import { PluginSettingsStore } from './plugin-settings-store';
 import { PluginTrustStore, PluginTrustStoreError } from './plugin-trust-store';
 import type { PluginSignerInput } from './plugin-trust-store';
+import {
+  installPluginMarketplaceRelease,
+  PluginMarketplaceInstallError,
+  type PluginMarketplaceRepositoryInput,
+} from './plugin-marketplace-installer';
 import type {
   DesktopPluginErrorCode,
   DesktopPluginOperationResult,
@@ -91,6 +97,11 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     }
     return lifecycleManager.installArchive(selection.filePaths[0]!);
   }));
+  ipcMain.handle('desktop:plugins:install-from-marketplace', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    () => installPluginFromMarketplace(value, dependencies, lifecycleManager),
+  ));
   ipcMain.handle('desktop:plugins:activate', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parseActivationRequest(value);
     const installed = await lifecycleManager.listInstalled();
@@ -306,10 +317,24 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
     error instanceof PluginLifecycleError
     || error instanceof PluginPackageError
     || error instanceof PluginTrustStoreError
+    || error instanceof PluginMarketplaceInstallError
   ) {
     return error.code;
   }
   return 'operation-failed';
+}
+
+async function installPluginFromMarketplace(
+  value: unknown,
+  dependencies: PluginIpcDependencies,
+  lifecycleManager: PluginLifecycleManager,
+) {
+  const repository = parseMarketplaceRepositoryRequest(value);
+  return installPluginMarketplaceRelease(repository, {
+    tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
+    fetch: (url, init) => net.fetch(url, init),
+    installArchive: archivePath => lifecycleManager.installArchive(archivePath),
+  });
 }
 
 function parseActivationRequest(value: unknown): {
@@ -342,6 +367,18 @@ function parsePluginIdRequest(value: unknown): string {
     throw new PluginIpcInputError();
   }
   return value.pluginId;
+}
+
+function parseMarketplaceRepositoryRequest(value: unknown): PluginMarketplaceRepositoryInput {
+  if (
+    !isRecord(value)
+    || !hasExactKeys(value, ['owner', 'name'])
+    || typeof value.owner !== 'string'
+    || typeof value.name !== 'string'
+  ) {
+    throw new PluginIpcInputError();
+  }
+  return { owner: value.owner, name: value.name };
 }
 
 function parsePluginVersionRequest(value: unknown): { pluginId: string; version: string } {

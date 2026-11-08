@@ -24,10 +24,34 @@ export const desktopPluginErrorCodes = Object.freeze([
   'invalid-request',
   'untrusted-renderer',
   'window-unavailable',
+  'marketplace-invalid-repository',
+  'marketplace-unavailable',
+  'marketplace-release-not-found',
+  'marketplace-download-failed',
   'operation-failed',
 ] as const);
 
 export type DesktopPluginErrorCode = typeof desktopPluginErrorCodes[number];
+
+export interface DesktopPluginMarketplaceInstallInput {
+  readonly owner: string;
+  readonly name: string;
+}
+
+export interface DesktopPluginMarketplaceInstallSource {
+  readonly repository: string;
+  readonly tagName: string;
+  readonly commitSha: string;
+  readonly assetName: string;
+  readonly assetUrl: string;
+  readonly archiveBytes: number;
+  readonly sha256: string;
+}
+
+export interface DesktopPluginMarketplaceInstallResult<TSnapshot> {
+  readonly snapshot: TSnapshot;
+  readonly source: DesktopPluginMarketplaceInstallSource;
+}
 
 /** Runtime failure codes attached to an installed package or tool contribution snapshot. */
 export const desktopPluginRuntimeFailureCodes = Object.freeze([

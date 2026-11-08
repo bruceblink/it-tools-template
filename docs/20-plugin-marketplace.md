@@ -1,6 +1,6 @@
 # 插件市场目录
 
-插件市场是一个只读目录，不存储、代理或分发插件包。插件仍由各自的 GitHub 仓库维护，用户从市场查看公开信息后跳转到仓库，再按仓库说明完成审查、签名和安装。
+插件市场是一个只读目录，不存储、代理或分发插件包。插件仍由各自的 GitHub 仓库维护，用户从市场查看公开信息后跳转到仓库，或在 Electron 中请求安装仓库发布的已签名 Release。直装下载由 Electron 主进程临时完成，完成校验后删除下载文件；市场本身不托管插件包。
 
 ## 发现规则
 
@@ -17,7 +17,7 @@ topic:it-tools-plugin archived:false fork:false
 - 推荐提交 plugin.source.json，市场会在详情窗口读取它的 API 版本、能力声明和工具贡献元数据；
 - 不要把私钥、凭据或未经审查的发布资产提交到仓库。
 
-市场读取 GitHub 的仓库元数据和 plugin.source.json 摘要，不执行仓库代码，不下载 .itplugin 文件，也不把结果写入应用后端。
+市场读取 GitHub 的仓库元数据和 plugin.source.json 摘要，不执行仓库代码，不在 Web 页面下载 .itplugin 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程复用本地安装器完成签名、哈希和资源限制校验。
 
 ## 配置
 
@@ -38,4 +38,16 @@ topic:it-tools-plugin archived:false fork:false
 - 卡片只显示仓库公开元数据；
 - 详情窗口可读取 plugin.source.json，但明确标记为参考信息；
 - “打开仓库”和 README 链接均在新窗口打开；
-- Web 和 Electron 共用目录页面；插件安装仍只在 Electron 管理器中完成。
+- Web 和 Electron 共用目录页面；Electron 卡片提供“安装最新 Release”，Web 页面只提供导航和参考信息；
+- 直装失败时页面显示稳定错误类型，用户可回到插件设置核对签名者或改用仓库说明中的开发者构建流程。
+
+## Electron 直装约定
+
+直装按钮只接受符合以下条件的仓库和 Release：
+
+- 仓库仍是公开、未归档、非 fork，并保留 `it-tools-plugin` topic；
+- 最新稳定 Release 恰好包含一个 `.itplugin` 资产，资产大小不超过宿主包上限，下载地址属于 GitHub Release 路径；
+- 主进程重新读取 Release tag 对应的 commit SHA，限制重定向到 GitHub 下载域名，并在写入临时目录后核对实际大小和 SHA-256；
+- 下载资产随后交给现有生命周期安装器，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
+
+市场不把源码直载作为安装回退。需要审查或开发时，使用固定 commit 的源码快照和 `plugin:build` 完成显式本地构建，边界见[插件市场安装流程](21-plugin-install-flow.md)。

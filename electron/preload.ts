@@ -37,6 +37,7 @@ import type {
   GitStatus,
 } from '../src/shared/desktop-services/git';
 import { isDesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
+import type { DesktopPluginMarketplaceInstallInput } from '../src/shared/desktop-services/plugins';
 import type { DesktopUpdateState } from '../src/shared/desktop-services/updates';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
@@ -149,6 +150,8 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     return () => ipcRenderer.removeListener('desktop:plugins:changed', listener);
   },
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
+  installPluginFromMarketplace: (input: DesktopPluginMarketplaceInstallInput) =>
+    ipcRenderer.invoke('desktop:plugins:install-from-marketplace', input),
   activatePlugin: (
     pluginId: string,
     version: string,

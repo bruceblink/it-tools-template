@@ -47,6 +47,8 @@ import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../
 import type { PluginHostCapability } from '../shared/plugin-capabilities';
 import type {
   DesktopPluginErrorCode as SharedDesktopPluginErrorCode,
+  DesktopPluginMarketplaceInstallInput as SharedDesktopPluginMarketplaceInstallInput,
+  DesktopPluginMarketplaceInstallResult as SharedDesktopPluginMarketplaceInstallResult,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
   DesktopPluginRuntimeFailureCode,
   DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
@@ -57,6 +59,8 @@ export {};
 declare global {
   type DesktopPluginCapability = PluginHostCapability;
   type DesktopPluginErrorCode = SharedDesktopPluginErrorCode;
+  type DesktopPluginMarketplaceInstallInput = SharedDesktopPluginMarketplaceInstallInput;
+  type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginSnapshot>;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
   type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
 
@@ -177,6 +181,9 @@ declare global {
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
+      installPluginFromMarketplace?(
+        input: DesktopPluginMarketplaceInstallInput,
+      ): Promise<DesktopPluginOperationResult<DesktopPluginMarketplaceInstallResult>>;
       activatePlugin?(
         pluginId: string,
         version: string,
