@@ -186,6 +186,8 @@ pnpm plugin:validate -- --source plugins/org.example.my-plugin
 
 The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the Electron host and user approve it.
 
+In Electron Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
+
 ## Plugin marketplace
 
 Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. It does not store, proxy, execute, or distribute plugin packages.

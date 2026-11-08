@@ -83,6 +83,11 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   test.setTimeout(90_000);
   await page.getByRole('link', { name: 'Settings' }).click();
   await expect(page).toHaveURL('app://bundle/settings');
+  await expect(page.getByTestId('plugin-manager-onboarding')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Browse plugin marketplace' })).toHaveAttribute(
+    'href',
+    '/plugin-marketplace',
+  );
   await electronApp.evaluate(({ clipboard }) => {
     let writeCount = 0;
     Object.defineProperty(clipboard, 'writeText', {
@@ -116,6 +121,8 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await page.getByRole('button', { name: 'Install signed package' }).click();
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`)).toBeVisible();
   const installedPluginCard = page.getByTestId(`plugin-package-${pluginId}-1.0.0`);
+  await expect(installedPluginCard.getByText(`Package ID: ${pluginId}`, { exact: true })).toBeVisible();
+  await expect(installedPluginCard.getByText('Requested 4 · supported 4 · selected 0 · active 0', { exact: true })).toBeVisible();
   await expect(installedPluginCard.getByText('Contributed tools', { exact: true })).toBeVisible();
   await expect(installedPluginCard.getByText('Review the capabilities and persistent settings granted to this plugin.', { exact: true })).toBeVisible();
   const contributionLink = installedPluginCard.getByRole('link', { name: 'Capability demo', exact: true });

@@ -71,6 +71,12 @@ const messages = {
     webOnly: 'External plugin packages are available only in the Electron desktop app. The web version continues to use built-in and first-party extensions.',
     refresh: 'Refresh',
     install: 'Install signed package',
+    browseMarketplace: 'Browse plugin marketplace',
+    onboardingTitle: 'Start with a trusted plugin source',
+    onboardingIntro: 'The marketplace is a read-only GitHub directory. Review the repository and publisher before installing a package.',
+    onboardingStepTrust: 'Verify the publisher fingerprint, then trust its public key below.',
+    onboardingStepInstall: 'Install the signed .itplugin file from the publisher.',
+    onboardingStepApprove: 'Select only the capabilities you need and approve the desktop prompt when you run it.',
     loading: 'Loading plugin packages…',
     empty: 'No external plugin packages are installed.',
     installed: 'Installed',
@@ -78,12 +84,22 @@ const messages = {
     invalid: 'Invalid or untrusted',
     tools: 'Contributed tools',
     requested: 'Requested capabilities',
+    capabilitySummary: 'Requested {requested} · supported {supported} · selected {selected} · active {active}',
+    capabilitySupported: 'Supported',
+    capabilitySelected: 'Selected for next run',
+    capabilityActive: 'Active now',
+    capabilityUnsupported: 'Unsupported',
     noCapabilities: 'This package requests no host capabilities.',
     unsupported: 'Not supported by this host',
     run: 'Run plugin',
     stop: 'Stop plugin',
     remove: 'Uninstall version',
     noGrant: 'A capability is used only after you select it and approve the desktop prompt.',
+    diagnostics: 'Diagnostics',
+    packageId: 'Package ID',
+    packageVersion: 'Package version',
+    activeContribution: 'Active contribution',
+    errorCode: 'Error code',
     pluginError: 'Plugin operation failed.',
     trustError: 'The signer trust store could not be loaded or updated.',
     signerTitle: 'Trusted plugin signers',
@@ -122,6 +138,12 @@ const messages = {
     webOnly: '外部插件包只支持 Electron 桌面应用。Web 版本继续使用内置和第一方扩展。',
     refresh: '刷新',
     install: '安装已签名的插件包',
+    browseMarketplace: '浏览插件市场',
+    onboardingTitle: '从受信任的插件来源开始',
+    onboardingIntro: '插件市场只是 GitHub 仓库的只读目录。安装插件包前，请先审查仓库和发布者。',
+    onboardingStepTrust: '核对发布者指纹，然后在下方信任其公钥。',
+    onboardingStepInstall: '安装发布者提供的已签名 .itplugin 文件。',
+    onboardingStepApprove: '只选择需要的能力，并在运行时确认桌面授权提示。',
     loading: '正在加载插件包…',
     empty: '尚未安装外部插件包。',
     installed: '已安装',
@@ -129,12 +151,22 @@ const messages = {
     invalid: '无效或不受信任',
     tools: '贡献的工具',
     requested: '请求的能力',
+    capabilitySummary: '已请求 {requested} · 宿主支持 {supported} · 下次运行将授权 {selected} · 当前已授权 {active}',
+    capabilitySupported: '宿主支持',
+    capabilitySelected: '下次运行将授权',
+    capabilityActive: '当前已授权',
+    capabilityUnsupported: '宿主不支持',
     noCapabilities: '此插件包没有请求宿主能力。',
     unsupported: '此宿主尚不支持',
     run: '运行插件',
     stop: '停止插件',
     remove: '卸载此版本',
     noGrant: '只有在你选中能力并确认桌面提示后，插件才能使用该能力。',
+    diagnostics: '诊断信息',
+    packageId: '插件包 ID',
+    packageVersion: '插件包版本',
+    activeContribution: '当前贡献项',
+    errorCode: '错误码',
     pluginError: '插件操作失败。',
     trustError: '无法读取或更新签名者信任存储。',
     signerTitle: '受信任的插件签名者',
@@ -186,6 +218,10 @@ function packageStatus(plugin: DesktopPluginSnapshot): string {
   return text('installed');
 }
 
+function capabilityLabel(capability: string): string {
+  return capabilities.value.find(item => item.id === capability)?.label ?? capability;
+}
+
 function hasGrant(plugin: DesktopPluginSnapshot, capability: DesktopPluginCapability): boolean {
   const selected = grantDrafts[packageKey(plugin)];
   return selected?.includes(capability) ?? plugin.grantedCapabilities.includes(capability);
@@ -193,6 +229,58 @@ function hasGrant(plugin: DesktopPluginSnapshot, capability: DesktopPluginCapabi
 
 function isCapabilitySupported(plugin: DesktopPluginSnapshot, capability: string): capability is DesktopPluginCapability {
   return plugin.supportedCapabilities.includes(capability as DesktopPluginCapability);
+}
+
+function capabilityStatus(plugin: DesktopPluginSnapshot, capability: string): 'active' | 'selected' | 'supported' | 'unsupported' {
+  if (!isCapabilitySupported(plugin, capability)) {
+    return 'unsupported';
+  }
+  if (plugin.grantedCapabilities.includes(capability)) {
+    return 'active';
+  }
+  return hasGrant(plugin, capability) ? 'selected' : 'supported';
+}
+
+function capabilityStatusLabel(status: ReturnType<typeof capabilityStatus>): string {
+  if (status === 'active') {
+    return text('capabilityActive');
+  }
+  if (status === 'selected') {
+    return text('capabilitySelected');
+  }
+  if (status === 'unsupported') {
+    return text('capabilityUnsupported');
+  }
+  return text('capabilitySupported');
+}
+
+function capabilityStatusType(status: ReturnType<typeof capabilityStatus>): 'success' | 'warning' | 'error' | 'default' {
+  if (status === 'active') {
+    return 'success';
+  }
+  if (status === 'selected') {
+    return 'warning';
+  }
+  if (status === 'unsupported') {
+    return 'error';
+  }
+  return 'default';
+}
+
+function capabilitySummary(plugin: DesktopPluginSnapshot): string {
+  const requested = plugin.requestedCapabilities.length;
+  const supported = plugin.requestedCapabilities.filter(capability => isCapabilitySupported(plugin, capability)).length;
+  const selected = plugin.requestedCapabilities.filter(capability => (
+    isCapabilitySupported(plugin, capability) && hasGrant(plugin, capability)
+  )).length;
+  const active = plugin.requestedCapabilities.filter(capability => (
+    plugin.grantedCapabilities.includes(capability as DesktopPluginCapability)
+  )).length;
+  return text('capabilitySummary')
+    .replace('{requested}', String(requested))
+    .replace('{supported}', String(supported))
+    .replace('{selected}', String(selected))
+    .replace('{active}', String(active));
 }
 
 function updateGrant(plugin: DesktopPluginSnapshot, capability: DesktopPluginCapability, checked: boolean): void {
@@ -518,6 +606,9 @@ onUnmounted(() => {
         <p>{{ text('intro') }}</p>
       </div>
       <n-space>
+        <n-button tag="a" href="/plugin-marketplace" secondary>
+          {{ text('browseMarketplace') }}
+        </n-button>
         <n-button v-if="isDesktop" :disabled="isLoading || isBusy" @click="refresh">
           {{ text('refresh') }}
         </n-button>
@@ -532,6 +623,20 @@ onUnmounted(() => {
     </n-alert>
 
     <template v-else>
+      <n-card
+        v-if="!isLoading && plugins.length === 0 && signers.length === 0 && !trustStoreError"
+        class="plugin-onboarding-card"
+        data-test-id="plugin-manager-onboarding"
+      >
+        <template #header>{{ text('onboardingTitle') }}</template>
+        <p>{{ text('onboardingIntro') }}</p>
+        <ol class="plugin-onboarding-steps">
+          <li>{{ text('onboardingStepTrust') }}</li>
+          <li>{{ text('onboardingStepInstall') }}</li>
+          <li>{{ text('onboardingStepApprove') }}</li>
+        </ol>
+      </n-card>
+
       <n-alert v-if="pluginError" type="error" role="alert" mb-4>
         {{ pluginError }}
       </n-alert>
@@ -546,7 +651,7 @@ onUnmounted(() => {
         <p v-if="isLoading" class="plugin-loading-status" role="status" aria-live="polite">
           {{ text('loading') }}
         </p>
-        <n-empty v-if="!isLoading && plugins.length === 0" :description="text('empty')" />
+        <n-empty v-if="!isLoading && plugins.length === 0 && signers.length > 0" :description="text('empty')" />
         <div v-else class="plugin-package-list">
           <n-card
             v-for="plugin in plugins"
@@ -560,6 +665,16 @@ onUnmounted(() => {
               <n-tag :type="plugin.status === 'active' ? 'success' : plugin.status === 'invalid' ? 'error' : 'default'">
                 {{ packageStatus(plugin) }}
               </n-tag>
+            </div>
+            <div class="plugin-diagnostics" :aria-label="text('diagnostics')">
+              <span>{{ text('packageId') }}: <code>{{ plugin.pluginId }}</code></span>
+              <span>{{ text('packageVersion') }}: <code>{{ plugin.version }}</code></span>
+              <span v-if="plugin.activeContributionId">
+                {{ text('activeContribution') }}: <code>{{ plugin.activeContributionId }}</code>
+              </span>
+              <span v-if="plugin.errorCode" class="plugin-error-code">
+                {{ text('errorCode') }}: <code>{{ plugin.errorCode }}</code>
+              </span>
             </div>
             <div v-if="plugin.contributions.tools.length > 0" class="plugin-contribution-list">
               <n-text strong>{{ text('tools') }}</n-text>
@@ -582,17 +697,26 @@ onUnmounted(() => {
 
             <div class="plugin-capability-list">
               <n-text strong>{{ text('requested') }}</n-text>
+              <n-text depth="3" class="plugin-capability-summary">{{ capabilitySummary(plugin) }}</n-text>
               <p v-if="plugin.requestedCapabilities.length === 0">{{ text('noCapabilities') }}</p>
               <div v-for="capability in plugin.requestedCapabilities" :key="capability" class="plugin-capability-row">
-                <n-checkbox
-                  v-if="isCapabilitySupported(plugin, capability) && capabilities.some(item => item.id === capability)"
-                  :checked="hasGrant(plugin, capability as DesktopPluginCapability)"
-                  :disabled="isBusy || plugin.status !== 'installed'"
-                  @update:checked="updateGrant(plugin, capability as DesktopPluginCapability, $event)"
-                >
-                  {{ capabilities.find(item => item.id === capability)?.label }}
-                </n-checkbox>
-                <n-text v-else depth="3">{{ capability }} · {{ text('unsupported') }}</n-text>
+                <div class="plugin-capability-control">
+                  <n-checkbox
+                    v-if="isCapabilitySupported(plugin, capability) && capabilities.some(item => item.id === capability)"
+                    :checked="hasGrant(plugin, capability as DesktopPluginCapability)"
+                    :disabled="isBusy || plugin.status !== 'installed'"
+                    @update:checked="updateGrant(plugin, capability as DesktopPluginCapability, $event)"
+                  >
+                    {{ capabilityLabel(capability) }}
+                  </n-checkbox>
+                  <n-text v-else depth="3">{{ capability }} · {{ text('unsupported') }}</n-text>
+                  <n-tag
+                    size="small"
+                    :type="capabilityStatusType(capabilityStatus(plugin, capability))"
+                  >
+                    {{ capabilityStatusLabel(capabilityStatus(plugin, capability)) }}
+                  </n-tag>
+                </div>
               </div>
               <n-text depth="3" class="capability-help">{{ text('noGrant') }}</n-text>
             </div>
@@ -722,6 +846,35 @@ onUnmounted(() => {
   color: var(--n-text-color-3);
 }
 
+.plugin-onboarding-card p {
+  margin: 0;
+  color: var(--n-text-color-3);
+}
+
+.plugin-onboarding-steps {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding-left: 24px;
+}
+
+.plugin-diagnostics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+  color: var(--n-text-color-3);
+  font-size: 0.82rem;
+}
+
+.plugin-diagnostics code {
+  overflow-wrap: anywhere;
+}
+
+.plugin-error-code {
+  color: var(--n-error-color);
+}
+
 .plugin-package-list {
   display: grid;
   gap: 12px;
@@ -749,12 +902,23 @@ onUnmounted(() => {
   margin-top: 16px;
 }
 
+.plugin-capability-summary {
+  font-size: 0.85rem;
+}
+
 .plugin-capability-list p {
   margin: 0;
 }
 
 .plugin-capability-row {
   padding-left: 8px;
+}
+
+.plugin-capability-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .capability-help {
