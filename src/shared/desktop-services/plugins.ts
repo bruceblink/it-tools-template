@@ -28,14 +28,40 @@ export const desktopPluginErrorCodes = Object.freeze([
   'marketplace-unavailable',
   'marketplace-release-not-found',
   'marketplace-download-failed',
+  'marketplace-cancelled',
+  'marketplace-busy',
   'operation-failed',
 ] as const);
 
 export type DesktopPluginErrorCode = typeof desktopPluginErrorCodes[number];
 
 export interface DesktopPluginMarketplaceInstallInput {
+  readonly requestId: string;
   readonly owner: string;
   readonly name: string;
+}
+
+export const desktopPluginMarketplaceInstallPhases = Object.freeze([
+  'discovering',
+  'pinned',
+  'downloading',
+  'verifying',
+  'installing',
+  'completed',
+  'cancelled',
+] as const);
+
+export type DesktopPluginMarketplaceInstallPhase = typeof desktopPluginMarketplaceInstallPhases[number];
+
+export interface DesktopPluginMarketplaceInstallProgress {
+  readonly requestId: string;
+  readonly phase: DesktopPluginMarketplaceInstallPhase;
+  readonly repository?: string;
+  readonly tagName?: string;
+  readonly commitSha?: string;
+  readonly assetName?: string;
+  readonly transferredBytes?: number;
+  readonly totalBytes?: number | null;
 }
 
 export interface DesktopPluginMarketplaceInstallSource {
@@ -87,6 +113,54 @@ const pluginVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const stateChangeKeys = new Set(['schemaVersion', 'pluginId', 'version', 'reason', 'contributionId']);
 const stateChangeReasons = new Set<string>(desktopPluginStateChangeReasons);
+const marketplaceProgressKeys = new Set([
+  'requestId',
+  'phase',
+  'repository',
+  'tagName',
+  'commitSha',
+  'assetName',
+  'transferredBytes',
+  'totalBytes',
+]);
+const marketplaceRequestIdPattern = /^[A-Za-z0-9_-]{1,64}$/;
+const marketplaceProgressPhases = new Set<string>(desktopPluginMarketplaceInstallPhases);
+
+/** Validate untrusted marketplace progress notifications before exposing them to a renderer. */
+export function isDesktopPluginMarketplaceInstallProgress(value: unknown): value is DesktopPluginMarketplaceInstallProgress {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some(key => !marketplaceProgressKeys.has(key))
+    || typeof record.requestId !== 'string'
+    || !marketplaceRequestIdPattern.test(record.requestId)
+    || typeof record.phase !== 'string'
+    || !marketplaceProgressPhases.has(record.phase)
+  ) {
+    return false;
+  }
+  for (const key of ['repository', 'tagName', 'commitSha', 'assetName'] as const) {
+    if (record[key] !== undefined && (typeof record[key] !== 'string' || record[key].length === 0 || record[key].length > 1024)) {
+      return false;
+    }
+  }
+  if (
+    record.transferredBytes !== undefined
+    && (!Number.isSafeInteger(record.transferredBytes) || (record.transferredBytes as number) < 0)
+  ) {
+    return false;
+  }
+  if (
+    record.totalBytes !== undefined
+    && record.totalBytes !== null
+    && (!Number.isSafeInteger(record.totalBytes) || (record.totalBytes as number) < 0)
+  ) {
+    return false;
+  }
+  return true;
+}
 
 /** Validate untrusted IPC payloads before exposing a lifecycle event to a renderer. */
 export function isDesktopPluginStateChangeEvent(value: unknown): value is DesktopPluginStateChangeEvent {

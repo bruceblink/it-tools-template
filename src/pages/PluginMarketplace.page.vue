@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NAlert, NButton, NCard, NEmpty, NInput, NModal, NSelect, NSpin, NTag, NText } from 'naive-ui';
+import { NAlert, NButton, NCard, NEmpty, NInput, NModal, NProgress, NSelect, NSpin, NTag, NText } from 'naive-ui';
 import { useHead } from '@unhead/vue';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
@@ -7,6 +7,7 @@ import {
   pluginMarketplaceConfig,
   PluginMarketplaceApiError,
   searchPluginRepositories,
+  supportsPluginMarketplaceDirectInstall,
   type PluginManifestSummary,
   type PluginMarketplaceRepository,
   type PluginMarketplaceSort,
@@ -34,18 +35,61 @@ const installNotice = ref('');
 const installError = ref('');
 const installErrorCode = ref<string>();
 const installErrorRepository = ref<PluginMarketplaceRepository>();
+const installRequestId = ref<string>();
+const installProgress = ref<DesktopPluginMarketplaceInstallProgress>();
+const cancellingInstall = ref(false);
 
 const canInstallFromMarketplace = computed(() => (
-  typeof window !== 'undefined' && typeof window.itToolsDesktop?.installPluginFromMarketplace === 'function'
+  supportsPluginMarketplaceDirectInstall(pluginMarketplaceConfig.apiBaseUrl)
+  && typeof window !== 'undefined'
+  && typeof window.itToolsDesktop?.installPluginFromMarketplace === 'function'
 ));
 
 const installErrorNeedsSettings = computed(() => (
   installErrorCode.value === 'untrusted-signature' || installErrorCode.value === 'already-installed'
 ));
 
+const installProgressPercent = computed(() => {
+  const progress = installProgress.value;
+  if (
+    !progress
+    || progress.totalBytes === undefined
+    || progress.totalBytes === null
+    || progress.totalBytes <= 0
+    || progress.transferredBytes === undefined
+  ) {
+    return undefined;
+  }
+  return Math.min(100, Math.round((progress.transferredBytes / progress.totalBytes) * 100));
+});
+
+const installCanBeCancelled = computed(() => {
+  const phase = installProgress.value?.phase;
+  return phase !== undefined && phase !== 'installing' && phase !== 'completed' && phase !== 'cancelled';
+});
+
+const installProgressMessage = computed(() => {
+  const progress = installProgress.value;
+  if (!progress) {
+    return '';
+  }
+  if (progress.phase === 'downloading' && progress.transferredBytes !== undefined && progress.totalBytes) {
+    return t('pluginMarketplace.installProgress.downloading', {
+      transferred: formatBytes(progress.transferredBytes),
+      total: formatBytes(progress.totalBytes),
+    });
+  }
+  if (progress.phase === 'pinned') {
+    return t('pluginMarketplace.installProgress.pinned', { tag: progress.tagName ?? '' });
+  }
+  return t(`pluginMarketplace.installProgress.${progress.phase}`);
+});
+
 let repositoryController: AbortController | undefined;
 let manifestController: AbortController | undefined;
+let removeMarketplaceProgress: (() => void) | undefined;
 let requestSequence = 0;
+let installSequence = 0;
 
 const sortOptions = computed(() => [
   { label: t('pluginMarketplace.sort.updated'), value: 'updated' as const },
@@ -75,6 +119,20 @@ function formatDate(value: string): string {
     return t('pluginMarketplace.unknownDate');
   }
   return new Intl.DateTimeFormat(locale.value, { dateStyle: 'medium' }).format(parsed);
+}
+
+function formatBytes(value: number): string {
+  if (value < 1024) {
+    return `${value} B`;
+  }
+  const units = ['KiB', 'MiB', 'GiB'];
+  let size = value / 1024;
+  let unit = units[0];
+  for (let index = 1; index < units.length && size >= 1024; index += 1) {
+    size /= 1024;
+    unit = units[index]!;
+  }
+  return `${size.toFixed(size >= 10 ? 0 : 1)} ${unit}`;
 }
 
 function repositoryTopics(repository: PluginMarketplaceRepository): readonly string[] {
@@ -113,6 +171,12 @@ function getInstallErrorMessage(error: string): string {
   if (error === 'already-installed') {
     return t('pluginMarketplace.installErrors.alreadyInstalled');
   }
+  if (error === 'marketplace-cancelled') {
+    return t('pluginMarketplace.installErrors.cancelled');
+  }
+  if (error === 'marketplace-busy') {
+    return t('pluginMarketplace.installErrors.busy');
+  }
   return t('pluginMarketplace.installErrors.unavailable');
 }
 
@@ -126,12 +190,16 @@ async function installRepository(repository: PluginMarketplaceRepository): Promi
     return;
   }
   installingRepositoryId.value = repository.id;
+  const requestId = `marketplace-${Date.now().toString(36)}-${(++installSequence).toString(36)}`;
+  installRequestId.value = requestId;
+  installProgress.value = { requestId, phase: 'discovering' };
+  cancellingInstall.value = false;
   installNotice.value = '';
   installError.value = '';
   installErrorCode.value = undefined;
   installErrorRepository.value = undefined;
   try {
-    const result = await install({ owner: repository.ownerLogin, name: repository.name });
+    const result = await install({ requestId, owner: repository.ownerLogin, name: repository.name });
     if (!result.ok) {
       installErrorCode.value = result.error;
       installError.value = getInstallErrorMessage(result.error);
@@ -151,6 +219,29 @@ async function installRepository(repository: PluginMarketplaceRepository): Promi
   }
   finally {
     installingRepositoryId.value = undefined;
+    installRequestId.value = undefined;
+    cancellingInstall.value = false;
+  }
+}
+
+async function cancelInstall(): Promise<void> {
+  const requestId = installRequestId.value;
+  const cancel = window.itToolsDesktop?.cancelPluginMarketplaceInstall;
+  if (!requestId || !cancel) {
+    return;
+  }
+  cancellingInstall.value = true;
+  try {
+    await cancel(requestId);
+  }
+  catch {
+    cancellingInstall.value = false;
+  }
+}
+
+function handleMarketplaceProgress(progress: DesktopPluginMarketplaceInstallProgress): void {
+  if (progress.requestId === installRequestId.value) {
+    installProgress.value = progress;
   }
 }
 
@@ -253,12 +344,18 @@ watch(sort, () => {
 });
 
 onMounted(() => {
+  removeMarketplaceProgress = window.itToolsDesktop?.onPluginMarketplaceInstallProgress?.(handleMarketplaceProgress);
   void loadRepositories();
 });
 
 onBeforeUnmount(() => {
   repositoryController?.abort();
   manifestController?.abort();
+  removeMarketplaceProgress?.();
+  const requestId = installRequestId.value;
+  if (requestId) {
+    void window.itToolsDesktop?.cancelPluginMarketplaceInstall?.(requestId);
+  }
 });
 </script>
 
@@ -285,6 +382,30 @@ onBeforeUnmount(() => {
 
     <n-alert class="marketplace-source-note" type="info" :show-icon="false">
       {{ sourceDescription }}
+    </n-alert>
+
+    <n-alert v-if="installingRepositoryId && installProgress" class="marketplace-install-progress" type="info" :show-icon="false" role="status">
+      <div class="marketplace-progress-content">
+        <div class="marketplace-progress-heading">
+          <span>{{ installProgressMessage }}</span>
+          <n-button
+            v-if="installCanBeCancelled"
+            size="small"
+            secondary
+            :loading="cancellingInstall"
+            @click="cancelInstall"
+          >
+            {{ t('pluginMarketplace.cancelInstall') }}
+          </n-button>
+        </div>
+        <n-progress
+          v-if="installProgressPercent !== undefined"
+          type="line"
+          :percentage="installProgressPercent"
+          :show-indicator="true"
+          processing
+        />
+      </div>
     </n-alert>
 
     <n-alert v-if="installNotice" class="marketplace-install-notice" type="success" :show-icon="false" role="status">
@@ -585,10 +706,23 @@ onBeforeUnmount(() => {
 }
 
 .marketplace-error-content,
+.marketplace-progress-content,
 .repository-heading,
 .repository-actions,
 .repository-modal-heading,
 .manifest-summary-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.marketplace-progress-content {
+  display: grid;
+  gap: 10px;
+}
+
+.marketplace-progress-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;

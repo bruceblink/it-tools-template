@@ -38,8 +38,8 @@ topic:it-tools-plugin archived:false fork:false
 - 卡片只显示仓库公开元数据；
 - 详情窗口可读取 plugin.source.json，但明确标记为参考信息；
 - “打开仓库”和 README 链接均在新窗口打开；
-- Web 和 Electron 共用目录页面；Electron 卡片提供“安装最新 Release”，Web 页面只提供导航和参考信息；
-- 直装失败时页面显示稳定错误类型，用户可回到插件设置核对签名者或改用仓库说明中的开发者构建流程。
+- Web 和 Electron 共用目录页面；Electron 卡片提供“安装最新 Release”，Web 页面只提供导航和参考信息；自定义 API 代理不会显示固定 GitHub 直装按钮；
+- Electron 页面显示发现、下载、校验和安装进度，支持取消和重试；直装失败时显示稳定错误类型，用户可回到插件设置核对签名者或改用仓库说明中的开发者构建流程。
 
 ## Electron 直装约定
 
@@ -47,7 +47,7 @@ topic:it-tools-plugin archived:false fork:false
 
 - 仓库仍是公开、未归档、非 fork，并保留 `it-tools-plugin` topic；
 - 最新稳定 Release 恰好包含一个 `.itplugin` 资产，资产大小不超过宿主包上限，下载地址属于 GitHub Release 路径；
-- 主进程重新读取 Release tag 对应的 commit SHA，限制重定向到 GitHub 下载域名，并在写入临时目录后核对实际大小和 SHA-256；
-- 下载资产随后交给现有生命周期安装器，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
+- 主进程重新读取 Release tag 对应的 commit SHA，限制重定向到 GitHub 下载域名，并在写入临时目录后流式核对实际大小和 SHA-256；
+- 下载资产随后交给现有生命周期安装器；安装来源写入 `.plugin-provenance.json` 作为可丢失的诊断元数据，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
 
 市场不把源码直载作为安装回退。需要审查或开发时，使用固定 commit 的源码快照和 `plugin:build` 完成显式本地构建，边界见[插件市场安装流程](21-plugin-install-flow.md)。

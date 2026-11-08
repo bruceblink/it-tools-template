@@ -19,13 +19,12 @@ import { createPluginSandboxWindow } from './plugin-sandbox';
 import { PluginSettingsStore } from './plugin-settings-store';
 import { PluginTrustStore, PluginTrustStoreError } from './plugin-trust-store';
 import type { PluginSignerInput } from './plugin-trust-store';
-import {
-  installPluginMarketplaceRelease,
-  PluginMarketplaceInstallError,
-  type PluginMarketplaceRepositoryInput,
-} from './plugin-marketplace-installer';
+import { PluginMarketplaceInstallError } from './plugin-marketplace-installer';
+import { PluginMarketplaceInstallController } from './plugin-marketplace-controller';
 import type {
   DesktopPluginErrorCode,
+  DesktopPluginMarketplaceInstallInput,
+  DesktopPluginMarketplaceInstallProgress,
   DesktopPluginOperationResult,
 } from '../src/shared/desktop-services/plugins';
 
@@ -47,6 +46,8 @@ class PluginIpcInputError extends Error {
     this.name = 'PluginIpcInputError';
   }
 }
+
+const marketplaceRequestIdPattern = /^[A-Za-z0-9_-]{1,64}$/;
 
 /** Load signer trust and expose a narrow IPC surface to the trusted desktop renderer. */
 export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependencies): Promise<PluginLifecycleIpc> {
@@ -80,6 +81,11 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       mainWindow.webContents.send('desktop:plugins:changed', event);
     },
   });
+  const marketplaceController = new PluginMarketplaceInstallController({
+    tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
+    fetch: (url, init) => net.fetch(url, init),
+    installArchive: (archivePath, source) => lifecycleManager.installArchive(archivePath, source),
+  });
 
   ipcMain.handle('desktop:plugins:list', event => runPluginManagementIpc(
     event,
@@ -100,7 +106,15 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   ipcMain.handle('desktop:plugins:install-from-marketplace', (event, value: unknown) => runPluginManagementIpc(
     event,
     dependencies,
-    () => installPluginFromMarketplace(value, dependencies, lifecycleManager),
+    () => {
+      const input = parseMarketplaceInstallRequest(value);
+      return marketplaceController.start(input, progress => sendMarketplaceProgress(event.sender, progress));
+    },
+  ));
+  ipcMain.handle('desktop:plugins:install-from-marketplace:cancel', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    () => marketplaceController.cancel(parseMarketplaceCancelRequest(value)),
   ));
   ipcMain.handle('desktop:plugins:activate', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parseActivationRequest(value);
@@ -202,7 +216,12 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   }));
 
   return {
-    shutdown: () => lifecycleManager.shutdown(),
+    shutdown: async () => {
+      await marketplaceController.dispose();
+      ipcMain.removeHandler('desktop:plugins:install-from-marketplace');
+      ipcMain.removeHandler('desktop:plugins:install-from-marketplace:cancel');
+      await lifecycleManager.shutdown();
+    },
   };
 }
 
@@ -324,19 +343,6 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
   return 'operation-failed';
 }
 
-async function installPluginFromMarketplace(
-  value: unknown,
-  dependencies: PluginIpcDependencies,
-  lifecycleManager: PluginLifecycleManager,
-) {
-  const repository = parseMarketplaceRepositoryRequest(value);
-  return installPluginMarketplaceRelease(repository, {
-    tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
-    fetch: (url, init) => net.fetch(url, init),
-    installArchive: archivePath => lifecycleManager.installArchive(archivePath),
-  });
-}
-
 function parseActivationRequest(value: unknown): {
   pluginId: string;
   version: string;
@@ -369,16 +375,43 @@ function parsePluginIdRequest(value: unknown): string {
   return value.pluginId;
 }
 
-function parseMarketplaceRepositoryRequest(value: unknown): PluginMarketplaceRepositoryInput {
+function parseMarketplaceInstallRequest(value: unknown): DesktopPluginMarketplaceInstallInput {
   if (
     !isRecord(value)
-    || !hasExactKeys(value, ['owner', 'name'])
+    || !hasExactKeys(value, ['requestId', 'owner', 'name'])
+    || typeof value.requestId !== 'string'
     || typeof value.owner !== 'string'
     || typeof value.name !== 'string'
+    || !marketplaceRequestIdPattern.test(value.requestId)
   ) {
     throw new PluginIpcInputError();
   }
-  return { owner: value.owner, name: value.name };
+  return { requestId: value.requestId, owner: value.owner, name: value.name };
+}
+
+function parseMarketplaceCancelRequest(value: unknown): string {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['requestId'])
+    || typeof value.requestId !== 'string'
+    || !marketplaceRequestIdPattern.test(value.requestId)) {
+    throw new PluginIpcInputError();
+  }
+  return value.requestId;
+}
+
+function sendMarketplaceProgress(
+  sender: WebContents,
+  progress: DesktopPluginMarketplaceInstallProgress,
+): void {
+  if (sender.isDestroyed()) {
+    return;
+  }
+  try {
+    sender.send('desktop:plugins:marketplace-progress', progress);
+  }
+  catch {
+    // The installation owns cleanup; a closed renderer only loses progress updates.
+  }
 }
 
 function parsePluginVersionRequest(value: unknown): { pluginId: string; version: string } {

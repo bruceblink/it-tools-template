@@ -48,7 +48,9 @@ import type { PluginHostCapability } from '../shared/plugin-capabilities';
 import type {
   DesktopPluginErrorCode as SharedDesktopPluginErrorCode,
   DesktopPluginMarketplaceInstallInput as SharedDesktopPluginMarketplaceInstallInput,
+  DesktopPluginMarketplaceInstallProgress as SharedDesktopPluginMarketplaceInstallProgress,
   DesktopPluginMarketplaceInstallResult as SharedDesktopPluginMarketplaceInstallResult,
+  DesktopPluginMarketplaceInstallSource as SharedDesktopPluginMarketplaceInstallSource,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
   DesktopPluginRuntimeFailureCode,
   DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
@@ -60,7 +62,9 @@ declare global {
   type DesktopPluginCapability = PluginHostCapability;
   type DesktopPluginErrorCode = SharedDesktopPluginErrorCode;
   type DesktopPluginMarketplaceInstallInput = SharedDesktopPluginMarketplaceInstallInput;
+  type DesktopPluginMarketplaceInstallProgress = SharedDesktopPluginMarketplaceInstallProgress;
   type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginSnapshot>;
+  type DesktopPluginMarketplaceInstallSource = SharedDesktopPluginMarketplaceInstallSource;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
   type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
 
@@ -75,6 +79,8 @@ declare global {
       tools: readonly DesktopPluginToolContribution[];
     };
     grantedCapabilities: readonly DesktopPluginCapability[];
+    /** Provenance recorded for a marketplace Release install, when available. */
+    source?: DesktopPluginMarketplaceInstallSource;
     status: 'installed' | 'active' | 'invalid';
     activeContributionId?: string;
     errorCode?: DesktopPluginErrorCode | DesktopPluginRuntimeFailureCode;
@@ -184,6 +190,12 @@ declare global {
       installPluginFromMarketplace?(
         input: DesktopPluginMarketplaceInstallInput,
       ): Promise<DesktopPluginOperationResult<DesktopPluginMarketplaceInstallResult>>;
+      cancelPluginMarketplaceInstall?(
+        requestId: string,
+      ): Promise<DesktopPluginOperationResult<boolean>>;
+      onPluginMarketplaceInstallProgress?(
+        callback: (progress: DesktopPluginMarketplaceInstallProgress) => void,
+      ): () => void;
       activatePlugin?(
         pluginId: string,
         version: string,

@@ -56,6 +56,15 @@ pluginMarketplace:
   installSuccess: 'Installed {name} {version} from release {tag}. Review capabilities in Settings before running it.'
   openSettings: 'Open plugin settings'
   retryInstall: 'Retry install'
+  cancelInstall: 'Cancel install'
+  installProgress:
+    discovering: 'Checking the repository and latest release…'
+    pinned: 'Pinned release {tag}.'
+    downloading: 'Downloading {transferred} of {total}.'
+    verifying: 'Verifying package integrity…'
+    installing: 'Installing the verified package…'
+    completed: 'Installation complete.'
+    cancelled: 'Installation cancelled.'
   readReadme: 'Read README'
   detailRepository: 'Repository'
   detailLicense: 'License'
@@ -82,6 +91,8 @@ pluginMarketplace:
     downloadFailed: 'The release asset could not be downloaded or its hash did not match.'
     untrustedSignature: 'The release is signed by an untrusted publisher. Verify and trust the signer in plugin settings, then retry.'
     alreadyInstalled: 'This plugin version is already installed. Open plugin settings to run or remove it.'
+    cancelled: 'Plugin installation was cancelled.'
+    busy: 'Another plugin installation is already running.'
 about:
   content: >
     # About IT-Tools

@@ -4,6 +4,7 @@ import {
   fetchPluginManifest,
   PluginMarketplaceApiError,
   searchPluginRepositories,
+  supportsPluginMarketplaceDirectInstall,
   type PluginMarketplaceRepository,
 } from './plugin-marketplace.service';
 
@@ -36,6 +37,16 @@ function repository(overrides: Partial<PluginMarketplaceRepository> = {}): Plugi
 }
 
 describe('plugin marketplace GitHub adapter', () => {
+  it('only enables direct installation for the public GitHub API', () => {
+    expect(supportsPluginMarketplaceDirectInstall('https://api.github.com')).toBe(true);
+    expect(supportsPluginMarketplaceDirectInstall('https://api.github.com/')).toBe(true);
+    expect(supportsPluginMarketplaceDirectInstall('https://api.github.com:8443')).toBe(false);
+    expect(supportsPluginMarketplaceDirectInstall('https://api.github.com/enterprise')).toBe(false);
+    expect(supportsPluginMarketplaceDirectInstall('https://marketplace-proxy.example')).toBe(false);
+    expect(supportsPluginMarketplaceDirectInstall('http://api.github.com')).toBe(false);
+    expect(supportsPluginMarketplaceDirectInstall('https://api.github.com/?token=secret')).toBe(false);
+  });
+
   it('builds a bounded topic query with optional owner and search text', () => {
     expect(buildPluginSearchQuery('  json   parser  ', {
       topic: 'it-tools-plugin',

@@ -109,6 +109,28 @@ export const pluginMarketplaceConfig = Object.freeze({
   owner: normalizeOwner(import.meta.env.VITE_PLUGIN_MARKETPLACE_OWNER),
 });
 
+/**
+ * The Electron installer currently pins its metadata requests to public GitHub.
+ * Hide the one-click installer when the directory is backed by another API so
+ * a proxy or Enterprise directory is not presented as an installable source.
+ */
+export function supportsPluginMarketplaceDirectInstall(apiBaseUrl: string): boolean {
+  try {
+    const url = new URL(apiBaseUrl);
+    return url.protocol === 'https:'
+      && url.hostname.toLowerCase() === 'api.github.com'
+      && !url.port
+      && url.pathname.replace(/\/$/, '') === ''
+      && !url.username
+      && !url.password
+      && !url.search
+      && !url.hash;
+  }
+  catch {
+    return false;
+  }
+}
+
 function createApiUrl(path: string): URL {
   const base = pluginMarketplaceConfig.apiBaseUrl.endsWith('/')
     ? pluginMarketplaceConfig.apiBaseUrl

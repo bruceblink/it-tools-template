@@ -36,8 +36,14 @@ import type {
   GitRepositoryInfo,
   GitStatus,
 } from '../src/shared/desktop-services/git';
-import { isDesktopPluginStateChangeEvent } from '../src/shared/desktop-services/plugins';
-import type { DesktopPluginMarketplaceInstallInput } from '../src/shared/desktop-services/plugins';
+import {
+  isDesktopPluginMarketplaceInstallProgress,
+  isDesktopPluginStateChangeEvent,
+} from '../src/shared/desktop-services/plugins';
+import type {
+  DesktopPluginMarketplaceInstallInput,
+  DesktopPluginMarketplaceInstallProgress,
+} from '../src/shared/desktop-services/plugins';
 import type { DesktopUpdateState } from '../src/shared/desktop-services/updates';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
@@ -152,6 +158,17 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
   installPluginFromMarketplace: (input: DesktopPluginMarketplaceInstallInput) =>
     ipcRenderer.invoke('desktop:plugins:install-from-marketplace', input),
+  cancelPluginMarketplaceInstall: (requestId: string) =>
+    ipcRenderer.invoke('desktop:plugins:install-from-marketplace:cancel', { requestId }),
+  onPluginMarketplaceInstallProgress: (callback: (progress: DesktopPluginMarketplaceInstallProgress) => void) => {
+    const listener = (_event: IpcRendererEvent, value: unknown) => {
+      if (isDesktopPluginMarketplaceInstallProgress(value)) {
+        callback(value);
+      }
+    };
+    ipcRenderer.on('desktop:plugins:marketplace-progress', listener);
+    return () => ipcRenderer.removeListener('desktop:plugins:marketplace-progress', listener);
+  },
   activatePlugin: (
     pluginId: string,
     version: string,

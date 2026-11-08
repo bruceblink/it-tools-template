@@ -198,7 +198,7 @@ In Electron Settings, the plugin manager starts with a three-step onboarding car
 
 ## Plugin marketplace
 
-Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In Electron, the page can install the latest eligible signed Release through the host bridge; the package is downloaded only to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
+Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In Electron, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
 
 Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a plugin.source.json manifest, and publish exactly one signed `.itplugin` asset in the latest stable Release for Electron direct install. The page reads source metadata only as reference data; signing, trust, capability approval, and installation remain part of the Electron workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
 

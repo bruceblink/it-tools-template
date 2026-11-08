@@ -56,6 +56,15 @@ pluginMarketplace:
   installSuccess: '已从 Release {tag} 安装 {name} {version}。运行前请到设置页检查能力。'
   openSettings: '打开插件设置'
   retryInstall: '重试安装'
+  cancelInstall: '取消安装'
+  installProgress:
+    discovering: '正在检查仓库和最新 Release…'
+    pinned: '已固定 Release {tag}。'
+    downloading: '正在下载 {transferred} / {total}。'
+    verifying: '正在校验插件包完整性…'
+    installing: '正在安装已校验的插件包…'
+    completed: '安装完成。'
+    cancelled: '安装已取消。'
   readReadme: '阅读 README'
   detailRepository: '仓库'
   detailLicense: '许可证'
@@ -82,6 +91,8 @@ pluginMarketplace:
     downloadFailed: 'Release 资产下载失败，或下载内容的哈希不匹配。'
     untrustedSignature: '此 Release 使用了未受信任的发布者签名。请先在插件设置中核对并信任签名者，再重试。'
     alreadyInstalled: '此插件版本已经安装。请打开插件设置运行或移除它。'
+    cancelled: '插件安装已取消。'
+    busy: '已有另一个插件安装正在进行。'
 about:
   content: >
     # 关于 IT-Tools

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   installPluginMarketplaceRelease,
   PluginMarketplaceInstallError,
@@ -23,6 +23,7 @@ function createFetchMock(options: {
   readonly asset: Uint8Array;
   readonly assetUrl?: string;
   readonly responseUrl?: string;
+  readonly repositoryUrl?: string;
   readonly omitContentLength?: boolean;
   readonly topics?: readonly string[];
   readonly assets?: readonly Record<string, unknown>[];
@@ -36,7 +37,7 @@ function createFetchMock(options: {
     if (url.endsWith('/repos/example/demo-plugin')) {
       return new Response(JSON.stringify({
         full_name: 'example/demo-plugin',
-        html_url: 'https://github.com/example/demo-plugin',
+        html_url: options.repositoryUrl ?? 'https://github.com/example/demo-plugin',
         archived: false,
         disabled: false,
         fork: false,
@@ -82,11 +83,13 @@ describe('GitHub release plugin installer', () => {
     const asset = new Uint8Array([80, 75, 3, 4, 1, 2, 3]);
     const { fetcher, calls } = createFetchMock({ asset });
     let installedPath = '';
+    let installedSource: unknown;
     const result = await installPluginMarketplaceRelease(repository, {
       tempRoot,
       fetch: fetcher,
-      installArchive: async (archivePath) => {
+      installArchive: async (archivePath, source) => {
         installedPath = archivePath;
+        installedSource = source;
         expect(await readFile(archivePath)).toEqual(Buffer.from(asset));
         return { pluginId: 'org.example.demo', version: '1.0.0' };
       },
@@ -101,6 +104,7 @@ describe('GitHub release plugin installer', () => {
       archiveBytes: asset.byteLength,
     });
     expect(result.source.sha256).toBe(createHash('sha256').update(asset).digest('hex'));
+    expect(installedSource).toEqual(result.source);
     expect(calls).toEqual([
       'https://api.github.com/repos/example/demo-plugin',
       'https://api.github.com/repos/example/demo-plugin/releases/latest',
@@ -145,6 +149,19 @@ describe('GitHub release plugin installer', () => {
       fetch: fetcher,
       installArchive: async () => ({}) as never,
     })).rejects.toMatchObject({ code: 'marketplace-invalid-repository' } satisfies Partial<PluginMarketplaceInstallError>);
+  });
+
+  it('rejects repository metadata that uses a non-standard port', async () => {
+    const tempRoot = await createTempRoot();
+    const { fetcher } = createFetchMock({
+      asset: new Uint8Array([1]),
+      repositoryUrl: 'https://github.com:8443/example/demo-plugin',
+    });
+    await expect(installPluginMarketplaceRelease(repository, {
+      tempRoot,
+      fetch: fetcher,
+      installArchive: async () => ({}) as never,
+    })).rejects.toMatchObject({ code: 'marketplace-unavailable' });
   });
 
   it('bounds GitHub API responses even when content-length is absent', async () => {
@@ -205,6 +222,34 @@ describe('GitHub release plugin installer', () => {
       installArchive: async () => ({}) as never,
     })).rejects.toMatchObject({ code: 'marketplace-download-failed' });
     expect(await readdir(join(tempRoot))).toEqual([]);
+  });
+
+  it('accepts the GitHub release asset redirect host', async () => {
+    const tempRoot = await createTempRoot();
+    const asset = new Uint8Array([1, 2, 3]);
+    const { fetcher } = createFetchMock({
+      asset,
+      responseUrl: 'https://release-assets.githubusercontent.com/github-production-release-asset/demo',
+    });
+    await expect(installPluginMarketplaceRelease(repository, {
+      tempRoot,
+      fetch: fetcher,
+      installArchive: async () => ({ installed: true }),
+    })).resolves.toMatchObject({ source: { archiveBytes: asset.byteLength } });
+  });
+
+  it('stops before network access when the installation signal is already aborted', async () => {
+    const tempRoot = await createTempRoot();
+    const controller = new AbortController();
+    controller.abort();
+    const fetcher = vi.fn(async () => new Response('{}', { status: 200 }));
+    await expect(installPluginMarketplaceRelease(repository, {
+      tempRoot,
+      signal: controller.signal,
+      fetch: fetcher,
+      installArchive: async () => ({ installed: true }),
+    })).rejects.toMatchObject({ code: 'marketplace-cancelled' });
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('rejects a malformed package asset even when another package-looking asset exists', async () => {
