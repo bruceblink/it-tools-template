@@ -12,8 +12,8 @@ const packageManagerMatch = /^pnpm@(\d+\.\d+\.\d+)$/.exec(packageJson.packageMan
 const requiredPnpmVersion = packageManagerMatch?.[1] ?? null;
 const requiredNodeMajor = /^(?:>=)?(\d+)/.exec(packageJson.engines?.node ?? '')?.[1];
 
-function commandName(command) {
-  return process.platform === 'win32' && command === 'corepack' ? 'corepack.cmd' : command;
+export function commandSpawnOptions(platform = process.platform) {
+  return platform === 'win32' ? { shell: true } : {};
 }
 
 function errorMessage(error) {
@@ -84,10 +84,11 @@ function currentPnpmVersion() {
     return fromUserAgent;
   }
 
-  const result = spawnSync(commandName('pnpm'), ['--version'], {
+  const result = spawnSync('pnpm', ['--version'], {
     cwd: repositoryRoot,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
+    ...commandSpawnOptions(),
   });
   return result.status === 0 ? parsePnpmVersion(result.stdout) : null;
 }
@@ -107,11 +108,12 @@ export function assertSupportedRuntime({ nodeVersion = process.versions.node, pn
 }
 
 function runCorepackPnpm(args, environment = process.env) {
-  const result = spawnSync(commandName('corepack'), ['pnpm', ...args], {
+  const result = spawnSync('corepack', ['pnpm', ...args], {
     cwd: repositoryRoot,
     env: environment,
     stdio: 'inherit',
     windowsHide: true,
+    ...commandSpawnOptions(),
   });
   if (result.error) {
     throw result.error;

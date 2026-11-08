@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import {
   assertSupportedRuntime,
+  commandSpawnOptions,
   createElectronInstallEnvironment,
   electronExecutableRelativePath,
   electronExecutablePath,
@@ -17,6 +19,30 @@ test('parses pnpm versions from package-manager user agents and plain output', (
   assert.equal(parsePnpmVersion('pnpm/12.16.1 npm/? node/v24.0.0 linux x64'), '12.16.1');
   assert.equal(parsePnpmVersion('12.16.1'), '12.16.1');
   assert.equal(parsePnpmVersion('npm/11.0.0'), null);
+});
+
+test('uses a command shell for Windows package-manager shims', () => {
+  assert.deepEqual(commandSpawnOptions('win32'), { shell: true });
+  assert.deepEqual(commandSpawnOptions('linux'), {});
+  assert.deepEqual(commandSpawnOptions('darwin'), {});
+});
+
+test('runs a Windows Corepack command shim through a real child process', { skip: process.platform !== 'win32' }, async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'it-tools-corepack-shim-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  await writeFile(path.join(directory, 'corepack.cmd'), '@echo off\r\necho corepack shim ran %*\r\n');
+
+  const result = spawnSync('corepack', ['pnpm', '--version'], {
+    cwd: directory,
+    encoding: 'utf8',
+    env: { ...process.env, PATH: `${directory}${path.delimiter}${process.env.PATH ?? ''}` },
+    stdio: ['ignore', 'pipe', 'pipe'],
+    ...commandSpawnOptions(),
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /corepack shim ran pnpm --version/);
 });
 
 test('recognizes configured HTTP(S) proxies without requiring one', () => {

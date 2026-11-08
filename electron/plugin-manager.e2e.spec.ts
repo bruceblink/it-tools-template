@@ -122,7 +122,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`)).toBeVisible();
   const installedPluginCard = page.getByTestId(`plugin-package-${pluginId}-1.0.0`);
   await expect(installedPluginCard.getByText(`Package ID: ${pluginId}`, { exact: true })).toBeVisible();
-  await expect(installedPluginCard.getByText('Requested 4 · supported 4 · selected 0 · active 0', { exact: true })).toBeVisible();
+  await expect(installedPluginCard.getByText('Requested 5 · supported 4 · selected 0 · active 0', { exact: true })).toBeVisible();
   await expect(installedPluginCard.getByText('Contributed tools', { exact: true })).toBeVisible();
   await expect(installedPluginCard.getByText('Review the capabilities and persistent settings granted to this plugin.', { exact: true })).toBeVisible();
   const contributionLink = installedPluginCard.getByRole('link', { name: 'Capability demo', exact: true });
@@ -795,7 +795,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await page.getByTestId(`plugin-package-${pluginId}-2.0.0`).getByRole('button', { name: 'Uninstall version' }).click();
   await page.getByTestId(`plugin-package-${pluginId}-3.0.0`).getByRole('button', { name: 'Uninstall version' }).click();
   await page.getByTestId(`plugin-package-${pluginId}-4.0.0`).getByRole('button', { name: 'Uninstall version' }).click();
-  await expect(page.getByText('No external plugin packages are installed.')).toBeVisible();
+  await expect(page.getByTestId('plugin-manager-onboarding')).toBeVisible();
   await expect(page.getByText('No signer keys are trusted. Add a publisher key before installing its packages.')).toBeVisible();
 });
 
