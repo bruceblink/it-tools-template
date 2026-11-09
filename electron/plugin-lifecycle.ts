@@ -95,6 +95,11 @@ export interface PluginLifecycleSnapshot {
   status: 'installed' | 'active' | 'invalid';
   /** The contribution currently selected for the active isolated window. */
   activeContributionId?: string;
+  /** Host route data for an active embedded plugin renderer. */
+  embedded?: {
+    readonly url: string;
+    readonly partition: string;
+  };
   errorCode?: string;
 }
 
@@ -523,9 +528,18 @@ export class PluginLifecycleManager {
       clearTimeout(active.unresponsiveTimer);
       active.unresponsiveTimer = undefined;
     });
+    (window as unknown as {
+      on(event: 'render-process-gone', listener: () => void): void;
+    }).on('render-process-gone', () => terminatePluginWindow('renderer-crashed'));
     window.webContents.on('render-process-gone', () => terminatePluginWindow('renderer-crashed'));
-    // Keep the main process responsive when a plugin renderer stops processing queued work.
-    active.responsivenessProbeInterval = setInterval(() => {
+    const embeddedTarget = (window as BrowserWindow & {
+      __itToolsPluginEmbed?: { url: string; partition: string };
+    }).__itToolsPluginEmbed;
+    // Embedded webviews are monitored by their guest render-process events. A
+    // main-window JavaScript probe would measure the host renderer instead.
+    if (!embeddedTarget) {
+      // Keep the main process responsive when a plugin renderer stops processing queued work.
+      active.responsivenessProbeInterval = setInterval(() => {
       if (
         this.activePlugins.get(pluginId) !== active
         || window.isDestroyed()
@@ -547,7 +561,8 @@ export class PluginLifecycleManager {
           terminatePluginWindow();
         },
       );
-    }, rendererResponsivenessProbeIntervalMs);
+      }, rendererResponsivenessProbeIntervalMs);
+    }
     window.once('closed', () => {
       clearActivePluginTimers(active);
       const failureCode = active.terminationFailureCode
@@ -665,6 +680,9 @@ export class PluginLifecycleManager {
   private snapshotFromManifest(manifest: PluginPackageManifest): PluginLifecycleSnapshot {
     const active = this.activePlugins.get(manifest.id);
     const isActive = active?.version === manifest.version && !active.window.isDestroyed();
+    const embeddedTarget = isActive
+      ? (active!.window as BrowserWindow & { __itToolsPluginEmbed?: { url: string; partition: string } }).__itToolsPluginEmbed
+      : undefined;
     const runtimeFailure = this.runtimeFailures.get(getPluginFailureKey(manifest.id, manifest.version));
     const source = this.provenanceStore.get(manifest.id, manifest.version);
     return {
@@ -690,6 +708,7 @@ export class PluginLifecycleManager {
       ...(source ? { source } : {}),
       status: isActive ? 'active' : 'installed',
       ...(isActive && active.contributionId !== undefined ? { activeContributionId: active.contributionId } : {}),
+      ...(isActive && embeddedTarget ? { embedded: embeddedTarget } : {}),
       ...(runtimeFailure ? { errorCode: runtimeFailure.code } : {}),
     };
   }

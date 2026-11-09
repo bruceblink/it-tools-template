@@ -47,6 +47,11 @@ export function createRendererPlugins({ componentDeclarations = false }: { compo
     Icons({ compiler: 'vue3' }),
     vue({
       include: [/\.vue$/, /\.md$/],
+      template: {
+        compilerOptions: {
+          isCustomElement: tag => tag === 'webview',
+        },
+      },
     }),
     vueJsx(),
     markdown({}),

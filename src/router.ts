@@ -54,7 +54,14 @@ const router = createRouter({
       path: '/extensions/:pluginId/:version/:toolId',
       name: 'external-plugin-tool',
       component: () => import('./pages/ExternalPluginTool.page.vue'),
-      meta: { layout: layouts.base },
+      meta: {
+        layout: layouts.toolLayout,
+        isTool: true,
+        name: 'External plugin tool',
+        description: 'Run an installed plugin tool inside the IT Tools workspace.',
+        translationKey: 'external-plugin-tool',
+        contentWidth: 'wide',
+      },
     },
     {
       path: '/settings/extensions',

@@ -93,6 +93,11 @@ declare global {
     source?: DesktopPluginInstallSource;
     status: 'installed' | 'active' | 'invalid';
     activeContributionId?: string;
+    /** Embedded renderer target used by the current desktop tool route. */
+    embedded?: {
+      readonly url: string;
+      readonly partition: string;
+    };
     errorCode?: DesktopPluginErrorCode | DesktopPluginRuntimeFailureCode;
   }
 

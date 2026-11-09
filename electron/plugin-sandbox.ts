@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import {
@@ -43,6 +44,7 @@ interface PluginSessionPolicy {
 }
 
 const configuredSessions = new WeakMap<Session, PluginSessionPolicy>();
+const embeddedPartitions = new Map<string, string>();
 
 export interface PluginSandboxRegistration {
   pluginId: string;
@@ -56,6 +58,15 @@ export interface PluginSandboxRegistration {
   toolContext?: PluginApiV1ToolContext;
   executeCapability?: PluginCapabilityExecutor;
 }
+
+export interface PluginEmbedTarget {
+  readonly url: string;
+  readonly partition: string;
+}
+
+type EmbeddedPluginWindowTarget = BrowserWindow & {
+  readonly __itToolsPluginEmbed?: PluginEmbedTarget;
+};
 
 const contentTypes: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
@@ -108,6 +119,20 @@ export function isPluginRendererUrl(candidate: string, pluginId: string): boolea
   catch {
     return false;
   }
+}
+
+/** Allow only a session prepared by a verified active plugin activation. */
+export function isAllowedPluginEmbeddedView(candidate: string, partition: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  }
+  catch {
+    return false;
+  }
+  const pluginId = embeddedPartitions.get(partition);
+  return pluginId !== undefined && isPluginRendererUrl(candidate, pluginId)
+    && url.pathname.length > 1;
 }
 
 /** Build a URL only from a normalized relative entrypoint supplied by a validated package record. */
@@ -253,10 +278,136 @@ export async function createPluginSandboxWindow(
   }
 }
 
+/**
+ * Prepare a signed plugin for a host `<webview>` while keeping the plugin in
+ * its own renderer session. The returned adapter lets the lifecycle service
+ * reuse activation, stop, crash and recovery handling without opening a new
+ * top-level window.
+ */
+export async function createPluginEmbeddedWindow(
+  registration: PluginSandboxRegistration,
+  hostContents: WebContents,
+  onWebContentsCreated: (contents: WebContents, pluginId: string) => void,
+): Promise<BrowserWindow> {
+  assertPluginId(registration.pluginId);
+  const entryUrl = getPluginEntryUrl(registration.pluginId, registration.entrypoint, registration.contributionId);
+  const packageRoot = resolve(registration.packageRoot);
+  const entryFile = await resolveRendererFile(packageRoot, new URL(entryUrl).pathname);
+  if (!entryFile || !(await stat(entryFile)).isFile()) {
+    throw new Error(`Plugin ${registration.pluginId} has no readable HTML entrypoint.`);
+  }
+
+  const partition = getPluginSessionPartition(registration.pluginId, packageRoot);
+  embeddedPartitions.set(partition, registration.pluginId);
+  const pluginSession = electronSession.fromPartition(partition, { cache: true });
+  const declaredCapabilities = registration.requestedCapabilities ?? [];
+  const requestedCapabilities = filterSupportedPluginCapabilities(declaredCapabilities);
+  const grantedCapabilities = filterSupportedPluginCapabilities(registration.grantedCapabilities ?? []);
+  if (!registration.executeCapability && (requestedCapabilities.length > 0 || grantedCapabilities.length > 0)) {
+    throw new Error('Plugin capabilities require a host executor.');
+  }
+  const capabilityBroker = registration.executeCapability
+    ? createPluginCapabilityBroker({
+        pluginId: registration.pluginId,
+        requestedCapabilities,
+        grantedCapabilities,
+        execute: registration.executeCapability,
+      })
+    : null;
+  const sessionPolicy = await installPluginSessionPolicy(
+    pluginSession,
+    { ...registration, packageRoot },
+    capabilityBroker,
+    true,
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-use-before-define
+  const adapter = new EmbeddedPluginWindow(
+    entryUrl,
+    partition,
+    pluginSession,
+    sessionPolicy,
+    hostContents,
+    registration.pluginId,
+    onWebContentsCreated,
+  );
+  // The host renderer remains trusted application content. The guest session
+  // is isolated by its partition and is authorized by the session policy.
+  return adapter as unknown as EmbeddedPluginWindowTarget;
+}
+
+class EmbeddedPluginWindow extends EventEmitter {
+  private destroyed = false;
+  private guestContents: WebContents | null = null;
+  private readonly onAttached = (_event: Electron.Event, guestContents: WebContents) => {
+    if (this.destroyed || guestContents.session !== this.pluginSession || this.guestContents !== null) {
+      return;
+    }
+    this.guestContents = guestContents;
+    this.onWebContentsCreated(guestContents, this.pluginId);
+    this.sessionPolicy.activeContentsId = guestContents.id;
+    guestContents.once('destroyed', () => {
+      if (this.guestContents === guestContents) {
+        this.guestContents = null;
+        this.sessionPolicy.activeContentsId = null;
+        this.destroy();
+      }
+    });
+    guestContents.on('render-process-gone', () => this.emit('render-process-gone'));
+  };
+
+  readonly webContents = {
+    id: -1,
+    on: (..._args: unknown[]) => this.webContents,
+    executeJavaScript: async (_script: string) => undefined,
+  };
+
+  constructor(
+    readonly entryUrl: string,
+    readonly partition: string,
+    private readonly pluginSession: Session,
+    private readonly sessionPolicy: PluginSessionPolicy,
+    private readonly hostContents: WebContents,
+    private readonly pluginId: string,
+    private readonly onWebContentsCreated: (contents: WebContents, pluginId: string) => void,
+  ) {
+    super();
+    hostContents.on('did-attach-webview', this.onAttached);
+  }
+
+  isDestroyed(): boolean {
+    return this.destroyed;
+  }
+
+  destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    if (embeddedPartitions.get(this.partition) === this.sessionPolicy.pluginContext.id) {
+      embeddedPartitions.delete(this.partition);
+    }
+    this.hostContents.removeListener('did-attach-webview', this.onAttached);
+    this.sessionPolicy.activeContentsId = null;
+    this.sessionPolicy.capabilityBroker?.revoke();
+    const guestContents = this.guestContents;
+    this.guestContents = null;
+    if (guestContents && !guestContents.isDestroyed()) {
+      (guestContents as WebContents & { destroy(): void }).destroy();
+    }
+    this.emit('closed');
+  }
+
+  get __itToolsPluginEmbed(): PluginEmbedTarget {
+    return { url: this.entryUrl, partition: this.partition };
+  }
+}
+
 async function installPluginSessionPolicy(
   pluginSession: Session,
   registration: PluginSandboxRegistration,
   capabilityBroker: PluginCapabilityBroker | null,
+  embedded = false,
 ): Promise<PluginSessionPolicy> {
   const declaredCapabilities = registration.requestedCapabilities ?? [];
   const grantedCapabilities = filterSupportedPluginCapabilities(registration.grantedCapabilities ?? []);
@@ -274,6 +425,9 @@ async function installPluginSessionPolicy(
     configuredPolicy.toolContext = registration.toolContext;
     configuredPolicy.toolId = registration.contributionId;
     configuredPolicy.capabilityBroker = capabilityBroker;
+    if (embedded) {
+      configuredPolicy.activeContentsId = null;
+    }
     return configuredPolicy;
   }
 

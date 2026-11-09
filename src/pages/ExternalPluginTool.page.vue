@@ -15,6 +15,7 @@ const operationError = ref<string>();
 const notice = ref<string>();
 const plugin = ref<DesktopPluginSnapshot>();
 const contribution = ref<DesktopPluginToolContribution>();
+const embeddedError = ref(false);
 
 type ExternalPluginBridge = {
   activatePlugin: NonNullable<NonNullable<Window['itToolsDesktop']>['activatePlugin']>;
@@ -30,11 +31,11 @@ const messages = {
     notFound: 'This signed plugin tool is not installed or is no longer available.',
     loadError: 'The signed plugin metadata could not be loaded.',
     package: 'Plugin package',
-    info: 'This page displays signed metadata only. The tool runs in its own isolated plugin window and is not injected into the host tool registry.',
+    info: 'The signed plugin tool runs inside the IT Tools workspace. Its renderer stays isolated and uses only the capabilities you approve.',
     run: 'Run plugin',
     stop: 'Stop plugin',
-    runStarted: 'Plugin window started.',
-    stopped: 'Plugin window stopped.',
+    runStarted: 'Plugin tool started.',
+    stopped: 'Plugin tool stopped.',
     running: 'Running this tool',
     runningElsewhere: 'Another tool is running',
     anotherToolRunning: 'Another contribution from this plugin is running. Running this tool will replace it.',
@@ -53,11 +54,11 @@ const messages = {
     notFound: '此签名插件工具尚未安装，或已经不可用。',
     loadError: '无法加载已签名的插件元数据。',
     package: '插件包',
-    info: '此页面只显示已签名的元数据。工具在独立的插件隔离窗口中运行，不会注入宿主工具注册表。',
+    info: '已签名的插件工具直接运行在 IT Tools 工作区内。插件渲染器保持隔离，只能使用你批准的能力。',
     run: '运行插件',
     stop: '停止插件',
-    runStarted: '插件窗口已启动。',
-    stopped: '插件窗口已停止。',
+    runStarted: '插件工具已启动。',
+    stopped: '插件工具已停止。',
     running: '当前工具正在运行',
     runningElsewhere: '另一个工具正在运行',
     anotherToolRunning: '此插件的另一个工具贡献正在运行。运行当前工具会替换它。',
@@ -81,6 +82,7 @@ const currentContributionActive = computed(() => (
 const anotherContributionActive = computed(() => (
   plugin.value?.status === 'active' && !currentContributionActive.value
 ));
+const embeddedTarget = computed(() => plugin.value?.embedded);
 const runtimeError = computed(() => {
   switch (contribution.value?.errorCode ?? plugin.value?.errorCode) {
     case 'renderer-crashed': return text('rendererCrashed');
@@ -115,6 +117,7 @@ const loadContribution = createQueuedRefresh(async () => {
   loadError.value = undefined;
   plugin.value = undefined;
   contribution.value = undefined;
+  embeddedError.value = false;
   if (!isDesktop.value) {
     isLoading.value = false;
     return;
@@ -306,10 +309,20 @@ onUnmounted(() => {
           <RouterLink to="/settings">
             <n-button>{{ text('manage') }}</n-button>
           </RouterLink>
-          <RouterLink to="/">
-            <n-button quaternary>{{ text('home') }}</n-button>
-          </RouterLink>
         </div>
+        <n-alert v-if="embeddedError" type="error" role="alert" :show-icon="false" mt-4>
+          {{ text('operationFailed') }}
+        </n-alert>
+        <component
+          v-if="currentContributionActive && embeddedTarget"
+          :is="'webview'"
+          class="external-plugin-webview"
+          :src="embeddedTarget.url"
+          :partition="embeddedTarget.partition"
+          allowpopups="false"
+          @did-fail-load="embeddedError = true"
+          @render-process-gone="embeddedError = true"
+        />
       </n-card>
     </n-spin>
   </div>
@@ -317,8 +330,8 @@ onUnmounted(() => {
 
 <style scoped>
 .external-plugin-tool-page {
-  width: min(720px, calc(100% - 32px));
-  margin: 64px auto;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .external-plugin-tool-description {
@@ -334,5 +347,14 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.external-plugin-webview {
+  display: block;
+  width: 100%;
+  min-height: 720px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--n-color-modal);
 }
 </style>

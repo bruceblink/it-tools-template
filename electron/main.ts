@@ -27,6 +27,7 @@ import {
 } from './media-permissions';
 import {
   createPluginSandboxWindow,
+  isAllowedPluginEmbeddedView,
   isPluginRendererUrl,
   PLUGIN_SCHEME,
 } from './plugin-sandbox';
@@ -391,8 +392,20 @@ function attachWebContentsSecurity(contents: WebContents) {
       closeRendererOwnedServices(contents);
     }
   });
-  contents.on('will-attach-webview', (event) => {
-    event.preventDefault();
+  contents.on('will-attach-webview', (event, webPreferences, params) => {
+    const partition = params.partition ?? '';
+    if (!isAllowedPluginEmbeddedView(params.src ?? '', partition)) {
+      event.preventDefault();
+      return;
+    }
+    // The guest receives no preload or Node integration. Its session policy
+    // controls package files, capability requests, network and downloads.
+    webPreferences.preload = undefined;
+    webPreferences.nodeIntegration = false;
+    webPreferences.contextIsolation = true;
+    webPreferences.sandbox = true;
+    webPreferences.webSecurity = true;
+    webPreferences.webviewTag = false;
   });
 }
 
@@ -468,7 +481,7 @@ async function createMainWindow() {
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
-      webviewTag: false,
+      webviewTag: true,
     },
   });
 

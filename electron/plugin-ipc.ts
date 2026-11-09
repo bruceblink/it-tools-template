@@ -15,7 +15,7 @@ import type { PluginPackageManifest, PluginPackageSigningKey } from './plugin-pa
 import type { PluginCapabilityCall } from './plugin-capability-broker';
 import { pluginHostApiVersion } from './plugin-api-v1';
 import { isTrustedDesktopSender } from './plugin-ipc-security';
-import { createPluginSandboxWindow } from './plugin-sandbox';
+import { createPluginEmbeddedWindow } from './plugin-sandbox';
 import { PluginSettingsStore } from './plugin-settings-store';
 import { PluginTrustStore, PluginTrustStoreError } from './plugin-trust-store';
 import type { PluginSignerInput } from './plugin-trust-store';
@@ -80,7 +80,17 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     installRoot: resolve(dependencies.userDataRoot, 'plugins', 'packages'),
     hostApiVersion: pluginHostApiVersion,
     trustedSigningKeys: signingKeys,
-    createWindow: registration => createPluginSandboxWindow(registration, dependencies.onPluginWebContentsCreated),
+    createWindow: registration => {
+      const mainWindow = dependencies.getMainWindow();
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        throw new PluginLifecycleError('activation-failed', 'The desktop host window is not available.');
+      }
+      return createPluginEmbeddedWindow(
+        registration,
+        mainWindow.webContents,
+        dependencies.onPluginWebContentsCreated,
+      );
+    },
     executeCapability: (manifest, call, signal) => executePluginCapability(manifest, call, pluginSettingsStore, signal),
     onStateChange: event => {
       const mainWindow = dependencies.getMainWindow();
