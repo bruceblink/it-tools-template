@@ -123,6 +123,7 @@ export async function extractPluginSourceArchive(
   try {
     stagingRoot = await mkdtemp(join(canonicalDestinationRoot, stagingDirectoryPrefix));
     const parsed = await parseGzipTarArchive(stagingRoot, resolvedArchivePath, limits, options.signal);
+    throwIfAborted(options.signal);
     const sourceDirectory = parsed.rootDirectory === ''
       ? stagingRoot
       : resolve(stagingRoot, ...parsed.rootDirectory.split('/'));
