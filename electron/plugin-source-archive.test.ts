@@ -132,6 +132,22 @@ describe('secure plugin source archive extraction', () => {
   });
 
   it.each([
+    ['linkpath', 'target'],
+    ['GNU.sparse.map', '0,1'],
+    ['SCHILY.devmajor', '1'],
+  ])('rejects unsafe PAX metadata %s', async (key, value) => {
+    const root = await createTempRoot();
+    const archive = await writeArchive(root, [
+      { name: 'pax_global_header', type: 'g', contents: paxRecord(key, value) },
+      { name: 'plugin.source.json', contents: '{}' },
+    ]);
+
+    await expect(extractPluginSourceArchive(archive, root)).rejects.toMatchObject({
+      code: 'archive-unsafe-entry',
+    } satisfies Partial<PluginSourceArchiveError>);
+  });
+
+  it.each([
     ['../plugin.source.json', 'unsafe path'],
     ['/plugin.source.json', 'absolute path'],
     ['dir\\plugin.source.json', 'backslash path'],
