@@ -54,6 +54,7 @@ interface ActiveBuild<TSnapshot> {
   readonly requestId: string;
   readonly controller: AbortController;
   readonly operation: Promise<PluginSourceBuildControllerResult<TSnapshot>>;
+  phase: DesktopPluginSourceBuildProgress['phase'];
 }
 
 export type PluginSourceBuildControllerResult<TSnapshot> = DesktopPluginSourceBuildResult<TSnapshot> & {
@@ -79,7 +80,11 @@ export class PluginSourceBuildController<TSnapshot> {
     }
 
     const controller = new AbortController();
+    let tracked: ActiveBuild<TSnapshot> | undefined;
     const emit = (progress: Omit<DesktopPluginSourceBuildProgress, 'requestId'>): void => {
+      if (tracked) {
+        tracked.phase = progress.phase;
+      }
       try {
         onProgress({ requestId: input.requestId, ...progress });
       }
@@ -89,9 +94,10 @@ export class PluginSourceBuildController<TSnapshot> {
     };
     const buildSnapshot = this.dependencies.buildSnapshot ?? buildPluginSourceSnapshot;
     const operation = this.run(input, controller, buildSnapshot, emit);
-    const tracked: ActiveBuild<TSnapshot> = {
+    tracked = {
       requestId: input.requestId,
       controller,
+      phase: 'selecting-key',
       operation: operation.finally(() => {
         if (this.active === tracked) {
           this.active = undefined;
@@ -106,6 +112,9 @@ export class PluginSourceBuildController<TSnapshot> {
     if (!this.active || this.active.requestId !== requestId) {
       return false;
     }
+    if (this.active.phase === 'installing' || this.active.phase === 'completed' || this.active.phase === 'cancelled') {
+      return false;
+    }
     this.active.controller.abort();
     return true;
   }
@@ -115,7 +124,9 @@ export class PluginSourceBuildController<TSnapshot> {
     if (!active) {
       return;
     }
-    active.controller.abort();
+    if (active.phase !== 'installing') {
+      active.controller.abort();
+    }
     await active.operation.catch(() => undefined);
   }
 

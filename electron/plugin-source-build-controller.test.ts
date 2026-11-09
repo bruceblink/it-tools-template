@@ -178,4 +178,39 @@ describe('PluginSourceBuildController', () => {
     await expect(operation).rejects.toMatchObject({ code: 'source-build-cancelled' });
     expect(controller.cancel('source-dispose')).toBe(false);
   });
+
+  it('keeps installation atomic by refusing cancellation after installation starts', async () => {
+    const tempRoot = await createTempRoot();
+    let releaseInstall!: () => void;
+    let controller!: PluginSourceBuildController<{ installed: boolean }>;
+    const installPackage = vi.fn(async (_path: string, _source: unknown, signal: AbortSignal) => {
+      expect(signal.aborted).toBe(false);
+      await new Promise<void>(resolve => {
+        releaseInstall = resolve;
+      });
+      expect(signal.aborted).toBe(false);
+      return { installed: true };
+    });
+    controller = new PluginSourceBuildController({
+      tempRoot,
+      fetch: vi.fn(),
+      selectPrivateKey: async () => '/secure/key.pem',
+      buildSnapshot: vi.fn(async buildInput => {
+        await mkdir(buildInput.outputPath.replace(/\/plugin\.itplugin$/, ''), { recursive: true });
+        return sourceBuild;
+      }),
+      installPackage,
+    });
+
+    const operation = controller.start(input('source-install'), () => {});
+    await vi.waitFor(() => expect(installPackage).toHaveBeenCalledOnce());
+    expect(controller.cancel('source-install')).toBe(false);
+    const dispose = controller.dispose();
+    releaseInstall();
+
+    await expect(operation).resolves.toMatchObject({ snapshot: { installed: true } });
+    await dispose;
+    expect(controller.cancel('source-install')).toBe(false);
+    expect(await readdir(tempRoot)).toEqual([]);
+  });
 });
