@@ -131,6 +131,18 @@ pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin
 
 该命令先执行与 `plugin:validate` 相同的源码检查；存在 `tsconfig.json` 时使用仓库固定的 TypeScript 编译器执行 `--noEmit`，失败时不会写入包。没有 TypeScript 配置时会明确报告跳过类型检查。输出包已存在时仍会失败，不覆盖旧包。
 
+## 从固定 GitHub 提交构建
+
+需要审查 GitHub 源码时，使用完整的 40 位 commit SHA。命令会重新核验公开仓库、`it-tools-plugin` topic 和 commit 身份，再下载受限的 gzip 快照。解压过程拒绝路径穿越、链接、特殊文件、重复路径和超出资源上限的归档。
+
+```powershell
+corepack pnpm plugin:build-source -- --owner example --name my-plugin --commit "<40-character-commit-sha>" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\my-plugin.itplugin"
+```
+
+该命令只执行源码清单校验、可选的仓库 TypeScript `--noEmit` 检查和签名打包。它不运行仓库脚本，不执行 `npm install`，不加载原始源码窗口。临时快照和解压目录在成功或失败后都会删除。输出包仍需在桌面设置中安装，并分别完成签名者信任和能力授权。
+
+命令输出仓库、固定 commit、源码快照 SHA-256、包版本和包 SHA-256。该摘要用于审查和故障定位，不证明 Release 资产由该源码构建。
+
 签名只证明包与该公钥匹配。它不证明插件代码安全。发布者应通过独立渠道提供公钥指纹，并审查插件源码。
 
 ## 安装和运行

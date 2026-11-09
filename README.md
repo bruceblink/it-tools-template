@@ -196,6 +196,17 @@ pnpm plugin:build -- --source ./dist/plugin --tsconfig ./tsconfig.json \
   --key-id plugin-publisher --output ./artifacts/plugin.itplugin
 ~~~
 
+For a reviewed GitHub source snapshot, pin a full commit and use the explicit source-build command. The command downloads the snapshot, rejects unsafe archive entries, validates the extracted source, performs the optional no-emit TypeScript check, and signs the package with the external key:
+
+~~~sh
+corepack pnpm plugin:build-source -- \
+  --owner example --name my-plugin --commit <40-char-commit-sha> \
+  --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
+  --key-id plugin-publisher --output ./artifacts/my-plugin.itplugin
+~~~
+
+The source-build command does not run repository scripts, install dependencies, or load source directly in Electron. Install the generated `.itplugin` from desktop Settings, then review the signer fingerprint and approve only the required capabilities. The snapshot commit and archive SHA-256 are reported for review; they do not prove that a published Release was built from that source.
+
 In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
 
 ## Plugin marketplace

@@ -71,6 +71,6 @@ Electron 不在普通模式下直接加载 GitHub 原始 HTML/JavaScript。直�
 
 1. **已完成基础**：市场只读 GitHub 目录、Electron 本地包安装、信任、能力授权和生命周期管理；`plugin:build` 将源码校验、可选 TypeScript 检查和签名打包收敛为一个命令。
 2. **已完成 Release 直装**：`electron/plugin-marketplace-installer.ts`、单飞控制器和 `desktop:plugins:install-from-marketplace` IPC 负责重新校验仓库、固定 tag/commit、限制下载、流式校验、进度/取消、清理临时文件，并复用生命周期安装器。来源摘要保存到 `.plugin-provenance.json`，只用于诊断，不参与签名包校验。
-3. **源码快照基础已完成**：`electron/plugin-source-snapshot.ts` 可固定完整 commit、校验仓库身份并下载受限的 gzip 快照，但当前不解压、不执行仓库脚本；后续再接入用户明确触发的本地构建和签名流程。不开放普通模式的原始源码直载。
+3. **源码快照构建首个切片已完成**：`electron/plugin-source-snapshot.ts` 固定完整 commit、校验仓库身份并下载受限的 gzip 快照；`plugin:build-source` 通过受限解压、源码校验、可选 TypeScript `--noEmit` 检查和外部 Ed25519 私钥签名生成 `.itplugin`。命令不执行仓库脚本、不安装依赖，也不开放普通模式的原始源码直载。Electron 市场页面尚未把该命令自动化为应用内入口，生成包仍由用户在桌面设置中显式安装。
 
 验收必须覆盖仓库身份伪造、可变分支、重定向、超大资产、下载清理、取消、签名不受信任、重复安装、能力拒绝和安装后运行恢复。当前直装回归覆盖身份/topic、唯一资产、commit 固定、GitHub 重定向主机、流式大小/哈希、单飞取消、来源持久化和临时目录清理；真实 Electron 窗口安装仍待有显示环境时验收。
