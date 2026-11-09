@@ -71,6 +71,15 @@ function writeField(target: Buffer, offset: number, width: number, value: string
   target.write(value, offset, width, 'ascii');
 }
 
+function paxRecord(key: string, value: string): string {
+  const body = `${key}=${value}\n`;
+  let length = Buffer.byteLength(body) + 2;
+  while (String(length).length + 1 + Buffer.byteLength(body) !== length) {
+    length = String(length).length + 1 + Buffer.byteLength(body);
+  }
+  return `${length} ${body}`;
+}
+
 describe('secure plugin source archive extraction', () => {
   it('strips the GitHub wrapper directory and returns the source root', async () => {
     const root = await createTempRoot();
@@ -104,6 +113,24 @@ describe('secure plugin source archive extraction', () => {
     expect(await readFile(join(result.sourceDirectory, 'plugin.source.json'), 'utf8')).toBe('{}');
   });
 
+  it('supports PAX global and extended headers used by GitHub codeload', async () => {
+    const root = await createTempRoot();
+    const archive = await writeArchive(root, [
+      { name: 'pax_global_header', type: 'g', contents: paxRecord('comment', 'github') },
+      { name: 'demo-sha/', type: '5' },
+      { name: 'PaxHeaders/demo-sha/plugin.source.json', type: 'x', contents: paxRecord('path', 'demo-sha/plugin.source.json') },
+      { name: 'demo-sha/placeholder', contents: '{}' },
+      { name: 'demo-sha/index.html', contents: '<main />' },
+    ]);
+
+    const result = await extractPluginSourceArchive(archive, root);
+
+    expect(result.rootDirectory).toBe('demo-sha');
+    expect(result.entryCount).toBe(5);
+    expect(await readFile(join(result.sourceDirectory, 'plugin.source.json'), 'utf8')).toBe('{}');
+    expect(await readFile(join(result.sourceDirectory, 'index.html'), 'utf8')).toBe('<main />');
+  });
+
   it.each([
     ['../plugin.source.json', 'unsafe path'],
     ['/plugin.source.json', 'absolute path'],
@@ -124,7 +151,7 @@ describe('secure plugin source archive extraction', () => {
     ['3', 'character device'],
     ['4', 'block device'],
     ['6', 'fifo'],
-    ['x', 'unknown special entry'],
+    ['L', 'unknown special entry'],
   ])('rejects %s entries (%s)', async type => {
     const root = await createTempRoot();
     const archive = await writeArchive(root, [

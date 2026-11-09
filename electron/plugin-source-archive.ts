@@ -88,6 +88,17 @@ interface ParsedArchive {
   readonly rootDirectory: string;
 }
 
+interface PaxAttributes {
+  readonly path?: string;
+  readonly size?: number;
+  readonly linkPath?: string;
+}
+
+interface ParsedPaxHeader {
+  readonly kind: 'global' | 'extended';
+  readonly size: number;
+}
+
 /**
  * Extract a GitHub tar.gz source snapshot into a fresh directory below
  * `destinationRoot`. Only regular files and directories are accepted. The
@@ -287,6 +298,8 @@ async function parseGzipTarArchive(
   let fileCount = 0;
   let expandedBytes = 0;
   let sawEndOfArchive = false;
+  let globalPax: PaxAttributes = {};
+  let pendingPax: PaxAttributes | undefined;
 
   try {
     while (true) {
@@ -308,18 +321,48 @@ async function parseGzipTarArchive(
       }
 
       const parsedHeader = parseTarHeader(header);
-      const normalized = normalizeTarPath(parsedHeader.path, parsedHeader.isDirectory);
-      registerEntry(normalized.path, normalized.segments, parsedHeader.isDirectory, parsedHeader.size, entriesByPath, pathPrefixes);
+      if (parsedHeader.pax) {
+        if (parsedHeader.pax.size > limits.maximumFileBytes) {
+          throw new PluginSourceArchiveError(
+            'archive-resource-limit',
+            'A PAX metadata entry exceeds the per-file size limit.',
+          );
+        }
+        const payload = await readPaxPayload(reader, parsedHeader.pax.size, signal);
+        const attributes = parsePaxRecords(payload);
+        const padding = (tarBlockBytes - (parsedHeader.pax.size % tarBlockBytes)) % tarBlockBytes;
+        await reader.discard(padding);
+        if (parsedHeader.pax.kind === 'global') {
+          globalPax = { ...globalPax, ...attributes };
+        }
+        else {
+          pendingPax = { ...(pendingPax ?? {}), ...attributes };
+        }
+        continue;
+      }
+
+      const attributes = { ...globalPax, ...(pendingPax ?? {}) };
+      pendingPax = undefined;
+      const effectivePath = attributes.path ?? parsedHeader.path;
+      const effectiveSize = attributes.size ?? parsedHeader.size;
+      if (attributes.linkPath !== undefined && attributes.linkPath !== '') {
+        throw new PluginSourceArchiveError(
+          'archive-unsafe-entry',
+          'The source archive contains a linked entry in its PAX metadata.',
+        );
+      }
+      const normalized = normalizeTarPath(effectivePath, parsedHeader.isDirectory);
+      registerEntry(normalized.path, normalized.segments, parsedHeader.isDirectory, effectiveSize, entriesByPath, pathPrefixes);
       const record: TarEntryRecord = {
         path: normalized.path,
         segments: normalized.segments,
         isDirectory: parsedHeader.isDirectory,
-        size: parsedHeader.size,
+        size: effectiveSize,
       };
       entries.push(record);
 
       if (parsedHeader.isDirectory) {
-        if (parsedHeader.size !== 0) {
+        if (effectiveSize !== 0) {
           throw new PluginSourceArchiveError(
             'archive-unsafe-entry',
             'The source archive contains a directory with file data.',
@@ -336,33 +379,36 @@ async function parseGzipTarArchive(
           'The source archive contains too many files.',
         );
       }
-      if (parsedHeader.size > limits.maximumFileBytes) {
+      if (effectiveSize > limits.maximumFileBytes) {
         throw new PluginSourceArchiveError(
           'archive-resource-limit',
           'A source archive file exceeds the per-file size limit.',
         );
       }
-      if (parsedHeader.size > limits.maximumExpandedBytes - expandedBytes) {
+      if (effectiveSize > limits.maximumExpandedBytes - expandedBytes) {
         throw new PluginSourceArchiveError(
           'archive-resource-limit',
           'The source archive exceeds the expanded size limit.',
         );
       }
-      expandedBytes += parsedHeader.size;
+      expandedBytes += effectiveSize;
 
       await writeFileEntry(
         reader,
         stagingRoot,
         normalized.segments,
-        parsedHeader.size,
+        effectiveSize,
         signal,
       );
-      const padding = (tarBlockBytes - (parsedHeader.size % tarBlockBytes)) % tarBlockBytes;
+      const padding = (tarBlockBytes - (effectiveSize % tarBlockBytes)) % tarBlockBytes;
       await reader.discard(padding);
     }
 
     if (!sawEndOfArchive) {
       throw new PluginSourceArchiveError('archive-invalid', 'The source archive is missing its end marker.');
+    }
+    if (pendingPax !== undefined) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive ends with an unused PAX metadata entry.');
     }
     // A conforming tar has two zero blocks. Accept one zero block for readers
     // that produce a short archive, but reject any non-zero trailing data.
@@ -428,10 +474,97 @@ async function parseGzipTarArchive(
   }
 }
 
+async function readPaxPayload(
+  reader: TarChunkReader,
+  size: number,
+  signal: AbortSignal | undefined,
+): Promise<Buffer> {
+  if (size === 0) {
+    return Buffer.alloc(0);
+  }
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  await reader.readExactly(size, async chunk => {
+    throwIfAborted(signal);
+    bytes += chunk.length;
+    chunks.push(Buffer.from(chunk));
+  });
+  return Buffer.concat(chunks, bytes);
+}
+
+function parsePaxRecords(payload: Buffer): PaxAttributes {
+  const attributes: { path?: string; size?: number; linkPath?: string } = {};
+  let offset = 0;
+  while (offset < payload.length) {
+    const space = payload.indexOf(0x20, offset);
+    if (space <= offset) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains a malformed PAX record.');
+    }
+    const lengthText = payload.subarray(offset, space).toString('ascii');
+    if (!/^[0-9]+$/.test(lengthText)) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains an invalid PAX record length.');
+    }
+    const recordLength = Number(lengthText);
+    if (
+      !Number.isSafeInteger(recordLength)
+      || recordLength <= space - offset + 3
+      || offset + recordLength > payload.length
+    ) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains an invalid PAX record length.');
+    }
+    const record = payload.subarray(offset, offset + recordLength);
+    if (record[record.length - 1] !== 0x0a) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains an unterminated PAX record.');
+    }
+    const equals = record.indexOf(0x3d, space - offset + 1);
+    if (equals < 0 || equals === space - offset + 1) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains an invalid PAX key.');
+    }
+    const key = record.subarray(space - offset + 1, equals).toString('ascii');
+    if (!/^[A-Za-z0-9._-]+$/.test(key)) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains an invalid PAX key.');
+    }
+    let value: string;
+    try {
+      value = new TextDecoder('utf-8', { fatal: true }).decode(record.subarray(equals + 1, record.length - 1));
+    }
+    catch (error) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains invalid UTF-8 PAX metadata.', { cause: error });
+    }
+    if (key === 'path') {
+      attributes.path = value;
+    }
+    else if (key === 'size') {
+      if (!/^[0-9]+$/.test(value)) {
+        throw new PluginSourceArchiveError('archive-invalid', 'The source archive contains an invalid PAX size.');
+      }
+      const size = Number(value);
+      if (!Number.isSafeInteger(size)) {
+        throw new PluginSourceArchiveError('archive-resource-limit', 'The PAX size is too large.');
+      }
+      attributes.size = size;
+    }
+    else if (key === 'linkpath') {
+      attributes.linkPath = value;
+    }
+    else if (
+      key.startsWith('GNU.sparse.')
+      || key === 'SCHILY.devmajor'
+      || key === 'SCHILY.devminor'
+      || key === 'SCHILY.realsize'
+    ) {
+      throw new PluginSourceArchiveError('archive-unsafe-entry', 'The source archive contains unsupported special-file PAX metadata.');
+    }
+    offset += recordLength;
+  }
+  return attributes;
+}
+
 interface ParsedTarHeader {
   readonly path: string;
   readonly size: number;
   readonly isDirectory: boolean;
+  readonly pax?: ParsedPaxHeader;
 }
 
 function parseTarHeader(header: Buffer): ParsedTarHeader {
@@ -441,6 +574,30 @@ function parseTarHeader(header: Buffer): ParsedTarHeader {
   const path = prefix === '' ? name : `${prefix}/${name}`;
   const typeByte = header[156];
   const type = typeByte === 0 ? '\0' : String.fromCharCode(typeByte);
+  if (type === 'g' || type === 'x') {
+    const size = parseTarNumber(header.subarray(124, 136), 'size');
+    const mode = parseTarNumber(header.subarray(100, 108), 'mode');
+    const modeType = mode & 0o170000;
+    if (modeType !== 0 && modeType !== 0o100000) {
+      throw new PluginSourceArchiveError(
+        'archive-unsafe-entry',
+        'The source archive contains PAX metadata with an unsafe type mode.',
+      );
+    }
+    const linkName = decodeTarField(header.subarray(157, 257), 'link name');
+    if (linkName !== '') {
+      throw new PluginSourceArchiveError(
+        'archive-unsafe-entry',
+        'The source archive contains linked PAX metadata.',
+      );
+    }
+    return {
+      path,
+      size,
+      isDirectory: false,
+      pax: { kind: type === 'g' ? 'global' : 'extended', size },
+    };
+  }
   const isDirectory = type === '5';
   if (type !== '\0' && type !== '0' && !isDirectory) {
     throw new PluginSourceArchiveError(
