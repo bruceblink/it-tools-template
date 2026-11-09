@@ -258,6 +258,38 @@ describe('plugin renderer API v1', () => {
     }
   });
 
+  it('clears the request timer when transport fails before a response exists', async () => {
+    vi.useFakeTimers();
+    try {
+      const clearTimeout = vi.fn(globalThis.clearTimeout);
+      const fetch = vi.fn(async () => {
+        throw new Error('connection refused');
+      });
+      const context = {
+        fetch,
+        AbortController,
+        setTimeout,
+        clearTimeout,
+      };
+      runInNewContext(getPluginApiV1Script(), context);
+      const api = (context as unknown as {
+        itTools: { capabilities: { runtime: { getInfo: () => Promise<unknown> } } };
+      }).itTools;
+
+      // 快速失败也必须清理超时任务，避免反复调用累积计时器。
+      await expect(api.capabilities.runtime.getInfo()).rejects.toMatchObject({
+        name: 'PluginApiError',
+        code: 'transport-error',
+        status: 0,
+      });
+      expect(clearTimeout).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    }
+    finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('aborts a capability call whose response body never finishes', async () => {
     vi.useFakeTimers();
     try {

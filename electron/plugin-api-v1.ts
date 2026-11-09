@@ -181,25 +181,26 @@ export function getPluginApiV1Script(options: PluginApiV1ScriptOptions = {}): st
       : nativeSetTimeout(() => controller.abort(), requestTimeoutMs);
     let response;
     try {
-      const requestOptions = {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, capability, operation, input }),
-        cache: 'no-store',
-        credentials: 'omit',
-        redirect: 'error',
-        referrerPolicy: 'no-referrer',
-      };
-      if (controller !== null) {
-        requestOptions.signal = controller.signal;
+      // 传输和响应解析共用同一个清理边界，快速失败时也必须释放计时器。
+      try {
+        const requestOptions = {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, capability, operation, input }),
+          cache: 'no-store',
+          credentials: 'omit',
+          redirect: 'error',
+          referrerPolicy: 'no-referrer',
+        };
+        if (controller !== null) {
+          requestOptions.signal = controller.signal;
+        }
+        response = await nativeFetch(apiEndpoint, requestOptions);
       }
-      response = await nativeFetch(apiEndpoint, requestOptions);
-    }
-    catch {
-      throw new PluginApiError('transport-error', 0);
-    }
+      catch {
+        throw new PluginApiError('transport-error', 0);
+      }
 
-    try {
       let payload;
       try {
         payload = await response.json();
