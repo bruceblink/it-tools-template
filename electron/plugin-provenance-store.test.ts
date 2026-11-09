@@ -23,8 +23,8 @@ const source: DesktopPluginMarketplaceInstallSource = {
   repository: 'example/demo-plugin',
   tagName: 'v1.0.0',
   commitSha: 'a'.repeat(40),
-  assetName: 'demo.itplugin',
-  assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+  assetName: 'demo.itxs',
+  assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs',
   archiveBytes: 128,
   sha256: 'b'.repeat(64),
 };
@@ -85,7 +85,7 @@ describe('plugin provenance store', () => {
 
     await expect(store.set('org.example.demo', '1.0.0', {
       ...source,
-      assetUrl: 'https://evil.example/demo.itplugin',
+      assetUrl: 'https://evil.example/demo.itxs',
     })).rejects.toMatchObject({ code: 'invalid-source' } satisfies Partial<PluginProvenanceStoreError>);
   });
 
@@ -97,7 +97,10 @@ describe('plugin provenance store', () => {
       assetUrl: 'https://release-assets.githubusercontent.com/github-production-release-asset/demo',
     });
     const saved = store.get('org.example.demo', '1.0.0');
-    expect(saved && 'assetUrl' in saved ? saved.assetUrl : undefined).toContain('release-assets.githubusercontent.com');
+    if (!saved || !('assetUrl' in saved)) {
+      throw new Error('Expected Release provenance.');
+    }
+    expect(saved.assetUrl).toContain('release-assets.githubusercontent.com');
   });
 
   it('persists fixed source snapshot provenance with a distinct source kind', async () => {

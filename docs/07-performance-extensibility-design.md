@@ -15,7 +15,7 @@
 | 平台适配层 | Platform Adapter | 提供明确的剪贴板、文件和运行信息操作；不提供通用 Node 或 Shell |
 | 任务执行器 | Task Runner | 管理计算队列、并发、取消、超时与结果归属；不隔离不可信插件 |
 | 第一方扩展 | First-Party Extension | 由本项目审查并随应用构建的代码；使用 SDK v0，不提供第三方隔离 |
-| 外部插件 | External Plugin | 用户安装的签名 `.itplugin` 静态包；仅在 Electron 隔离窗口运行 |
+| 外部插件 | External Plugin | 用户安装的签名 `.itxs` 静态包；仅在 Electron 隔离窗口运行 |
 | 插件清单 | Plugin Manifest | 声明身份、API 范围、入口、贡献项、请求能力、资源哈希与签名 |
 | 扩展宿主 | Extension Host | 管理注册、激活、停用与资源回收；第一方和外部插件各有实现 |
 | 能力代理 | Capability Broker | 校验来源、输入、宿主支持和用户授权，再执行受限操作 |
@@ -30,7 +30,7 @@ Web/PWA 与 Electron 共享 Vue 组件、工具注册、路由、校验、主题
 | 启动与资源 | 浏览器入口、SPA 回退、Service Worker | `app://bundle/` 本地协议，不注册 Web Service Worker |
 | 原生操作 | 浏览器 API 和站点权限 | 固定 preload 方法、主进程来源检查和受限桌面服务 |
 | 工具注册 | 仅注册支持 Web 的工具 | 可注册数据库、系统监视、API、Git、对象存储和容器工作台 |
-| 外部包 | 不安装 `.itplugin` | 校验、信任、授权后在隔离窗口运行 |
+| 外部包 | 不安装 `.itxs` | 校验、信任、授权后在隔离窗口运行 |
 | 存储 | 页面内容默认内存；普通偏好可本地保存 | 凭据、插件设置和运行 Session 按各自边界管理，不与 Web 或 Ramag 共享 |
 
 Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Node integration。主进程校验调用来源、主框架、参数和会话归属；不向页面提供任意文件路径、Shell、通用网络代理或数据库驱动。插件不复用应用主窗口的 preload。

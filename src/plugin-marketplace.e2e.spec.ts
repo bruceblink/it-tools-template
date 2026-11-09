@@ -71,7 +71,7 @@ test('plugin marketplace lists repositories and opens manifest reference details
   await expect(page.getByText('runtime.info', { exact: true })).toBeVisible();
 
   expect(apiRequests).toHaveLength(2);
-  expect(apiRequests.every(url => !url.includes('.itplugin'))).toBe(true);
+  expect(apiRequests.every(url => !url.includes('.itxs'))).toBe(true);
   expect(pageErrors).toEqual([]);
 });
 
@@ -79,6 +79,7 @@ test('desktop marketplace can install a repository release through the host brid
   await page.addInitScript(() => {
     Object.assign(window, {
       itToolsDesktop: {
+        buildPluginSource: async () => ({ ok: false, error: { code: 'source-build-cancelled' } }),
         installPluginFromMarketplace: async () => ({
           ok: true,
           value: {
@@ -91,8 +92,8 @@ test('desktop marketplace can install a repository release through the host brid
               repository: 'example/demo-plugin',
               tagName: 'v1.0.0',
               commitSha: 'a'.repeat(40),
-              assetName: 'demo.itplugin',
-              assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+              assetName: 'demo.itxs',
+              assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs',
               archiveBytes: 128,
               sha256: 'b'.repeat(64),
             },
@@ -134,6 +135,12 @@ test('desktop marketplace can install a repository release through the host brid
   await page.goto('/plugin-marketplace');
   const repositoryCard = page.getByTestId('plugin-repository-42');
   await expect(repositoryCard.getByRole('button', { name: 'Install latest release' })).toBeVisible();
+  await repositoryCard.getByRole('button', { name: 'Details' }).click();
+  await expect(page.getByRole('link', { name: 'Build from a fixed commit' })).toHaveAttribute(
+    'href',
+    '/settings?pluginOwner=example&pluginName=demo-plugin',
+  );
+  await page.getByRole('button', { name: 'Close plugin details' }).click();
   await repositoryCard.getByRole('button', { name: 'Install latest release' }).click();
   await expect(page.getByText('Installed Demo plugin 1.0.0 from release v1.0.0.', { exact: false })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Open plugin settings' })).toHaveAttribute('href', '/settings');

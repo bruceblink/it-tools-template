@@ -11,7 +11,7 @@ const repositoryPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/[A-Za-z0-9][A-Za-
 const commitPattern = /^[a-f0-9]{40}$/i;
 const hashPattern = /^[a-f0-9]{64}$/i;
 const sourceTagPattern = /^[^\u0000-\u001f\u007f]{1,256}$/;
-const assetNamePattern = /^[^\\/\u0000-\u001f\u007f]{1,255}\.itplugin$/i;
+const assetNamePattern = /^[^\\/\u0000-\u001f\u007f]{1,255}\.itxs$/i;
 const allowedAssetHosts = new Set([
   'github.com',
   'objects.githubusercontent.com',

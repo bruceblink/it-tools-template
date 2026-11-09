@@ -68,7 +68,7 @@
     "test:heap-snapshot": "node --test scripts/heap-snapshot-analysis.test.mjs",
     "test:plugin-pack": "node --test scripts/plugin-pack.test.mjs",
     "test:plugin-build": "node --test scripts/plugin-build.test.mjs",
-    "test:plugin-source-build": "vitest run electron/plugin-source-build.test.ts electron/plugin-source-archive.test.ts electron/plugin-source-build-controller.test.ts --environment node",
+    "test:plugin-source-build": "vitest run electron/plugin-source-build.test.ts electron/plugin-source-archive.test.ts electron/plugin-source-snapshot.test.ts electron/plugin-source-build-controller.test.ts --environment node",
     "test:plugin-sdk": "node --test scripts/plugin-sdk.test.mjs",
     "test:plugin-project": "node --test scripts/plugin-project.test.mjs",
     "generate:oui": "node scripts/generate-oui-data.mjs",

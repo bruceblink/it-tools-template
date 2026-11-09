@@ -148,7 +148,7 @@ Tool metadata controls platform visibility, route registration, search, offline 
 
 ## Desktop app
 
-The desktop app shares the tool catalog and Vue UI while adding local capabilities through a sandboxed preload bridge. External .itplugin packages are currently desktop-only.
+The desktop app shares the tool catalog and Vue UI while adding local capabilities through a sandboxed preload bridge. External .itxs packages are currently desktop-only.
 
 ~~~sh
 corepack pnpm setup:electron
@@ -193,7 +193,7 @@ For a repeatable external-project build, run one command. It validates the sourc
 ~~~sh
 pnpm plugin:build -- --source ./dist/plugin --tsconfig ./tsconfig.json \
   --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
-  --key-id plugin-publisher --output ./artifacts/plugin.itplugin
+  --key-id plugin-publisher --output ./artifacts/plugin.itxs
 ~~~
 
 For a reviewed GitHub source snapshot, pin a full commit and use the explicit source-build command. The command downloads the snapshot, rejects unsafe archive entries, validates the extracted source, performs the optional no-emit TypeScript check, and signs the package with the external key:
@@ -202,7 +202,7 @@ For a reviewed GitHub source snapshot, pin a full commit and use the explicit so
 corepack pnpm plugin:build-source -- \
   --owner example --name my-plugin --commit <40-char-commit-sha> \
   --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
-  --key-id plugin-publisher --output ./artifacts/my-plugin.itplugin
+  --key-id plugin-publisher --output ./artifacts/my-plugin.itxs
 ~~~
 
 The source-build command does not run repository scripts, install dependencies, or load source directly in Electron. You can also enter the owner, repository, full commit SHA, and signer key ID in the desktop Settings source-build card; the main process selects the private key and installs the generated package. Review the signer fingerprint and approve only the required capabilities. The snapshot commit and archive SHA-256 are reported for review; they do not prove that a published Release was built from that source.
@@ -213,7 +213,7 @@ In desktop Settings, the plugin manager starts with a three-step onboarding card
 
 Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In the desktop app, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
 
-Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a plugin.source.json manifest, and publish exactly one signed `.itplugin` asset in the latest stable Release for desktop direct install. The page reads source metadata only as reference data; signing, trust, capability approval, and installation remain part of the desktop workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
+Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a plugin.source.json manifest, and publish exactly one signed `.itxs` asset in the latest stable Release for desktop direct install. The page reads source metadata only as reference data; signing, trust, capability approval, and installation remain part of the desktop workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
 
 ## Architecture and project docs
 

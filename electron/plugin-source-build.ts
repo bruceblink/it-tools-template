@@ -49,7 +49,7 @@ export interface PluginSourceBuildInput extends PluginSourceSnapshotInput {
   readonly privateKeyPath: string;
   /** The explicit signer ID written into the package manifest. */
   readonly keyId: string;
-  /** A new `.itplugin` path. Existing files are never overwritten. */
+  /** A new `.itxs` path. Existing files are never overwritten. */
   readonly outputPath: string;
   /** Optional TypeScript project configuration inside or beside the snapshot. */
   readonly tsconfigPath?: string;

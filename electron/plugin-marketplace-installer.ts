@@ -224,7 +224,7 @@ function parseReleaseAsset(value: unknown, owner: string, name: string, tagName:
     || assetName.length > 255
     || assetName.includes('/')
     || assetName.includes('\\')
-    || !assetName.toLowerCase().endsWith('.itplugin')
+    || !assetName.toLowerCase().endsWith('.itxs')
     || !urlValue
     || size <= 0
     || size > pluginPackageLimits.maximumArchiveBytes
@@ -269,19 +269,19 @@ function selectReleaseAsset(payload: GithubReleaseResponse, owner: string, name:
     if (!isRecord(asset) || typeof asset.name !== 'string') {
       return false;
     }
-    return asset.name.toLowerCase().endsWith('.itplugin');
+    return asset.name.toLowerCase().endsWith('.itxs');
   });
   if (packageAssets.length !== 1) {
     throw new PluginMarketplaceInstallError(
       'marketplace-release-not-found',
       packageAssets.length === 0
-        ? 'The latest GitHub release does not contain a .itplugin asset.'
-        : 'The latest GitHub release contains multiple .itplugin assets; the publisher must expose exactly one.',
+        ? 'The latest GitHub release does not contain a .itxs asset.'
+        : 'The latest GitHub release contains multiple .itxs assets; the publisher must expose exactly one.',
     );
   }
   const asset = parseReleaseAsset(packageAssets[0], owner, name, String(payload.tag_name));
   if (!asset) {
-    throw new PluginMarketplaceInstallError('marketplace-release-not-found', 'The latest GitHub release does not contain a valid bounded .itplugin asset.');
+    throw new PluginMarketplaceInstallError('marketplace-release-not-found', 'The latest GitHub release does not contain a valid bounded .itxs asset.');
   }
   return asset;
 }
@@ -550,7 +550,7 @@ export async function installPluginMarketplaceRelease<TSnapshot>(
   });
   await mkdir(dependencies.tempRoot, { recursive: true, mode: 0o700 });
   const temporaryDirectory = await mkdtemp(join(dependencies.tempRoot, '.it-tools-plugin-marketplace-'));
-  const archivePath = join(temporaryDirectory, 'release.itplugin');
+  const archivePath = join(temporaryDirectory, 'release.itxs');
   try {
     const downloaded = await downloadReleaseAsset(release, dependencies, archivePath);
     throwIfAborted(dependencies.signal);

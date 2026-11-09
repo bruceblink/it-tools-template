@@ -81,7 +81,7 @@ describe('desktop plugin bridge error catalog', () => {
       repository: 'example/demo-plugin',
       tagName: 'v1.0.0',
       commitSha: 'a'.repeat(40),
-      assetName: 'demo.itplugin',
+      assetName: 'demo.itxs',
       transferredBytes: 12,
       totalBytes: 24,
     })).toBe(true);

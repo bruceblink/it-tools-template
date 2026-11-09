@@ -34,7 +34,7 @@ catch (error) {
 
 1. **声明兼容范围**：在 `plugin.source.json` 中声明 `formatVersion: 1`、包 `version`、`apiVersion.minInclusive`/`maxExclusive`、入口文件、请求能力和可选 `contributions.tools`。`apiVersion` 必须覆盖宿主的 `1.4.0`；未知能力不会自动获得授权。
 2. **声明工具贡献**：工具 ID 使用 `<plugin-id>/<tool-id>`，并提供标题、说明、关键词。`dataProcessing`、`offline` 和工具级 `capabilities` 只用于显示和最小授权筛选；工具能力必须是包 `requestedCapabilities` 的子集。
-3. **打包和安装**：使用 `plugin:pack` 生成签名 `.itplugin`。宿主先校验签名、API 范围、路径、文件哈希和资源上限，再写入暂存目录。安装不执行包内脚本，也不执行 `npm install`。
+3. **打包和安装**：使用 `plugin:pack` 生成签名 `.itxs`。宿主先校验签名、API 范围、路径、文件哈希和资源上限，再写入暂存目录。安装不执行包内脚本，也不执行 `npm install`。
 4. **信任与授权分离**：用户先核对签名者指纹并信任公钥，再安装包；运行前再选择能力并确认桌面提示。签名信任只确认来源和完整性，不授予运行能力。
 5. **运行时握手**：宿主在插件代码运行前注入 `window.itTools`。插件可读取 `plugin`、`toolId`、`tool` 和 `permissions`，但这些对象只描述上下文。贡献页面的 `toolId` 优先使用宿主已验证的贡献 ID，插件不应依赖 URL hash 作为主标识。
 6. **能力调用**：插件只调用 `window.itTools.capabilities`。请求通过同源能力代理发送；宿主校验来源、请求结构、输入输出大小、频率、并发和当前授权。错误只依赖稳定 `PluginApiError.code`，不解析宿主内部错误文本。
@@ -56,7 +56,7 @@ if (canReadRuntime) {
 }
 ```
 
-对接方应验证四个边界：不支持的 API 版本在安装前被拒绝；未请求或未授权的能力返回稳定错误；贡献 ID 在包内保持命名空间；插件停用后宿主仍可打开设置和其他工具。Web 和 Docker 不加载 `.itplugin`，因此对接方必须为这些平台提供降级说明或继续使用内置工具。
+对接方应验证四个边界：不支持的 API 版本在安装前被拒绝；未请求或未授权的能力返回稳定错误；贡献 ID 在包内保持命名空间；插件停用后宿主仍可打开设置和其他工具。Web 和 Docker 不加载 `.itxs`，因此对接方必须为这些平台提供降级说明或继续使用内置工具。
 
 桌面管理器的 `listPlugins()` 快照同时返回 `requestedCapabilities`、`supportedCapabilities` 和 `grantedCapabilities`。前者是包声明，中者是当前宿主可以执行的能力，后者是本次运行实际授予的能力。渲染器应使用快照中的 `supportedCapabilities` 决定是否显示授权控件，不应复制宿主能力列表。已知但暂未实现的清单声明仍会保留在 `requestedCapabilities` 中，并显示为不支持。
 

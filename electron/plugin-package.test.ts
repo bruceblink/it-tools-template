@@ -45,9 +45,22 @@ afterEach(async () => {
 });
 
 describe('Electron plugin package staging', () => {
+  it('requires the unified .itxs package extension', async () => {
+    const root = await createTemporaryDirectory();
+    const archivePath = join(root, 'sample.zip');
+    await writeFile(archivePath, makeSignedArchive());
+
+    await expect(stagePluginPackageArchive({
+      archivePath,
+      installRoot: join(root, 'installed'),
+      hostApiVersion: '1.2.0',
+      trustedSigningKeys,
+    })).rejects.toMatchObject({ code: 'invalid-archive' } satisfies Partial<PluginPackageError>);
+  });
+
   it('verifies the signed manifest and every file before atomically staging prebuilt assets', async () => {
     const root = await createTemporaryDirectory();
-    const archivePath = join(root, 'sample.itplugin');
+    const archivePath = join(root, 'sample.itxs');
     const files = {
       'index.html': '<!doctype html><main>Safe plugin</main>',
       'install.js': 'globalThis.__pluginInstallScriptRan = true; throw new Error("must not run");',
@@ -72,7 +85,7 @@ describe('Electron plugin package staging', () => {
 
   it('rejects a changed file and removes the incomplete staging directory', async () => {
     const root = await createTemporaryDirectory();
-    const archivePath = join(root, 'tampered.itplugin');
+    const archivePath = join(root, 'tampered.itxs');
     await writeFile(archivePath, makeSignedArchive({
       signedFiles: { 'index.html': '<main>Signed content</main>' },
       archivedFiles: { 'index.html': '<main>Changed content</main>' },
@@ -91,7 +104,7 @@ describe('Electron plugin package staging', () => {
 
   it('validates signed tool contribution metadata and keeps old packages compatible', async () => {
     const root = await createTemporaryDirectory();
-    const archivePath = join(root, 'contributions.itplugin');
+    const archivePath = join(root, 'contributions.itxs');
     await writeFile(archivePath, makeSignedArchive({
       requestedCapabilities: ['runtime.info', 'clipboard.write'],
       contributions: {
@@ -122,7 +135,7 @@ describe('Electron plugin package staging', () => {
       capabilities: ['runtime.info'],
     }]);
 
-    const oldArchivePath = join(root, 'old.itplugin');
+    const oldArchivePath = join(root, 'old.itxs');
     await writeFile(oldArchivePath, makeSignedArchive());
     const oldResult = await stagePluginPackageArchive({
       archivePath: oldArchivePath,
@@ -132,7 +145,7 @@ describe('Electron plugin package staging', () => {
     });
     expect(oldResult.manifest.contributions).toBeUndefined();
 
-    const invalidArchivePath = join(root, 'invalid-contribution.itplugin');
+    const invalidArchivePath = join(root, 'invalid-contribution.itxs');
     await writeFile(invalidArchivePath, makeSignedArchive({
       contributions: {
         tools: [{
@@ -150,7 +163,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'invalid-package' });
 
-    const undeclaredCapabilityPath = join(root, 'undeclared-capability.itplugin');
+    const undeclaredCapabilityPath = join(root, 'undeclared-capability.itxs');
     await writeFile(undeclaredCapabilityPath, makeSignedArchive({
       requestedCapabilities: ['runtime.info'],
       contributions: {
@@ -173,7 +186,7 @@ describe('Electron plugin package staging', () => {
 
   it('rejects files that are not covered by the signed manifest', async () => {
     const root = await createTemporaryDirectory();
-    const archivePath = join(root, 'unlisted.itplugin');
+    const archivePath = join(root, 'unlisted.itxs');
     await writeFile(archivePath, makeSignedArchive({
       signedFiles: { 'index.html': '<main>Signed</main>' },
       archivedFiles: {
@@ -192,7 +205,7 @@ describe('Electron plugin package staging', () => {
 
   it('rejects untrusted signing keys and incompatible host API versions', async () => {
     const root = await createTemporaryDirectory();
-    const untrustedArchivePath = join(root, 'untrusted.itplugin');
+    const untrustedArchivePath = join(root, 'untrusted.itxs');
     await writeFile(untrustedArchivePath, makeSignedArchive());
 
     await expect(stagePluginPackageArchive({
@@ -202,7 +215,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys: new Map(),
     })).rejects.toMatchObject({ code: 'untrusted-signature' });
 
-    const invalidSignaturePath = join(root, 'invalid-signature.itplugin');
+    const invalidSignaturePath = join(root, 'invalid-signature.itxs');
     await writeFile(invalidSignaturePath, makeSignedArchive({ signingKey: otherSigningPair.privateKey }));
     await expect(stagePluginPackageArchive({
       archivePath: invalidSignaturePath,
@@ -211,7 +224,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'untrusted-signature' });
 
-    const incompatibleArchivePath = join(root, 'incompatible.itplugin');
+    const incompatibleArchivePath = join(root, 'incompatible.itxs');
     await writeFile(incompatibleArchivePath, makeSignedArchive({
       apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
     }));
@@ -225,7 +238,7 @@ describe('Electron plugin package staging', () => {
 
   it('rejects traversal paths, symlinks, duplicate entries and case collisions', async () => {
     const root = await createTemporaryDirectory();
-    const traversalPath = join(root, 'traversal.itplugin');
+    const traversalPath = join(root, 'traversal.itxs');
     await writeFile(traversalPath, makeZip([
       { path: 'plugin.json', contents: '{}' },
       { path: '../escape.txt', contents: 'outside' },
@@ -237,7 +250,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toBeInstanceOf(PluginPackageError);
 
-    const deepPath = join(root, 'deep-path.itplugin');
+    const deepPath = join(root, 'deep-path.itxs');
     const nestedAsset = `${Array.from({ length: pluginPackageLimits.maximumPathSegments + 1 }, () => 'a').join('/')}.txt`;
     await writeFile(deepPath, makeZip([
       { path: 'plugin.json', contents: '{}' },
@@ -250,7 +263,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'unsafe-archive-entry' });
 
-    const symlinkPath = join(root, 'symlink.itplugin');
+    const symlinkPath = join(root, 'symlink.itxs');
     await writeFile(symlinkPath, makeZip([
       { path: 'plugin.json', contents: '{}' },
       { path: 'assets/escape.js', contents: '../outside.js', mode: 0o120777 },
@@ -262,7 +275,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'unsafe-archive-entry' });
 
-    const duplicatePath = join(root, 'duplicate.itplugin');
+    const duplicatePath = join(root, 'duplicate.itxs');
     await writeFile(duplicatePath, makeZip([
       { path: 'plugin.json', contents: '{}' },
       { path: 'index.html', contents: 'first' },
@@ -275,7 +288,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'unsafe-archive-entry' });
 
-    const collisionPath = join(root, 'case-collision.itplugin');
+    const collisionPath = join(root, 'case-collision.itxs');
     await writeFile(collisionPath, makeZip([
       { path: 'plugin.json', contents: '{}' },
       { path: 'assets/Logo.svg', contents: 'one' },
@@ -288,7 +301,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'unsafe-archive-entry' });
 
-    const windowsPath = join(root, 'windows-path.itplugin');
+    const windowsPath = join(root, 'windows-path.itxs');
     await writeFile(windowsPath, makeZip([
       { path: 'plugin.json', contents: '{}' },
       { path: 'CON.txt', contents: 'reserved' },
@@ -300,7 +313,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'unsafe-archive-entry' });
 
-    const fileDirectoryConflictPath = join(root, 'file-directory-conflict.itplugin');
+    const fileDirectoryConflictPath = join(root, 'file-directory-conflict.itxs');
     await writeFile(fileDirectoryConflictPath, makeZip([
       { path: 'plugin.json', contents: '{}' },
       { path: 'assets', contents: 'file' },
@@ -316,7 +329,7 @@ describe('Electron plugin package staging', () => {
 
   it('rejects compression bombs and does not overwrite an installed version', async () => {
     const root = await createTemporaryDirectory();
-    const largeArchivePath = join(root, 'large.itplugin');
+    const largeArchivePath = join(root, 'large.itxs');
     const largePayload = 'A'.repeat(2 * 1024 * 1024);
     await writeFile(largeArchivePath, makeSignedArchive({
       signedFiles: { 'index.html': '<main />', 'large.txt': largePayload },
@@ -329,7 +342,7 @@ describe('Electron plugin package staging', () => {
       trustedSigningKeys,
     })).rejects.toMatchObject({ code: 'resource-limit' });
 
-    const validArchivePath = join(root, 'valid.itplugin');
+    const validArchivePath = join(root, 'valid.itxs');
     await writeFile(validArchivePath, makeSignedArchive());
     const installRoot = join(root, 'valid-install');
     const first = await stagePluginPackageArchive({
@@ -349,7 +362,7 @@ describe('Electron plugin package staging', () => {
 
   it('rejects archives above the compressed size limit before parsing them', async () => {
     const root = await createTemporaryDirectory();
-    const archivePath = join(root, 'oversized.itplugin');
+    const archivePath = join(root, 'oversized.itxs');
     await writeFile(archivePath, Buffer.alloc(64 * 1024 * 1024 + 1));
     await expect(stagePluginPackageArchive({
       archivePath,
@@ -361,7 +374,7 @@ describe('Electron plugin package staging', () => {
 
   it('refuses plugin install directories that are symlinks outside the install root', async () => {
     const root = await createTemporaryDirectory();
-    const archivePath = join(root, 'sample.itplugin');
+    const archivePath = join(root, 'sample.itxs');
     const installRoot = join(root, 'installed');
     const outsideDirectory = join(root, 'outside');
     await writeFile(archivePath, makeSignedArchive());

@@ -32,7 +32,7 @@ const sourceBuild: PluginSourceBuildResult = {
     expandedBytes: 128,
     typecheck: { status: 'skipped', reason: 'no-tsconfig' },
     package: {
-      outputPath: '/temporary/plugin.itplugin',
+      outputPath: '/temporary/plugin.itxs',
       pluginId: 'org.example.demo',
       version: '1.0.0',
       archiveBytes: 512,
@@ -67,8 +67,8 @@ describe('PluginSourceBuildController', () => {
     const installPackage = vi.fn(async (_path, source) => ({ installed: true, source }));
     const buildSnapshot = vi.fn(async (buildInput) => {
       expect(buildInput.privateKeyPath).toBe('/secure/publisher.private.pem');
-      expect(buildInput.outputPath).toMatch(/plugin\.itplugin$/);
-      await mkdir(buildInput.outputPath.replace(/\/plugin\.itplugin$/, ''), { recursive: true });
+      expect(buildInput.outputPath).toMatch(/plugin\.itxs$/);
+      await mkdir(buildInput.outputPath.replace(/\/plugin\.itxs$/, ''), { recursive: true });
       return sourceBuild;
     });
     const controller = new PluginSourceBuildController({
@@ -196,7 +196,7 @@ describe('PluginSourceBuildController', () => {
       fetch: vi.fn(),
       selectPrivateKey: async () => '/secure/key.pem',
       buildSnapshot: vi.fn(async buildInput => {
-        await mkdir(buildInput.outputPath.replace(/\/plugin\.itplugin$/, ''), { recursive: true });
+        await mkdir(buildInput.outputPath.replace(/\/plugin\.itxs$/, ''), { recursive: true });
         return sourceBuild;
       }),
       installPackage,

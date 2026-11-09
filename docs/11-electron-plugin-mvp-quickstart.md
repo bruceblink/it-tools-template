@@ -1,6 +1,8 @@
 # 桌面插件 MVP 使用说明
 
-本文面向维护 IT Tools 插件的开发者和桌面应用用户。当前 MVP 只支持 Electron 桌面版的本地 `.itplugin` 包。Web 和 Docker 版继续使用仓库内置工具与第一方扩展，不加载外部包。
+本文面向维护 IT Tools 插件的开发者和桌面应用用户。当前 MVP 只支持 Electron 桌面版的本地 `.itxs` 包。Web 和 Docker 版继续使用仓库内置工具与第一方扩展，不加载外部包。
+
+从当前版本起，插件包扩展名统一为 `.itxs`。发布者需要重新打包并重新发布 Release 资产。已经安装的插件目录不受文件名迁移影响；未安装的旧扩展名文件不会出现在文件选择器或市场直装候选中。
 
 ## 插件源码
 
@@ -85,7 +87,7 @@ void manifest;
 - 未授权的能力显示可理解的拒绝状态，其他插件功能继续运行。
 - 工具贡献 ID 始终位于包命名空间内，`toolId`、`tool` 和 `permissions` 与当前启动上下文一致。
 - 停止、窗口关闭、渲染进程崩溃、升级回退和卸载后，宿主设置页仍可用。
-- Web 和 Docker 构建显示桌面专属降级提示，不尝试加载 `.itplugin`。
+- Web 和 Docker 构建显示桌面专属降级提示，不尝试加载 `.itxs`。
 
 MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系统剪贴板、读取插件设置和保存插件设置。插件通过 `window.itTools.capabilities.runtime.getInfo()`、`window.itTools.capabilities.clipboard.writeText(text)`、`window.itTools.capabilities.settings.get(key)`、`window.itTools.capabilities.settings.set(key, value)` 和 `window.itTools.capabilities.settings.delete(key)` 调用能力。用户授权前，宿主拒绝调用并返回 `PluginApiError`。设置只保存非秘密的基本值，并按插件 ID 命名空间持久化。插件不能继承宿主 preload 或其他插件的数据。网络请求只能访问插件自身来源；主进程会拒绝外部连接。
 
@@ -99,7 +101,7 @@ MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系�
 pnpm run plugin:validate -- --source plugins/capability-demo
 ```
 
-该命令只读取插件目录。它校验清单、当前宿主 API 兼容范围、工具贡献命名空间、能力声明、入口文件、路径规则、文件类型和资源上限，并输出文件数量与展开字节数。它不运行插件代码、不安装依赖、不写入源码目录，也不生成 `.itplugin`。`plugin:pack` 在签名时会重复同一校验。
+该命令只读取插件目录。它校验清单、当前宿主 API 兼容范围、工具贡献命名空间、能力声明、入口文件、路径规则、文件类型和资源上限，并输出文件数量与展开字节数。它不运行插件代码、不安装依赖、不写入源码目录，也不生成 `.itxs`。`plugin:pack` 在签名时会重复同一校验。
 
 ## 创建签名密钥
 
@@ -116,7 +118,7 @@ pnpm run plugin:keygen -- --key-id capability-demo-publisher --output-directory 
 源码校验通过后再创建签名包：
 
 ```powershell
-pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itplugin"
+pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itxs"
 ```
 
 打包器生成确定性的未压缩 ZIP。它把每个文件的 SHA-256 写入签名清单，并用 Ed25519 私钥签名清单。包不包含 `plugin.source.json` 或签名私钥。安装器会再次检查包签名、清单、文件路径和每个文件哈希。
@@ -126,7 +128,7 @@ pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secur
 如果源码项目另有 TypeScript 配置，可以用 `plugin:build` 收敛校验、类型检查和签名打包。`--tsconfig` 可以指向源码包目录之外的项目配置，避免把开发源码和配置误放进最终静态包：
 
 ```powershell
-pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin-project\tsconfig.json" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itplugin"
+pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin-project\tsconfig.json" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itxs"
 ```
 
 该命令先执行与 `plugin:validate` 相同的源码检查；存在 `tsconfig.json` 时使用仓库固定的 TypeScript 编译器执行 `--noEmit`，失败时不会写入包。没有 TypeScript 配置时会明确报告跳过类型检查。输出包已存在时仍会失败，不覆盖旧包。
@@ -136,7 +138,7 @@ pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin
 需要审查 GitHub 源码时，使用完整的 40 位 commit SHA。命令会重新核验公开仓库、`it-tools-plugin` topic 和 commit 身份，再下载受限的 gzip 快照。解压过程拒绝路径穿越、链接、特殊文件、重复路径和超出资源上限的归档。
 
 ```powershell
-corepack pnpm plugin:build-source -- --owner example --name my-plugin --commit "<40-character-commit-sha>" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\my-plugin.itplugin"
+corepack pnpm plugin:build-source -- --owner example --name my-plugin --commit "<40-character-commit-sha>" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\my-plugin.itxs"
 ```
 
 该命令只执行源码清单校验、可选的仓库 TypeScript `--noEmit` 检查和签名打包。它不运行仓库脚本，不执行 `npm install`，不加载原始源码窗口。临时快照和解压目录在成功或失败后都会删除。也可以先在桌面设置中信任公钥，再在“从固定源码快照构建并安装”卡片填写相同的仓库、commit 和签名者 key ID；主进程会打开私钥选择器，构建后直接交给本地安装器。两种入口都仍需单独完成能力授权。
@@ -147,9 +149,9 @@ corepack pnpm plugin:build-source -- --owner example --name my-plugin --commit "
 
 ## 安装和运行
 
-1. 在 Electron 桌面版的“设置 → Electron 插件包”中打开插件市场目录。市场只读取 GitHub 仓库和源码清单；如果仓库的最新稳定 Release 有符合约定的已签名 `.itplugin`，可以由 Electron 临时下载并直接交给本地安装器，页面会显示发现、下载、校验和安装进度，并允许在下载或校验阶段取消；市场不托管插件包。
+1. 在 Electron 桌面版的“设置 → Electron 插件包”中打开插件市场目录。市场只读取 GitHub 仓库和源码清单；如果仓库的最新稳定 Release 有符合约定的已签名 `.itxs`，可以由 Electron 临时下载并直接交给本地安装器，页面会显示发现、下载、校验和安装进度，并允许在下载或校验阶段取消；市场不托管插件包。
 2. 输入签名密钥 ID、公钥 PEM 和允许的插件 ID；对照发布者通过独立渠道提供的指纹，预览并信任签名者。信任签名者不会自动授予系统能力。
-3. 安装 `.itplugin` 包。安装器先验证和暂存资源，再登记已安装版本；管理器会显示包 ID、版本、Release 来源摘要和错误码，便于定位失败步骤。
+3. 安装 `.itxs` 包。安装器先验证和暂存资源，再登记已安装版本；管理器会显示包 ID、版本、Release 来源摘要和错误码，便于定位失败步骤。
 4. 查看能力摘要，区分宿主支持、下次运行将授权和当前已授权状态；选择能力并点击“运行插件”。桌面确认对话框会再次显示本次授权。
 5. 在运行窗口验证插件功能。停止、升级、切换旧版本、撤销签名者和卸载都从设置页面执行；异常关闭后可按卡片中的错误提示再次运行恢复。
 

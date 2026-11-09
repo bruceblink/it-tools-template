@@ -91,7 +91,7 @@ export function getPluginSourceBuildUsage(): string {
   return [
     'Build a fixed GitHub plugin source snapshot into a signed package.',
     '  corepack pnpm plugin:build-source -- --owner <owner> --name <repository> --commit <40-char-sha>',
-    '    --private-key <external.pem> --key-id <publisher> --output <package.itplugin> [--tsconfig <project.json>] [--json]',
+    '    --private-key <external.pem> --key-id <publisher> --output <package.itxs> [--tsconfig <project.json>] [--json]',
     '',
     'The command validates the repository and immutable commit, rejects unsafe archive entries,',
     'runs source validation and an optional no-emit TypeScript check, then signs the package.',

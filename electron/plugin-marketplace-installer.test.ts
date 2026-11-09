@@ -28,7 +28,7 @@ function createFetchMock(options: {
   readonly assets?: readonly Record<string, unknown>[];
   readonly commit?: string;
 }) {
-  const assetUrl = options.assetUrl ?? 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin';
+  const assetUrl = options.assetUrl ?? 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs';
   const digest = createHash('sha256').update(options.asset).digest('hex');
   const calls: string[] = [];
   const fetcher = async (url: string, _init?: RequestInit): Promise<Response> => {
@@ -47,7 +47,7 @@ function createFetchMock(options: {
       return new Response(JSON.stringify({
         tag_name: 'v1.0.0',
         assets: options.assets ?? [{
-          name: 'demo.itplugin',
+          name: 'demo.itxs',
           browser_download_url: assetUrl,
           size: options.asset.byteLength,
           digest: `sha256:${digest}`,
@@ -99,7 +99,7 @@ describe('GitHub release plugin installer', () => {
       repository: 'example/demo-plugin',
       tagName: 'v1.0.0',
       commitSha,
-      assetName: 'demo.itplugin',
+      assetName: 'demo.itxs',
       archiveBytes: asset.byteLength,
     });
     expect(result.source.sha256).toBe(createHash('sha256').update(asset).digest('hex'));
@@ -108,7 +108,7 @@ describe('GitHub release plugin installer', () => {
       'https://api.github.com/repos/example/demo-plugin',
       'https://api.github.com/repos/example/demo-plugin/releases/latest',
       'https://api.github.com/repos/example/demo-plugin/commits/v1.0.0',
-      'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+      'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs',
     ]);
     expect(installedPath).toContain('.it-tools-plugin-marketplace-');
     expect(await readdir(join(tempRoot))).toEqual([]);
@@ -190,8 +190,8 @@ describe('GitHub release plugin installer', () => {
     const { fetcher } = createFetchMock({
       asset,
       assets: [
-        { name: 'one.itplugin', browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1/one.itplugin', size: 3 },
-        { name: 'two.itplugin', browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1/two.itplugin', size: 3 },
+        { name: 'one.itxs', browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1/one.itxs', size: 3 },
+        { name: 'two.itxs', browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1/two.itxs', size: 3 },
       ],
     });
     await expect(installPluginMarketplaceRelease(repository, {
@@ -244,7 +244,7 @@ describe('GitHub release plugin installer', () => {
     const tempRoot = await createTempRoot();
     const { fetcher, fetchReleaseAsset } = createFetchMock({
       asset: new Uint8Array([1]),
-      assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin?token=secret',
+      assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs?token=secret',
     });
     await expect(installPluginMarketplaceRelease(repository, {
       tempRoot,
@@ -276,13 +276,13 @@ describe('GitHub release plugin installer', () => {
       asset,
       assets: [
         {
-          name: 'demo.itplugin',
-          browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+          name: 'demo.itxs',
+          browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs',
           size: 3,
         },
         {
-          name: 'unbounded.itplugin',
-          browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/unbounded.itplugin',
+          name: 'unbounded.itxs',
+          browser_download_url: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/unbounded.itxs',
           size: Number.MAX_SAFE_INTEGER,
         },
       ],

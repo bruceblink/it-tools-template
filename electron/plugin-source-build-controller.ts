@@ -169,7 +169,7 @@ export class PluginSourceBuildController<TSnapshot> {
 
     await mkdir(this.dependencies.tempRoot, { recursive: true, mode: 0o700 });
     const requestRoot = await mkdtemp(join(this.dependencies.tempRoot, '.it-tools-plugin-source-install-'));
-    const outputPath = join(requestRoot, 'plugin.itplugin');
+    const outputPath = join(requestRoot, 'plugin.itxs');
     try {
       emit({ phase: 'building', repository, commitSha: input.commitSha });
       const buildInput: PluginSourceBuildInput = {

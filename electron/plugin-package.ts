@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
 import { lstat, mkdir, mkdtemp, open, readdir, realpath, rename, rm, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import * as yauzl from 'yauzl';
@@ -61,6 +61,9 @@ const installQueues = new Map<string, Promise<void>>();
 
 /** Stage a signed, prebuilt package without executing scripts or modifying an installed version. */
 export async function stagePluginPackageArchive(options: StagePluginPackageOptions): Promise<StagedPluginPackage> {
+  if (!basename(options.archivePath).toLowerCase().endsWith('.itxs')) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive must use the .itxs extension.');
+  }
   const archiveMetadata = await stat(options.archivePath).catch((error: unknown) => {
     throw new PluginPackageError('invalid-archive', 'The plugin package archive cannot be read.', { cause: error });
   });

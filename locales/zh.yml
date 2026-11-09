@@ -55,6 +55,7 @@ pluginMarketplace:
   details: '详情'
   openRepository: '打开仓库'
   installRelease: '安装最新 Release'
+  buildFromSource: '从固定提交构建'
   installSuccess: '已从 Release {tag} 安装 {name} {version}。运行前请到设置页检查能力。'
   openSettings: '打开插件设置'
   retryInstall: '重试安装'
@@ -89,7 +90,7 @@ pluginMarketplace:
   installErrors:
     unavailable: '桌面应用无法完成 GitHub Release 安装。'
     invalidRepository: '此仓库不是符合条件的 IT Tools 插件来源。'
-    releaseNotFound: '最新 Release 没有恰好一个受大小限制的 .itplugin 资产。'
+    releaseNotFound: '最新 Release 没有恰好一个受大小限制的 .itxs 资产。'
     downloadFailed: 'Release 资产下载失败，或下载内容的哈希不匹配。'
     untrustedSignature: '此 Release 使用了未受信任的发布者签名。请先在插件设置中核对并信任签名者，再重试。'
     alreadyInstalled: '此插件版本已经安装。请打开插件设置运行或移除它。'

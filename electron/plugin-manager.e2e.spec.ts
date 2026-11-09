@@ -23,10 +23,10 @@ const pluginStartupErrors: string[] = [];
 test.beforeAll(async () => {
   temporaryDirectory = await mkdtemp(join(tmpdir(), 'it-tools-plugin-manager-e2e-'));
   userDataDirectory = await mkdtemp(join(tmpdir(), 'it-tools-plugin-manager-profile-'));
-  archivePath = join(temporaryDirectory, 'manager-e2e.itplugin');
-  upgradeArchivePath = join(temporaryDirectory, 'manager-e2e-upgrade.itplugin');
-  unresponsiveArchivePath = join(temporaryDirectory, 'manager-e2e-unresponsive.itplugin');
-  crashArchivePath = join(temporaryDirectory, 'manager-e2e-crash.itplugin');
+  archivePath = join(temporaryDirectory, 'manager-e2e.itxs');
+  upgradeArchivePath = join(temporaryDirectory, 'manager-e2e-upgrade.itxs');
+  unresponsiveArchivePath = join(temporaryDirectory, 'manager-e2e-unresponsive.itxs');
+  crashArchivePath = join(temporaryDirectory, 'manager-e2e-crash.itxs');
   await writeFile(archivePath, await createSignedPackage('1.0.0'));
   await writeFile(upgradeArchivePath, await createSignedPackage('2.0.0'));
   await writeFile(unresponsiveArchivePath, await createSignedPackage('3.0.0', true));
@@ -34,7 +34,7 @@ test.beforeAll(async () => {
   const fixtureDirectory = process.env.IT_TOOLS_PLUGIN_MANAGER_FIXTURE_DIR;
   if (fixtureDirectory) {
     await mkdir(fixtureDirectory, { recursive: true });
-    await writeFile(join(fixtureDirectory, 'manager-e2e.itplugin'), await createSignedPackage('1.0.0'));
+    await writeFile(join(fixtureDirectory, 'manager-e2e.itxs'), await createSignedPackage('1.0.0'));
     await writeFile(join(fixtureDirectory, 'manager-e2e-public-key.pem'), getPackagePublicKey());
   }
 

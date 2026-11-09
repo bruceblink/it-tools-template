@@ -17,7 +17,7 @@ topic:it-tools-plugin archived:false fork:false
 - 推荐提交 plugin.source.json，市场会在详情窗口读取它的 API 版本、能力声明和工具贡献元数据；
 - 不要把私钥、凭据或未经审查的发布资产提交到仓库。
 
-市场读取 GitHub 的仓库元数据和 plugin.source.json 摘要，不执行仓库代码，不在 Web 页面下载 .itplugin 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程复用本地安装器完成签名、哈希和资源限制校验。
+市场读取 GitHub 的仓库元数据和 plugin.source.json 摘要，不执行仓库代码，不在 Web 页面下载 .itxs 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程复用本地安装器完成签名、哈希和资源限制校验。桌面详情还提供“从固定提交构建”入口；该入口只传递仓库身份，commit 和签名密钥仍由用户在设置页核对或选择。
 
 ## 配置
 
@@ -46,7 +46,7 @@ topic:it-tools-plugin archived:false fork:false
 直装按钮只接受符合以下条件的仓库和 Release：
 
 - 仓库仍是公开、未归档、非 fork，并保留 `it-tools-plugin` topic；
-- 最新稳定 Release 恰好包含一个 `.itplugin` 资产，资产大小不超过宿主包上限，下载地址属于 GitHub Release 路径；
+- 最新稳定 Release 恰好包含一个 `.itxs` 资产，资产大小不超过宿主包上限，下载地址属于 GitHub Release 路径；
 - 主进程重新读取 Release tag 对应的 commit SHA，限制重定向到 GitHub 下载域名，并在写入临时目录后流式核对实际大小和 SHA-256；
 - 下载资产随后交给现有生命周期安装器；安装来源写入 `.plugin-provenance.json` 作为可丢失的诊断元数据，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
 

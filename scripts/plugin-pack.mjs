@@ -153,8 +153,8 @@ export async function packPluginPackage({ sourceDirectory, privateKeyPath, keyId
   }
 
   const output = resolve(outputPath);
-  if (extname(output).toLowerCase() !== '.itplugin') {
-    throw new Error('The output filename must use the .itplugin extension.');
+  if (extname(output).toLowerCase() !== '.itxs') {
+    throw new Error('The output filename must use the .itxs extension.');
   }
   if (isContainedPath(await realpath(sourceDirectory), output)) {
     throw new Error('The output package must be outside the plugin source directory.');
@@ -655,7 +655,7 @@ function getUsage() {
     'IT Tools signed Electron plugin package commands',
     '  pnpm run plugin:keygen -- --key-id <publisher> --output-directory <outside-repo-directory>',
     '  pnpm run plugin:validate -- --source <plugin-directory>',
-    '  pnpm run plugin:pack -- --source <plugin-directory> --private-key <external.pem> --key-id <publisher> --output <package.itplugin>',
+    '  pnpm run plugin:pack -- --source <plugin-directory> --private-key <external.pem> --key-id <publisher> --output <package.itxs>',
     '',
   ].join('\n');
 }

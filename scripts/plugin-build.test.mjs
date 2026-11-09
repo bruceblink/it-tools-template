@@ -15,7 +15,7 @@ async function createWorkflowFixture() {
   const sourceDirectory = resolve(temporaryRoot, 'package');
   const projectDirectory = resolve(temporaryRoot, 'project');
   const keyDirectory = resolve(temporaryRoot, 'keys');
-  const outputPath = resolve(temporaryRoot, 'dist', 'plugin.itplugin');
+  const outputPath = resolve(temporaryRoot, 'dist', 'plugin.itxs');
   await mkdir(projectDirectory, { recursive: true });
   await createPluginScaffold(parseCreatePluginArguments([
     '--id', 'org.example.workflow',
@@ -68,7 +68,7 @@ test('runs source validation, an external TypeScript check, and signing as one w
     '--source', fixture.sourceDirectory,
     '--private-key', fixture.key.privateKeyPath,
     '--key-id', fixture.key.keyId,
-    '--output', resolve(fixture.temporaryRoot, 'dist', 'cli.itplugin'),
+    '--output', resolve(fixture.temporaryRoot, 'dist', 'cli.itxs'),
     '--tsconfig', fixture.tsconfigPath,
     '--json',
   ], { encoding: 'utf8' });
@@ -113,7 +113,7 @@ test('requires the package, signer, and output arguments', () => {
     '--source', 'plugin',
     '--private-key', 'key.pem',
     '--key-id', 'publisher',
-    '--output', 'plugin.itplugin',
+    '--output', 'plugin.itxs',
     '--json',
     '--json',
   ]), /may only be provided once/);

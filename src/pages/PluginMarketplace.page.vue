@@ -44,6 +44,12 @@ const canInstallFromMarketplace = computed(() => (
   && typeof window !== 'undefined'
   && typeof window.itToolsDesktop?.installPluginFromMarketplace === 'function'
 ));
+const desktopBridgeReady = ref(false);
+const canOpenSourceBuild = computed(() => (
+  desktopBridgeReady.value
+  && typeof window !== 'undefined'
+  && typeof window.itToolsDesktop?.buildPluginSource === 'function'
+));
 
 const installErrorNeedsSettings = computed(() => (
   installErrorCode.value === 'untrusted-signature' || installErrorCode.value === 'already-installed'
@@ -139,6 +145,14 @@ function repositoryTopics(repository: PluginMarketplaceRepository): readonly str
   return repository.topics
     .filter(topic => topic !== pluginMarketplaceConfig.topic)
     .slice(0, 5);
+}
+
+function sourceBuildHref(repository: PluginMarketplaceRepository): string {
+  const query = new URLSearchParams({
+    pluginOwner: repository.ownerLogin,
+    pluginName: repository.name,
+  });
+  return `/settings?${query.toString()}`;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -344,6 +358,7 @@ watch(sort, () => {
 });
 
 onMounted(() => {
+  desktopBridgeReady.value = true;
   removeMarketplaceProgress = window.itToolsDesktop?.onPluginMarketplaceInstallProgress?.(handleMarketplaceProgress);
   void loadRepositories();
 });
@@ -620,6 +635,14 @@ onBeforeUnmount(() => {
             @click="installRepository(selectedRepository)"
           >
             {{ t('pluginMarketplace.installRelease') }}
+          </n-button>
+          <n-button
+            v-if="canOpenSourceBuild"
+            tag="a"
+            :href="sourceBuildHref(selectedRepository)"
+            secondary
+          >
+            {{ t('pluginMarketplace.buildFromSource') }}
           </n-button>
           <n-button
             tag="a"

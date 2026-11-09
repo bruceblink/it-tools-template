@@ -85,7 +85,7 @@ test('builds a deterministic package that verifies with the documented Ed25519 f
     .toUpperCase();
   assert.ok(generated.stdout.includes(`Fingerprint: SHA256:${fingerprintHex.match(/.{2}/g).join(':')}`));
 
-  const cliOutputPath = join(temporaryRoot, 'capability-demo.itplugin');
+  const cliOutputPath = join(temporaryRoot, 'capability-demo.itxs');
   const packed = spawnSync(process.execPath, [
     packageScript,
     'pack',
@@ -152,7 +152,7 @@ test('rejects repository signing keys, private key material in sources, and pack
 
   const cleanSourceDirectory = join(temporaryRoot, 'clean-sample');
   await cp(sampleRoot, cleanSourceDirectory, { recursive: true });
-  const archivePath = join(temporaryRoot, 'capability-demo.itplugin');
+  const archivePath = join(temporaryRoot, 'capability-demo.itxs');
   await writeFile(archivePath, 'preserve existing package');
   await assert.rejects((await import('./plugin-pack.mjs')).packPluginPackage({
     sourceDirectory: cleanSourceDirectory,

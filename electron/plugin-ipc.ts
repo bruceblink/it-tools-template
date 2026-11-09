@@ -117,7 +117,7 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     const selection = await dialog.showOpenDialog(getPluginManagementWindow(dependencies), {
       title: 'Install a signed plugin package / 安装已签名的插件包',
       properties: ['openFile'],
-      filters: [{ name: 'IT Tools plugin package', extensions: ['itplugin'] }],
+      filters: [{ name: 'IT Tools plugin package', extensions: ['itxs'] }],
     });
     if (selection.canceled || selection.filePaths.length === 0) {
       return null;

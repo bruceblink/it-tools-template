@@ -90,8 +90,8 @@ describe('Electron plugin lifecycle manager', () => {
       repository: 'example/demo-plugin',
       tagName: 'v1.0.0',
       commitSha: 'a'.repeat(40),
-      assetName: 'demo.itplugin',
-      assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
+      assetName: 'demo.itxs',
+      assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs',
       archiveBytes: 128,
       sha256: 'b'.repeat(64),
     };
@@ -553,7 +553,7 @@ async function writeArchive(
   requestedCapabilities: string[] = [],
   id = pluginId,
 ): Promise<string> {
-  const archivePath = join(root, `${id}-${version}.itplugin`);
+  const archivePath = join(root, `${id}-${version}.itxs`);
   await writeFile(archivePath, makeSignedArchive(version, requestedCapabilities, id));
   return archivePath;
 }

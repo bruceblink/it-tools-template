@@ -41,6 +41,25 @@ const sourceBuildForm = reactive({
   commitSha: '',
   keyId: '',
 });
+
+function applySourceBuildPrefill(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  const query = new URLSearchParams(window.location.search);
+  const owner = query.get('pluginOwner')?.trim() ?? '';
+  const name = query.get('pluginName')?.trim() ?? '';
+  if (!/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(owner) || !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,99}$/.test(name)) {
+    return;
+  }
+  sourceBuildForm.owner = owner;
+  sourceBuildForm.name = name;
+  const commit = query.get('pluginCommit')?.trim() ?? '';
+  if (/^[a-f0-9]{40}$/i.test(commit)) {
+    sourceBuildForm.commitSha = commit.toLowerCase();
+  }
+}
+
 const sourceBuildRequestId = ref<string>();
 const sourceBuildProgress = ref<DesktopPluginSourceBuildProgress>();
 const sourceBuildError = ref<string>();
@@ -116,7 +135,7 @@ const messages = {
     onboardingTitle: 'Start with a trusted plugin source',
     onboardingIntro: 'The marketplace is a read-only GitHub directory. Review the repository and publisher before installing a package.',
     onboardingStepTrust: 'Verify the publisher fingerprint, then trust its public key below.',
-    onboardingStepInstall: 'Install the signed .itplugin file from the publisher.',
+    onboardingStepInstall: 'Install the signed .itxs file from the publisher.',
     onboardingStepApprove: 'Select only the capabilities you need and approve the desktop prompt when you run it.',
     loading: 'Loading plugin packages…',
     empty: 'No external plugin packages are installed.',
@@ -211,7 +230,7 @@ const messages = {
     onboardingTitle: '从受信任的插件来源开始',
     onboardingIntro: '插件市场只是 GitHub 仓库的只读目录。安装插件包前，请先审查仓库和发布者。',
     onboardingStepTrust: '核对发布者指纹，然后在下方信任其公钥。',
-    onboardingStepInstall: '安装发布者提供的已签名 .itplugin 文件。',
+    onboardingStepInstall: '安装发布者提供的已签名 .itxs 文件。',
     onboardingStepApprove: '只选择需要的能力，并在运行时确认桌面授权提示。',
     loading: '正在加载插件包…',
     empty: '尚未安装外部插件包。',
@@ -748,6 +767,7 @@ let disposePluginStateChange: (() => void) | undefined;
 let disposeSourceBuildProgress: (() => void) | undefined;
 
 onMounted(() => {
+  applySourceBuildPrefill();
   disposePluginStateChange = window.itToolsDesktop?.onPluginStateChanged?.(() => {
     if (!isBusy.value) {
       void refresh();

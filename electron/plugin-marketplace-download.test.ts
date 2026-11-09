@@ -65,7 +65,7 @@ describe('marketplace release download adapter', () => {
     const requests: FakeRequest[] = [];
     const factory = createRequestFactory(requests);
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       factory,
     );
 
@@ -74,7 +74,7 @@ describe('marketplace release download adapter', () => {
       'redirect',
       302,
       'GET',
-      '/example/demo/releases/download/v1/demo.itplugin',
+      '/example/demo/releases/download/v1/demo.itxs',
       {},
     );
     expect(first.followRedirect).toHaveBeenCalledOnce();
@@ -105,7 +105,7 @@ describe('marketplace release download adapter', () => {
     const factory = createRequestFactory(requests);
     const secretUrl = 'https://evil.example/download?token=secret';
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       factory,
     );
     const request = requests[0]!;
@@ -122,7 +122,7 @@ describe('marketplace release download adapter', () => {
   it('rejects a GitHub URL with a query before creating a request', async () => {
     const request = vi.fn();
     await expect(fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin?token=secret',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs?token=secret',
       { request: request as MarketplaceReleaseRequestFactory['request'] },
     )).rejects.toMatchObject({ code: 'invalid-url' });
     expect(request).not.toHaveBeenCalled();
@@ -131,7 +131,7 @@ describe('marketplace release download adapter', () => {
   it('enforces the redirect limit', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
       { maximumRedirects: 1 },
     );
@@ -148,7 +148,7 @@ describe('marketplace release download adapter', () => {
     const controller = new AbortController();
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
       { signal: controller.signal },
     );
@@ -162,7 +162,7 @@ describe('marketplace release download adapter', () => {
     const controller = new AbortController();
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
       { signal: controller.signal },
     );
@@ -179,7 +179,7 @@ describe('marketplace release download adapter', () => {
   it('fails and aborts when a streamed body exceeds the bound', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
       { maximumBytes: 2 },
     );
@@ -196,7 +196,7 @@ describe('marketplace release download adapter', () => {
   it('returns an empty non-success response after draining it', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
     );
     const body = new FakeResponse(404, { 'content-length': '7', 'x-private': 'hidden' });
@@ -213,7 +213,7 @@ describe('marketplace release download adapter', () => {
   it('rejects 304 responses that cannot be constructed as a Response', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
     );
     emitResponse(requests[0]!, new FakeResponse(304));
@@ -226,7 +226,7 @@ describe('marketplace release download adapter', () => {
     for (const status of [204, 205]) {
       const requests: FakeRequest[] = [];
       const operation = fetchMarketplaceReleaseAsset(
-        'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+        'https://github.com/example/demo/releases/download/v1/demo.itxs',
         createRequestFactory(requests),
       );
       const body = new FakeResponse(status);
@@ -247,7 +247,7 @@ describe('marketplace release download adapter', () => {
     ]) {
       const requests: FakeRequest[] = [];
       const operation = fetchMarketplaceReleaseAsset(
-        'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+        'https://github.com/example/demo/releases/download/v1/demo.itxs',
         createRequestFactory(requests),
       );
       emitResponse(requests[0]!, new FakeResponse(200, headers));
@@ -260,7 +260,7 @@ describe('marketplace release download adapter', () => {
   it('fails a response that closes before its body ends', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
     );
     const body = new FakeResponse(200);
@@ -276,7 +276,7 @@ describe('marketplace release download adapter', () => {
   it('fails a response when the request closes before the body ends', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
     );
     const body = new FakeResponse(200);
@@ -292,7 +292,7 @@ describe('marketplace release download adapter', () => {
   it('allows a redirect event that follows the initial request close', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
     );
     const request = requests[0]!;
@@ -322,7 +322,7 @@ describe('marketplace release download adapter', () => {
     const controller = new AbortController();
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
       { signal: controller.signal },
     );
@@ -349,7 +349,7 @@ describe('marketplace release download adapter', () => {
     const removeAbortListener = vi.spyOn(controller.signal, 'removeEventListener');
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
       { signal: controller.signal },
     );
@@ -371,7 +371,7 @@ describe('marketplace release download adapter', () => {
   it('maps a response stream error to a redacted error', async () => {
     const requests: FakeRequest[] = [];
     const operation = fetchMarketplaceReleaseAsset(
-      'https://github.com/example/demo/releases/download/v1/demo.itplugin',
+      'https://github.com/example/demo/releases/download/v1/demo.itxs',
       createRequestFactory(requests),
     );
     const body = new FakeResponse(200);

@@ -55,6 +55,7 @@ pluginMarketplace:
   details: 'Details'
   openRepository: 'Open repository'
   installRelease: 'Install latest release'
+  buildFromSource: 'Build from a fixed commit'
   installSuccess: 'Installed {name} {version} from release {tag}. Review capabilities in Settings before running it.'
   openSettings: 'Open plugin settings'
   retryInstall: 'Retry install'
@@ -89,7 +90,7 @@ pluginMarketplace:
   installErrors:
     unavailable: 'The desktop app could not complete the GitHub release installation.'
     invalidRepository: 'This repository is not an eligible IT Tools plugin source.'
-    releaseNotFound: 'The latest release does not contain exactly one bounded .itplugin asset.'
+    releaseNotFound: 'The latest release does not contain exactly one bounded .itxs asset.'
     downloadFailed: 'The release asset could not be downloaded or its hash did not match.'
     untrustedSignature: 'The release is signed by an untrusted publisher. Verify and trust the signer in plugin settings, then retry.'
     alreadyInstalled: 'This plugin version is already installed. Open plugin settings to run or remove it.'

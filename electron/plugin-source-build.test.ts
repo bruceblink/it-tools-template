@@ -30,7 +30,7 @@ const buildReport: PluginSourceBuildPackageReport = {
   expandedBytes: 128,
   typecheck: { status: 'passed', configPath: '/temporary/source/root/tsconfig.json' },
   package: {
-    outputPath: '/temporary/output/demo.itplugin',
+    outputPath: '/temporary/output/demo.itxs',
     pluginId: 'org.example.demo',
     version: '1.0.0',
     archiveBytes: 256,
@@ -40,7 +40,7 @@ const buildReport: PluginSourceBuildPackageReport = {
 describe('plugin source build orchestration', () => {
   it('pins, extracts, validates, and builds without retaining the extraction directory', async () => {
     const tempRoot = await mkdtemp(join(tmpdir(), 'it-tools-source-build-test-'));
-    const outputPath = join(tempRoot, 'output', 'demo.itplugin');
+    const outputPath = join(tempRoot, 'output', 'demo.itxs');
     try {
       const downloadSnapshot = vi.fn(async (_input: unknown, dependencies: any) => {
         await mkdir(dependencies.tempRoot, { recursive: true });
@@ -103,7 +103,7 @@ describe('plugin source build orchestration', () => {
       ...repository,
       privateKeyPath: '/outside/keys/publisher.private.pem',
       keyId: 'publisher',
-      outputPath: '/temporary/output/demo.itplugin',
+      outputPath: '/temporary/output/demo.itxs',
     }, {
       tempRoot: '/temporary',
       fetch: vi.fn(),
@@ -122,7 +122,7 @@ describe('plugin source build CLI arguments', () => {
       '--commit', 'a'.repeat(40),
       '--private-key', '../keys/publisher.private.pem',
       '--key-id', 'publisher',
-      '--output', '../dist/demo.itplugin',
+      '--output', '../dist/demo.itxs',
       '--json',
     ])).toMatchObject({
       owner: 'example',
