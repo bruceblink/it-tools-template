@@ -367,6 +367,18 @@ export class PluginLifecycleManager {
   }
 
   /**
+   * Stop active plugin windows while keeping the lifecycle manager operational.
+   * This path is used when macOS closes the host window but keeps the app alive.
+   */
+  async stopActivePlugins(): Promise<void> {
+    if (this.shutdownPromise) {
+      return this.shutdownPromise;
+    }
+    // 临时关闭只清理活动窗口，不设置 shuttingDown，Dock 重开后仍可执行管理操作。
+    return this.runExclusive(() => this.destroyAllActivePlugins());
+  }
+
+  /**
    * Stop every active plugin before the Electron process exits.
    *
    * The host must close plugin windows explicitly so that renderer-owned
@@ -379,28 +391,30 @@ export class PluginLifecycleManager {
       return this.shutdownPromise;
     }
     this.shuttingDown = true;
-    this.shutdownPromise = this.runExclusive(async () => {
-      const failures: unknown[] = [];
-      for (const active of [...this.activePlugins.values()]) {
-        try {
-          await this.destroyActivePlugin(active);
-        }
-        catch (error) {
-          failures.push(error);
-          if (this.activePlugins.get(active.pluginId) === active) {
-            this.activePlugins.delete(active.pluginId);
-          }
-        }
-      }
-      if (failures.length > 0) {
-        throw new PluginLifecycleError(
-          'window-close-timeout',
-          'One or more plugin windows did not close during shutdown.',
-          { cause: new AggregateError(failures) },
-        );
-      }
-    });
+    this.shutdownPromise = this.runExclusive(() => this.destroyAllActivePlugins());
     return this.shutdownPromise;
+  }
+
+  private async destroyAllActivePlugins(): Promise<void> {
+    const failures: unknown[] = [];
+    for (const active of [...this.activePlugins.values()]) {
+      try {
+        await this.destroyActivePlugin(active);
+      }
+      catch (error) {
+        failures.push(error);
+        if (this.activePlugins.get(active.pluginId) === active) {
+          this.activePlugins.delete(active.pluginId);
+        }
+      }
+    }
+    if (failures.length > 0) {
+      throw new PluginLifecycleError(
+        'window-close-timeout',
+        'One or more plugin windows did not close during shutdown.',
+        { cause: new AggregateError(failures) },
+      );
+    }
   }
 
   async uninstall(pluginId: string, version: string): Promise<boolean> {

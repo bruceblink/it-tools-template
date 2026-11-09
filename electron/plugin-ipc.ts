@@ -43,6 +43,8 @@ export interface PluginIpcDependencies {
 }
 
 export interface PluginLifecycleIpc {
+  /** Stop active plugin windows while keeping IPC handlers available for host window reopen. */
+  stopActivePlugins: () => Promise<void>;
   /** Stop active plugin renderers before the Electron app exits. */
   shutdown: () => Promise<void>;
 }
@@ -254,6 +256,8 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   }));
 
   return {
+    // 主窗口关闭只停止活动插件；市场和源码构建控制器必须继续保留到应用退出。
+    stopActivePlugins: () => lifecycleManager.stopActivePlugins(),
     shutdown: async () => {
       await marketplaceController.dispose();
       await sourceBuildController.dispose();

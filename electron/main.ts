@@ -78,6 +78,7 @@ let updateIpc: Awaited<ReturnType<typeof registerUpdateIpc>> | null = null;
 let pluginLifecycleIpc: Awaited<ReturnType<typeof registerPluginLifecycleIpc>> | null = null;
 let trustedRendererUrl = APP_BASE_URL;
 let quitting = false;
+let pluginStopPromise: Promise<void> | null = null;
 let pluginShutdownPromise: Promise<void> | null = null;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
@@ -156,7 +157,7 @@ else {
     if (!quitting && pluginLifecycleIpc) {
       event.preventDefault();
       quitting = true;
-      void stopExternalPlugins()
+      void shutdownExternalPlugins()
         .finally(() => {
           pluginLifecycleIpc = null;
           app.quit();
@@ -487,6 +488,7 @@ async function createMainWindow() {
     containerWorkbenchIpc?.closeRenderer(rendererId);
     if (mainWindow === window) {
       mainWindow = null;
+      // macOS 关闭主窗口后应用仍可从 Dock 重开，不能永久关闭插件 IPC。
       void stopExternalPlugins();
     }
   });
@@ -502,11 +504,25 @@ async function createMainWindow() {
 
 /** Stop managed plugins and close any remaining plugin windows with the host. */
 function stopExternalPlugins(): Promise<void> {
+  if (pluginStopPromise) {
+    return pluginStopPromise;
+  }
+  pluginStopPromise = (pluginLifecycleIpc?.stopActivePlugins() ?? Promise.resolve())
+    .catch(error => console.error('Failed to stop external plugins before host close.', error))
+    .finally(() => {
+      closePluginWindows();
+      pluginStopPromise = null;
+    });
+  return pluginStopPromise;
+}
+
+/** Permanently close plugin services while the Electron app is exiting. */
+function shutdownExternalPlugins(): Promise<void> {
   if (pluginShutdownPromise) {
     return pluginShutdownPromise;
   }
   pluginShutdownPromise = (pluginLifecycleIpc?.shutdown() ?? Promise.resolve())
-    .catch(error => console.error('Failed to stop external plugins before host close.', error))
+    .catch(error => console.error('Failed to stop external plugins before app exit.', error))
     .finally(() => {
       closePluginWindows();
       pluginShutdownPromise = null;

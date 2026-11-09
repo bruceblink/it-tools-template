@@ -323,6 +323,20 @@ describe('Electron plugin lifecycle manager', () => {
     await expect(manager.shutdown()).resolves.toBeUndefined();
   });
 
+  it('stops active plugins without blocking management after a host window reopen', async () => {
+    const { root, manager, windows } = await createManager();
+    await manager.installArchive(await writeArchive(root, '1.0.0'));
+    await manager.activate(pluginId, '1.0.0', []);
+
+    // 主窗口临时关闭后，插件窗口停止但生命周期管理器仍可继续工作。
+    await expect(manager.stopActivePlugins()).resolves.toBeUndefined();
+    expect(windows[0]?.isDestroyed()).toBe(true);
+
+    await expect(manager.activate(pluginId, '1.0.0', [])).resolves.toMatchObject({ status: 'active' });
+    await expect(manager.disable(pluginId)).resolves.toBe(true);
+    await expect(manager.uninstall(pluginId, '1.0.0')).resolves.toBe(true);
+  });
+
   it('gates lifecycle mutations after shutdown begins and makes shutdown idempotent', async () => {
     const { root, manager } = await createManager();
     await manager.installArchive(await writeArchive(root, '1.0.0'));
