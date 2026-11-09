@@ -51,6 +51,11 @@ import type {
   DesktopPluginMarketplaceInstallProgress as SharedDesktopPluginMarketplaceInstallProgress,
   DesktopPluginMarketplaceInstallResult as SharedDesktopPluginMarketplaceInstallResult,
   DesktopPluginMarketplaceInstallSource as SharedDesktopPluginMarketplaceInstallSource,
+  DesktopPluginSourceBuildInput as SharedDesktopPluginSourceBuildInput,
+  DesktopPluginSourceBuildProgress as SharedDesktopPluginSourceBuildProgress,
+  DesktopPluginSourceBuildResult as SharedDesktopPluginSourceBuildResult,
+  DesktopPluginInstallSource as SharedDesktopPluginInstallSource,
+  DesktopPluginSourceSnapshotInstallSource as SharedDesktopPluginSourceSnapshotInstallSource,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
   DesktopPluginRuntimeFailureCode,
   DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
@@ -65,6 +70,11 @@ declare global {
   type DesktopPluginMarketplaceInstallProgress = SharedDesktopPluginMarketplaceInstallProgress;
   type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginSnapshot>;
   type DesktopPluginMarketplaceInstallSource = SharedDesktopPluginMarketplaceInstallSource;
+  type DesktopPluginSourceBuildInput = SharedDesktopPluginSourceBuildInput;
+  type DesktopPluginSourceBuildProgress = SharedDesktopPluginSourceBuildProgress;
+  type DesktopPluginSourceBuildResult = SharedDesktopPluginSourceBuildResult<DesktopPluginSnapshot>;
+  type DesktopPluginSourceSnapshotInstallSource = SharedDesktopPluginSourceSnapshotInstallSource;
+  type DesktopPluginInstallSource = SharedDesktopPluginInstallSource;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
   type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
 
@@ -79,8 +89,8 @@ declare global {
       tools: readonly DesktopPluginToolContribution[];
     };
     grantedCapabilities: readonly DesktopPluginCapability[];
-    /** Provenance recorded for a marketplace Release install, when available. */
-    source?: DesktopPluginMarketplaceInstallSource;
+    /** Provenance recorded for a Release or fixed source snapshot install. */
+    source?: DesktopPluginInstallSource;
     status: 'installed' | 'active' | 'invalid';
     activeContributionId?: string;
     errorCode?: DesktopPluginErrorCode | DesktopPluginRuntimeFailureCode;
@@ -196,6 +206,11 @@ declare global {
       onPluginMarketplaceInstallProgress?(
         callback: (progress: DesktopPluginMarketplaceInstallProgress) => void,
       ): () => void;
+      buildPluginSource?(
+        input: DesktopPluginSourceBuildInput,
+      ): Promise<DesktopPluginOperationResult<DesktopPluginSourceBuildResult>>;
+      cancelPluginSourceBuild?(requestId: string): Promise<DesktopPluginOperationResult<boolean>>;
+      onPluginSourceBuildProgress?(callback: (progress: DesktopPluginSourceBuildProgress) => void): () => void;
       activatePlugin?(
         pluginId: string,
         version: string,

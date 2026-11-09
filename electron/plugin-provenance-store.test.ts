@@ -8,7 +8,10 @@ import {
   PluginProvenanceStoreError,
   pluginProvenanceStoreLimits,
 } from './plugin-provenance-store';
-import type { DesktopPluginMarketplaceInstallSource } from '../src/shared/desktop-services/plugins';
+import type {
+  DesktopPluginMarketplaceInstallSource,
+  DesktopPluginSourceSnapshotInstallSource,
+} from '../src/shared/desktop-services/plugins';
 
 const temporaryDirectories: string[] = [];
 
@@ -24,6 +27,15 @@ const source: DesktopPluginMarketplaceInstallSource = {
   assetUrl: 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itplugin',
   archiveBytes: 128,
   sha256: 'b'.repeat(64),
+};
+
+const sourceSnapshot: DesktopPluginSourceSnapshotInstallSource = {
+  kind: 'source-snapshot',
+  repository: 'example/demo-plugin',
+  commitSha: 'c'.repeat(40),
+  archiveUrl: 'https://codeload.github.com/example/demo-plugin/tar.gz/' + 'c'.repeat(40),
+  archiveBytes: 256,
+  sha256: 'd'.repeat(64),
 };
 
 describe('plugin provenance store', () => {
@@ -84,7 +96,43 @@ describe('plugin provenance store', () => {
       ...source,
       assetUrl: 'https://release-assets.githubusercontent.com/github-production-release-asset/demo',
     });
-    expect(store.get('org.example.demo', '1.0.0')?.assetUrl).toContain('release-assets.githubusercontent.com');
+    const saved = store.get('org.example.demo', '1.0.0');
+    expect(saved && 'assetUrl' in saved ? saved.assetUrl : undefined).toContain('release-assets.githubusercontent.com');
+  });
+
+  it('persists fixed source snapshot provenance with a distinct source kind', async () => {
+    const directory = await createTemporaryDirectory();
+    const store = new PluginProvenanceStore(join(directory, '.plugin-provenance.json'));
+
+    await store.set('org.example.demo', '1.0.0', sourceSnapshot);
+
+    expect(store.get('org.example.demo', '1.0.0')).toEqual(sourceSnapshot);
+    const reloaded = new PluginProvenanceStore(join(directory, '.plugin-provenance.json'));
+    await reloaded.load();
+    expect(reloaded.get('org.example.demo', '1.0.0')).toEqual(sourceSnapshot);
+  });
+
+  it('accepts GitHub repository casing returned by the API', async () => {
+    const directory = await createTemporaryDirectory();
+    const store = new PluginProvenanceStore(join(directory, '.plugin-provenance.json'));
+    const mixedCaseSource: DesktopPluginSourceSnapshotInstallSource = {
+      ...sourceSnapshot,
+      repository: 'Example/Demo-plugin',
+    };
+
+    await store.set('org.example.demo', '1.0.0', mixedCaseSource);
+
+    expect(store.get('org.example.demo', '1.0.0')).toEqual(mixedCaseSource);
+  });
+
+  it('rejects source snapshot provenance that points outside the fixed codeload URL', async () => {
+    const directory = await createTemporaryDirectory();
+    const store = new PluginProvenanceStore(join(directory, '.plugin-provenance.json'));
+
+    await expect(store.set('org.example.demo', '1.0.0', {
+      ...sourceSnapshot,
+      archiveUrl: 'https://github.com/example/demo-plugin/archive/' + sourceSnapshot.commitSha + '.tar.gz',
+    })).rejects.toMatchObject({ code: 'invalid-source' } satisfies Partial<PluginProvenanceStoreError>);
   });
 
   it('exposes bounded store limits for lifecycle callers', () => {

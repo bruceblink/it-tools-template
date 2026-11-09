@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   desktopPluginErrorCodes,
   desktopPluginMarketplaceInstallPhases,
+  desktopPluginSourceBuildPhases,
   desktopPluginRuntimeFailureCodes,
   desktopPluginStateChangeReasons,
   isDesktopPluginMarketplaceInstallProgress,
+  isDesktopPluginSourceBuildProgress,
   isDesktopPluginStateChangeEvent,
 } from './plugins';
 
@@ -103,5 +105,30 @@ describe('desktop plugin bridge error catalog', () => {
       phase: 'discovering',
       totalBytes: null,
     })).toBe(true);
+  });
+
+  it('validates fixed source-build progress events', () => {
+    expect(desktopPluginSourceBuildPhases).toEqual([
+      'selecting-key',
+      'building',
+      'installing',
+      'completed',
+      'cancelled',
+    ]);
+    expect(isDesktopPluginSourceBuildProgress({
+      requestId: 'source-1',
+      phase: 'building',
+      repository: 'example/demo-plugin',
+      commitSha: 'a'.repeat(40),
+    })).toBe(true);
+    expect(isDesktopPluginSourceBuildProgress({
+      requestId: 'source-1',
+      phase: 'building',
+      commitSha: 'not-a-commit',
+    })).toBe(false);
+    expect(isDesktopPluginSourceBuildProgress({
+      requestId: 'source-1',
+      phase: 'unknown',
+    })).toBe(false);
   });
 });

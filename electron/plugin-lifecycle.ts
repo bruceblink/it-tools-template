@@ -28,7 +28,7 @@ import {
 } from './plugin-package-integrity';
 import { getExternalPluginToolRoute } from '../src/shared/plugin-tool-route';
 import type {
-  DesktopPluginMarketplaceInstallSource,
+  DesktopPluginInstallSource,
   DesktopPluginStateChangeEvent,
 } from '../src/shared/desktop-services/plugins';
 import {
@@ -90,8 +90,8 @@ export interface PluginLifecycleSnapshot {
     tools: readonly PluginLifecycleToolContribution[];
   };
   grantedCapabilities: readonly PluginCapability[];
-  /** Source metadata recorded when this version was installed from a marketplace Release. */
-  source?: DesktopPluginMarketplaceInstallSource;
+  /** Source metadata recorded for a Release or fixed source snapshot install. */
+  source?: DesktopPluginInstallSource;
   status: 'installed' | 'active' | 'invalid';
   /** The contribution currently selected for the active isolated window. */
   activeContributionId?: string;
@@ -213,7 +213,7 @@ export class PluginLifecycleManager {
 
   async installArchive(
     archivePath: string,
-    source?: DesktopPluginMarketplaceInstallSource,
+    source?: DesktopPluginInstallSource,
   ): Promise<PluginLifecycleSnapshot> {
     return this.runExclusive(async () => {
       this.assertOperational();
@@ -696,7 +696,7 @@ export class PluginLifecycleManager {
   private async updateProvenance(
     pluginId: string,
     version: string,
-    source: DesktopPluginMarketplaceInstallSource | undefined,
+    source: DesktopPluginInstallSource | undefined,
   ): Promise<void> {
     try {
       if (source) {

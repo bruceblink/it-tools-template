@@ -30,6 +30,15 @@ export const desktopPluginErrorCodes = Object.freeze([
   'marketplace-download-failed',
   'marketplace-cancelled',
   'marketplace-busy',
+  'source-build-invalid-repository',
+  'source-build-commit-not-found',
+  'source-build-download-failed',
+  'source-build-archive-invalid',
+  'source-build-resource-limit',
+  'source-build-key-cancelled',
+  'source-build-cancelled',
+  'source-build-busy',
+  'source-build-failed',
   'operation-failed',
 ] as const);
 
@@ -65,6 +74,8 @@ export interface DesktopPluginMarketplaceInstallProgress {
 }
 
 export interface DesktopPluginMarketplaceInstallSource {
+  /** Omitted on legacy Release provenance entries for backwards compatibility. */
+  readonly kind?: 'release';
   readonly repository: string;
   readonly tagName: string;
   readonly commitSha: string;
@@ -74,9 +85,56 @@ export interface DesktopPluginMarketplaceInstallSource {
   readonly sha256: string;
 }
 
+/** Provenance for a package built from a fixed GitHub source snapshot. */
+export interface DesktopPluginSourceSnapshotInstallSource {
+  readonly kind: 'source-snapshot';
+  readonly repository: string;
+  readonly commitSha: string;
+  readonly archiveUrl: string;
+  readonly archiveBytes: number;
+  readonly sha256: string;
+}
+
+export type DesktopPluginInstallSource =
+  | DesktopPluginMarketplaceInstallSource
+  | DesktopPluginSourceSnapshotInstallSource;
+
 export interface DesktopPluginMarketplaceInstallResult<TSnapshot> {
   readonly snapshot: TSnapshot;
   readonly source: DesktopPluginMarketplaceInstallSource;
+}
+
+/** Explicit renderer input for building a fixed GitHub source snapshot. */
+export interface DesktopPluginSourceBuildInput {
+  readonly requestId: string;
+  readonly owner: string;
+  readonly name: string;
+  readonly commitSha: string;
+  readonly keyId: string;
+}
+
+export const desktopPluginSourceBuildPhases = Object.freeze([
+  'selecting-key',
+  'building',
+  'installing',
+  'completed',
+  'cancelled',
+] as const);
+
+export type DesktopPluginSourceBuildPhase = typeof desktopPluginSourceBuildPhases[number];
+
+export interface DesktopPluginSourceBuildProgress {
+  readonly requestId: string;
+  readonly phase: DesktopPluginSourceBuildPhase;
+  readonly repository?: string;
+  readonly commitSha?: string;
+  readonly pluginId?: string;
+  readonly version?: string;
+}
+
+export interface DesktopPluginSourceBuildResult<TSnapshot> {
+  readonly snapshot: TSnapshot;
+  readonly source: DesktopPluginSourceSnapshotInstallSource;
 }
 
 /** Runtime failure codes attached to an installed package or tool contribution snapshot. */
@@ -125,6 +183,16 @@ const marketplaceProgressKeys = new Set([
 ]);
 const marketplaceRequestIdPattern = /^[A-Za-z0-9_-]{1,64}$/;
 const marketplaceProgressPhases = new Set<string>(desktopPluginMarketplaceInstallPhases);
+const sourceBuildProgressKeys = new Set([
+  'requestId',
+  'phase',
+  'repository',
+  'commitSha',
+  'pluginId',
+  'version',
+]);
+const sourceBuildProgressPhases = new Set<string>(desktopPluginSourceBuildPhases);
+const commitShaPattern = /^[a-f0-9]{40}$/i;
 
 /** Validate untrusted marketplace progress notifications before exposing them to a renderer. */
 export function isDesktopPluginMarketplaceInstallProgress(value: unknown): value is DesktopPluginMarketplaceInstallProgress {
@@ -157,6 +225,32 @@ export function isDesktopPluginMarketplaceInstallProgress(value: unknown): value
     && record.totalBytes !== null
     && (!Number.isSafeInteger(record.totalBytes) || (record.totalBytes as number) < 0)
   ) {
+    return false;
+  }
+  return true;
+}
+
+/** Validate source-build progress notifications before exposing them to a renderer. */
+export function isDesktopPluginSourceBuildProgress(value: unknown): value is DesktopPluginSourceBuildProgress {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some(key => !sourceBuildProgressKeys.has(key))
+    || typeof record.requestId !== 'string'
+    || !marketplaceRequestIdPattern.test(record.requestId)
+    || typeof record.phase !== 'string'
+    || !sourceBuildProgressPhases.has(record.phase)
+  ) {
+    return false;
+  }
+  for (const key of ['repository', 'pluginId', 'version'] as const) {
+    if (record[key] !== undefined && (typeof record[key] !== 'string' || record[key].length === 0 || record[key].length > 256)) {
+      return false;
+    }
+  }
+  if (record.commitSha !== undefined && (typeof record.commitSha !== 'string' || !commitShaPattern.test(record.commitSha))) {
     return false;
   }
   return true;

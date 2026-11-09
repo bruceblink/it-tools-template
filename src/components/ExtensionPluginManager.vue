@@ -14,7 +14,11 @@ type PluginManagerBridge = Required<Pick<NonNullable<Window['itToolsDesktop']>,
   | 'previewPluginSigner'
   | 'trustPluginSigner'
   | 'revokePluginSigner'
->>;
+>> & Pick<NonNullable<Window['itToolsDesktop']>,
+  | 'buildPluginSource'
+  | 'cancelPluginSourceBuild'
+  | 'onPluginSourceBuildProgress'
+>;
 
 const isDesktop = computed(() => typeof window !== 'undefined' && Boolean(getPluginBridge()));
 const isLoading = ref(true);
@@ -31,6 +35,22 @@ const signerForm = reactive({
   publicKey: '',
 });
 const signerPreview = ref<DesktopPluginSignerSnapshot>();
+const sourceBuildForm = reactive({
+  owner: '',
+  name: '',
+  commitSha: '',
+  keyId: '',
+});
+const sourceBuildRequestId = ref<string>();
+const sourceBuildProgress = ref<DesktopPluginSourceBuildProgress>();
+const sourceBuildError = ref<string>();
+const canBuildSource = computed(() => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  const bridge = getPluginBridge();
+  return Boolean(bridge?.buildPluginSource && bridge.cancelPluginSourceBuild && bridge.onPluginSourceBuildProgress);
+});
 
 function getPluginBridge(): PluginManagerBridge | undefined {
   const bridge = window.itToolsDesktop;
@@ -72,6 +92,27 @@ const messages = {
     refresh: 'Refresh',
     install: 'Install signed package',
     browseMarketplace: 'Browse plugin marketplace',
+    sourceBuildTitle: 'Build and install a fixed source snapshot',
+    sourceBuildIntro: 'Use a full commit SHA. Trust the matching public key below first. The desktop app then downloads the reviewed snapshot, asks for an external signing key, validates it, and installs the signed package.',
+    sourceOwner: 'GitHub owner',
+    sourceName: 'Repository name',
+    sourceCommit: 'Full commit SHA',
+    sourceKeyId: 'Signer key ID',
+    sourceBuild: 'Build and install',
+    sourceBuildCancel: 'Cancel build',
+    sourceBuildHint: 'The private key is selected by a native file dialog. It is not sent through the renderer.',
+    sourceBuildSelectingKey: 'Select the external signing key…',
+    sourceBuildBuilding: 'Downloading and validating the fixed source snapshot…',
+    sourceBuildInstalling: 'Installing the signed package…',
+    sourceBuildCompleted: 'Source snapshot installed.',
+    sourceBuildSuccess: 'Source snapshot installed for {name} {version}. Review the source record and capabilities before running it.',
+    sourceBuildInvalidRepository: 'Enter a valid GitHub owner, repository name, and full commit SHA.',
+    sourceBuildCommitNotFound: 'The commit was not found in the selected GitHub repository.',
+    sourceBuildDownloadFailed: 'The fixed source snapshot could not be downloaded.',
+    sourceBuildArchiveInvalid: 'The source archive failed safety validation.',
+    sourceBuildResourceLimit: 'The source archive exceeds the host resource limits.',
+    sourceBuildBusy: 'Another source build is already running.',
+    sourceBuildFailed: 'The source snapshot could not be built or installed.',
     onboardingTitle: 'Start with a trusted plugin source',
     onboardingIntro: 'The marketplace is a read-only GitHub directory. Review the repository and publisher before installing a package.',
     onboardingStepTrust: 'Verify the publisher fingerprint, then trust its public key below.',
@@ -102,7 +143,8 @@ const messages = {
     localPackage: 'Local signed package',
     sourceRepository: 'Repository',
     sourceRelease: 'Release',
-    sourceCommit: 'Commit',
+    sourceSnapshot: 'Fixed source snapshot',
+    sourceCommitLabel: 'Commit',
     sourceHash: 'SHA-256',
     activeContribution: 'Active contribution',
     errorCode: 'Error code',
@@ -145,6 +187,27 @@ const messages = {
     refresh: '刷新',
     install: '安装已签名的插件包',
     browseMarketplace: '浏览插件市场',
+    sourceBuildTitle: '从固定源码快照构建并安装',
+    sourceBuildIntro: '使用完整 commit SHA。请先在下方信任匹配的公钥。桌面应用随后下载已审查的源码快照，要求选择外部签名私钥，完成校验后安装签名包。',
+    sourceOwner: 'GitHub 所有者',
+    sourceName: '仓库名称',
+    sourceCommit: '完整 commit SHA',
+    sourceKeyId: '签名者密钥 ID',
+    sourceBuild: '构建并安装',
+    sourceBuildCancel: '取消构建',
+    sourceBuildHint: '私钥由原生文件选择器选择，不会经过渲染器传递。',
+    sourceBuildSelectingKey: '请选择外部签名私钥…',
+    sourceBuildBuilding: '正在下载并校验固定源码快照…',
+    sourceBuildInstalling: '正在安装已签名插件包…',
+    sourceBuildCompleted: '源码快照已安装。',
+    sourceBuildSuccess: '已为 {name} {version} 安装源码快照。运行前请检查来源记录和能力。',
+    sourceBuildInvalidRepository: '请输入有效的 GitHub 所有者、仓库名称和完整 commit SHA。',
+    sourceBuildCommitNotFound: '在所选 GitHub 仓库中没有找到此 commit。',
+    sourceBuildDownloadFailed: '无法下载固定源码快照。',
+    sourceBuildArchiveInvalid: '源码归档未通过安全校验。',
+    sourceBuildResourceLimit: '源码归档超过宿主资源限制。',
+    sourceBuildBusy: '已有另一个源码构建正在运行。',
+    sourceBuildFailed: '无法构建或安装源码快照。',
     onboardingTitle: '从受信任的插件来源开始',
     onboardingIntro: '插件市场只是 GitHub 仓库的只读目录。安装插件包前，请先审查仓库和发布者。',
     onboardingStepTrust: '核对发布者指纹，然后在下方信任其公钥。',
@@ -175,7 +238,8 @@ const messages = {
     localPackage: '本地已签名插件包',
     sourceRepository: '仓库',
     sourceRelease: 'Release',
-    sourceCommit: 'Commit',
+    sourceSnapshot: '固定源码快照',
+    sourceCommitLabel: 'Commit',
     sourceHash: 'SHA-256',
     activeContribution: '当前贡献项',
     errorCode: '错误码',
@@ -340,8 +404,52 @@ function displayPluginError(error: string): string {
   if (error === 'cancelled') {
     return text('operationCancelled');
   }
+  if (error === 'source-build-key-cancelled' || error === 'source-build-cancelled') {
+    return text('operationCancelled');
+  }
+  if (error === 'source-build-invalid-repository') {
+    return text('sourceBuildInvalidRepository');
+  }
+  if (error === 'source-build-commit-not-found') {
+    return text('sourceBuildCommitNotFound');
+  }
+  if (error === 'source-build-download-failed') {
+    return text('sourceBuildDownloadFailed');
+  }
+  if (error === 'source-build-archive-invalid') {
+    return text('sourceBuildArchiveInvalid');
+  }
+  if (error === 'source-build-resource-limit') {
+    return text('sourceBuildResourceLimit');
+  }
+  if (error === 'source-build-busy') {
+    return text('sourceBuildBusy');
+  }
+  if (error === 'source-build-failed') {
+    return text('sourceBuildFailed');
+  }
   return `${text('operationFailed')} (${error})`;
 }
+
+const sourceBuildProgressMessage = computed(() => {
+  const progress = sourceBuildProgress.value;
+  if (!progress) {
+    return '';
+  }
+  if (progress.phase === 'selecting-key') {
+    return text('sourceBuildSelectingKey');
+  }
+  if (progress.phase === 'building') {
+    return text('sourceBuildBuilding');
+  }
+  if (progress.phase === 'installing') {
+    return text('sourceBuildInstalling');
+  }
+  if (progress.phase === 'completed') {
+    return text('sourceBuildCompleted');
+  }
+  return text('operationCancelled');
+});
 
 const refresh = createQueuedRefresh(async () => {
   const bridge = getPluginBridge();
@@ -414,6 +522,52 @@ async function installPlugin(): Promise<void> {
   finally {
     isBusy.value = false;
   }
+}
+
+async function buildSourcePlugin(): Promise<void> {
+  const bridge = getPluginBridge();
+  if (!bridge?.buildPluginSource || sourceBuildRequestId.value !== undefined) {
+    return;
+  }
+  const owner = sourceBuildForm.owner.trim();
+  const name = sourceBuildForm.name.trim();
+  const commitSha = sourceBuildForm.commitSha.trim();
+  const keyId = sourceBuildForm.keyId.trim();
+  const requestId = `source-build-${Date.now().toString(36)}`;
+  sourceBuildRequestId.value = requestId;
+  sourceBuildProgress.value = { requestId, phase: 'selecting-key' };
+  sourceBuildError.value = undefined;
+  pluginError.value = undefined;
+  notice.value = undefined;
+  isBusy.value = true;
+  try {
+    const result = await bridge.buildPluginSource({ requestId, owner, name, commitSha, keyId });
+    if (!result.ok) {
+      sourceBuildError.value = displayPluginError(result.error);
+    }
+    else {
+      notice.value = text('sourceBuildSuccess')
+        .replace('{name}', result.value.snapshot.name)
+        .replace('{version}', result.value.snapshot.version);
+      await refresh();
+    }
+  }
+  catch {
+    sourceBuildError.value = text('operationFailed');
+  }
+  finally {
+    sourceBuildRequestId.value = undefined;
+    isBusy.value = false;
+  }
+}
+
+async function cancelSourceBuild(): Promise<void> {
+  const requestId = sourceBuildRequestId.value;
+  const bridge = getPluginBridge();
+  if (!requestId || !bridge?.cancelPluginSourceBuild) {
+    return;
+  }
+  await bridge.cancelPluginSourceBuild(requestId);
 }
 
 async function activatePlugin(plugin: DesktopPluginSnapshot): Promise<void> {
@@ -591,6 +745,7 @@ watch(signerForm, () => {
 }, { deep: true });
 
 let disposePluginStateChange: (() => void) | undefined;
+let disposeSourceBuildProgress: (() => void) | undefined;
 
 onMounted(() => {
   disposePluginStateChange = window.itToolsDesktop?.onPluginStateChanged?.(() => {
@@ -598,11 +753,17 @@ onMounted(() => {
       void refresh();
     }
   });
+  disposeSourceBuildProgress = window.itToolsDesktop?.onPluginSourceBuildProgress?.((progress) => {
+    if (progress.requestId === sourceBuildRequestId.value) {
+      sourceBuildProgress.value = progress;
+    }
+  });
   void refresh();
 });
 
 onUnmounted(() => {
   disposePluginStateChange?.();
+  disposeSourceBuildProgress?.();
 });
 </script>
 
@@ -649,6 +810,48 @@ onUnmounted(() => {
         </ol>
       </n-card>
 
+      <n-card v-if="canBuildSource" class="source-build-card" :title="text('sourceBuildTitle')">
+        <p class="source-build-intro">{{ text('sourceBuildIntro') }}</p>
+        <div class="source-build-form">
+          <n-form-item :label="text('sourceOwner')" label-placement="top">
+            <n-input v-model:value="sourceBuildForm.owner" maxlength="39" autocomplete="off" />
+          </n-form-item>
+          <n-form-item :label="text('sourceName')" label-placement="top">
+            <n-input v-model:value="sourceBuildForm.name" maxlength="100" autocomplete="off" />
+          </n-form-item>
+          <n-form-item :label="text('sourceCommit')" label-placement="top">
+            <n-input v-model:value="sourceBuildForm.commitSha" maxlength="40" autocomplete="off" />
+          </n-form-item>
+          <n-form-item :label="text('sourceKeyId')" label-placement="top">
+            <n-input v-model:value="sourceBuildForm.keyId" maxlength="128" autocomplete="off" />
+          </n-form-item>
+        </div>
+        <p class="source-build-hint">{{ text('sourceBuildHint') }}</p>
+        <n-alert v-if="sourceBuildProgress" type="info" :show-icon="false" role="status" aria-live="polite">
+          <div class="source-build-progress">
+            <span>{{ sourceBuildProgressMessage }}</span>
+            <n-button
+              v-if="sourceBuildRequestId && (sourceBuildProgress.phase === 'selecting-key' || sourceBuildProgress.phase === 'building')"
+              size="small"
+              secondary
+              @click="cancelSourceBuild"
+            >
+              {{ text('sourceBuildCancel') }}
+            </n-button>
+          </div>
+        </n-alert>
+        <n-alert v-if="sourceBuildError" type="error" :show-icon="false" role="alert" mt-3>
+          {{ sourceBuildError }}
+        </n-alert>
+        <n-button
+          type="primary"
+          :disabled="isBusy || sourceBuildRequestId !== undefined"
+          @click="buildSourcePlugin"
+        >
+          {{ text('sourceBuild') }}
+        </n-button>
+      </n-card>
+
       <n-alert v-if="pluginError" type="error" role="alert" mb-4>
         {{ pluginError }}
       </n-alert>
@@ -683,8 +886,9 @@ onUnmounted(() => {
               <span>{{ text('packageVersion') }}: <code>{{ plugin.version }}</code></span>
               <template v-if="plugin.source">
                 <span>{{ text('sourceRepository') }}: <code>{{ plugin.source.repository }}</code></span>
-                <span>{{ text('sourceRelease') }}: <code>{{ plugin.source.tagName }}</code></span>
-                <span>{{ text('sourceCommit') }}: <code>{{ plugin.source.commitSha }}</code></span>
+                <span v-if="'tagName' in plugin.source">{{ text('sourceRelease') }}: <code>{{ plugin.source.tagName }}</code></span>
+                <span v-else>{{ text('sourceSnapshot') }}</span>
+                <span>{{ text('sourceCommitLabel') }}: <code>{{ plugin.source.commitSha }}</code></span>
                 <span>{{ text('sourceHash') }}: <code>{{ plugin.source.sha256 }}</code></span>
               </template>
               <span v-else>{{ text('source') }}: <code>{{ text('localPackage') }}</code></span>
@@ -891,6 +1095,36 @@ onUnmounted(() => {
 .plugin-onboarding-card p {
   margin: 0;
   color: var(--n-text-color-3);
+}
+
+.source-build-card {
+  display: grid;
+  gap: 12px;
+}
+
+.source-build-intro,
+.source-build-hint {
+  margin: 0;
+  color: var(--n-text-color-3);
+}
+
+.source-build-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.source-build-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .source-build-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 .plugin-onboarding-steps {

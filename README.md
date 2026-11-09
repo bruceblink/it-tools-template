@@ -205,7 +205,7 @@ corepack pnpm plugin:build-source -- \
   --key-id plugin-publisher --output ./artifacts/my-plugin.itplugin
 ~~~
 
-The source-build command does not run repository scripts, install dependencies, or load source directly in Electron. Install the generated `.itplugin` from desktop Settings, then review the signer fingerprint and approve only the required capabilities. The snapshot commit and archive SHA-256 are reported for review; they do not prove that a published Release was built from that source.
+The source-build command does not run repository scripts, install dependencies, or load source directly in Electron. You can also enter the owner, repository, full commit SHA, and signer key ID in the desktop Settings source-build card; the main process selects the private key and installs the generated package. Review the signer fingerprint and approve only the required capabilities. The snapshot commit and archive SHA-256 are reported for review; they do not prove that a published Release was built from that source.
 
 In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
 

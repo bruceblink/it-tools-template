@@ -20,6 +20,7 @@ import {
 import type { PluginSandboxRegistration } from './plugin-sandbox';
 import type {
   DesktopPluginMarketplaceInstallSource,
+  DesktopPluginSourceSnapshotInstallSource,
   DesktopPluginStateChangeEvent,
 } from '../src/shared/desktop-services/plugins';
 
@@ -112,6 +113,21 @@ describe('Electron plugin lifecycle manager', () => {
 
     await expect(reloaded.uninstall(pluginId, '1.0.0')).resolves.toBe(true);
     expect((await reloaded.listInstalled())).toEqual([]);
+  });
+
+  it('persists fixed source snapshot provenance without Release fields', async () => {
+    const { root, manager } = await createManager();
+    const source: DesktopPluginSourceSnapshotInstallSource = {
+      kind: 'source-snapshot',
+      repository: 'example/demo-plugin',
+      commitSha: 'c'.repeat(40),
+      archiveUrl: 'https://codeload.github.com/example/demo-plugin/tar.gz/' + 'c'.repeat(40),
+      archiveBytes: 256,
+      sha256: 'd'.repeat(64),
+    };
+    const installed = await manager.installArchive(await writeArchive(root, '1.0.0'), source);
+    expect(installed.source).toEqual(source);
+    await expect(manager.listInstalled()).resolves.toEqual([installed]);
   });
 
   it('starts a package that declares a known capability not implemented by this host', async () => {

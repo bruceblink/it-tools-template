@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { lstat, mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import type { DesktopPluginMarketplaceInstallSource } from '../src/shared/desktop-services/plugins';
+import type { DesktopPluginInstallSource } from '../src/shared/desktop-services/plugins';
 
 const maximumProvenanceStoreBytes = 512 * 1024;
 const maximumProvenanceEntries = 128;
@@ -18,6 +18,7 @@ const allowedAssetHosts = new Set([
   'github-releases.githubusercontent.com',
   'release-assets.githubusercontent.com',
 ]);
+const allowedSourceArchiveHosts = new Set(['codeload.github.com']);
 
 export const pluginProvenanceStoreLimits = Object.freeze({
   maximumProvenanceStoreBytes,
@@ -38,7 +39,7 @@ export class PluginProvenanceStoreError extends Error {
 interface StoredProvenanceEntry {
   pluginId: string;
   version: string;
-  source: DesktopPluginMarketplaceInstallSource;
+  source: DesktopPluginInstallSource;
 }
 
 interface StoredProvenanceState {
@@ -47,7 +48,7 @@ interface StoredProvenanceState {
 }
 
 /**
- * Persist marketplace provenance outside the signed package tree.
+ * Persist Release or fixed source snapshot provenance outside the signed package tree.
  *
  * Provenance is informational metadata. It never participates in package
  * verification or capability decisions, so an absent/corrupt store must not
@@ -55,7 +56,7 @@ interface StoredProvenanceState {
  */
 export class PluginProvenanceStore {
   private readonly statePath: string;
-  private readonly entries = new Map<string, DesktopPluginMarketplaceInstallSource>();
+  private readonly entries = new Map<string, DesktopPluginInstallSource>();
   private loaded = false;
 
   constructor(statePath: string) {
@@ -108,12 +109,12 @@ export class PluginProvenanceStore {
     this.loaded = true;
   }
 
-  get(pluginId: string, version: string): DesktopPluginMarketplaceInstallSource | undefined {
+  get(pluginId: string, version: string): DesktopPluginInstallSource | undefined {
     const source = this.entries.get(getEntryKey(pluginId, version));
     return source ? cloneSource(source) : undefined;
   }
 
-  async set(pluginId: string, version: string, source: DesktopPluginMarketplaceInstallSource): Promise<void> {
+  async set(pluginId: string, version: string, source: DesktopPluginInstallSource): Promise<void> {
     await this.load();
     if (!isValidPluginIdentity(pluginId, version)) {
       throw new PluginProvenanceStoreError('invalid-source', 'The plugin provenance identity is invalid.');
@@ -237,13 +238,22 @@ function validateStoredState(value: unknown): StoredProvenanceEntry[] {
   return normalized;
 }
 
-function normalizeSource(value: unknown): DesktopPluginMarketplaceInstallSource {
+function normalizeSource(value: unknown): DesktopPluginInstallSource {
   if (!isRecord(value)) {
     throw new PluginProvenanceStoreError('invalid-source', 'The plugin provenance source is invalid.');
   }
+  if (value.kind === 'source-snapshot') {
+    return normalizeSourceSnapshot(value);
+  }
   const keys = Object.keys(value);
   const expectedKeys = ['repository', 'tagName', 'commitSha', 'assetName', 'assetUrl', 'archiveBytes', 'sha256'];
-  if (keys.length !== expectedKeys.length || keys.some(key => !expectedKeys.includes(key))) {
+  const hasReleaseKind = value.kind === 'release';
+  if (
+    (hasReleaseKind && keys.length !== expectedKeys.length + 1)
+    || (!hasReleaseKind && value.kind !== undefined && value.kind !== 'release')
+    || (!hasReleaseKind && keys.length !== expectedKeys.length)
+    || keys.some(key => key !== 'kind' && !expectedKeys.includes(key))
+  ) {
     throw new PluginProvenanceStoreError('invalid-source', 'The plugin provenance source has unexpected fields.');
   }
   if (
@@ -278,7 +288,54 @@ function normalizeSource(value: unknown): DesktopPluginMarketplaceInstallSource 
   };
 }
 
-function cloneSource(source: DesktopPluginMarketplaceInstallSource): DesktopPluginMarketplaceInstallSource {
+function normalizeSourceSnapshot(value: Record<string, unknown>): DesktopPluginInstallSource {
+  const expectedKeys = ['kind', 'repository', 'commitSha', 'archiveUrl', 'archiveBytes', 'sha256'];
+  const keys = Object.keys(value);
+  if (keys.length !== expectedKeys.length || keys.some(key => !expectedKeys.includes(key))) {
+    throw new PluginProvenanceStoreError('invalid-source', 'The source snapshot provenance has unexpected fields.');
+  }
+  if (
+    value.kind !== 'source-snapshot'
+    || typeof value.repository !== 'string' || !repositoryPattern.test(value.repository)
+    || typeof value.commitSha !== 'string' || !commitPattern.test(value.commitSha)
+    || typeof value.archiveUrl !== 'string'
+    || typeof value.archiveBytes !== 'number' || !Number.isSafeInteger(value.archiveBytes) || value.archiveBytes <= 0 || value.archiveBytes > 128 * 1024 * 1024
+    || typeof value.sha256 !== 'string' || !hashPattern.test(value.sha256)
+  ) {
+    throw new PluginProvenanceStoreError('invalid-source', 'The source snapshot provenance contains invalid fields.');
+  }
+  let archiveUrl: URL;
+  try {
+    archiveUrl = new URL(value.archiveUrl);
+  }
+  catch (error) {
+    throw new PluginProvenanceStoreError('invalid-source', 'The source snapshot archive URL is invalid.', { cause: error });
+  }
+  const [owner, name] = value.repository.split('/');
+  const expectedPath = `/${encodeURIComponent(owner!)}/${encodeURIComponent(name!)}/tar.gz/${value.commitSha.toLowerCase()}`;
+  if (
+    archiveUrl.protocol !== 'https:'
+    || !allowedSourceArchiveHosts.has(archiveUrl.hostname.toLowerCase())
+    || archiveUrl.port
+    || archiveUrl.username
+    || archiveUrl.password
+    || archiveUrl.search
+    || archiveUrl.hash
+    || archiveUrl.pathname.toLowerCase() !== expectedPath.toLowerCase()
+  ) {
+    throw new PluginProvenanceStoreError('invalid-source', 'The source snapshot archive URL is not approved.');
+  }
+  return {
+    kind: 'source-snapshot',
+    repository: value.repository,
+    commitSha: value.commitSha.toLowerCase(),
+    archiveUrl: archiveUrl.href,
+    archiveBytes: value.archiveBytes,
+    sha256: value.sha256.toLowerCase(),
+  };
+}
+
+function cloneSource(source: DesktopPluginInstallSource): DesktopPluginInstallSource {
   return { ...source };
 }
 

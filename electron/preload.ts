@@ -38,11 +38,14 @@ import type {
 } from '../src/shared/desktop-services/git';
 import {
   isDesktopPluginMarketplaceInstallProgress,
+  isDesktopPluginSourceBuildProgress,
   isDesktopPluginStateChangeEvent,
 } from '../src/shared/desktop-services/plugins';
 import type {
   DesktopPluginMarketplaceInstallInput,
   DesktopPluginMarketplaceInstallProgress,
+  DesktopPluginSourceBuildInput,
+  DesktopPluginSourceBuildProgress,
 } from '../src/shared/desktop-services/plugins';
 import type { DesktopUpdateState } from '../src/shared/desktop-services/updates';
 
@@ -168,6 +171,19 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     };
     ipcRenderer.on('desktop:plugins:marketplace-progress', listener);
     return () => ipcRenderer.removeListener('desktop:plugins:marketplace-progress', listener);
+  },
+  buildPluginSource: (input: DesktopPluginSourceBuildInput) =>
+    ipcRenderer.invoke('desktop:plugins:build-source', input),
+  cancelPluginSourceBuild: (requestId: string) =>
+    ipcRenderer.invoke('desktop:plugins:build-source:cancel', { requestId }),
+  onPluginSourceBuildProgress: (callback: (progress: DesktopPluginSourceBuildProgress) => void) => {
+    const listener = (_event: IpcRendererEvent, value: unknown) => {
+      if (isDesktopPluginSourceBuildProgress(value)) {
+        callback(value);
+      }
+    };
+    ipcRenderer.on('desktop:plugins:source-build-progress', listener);
+    return () => ipcRenderer.removeListener('desktop:plugins:source-build-progress', listener);
   },
   activatePlugin: (
     pluginId: string,

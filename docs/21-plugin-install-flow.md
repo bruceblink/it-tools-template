@@ -32,9 +32,9 @@
 源码构建用于开发和审查，不作为普通市场安装的静默回退：
 
 1. 宿主下载固定 commit 的源码快照，校验 GitHub 返回的仓库和 commit 身份。
-2. 源码先落到临时目录并执行 `plugin:validate`；需要 TypeScript 时使用 `plugin:build --tsconfig <project.json>` 完成 `--noEmit` 检查和签名打包。
-3. 管理器显示“本地构建”标识、仓库、commit、构建时间和签名者。用户明确确认后才安装。
-4. 不使用应用自身的长期私钥替源码自动签名；开发者必须提供仓库外的签名密钥，或者使用独立的本地开发签名者并明确标记其身份。
+2. 源码先落到临时目录并执行 `plugin:validate`；需要 TypeScript 时使用仓库固定编译器完成 `--noEmit` 检查，再用仓库外的 Ed25519 私钥签名打包。
+3. CLI 输出 `.itplugin`；桌面设置的源码构建卡片则在主进程选择私钥后直接调用本地安装器。管理器保存 `source-snapshot` 标识、仓库、commit、源码快照 SHA-256 和包摘要。
+4. 不使用应用自身的长期私钥替源码自动签名；开发者必须提供仓库外的签名密钥，随后仍需单独信任签名者和授权插件能力。
 
 Electron 不在普通模式下直接加载 GitHub 原始 HTML/JavaScript。直接加载会绕过固定包清单、文件哈希和发布者身份，也会让可变分支内容进入宿主生命周期。若未来增加源码预览，只能使用无持久安装、无宿主能力、无工具注册的独立预览窗口。
 
@@ -48,6 +48,8 @@ Electron 不在普通模式下直接加载 GitHub 原始 HTML/JavaScript。直�
 | `pinned` | 已固定仓库、版本和 commit/tag | 查看来源摘要 |
 | `downloading` | 正在下载临时资产 | 等待或取消 |
 | `verifying` | 正在校验包、哈希、API 和签名 | 等待 |
+| `selecting-key` | 正在等待主进程打开外部签名私钥选择器 | 选择私钥或取消 |
+| `building` | 正在下载、解压、校验和签名固定源码快照 | 等待或取消 |
 | `installing` | 正在调用宿主生命周期安装器 | 等待完成 |
 | `cancelled` | 用户取消了下载或校验 | 查看提示后重试 |
 | `awaiting-trust` | 包有效但签名者尚未受信任 | 核对指纹并添加公钥 |
@@ -71,6 +73,6 @@ Electron 不在普通模式下直接加载 GitHub 原始 HTML/JavaScript。直�
 
 1. **已完成基础**：市场只读 GitHub 目录、Electron 本地包安装、信任、能力授权和生命周期管理；`plugin:build` 将源码校验、可选 TypeScript 检查和签名打包收敛为一个命令。
 2. **已完成 Release 直装**：`electron/plugin-marketplace-installer.ts`、单飞控制器和 `desktop:plugins:install-from-marketplace` IPC 负责重新校验仓库、固定 tag/commit、限制下载、流式校验、进度/取消、清理临时文件，并复用生命周期安装器。来源摘要保存到 `.plugin-provenance.json`，只用于诊断，不参与签名包校验。
-3. **源码快照构建首个切片已完成**：`electron/plugin-source-snapshot.ts` 固定完整 commit、校验仓库身份并下载受限的 gzip 快照；`plugin:build-source` 通过受限解压、源码校验、可选 TypeScript `--noEmit` 检查和外部 Ed25519 私钥签名生成 `.itplugin`。命令不执行仓库脚本、不安装依赖，也不开放普通模式的原始源码直载。Electron 市场页面尚未把该命令自动化为应用内入口，生成包仍由用户在桌面设置中显式安装。
+3. **源码快照构建和桌面安装已接通**：`electron/plugin-source-snapshot.ts` 固定完整 commit、校验仓库身份并下载受限的 gzip 快照；`plugin:build-source` 及桌面设置中的“从固定源码快照构建并安装”入口都通过受限解压、源码校验、可选 TypeScript `--noEmit` 检查和外部 Ed25519 私钥签名生成包。私钥路径只由主进程原生文件选择器读取。源码来源以独立的 `source-snapshot` provenance 保存，不能伪装成 Release。流程不执行仓库脚本、不安装依赖，也不开放普通模式的原始源码直载。插件市场页面仍把 Release 直装作为默认路径；源码构建需要用户明确输入完整 commit 和签名者 key ID。
 
 验收必须覆盖仓库身份伪造、可变分支、重定向、超大资产、下载清理、取消、签名不受信任、重复安装、能力拒绝和安装后运行恢复。当前直装回归覆盖身份/topic、唯一资产、commit 固定、GitHub 重定向主机、流式大小/哈希、单飞取消、来源持久化和临时目录清理；真实 Electron 窗口安装仍待有显示环境时验收。

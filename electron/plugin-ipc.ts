@@ -22,11 +22,17 @@ import type { PluginSignerInput } from './plugin-trust-store';
 import { PluginMarketplaceInstallError } from './plugin-marketplace-installer';
 import { PluginMarketplaceInstallController } from './plugin-marketplace-controller';
 import { createMarketplaceReleaseFetcher } from './plugin-marketplace-download';
+import {
+  PluginSourceBuildController,
+  PluginSourceBuildControllerError,
+} from './plugin-source-build-controller';
 import type {
   DesktopPluginErrorCode,
   DesktopPluginMarketplaceInstallInput,
   DesktopPluginMarketplaceInstallProgress,
   DesktopPluginOperationResult,
+  DesktopPluginSourceBuildInput,
+  DesktopPluginSourceBuildProgress,
 } from '../src/shared/desktop-services/plugins';
 
 export interface PluginIpcDependencies {
@@ -89,6 +95,18 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     fetchReleaseAsset,
     installArchive: (archivePath, source) => lifecycleManager.installArchive(archivePath, source),
   });
+  const sourceBuildController = new PluginSourceBuildController({
+    tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.source-builds'),
+    fetch: (url, init) => net.fetch(url, init),
+    selectPrivateKey: async signal => {
+      if (signal.aborted) {
+        return null;
+      }
+      const window = getPluginManagementWindow(dependencies);
+      return selectPrivateKeyPath(window, signal);
+    },
+    installPackage: (archivePath, source) => lifecycleManager.installArchive(archivePath, source),
+  });
 
   ipcMain.handle('desktop:plugins:list', event => runPluginManagementIpc(
     event,
@@ -118,6 +136,23 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     event,
     dependencies,
     () => marketplaceController.cancel(parseMarketplaceCancelRequest(value)),
+  ));
+  ipcMain.handle('desktop:plugins:build-source', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    async () => {
+      const input = parseSourceBuildRequest(value);
+      const result = await sourceBuildController.start(
+        input,
+        progress => sendSourceBuildProgress(event.sender, progress),
+      );
+      return { snapshot: result.snapshot, source: result.source };
+    },
+  ));
+  ipcMain.handle('desktop:plugins:build-source:cancel', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    () => sourceBuildController.cancel(parseMarketplaceCancelRequest(value)),
   ));
   ipcMain.handle('desktop:plugins:activate', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parseActivationRequest(value);
@@ -221,8 +256,11 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   return {
     shutdown: async () => {
       await marketplaceController.dispose();
+      await sourceBuildController.dispose();
       ipcMain.removeHandler('desktop:plugins:install-from-marketplace');
       ipcMain.removeHandler('desktop:plugins:install-from-marketplace:cancel');
+      ipcMain.removeHandler('desktop:plugins:build-source');
+      ipcMain.removeHandler('desktop:plugins:build-source:cancel');
       await lifecycleManager.shutdown();
     },
   };
@@ -340,6 +378,7 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
     || error instanceof PluginPackageError
     || error instanceof PluginTrustStoreError
     || error instanceof PluginMarketplaceInstallError
+    || error instanceof PluginSourceBuildControllerError
   ) {
     return error.code;
   }
@@ -402,6 +441,28 @@ function parseMarketplaceCancelRequest(value: unknown): string {
   return value.requestId;
 }
 
+function parseSourceBuildRequest(value: unknown): DesktopPluginSourceBuildInput {
+  if (
+    !isRecord(value)
+    || !hasExactKeys(value, ['requestId', 'owner', 'name', 'commitSha', 'keyId'])
+    || typeof value.requestId !== 'string'
+    || typeof value.owner !== 'string'
+    || typeof value.name !== 'string'
+    || typeof value.commitSha !== 'string'
+    || typeof value.keyId !== 'string'
+    || !marketplaceRequestIdPattern.test(value.requestId)
+  ) {
+    throw new PluginIpcInputError();
+  }
+  return {
+    requestId: value.requestId,
+    owner: value.owner,
+    name: value.name,
+    commitSha: value.commitSha,
+    keyId: value.keyId,
+  };
+}
+
 function sendMarketplaceProgress(
   sender: WebContents,
   progress: DesktopPluginMarketplaceInstallProgress,
@@ -415,6 +476,69 @@ function sendMarketplaceProgress(
   catch {
     // The installation owns cleanup; a closed renderer only loses progress updates.
   }
+}
+
+function sendSourceBuildProgress(
+  sender: WebContents,
+  progress: DesktopPluginSourceBuildProgress,
+): void {
+  if (sender.isDestroyed()) {
+    return;
+  }
+  try {
+    sender.send('desktop:plugins:source-build-progress', progress);
+  }
+  catch {
+    // The build owns cleanup; a closed renderer only loses progress updates.
+  }
+}
+
+/** Let cancellation release the build while a native key dialog is still open. */
+function selectPrivateKeyPath(window: BrowserWindow, signal: AbortSignal): Promise<string | null> {
+  if (signal.aborted) {
+    return Promise.resolve(null);
+  }
+  const dialogOperation = dialog.showOpenDialog(window, {
+    title: 'Select external plugin signing key / 选择外部插件签名私钥',
+    properties: ['openFile'],
+    filters: [{ name: 'PEM private key', extensions: ['pem', 'key'] }],
+  });
+  return new Promise<string | null>((resolvePromise, rejectPromise) => {
+    let settled = false;
+    const onAbort = () => resolveOnce(null);
+    const cleanup = () => signal.removeEventListener('abort', onAbort);
+    function resolveOnce(value: string | null): void {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolvePromise(value);
+    }
+    function rejectOnce(error: unknown): void {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      rejectPromise(error);
+    }
+    signal.addEventListener('abort', onAbort, { once: true });
+    if (signal.aborted) {
+      onAbort();
+    }
+    void dialogOperation.then(
+      selection => {
+        if (selection.canceled || selection.filePaths.length === 0) {
+          resolveOnce(null);
+        }
+        else {
+          resolveOnce(selection.filePaths[0]!);
+        }
+      },
+      error => rejectOnce(error),
+    );
+  });
 }
 
 function parsePluginVersionRequest(value: unknown): { pluginId: string; version: string } {

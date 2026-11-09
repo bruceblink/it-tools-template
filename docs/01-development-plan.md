@@ -2,7 +2,7 @@
 
 > 状态：唯一开发计划
 > 更新日期：2026-11-09
-> 本次审查源码基线：`ee2d72a`；本次同步增量为 `3010d78..ee2d72a`，重点检查 Release 重定向修复、源码快照解压和开发构建命令
+> 本次审查源码基线：`ee2d72a`；本次同步增量为 `3010d78..ee2d72a`，重点检查 Release 重定向修复、源码快照解压、开发构建命令和桌面安装接入
 > 历史安装更新验收基线：`v2026.11.1-1793495127.gca55a2c`；不是当前主线或最新发布状态的证明
 > 完整验证基线：2026-11-07 在 Windows、Node `v24.15.0`、pnpm `12.16.1` 执行 `pnpm check`，退出码为 0；147 个测试文件通过、2 个跳过，917 项测试通过、18 项跳过，Web 与 Electron 构建通过
 > 历史交付验证：此前记录在 Linux、Node `v24.22.1`、pnpm `12.16.1` 执行 `corepack pnpm check` 通过；该结果不代替本次 Windows 审查或真实 GitHub Release 安装验收
@@ -61,7 +61,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | 顺序 | ID | 当前状态 | 下一项工作 | 完成条件 |
 | --- | --- | --- | --- | --- |
 | P0 | MARKETPLACE-RELEASE-REDIRECT-001 | 已完成逐跳校验和 GitHub CDN 查询参数兼容；定向测试已覆盖允许和拒绝地址 | 使用真实 GitHub Release 资产和 Electron 窗口完成最终验收 | 带查询参数的 GitHub 资产可安装；未批准地址被拒绝；完成真实窗口安装验收 |
-| P0 | PLUGIN-DEVEX-FOUNDATION-001 | 已完成固定提交源码下载、受限 tar.gz 解压、资源边界、源码校验、可选 TypeScript 检查、外部私钥签名和 `plugin:build-source` CLI 首个切片；普通 Release 直装仍使用独立流程 | 把 CLI 结果接入明确的桌面开发者入口、来源摘要和安装运行闭环；继续保持普通安装不加载原始源码 | 新开发者可在仓库外从零完成创建、编写、校验、打包、安装和运行；命令、错误和文档一致；私钥不进入源码 |
+| P0 | PLUGIN-DEVEX-FOUNDATION-001 | 已完成固定提交源码下载、受限 tar.gz 解压、资源边界、源码校验、可选 TypeScript 检查、外部私钥签名、`plugin:build-source` CLI，以及桌面设置中的源码构建、安装、取消和 `source-snapshot` 来源记录；普通 Release 直装仍使用独立流程 | 使用真实 GitHub 源码和 Electron 窗口完成最终验收；继续打磨市场到源码构建的预填充路径 | 新开发者可在仓库外从零完成创建、编写、校验、打包、安装和运行；命令、桌面错误、来源摘要和文档一致；私钥不进入渲染器或源码 |
 | P1 | PLUGIN-HOST-UX-001 | Electron 管理器已支持安装、信任、能力授权、贡献工具、停用和卸载；已有首次使用引导、能力状态摘要和包诊断信息 | 继续打磨签名者流程、失败提示、升级回退和恢复动作；补齐中英文路径与键盘可操作性 | 安装、信任、授权、运行、停止、升级回退和卸载均有清晰可见状态；失败后可按提示恢复；宿主设置和内置工具继续可用 |
 | P2 | PLUGIN-SDK-API-001 | API `1.4.0`、五个自包含声明、四项宿主能力和独立项目回归已具备；SDK 交付方式与能力兼容矩阵尚未定型 | 固化 SDK 交付和版本策略，补充 API/错误码示例与接口约定回归；明确 `file`、`camera`、`data.oui` 等已声明能力的实现或暂缓边界 | 仓库外项目无需引用内部 `src/` 即可类型检查和打包；版本兼容、能力状态和错误处理有可复制的示例 |
 | P3 | PLUGIN-RUNTIME-VALIDATION-001 | 沙箱、签名信任、能力代理、资源上限和生命周期基础实现已存在；目标平台真实窗口验收仍不完整 | 在平台建设稳定后补取消边界、资源诊断、关闭恢复、安装升级和自然故障验证；只扩展有明确权限和资源口径的能力 | Linux、macOS、Windows 的权限、停用、崩溃、卡死、Worker 限额、升级回退和卸载流程都有可追溯证据 |
@@ -82,9 +82,9 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 ### P0：插件开发闭环（PLUGIN-DEVEX-FOUNDATION-001）
 
 - 现有基础：`plugin:create` 可以生成源码清单、静态页面和五个自包含 SDK 声明；`plugin:validate`、`plugin:pack` 和 `plugin:keygen` 已有安全边界；`plugins/capability-demo/` 提供能力调用示例；`scripts/plugin-project.test.mjs` 已验证仓库外 TypeScript 项目。
-- 主要缺口：桌面设置和插件市场还没有直接调用固定提交源码构建命令；构建结果的来源摘要、安装入口和运行恢复仍需接入宿主流程。
-- 已完成切片：`plugin:build-source` 固定 commit，流式下载并校验源码快照，拒绝危险 tar 条目，执行源码校验和可选 TypeScript `--noEmit`，使用仓库外 Ed25519 私钥生成 `.itplugin`。命令不运行仓库脚本、不安装依赖，也不加载原始源码。
-- 下一步：把构建结果接入明确的桌面开发者入口、来源摘要和安装运行闭环，不绕过签名、信任和隔离边界。
+- 主要缺口：真实 GitHub 源码和 Electron 窗口的完整构建、信任、授权、运行和恢复证据仍不完整；市场详情还没有自动填充固定 commit 的源码构建表单。
+- 已完成切片：`plugin:build-source` 和桌面源码构建入口固定 commit，流式下载并校验源码快照，拒绝危险 tar 条目，执行源码校验和可选 TypeScript `--noEmit`，使用仓库外 Ed25519 私钥生成并安装 `.itplugin`，保存独立的 `source-snapshot` 来源摘要。流程不运行仓库脚本、不安装依赖，也不加载原始源码。
+- 下一步：补真实 GitHub/Electron 验收，再把市场详情的 commit 解析和源码构建表单预填充接通，不绕过签名、信任和隔离边界。
 - 验收：在全新仓库外目录完成一次端到端流程；生成项目能独立类型检查和打包，私钥不写入源码，包能在 Electron 中安装、信任、授权并打开贡献工具；文档和命令输出能让开发者定位失败步骤。
 
 ### P1：宿主管理体验（PLUGIN-HOST-UX-001）
@@ -112,7 +112,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 ### P4：发布者与分发准备（PLUGIN-PUBLISHING-001）
 
 - 现有基础：Ed25519 本地密钥生成、签名包、校验和和版本化安装路径已具备；`/plugin-marketplace` 已提供基于 GitHub topic 的只读仓库导航、清单摘要和源码跳转，但不保存、代理或执行插件包。当前仍没有生产签名者、预构建包、自动更新或公共包分发目录。
-- 主要缺口：发布者密钥托管、包复现、资产命名、兼容性检查和回滚清单尚未形成完整的插件发布流程；源码快照开发模式还没有市场入口。
+- 主要缺口：发布者密钥托管、包复现、资产命名、兼容性检查和回滚清单尚未形成完整的插件发布流程；源码快照开发模式还没有市场详情的预填充入口。
 - 已有实现：Electron 主进程重新读取仓库 topic、稳定 Release、唯一 `.itplugin` 资产和 tag 对应 commit，逐跳检查下载地址与大小，计算下载内容的哈希并复用本地生命周期安装器；仅当 GitHub 元数据提供摘要时才比较该摘要。下载文件保存在临时目录；页面提供进度与下载阶段取消，生命周期在安装根目录外保存可丢失的来源摘要。源码构建命令另行使用固定 commit 和外部签名密钥，不把源码直接载入宿主。
 - 来源说明：记录的 commit 是读取 tag 时 GitHub 返回的值，并不能证明发布包由该 commit 构建；tag 和 Release 资产也可能变化。包签名用于验证签名者和包内容，不建立源码与产物之间的关联。修订 [`docs/21-plugin-install-flow.md`](21-plugin-install-flow.md) 中“固定”及验收表述，并在界面或文档中明确来源摘要的限制；如需可验证的构建来源，应另行设计和验收。
 - 下一步：整理本地/CI 发布者边界、可复现打包和签名审查清单，补真实窗口验收；在 P0–P3 稳定后单独评估公共包目录、更新和分发策略。
@@ -174,7 +174,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | --- | --- |
 | 源码基线 | `ee2d72a`；Linux、Node `v24.22.1`、pnpm `12.16.1` |
 | 插件市场定向回归 | Release 下载、安装器、控制器测试通过；真实 GitHub CDN 查询参数和逐跳重定向由受控响应覆盖 |
-| 插件源码构建定向回归 | `pnpm test:plugin-source-build`；安全解压、资源上限、路径和链接拒绝、取消、构建编排共 19 项测试通过；`pnpm typecheck:electron` 和新增文件 ESLint 通过 |
+| 插件源码构建定向回归 | `pnpm test:plugin-source-build`；安全解压、资源上限、路径和链接拒绝、取消、构建编排、单飞控制器和 dispose 共 24 项测试通过；源码来源存储与生命周期回归另有 34 项通过；`pnpm typecheck:electron`、`pnpm typecheck:app` 和新增文件 ESLint 通过 |
 | CLI 启动检查 | `corepack pnpm plugin:build-source -- --help` 正常输出；缺少参数时返回稳定错误和使用说明 |
 | owner 核对 | GitHub API 返回单字符用户 `A`；本次未验证该用户有符合市场要求的插件仓库 |
 | 旧问题核对 | `MAC-REOPEN-001`、`MONITOR-SORT-001`、`API-TIMER-001` 的相关调用和排序代码仍在；本次未重跑旧复现实验，也没有 macOS 真实窗口证据 |
@@ -190,7 +190,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | 应用、构建或接口变更 | `pnpm check`，再执行受影响的定向回归 |
 | 插件市场目录 | `pnpm exec vitest run src/modules/plugin-marketplace/plugin-marketplace.service.test.ts`、`pnpm typecheck:app`、`pnpm headers:check`、`pnpm build`；页面通过 GitHub API mock 验证仓库分页、清单摘要、速率限制和不下载插件包 |
 | 插件市场直装流程 | `pnpm exec vitest run electron/plugin-marketplace-download.test.ts electron/plugin-marketplace-installer.test.ts electron/plugin-marketplace-controller.test.ts electron/plugin-provenance-store.test.ts electron/plugin-source-snapshot.test.ts --reporter=dot`、`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`；受控响应验证逐跳地址、大小、摘要、临时文件清理和签名安装；真实 GitHub Release 与 Electron 窗口验收仍待补充；普通模式不允许原始源码直载 |
-| 插件平台 P0 开发闭环 | `pnpm test:plugin-source-build`、`pnpm typecheck:electron`；使用 `pnpm plugin:build-source -- --owner ... --name ... --commit ... --private-key ... --key-id ... --output ...` 完成固定提交下载、受限解压、校验、可选类型检查和签名打包，再在桌面设置中安装、信任、授权并运行；真实窗口验收仍待补充 |
+| 插件平台 P0 开发闭环 | `pnpm test:plugin-source-build`、源码来源和生命周期定向回归、`pnpm typecheck:electron`、`pnpm typecheck:app`；使用 CLI 或桌面设置源码卡片完成固定提交下载、受限解压、校验、可选类型检查、签名打包、安装和来源记录，再信任、授权并运行；真实窗口验收仍待补充 |
 | 插件平台 P1/P3 宿主与运行时 | `pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts electron/plugin-sandbox.e2e.spec.ts`；记录安装、信任、能力授权、贡献工具、停止、升级回退、崩溃和清理的真实窗口范围 |
 | 维护队列中的三个缺陷 | `MAC-REOPEN-001`：macOS 执行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts`，补重开窗口流程；`MONITOR-SORT-001`：`pnpm exec vitest run electron/system-monitor/system-info.test.ts`；`API-TIMER-001`：`pnpm exec vitest run electron/plugin-api-v1.test.ts`；按维护优先级执行，发布前仍需纳入适用的 `pnpm check` |
 | 插件 CLI 与 SDK | `pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`、`pnpm test:plugin-project`；复核独立生成项目 |
