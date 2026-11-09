@@ -410,8 +410,9 @@ async function parseGzipTarArchive(
     if (pendingPax !== undefined) {
       throw new PluginSourceArchiveError('archive-invalid', 'The source archive ends with an unused PAX metadata entry.');
     }
-    // A conforming tar has two zero blocks. Accept one zero block for readers
-    // that produce a short archive, but reject any non-zero trailing data.
+    // A conforming tar has two zero blocks. Reject short archives and any
+    // non-zero trailing data after the end marker.
+    let endBlockCount = 1;
     while (true) {
       const trailing = await reader.readBlock();
       if (trailing === null) {
@@ -420,6 +421,10 @@ async function parseGzipTarArchive(
       if (!isZeroBlock(trailing)) {
         throw new PluginSourceArchiveError('archive-invalid', 'The source archive has trailing data after its end marker.');
       }
+      endBlockCount += 1;
+    }
+    if (endBlockCount < 2) {
+      throw new PluginSourceArchiveError('archive-invalid', 'The source archive is missing its complete end marker.');
     }
     if (compressedBytes <= 0) {
       throw new PluginSourceArchiveError('archive-invalid', 'The source archive has no compressed data.');

@@ -29,13 +29,17 @@ async function createTempRoot(): Promise<string> {
   return path;
 }
 
-async function writeArchive(root: string, entries: readonly TarFixtureEntry[]): Promise<string> {
+async function writeArchive(
+  root: string,
+  entries: readonly TarFixtureEntry[],
+  endBlocks = 2,
+): Promise<string> {
   const path = join(root, 'source.tar.gz');
-  await writeFile(path, gzipSync(createTar(entries)));
+  await writeFile(path, gzipSync(createTar(entries, endBlocks)));
   return path;
 }
 
-function createTar(entries: readonly TarFixtureEntry[]): Buffer {
+function createTar(entries: readonly TarFixtureEntry[], endBlocks = 2): Buffer {
   const blocks: Buffer[] = [];
   for (const entry of entries) {
     const contents = typeof entry.contents === 'string'
@@ -63,7 +67,7 @@ function createTar(entries: readonly TarFixtureEntry[]): Buffer {
       }
     }
   }
-  blocks.push(Buffer.alloc(tarBlockBytes), Buffer.alloc(tarBlockBytes));
+  blocks.push(...Array.from({ length: endBlocks }, () => Buffer.alloc(tarBlockBytes)));
   return Buffer.concat(blocks);
 }
 
@@ -111,6 +115,17 @@ describe('secure plugin source archive extraction', () => {
     expect(result.rootDirectory).toBe('');
     expect(result.sourceDirectory).toMatch(/\.it-tools-plugin-source-/);
     expect(await readFile(join(result.sourceDirectory, 'plugin.source.json'), 'utf8')).toBe('{}');
+  });
+
+  it('rejects an archive with an incomplete tar end marker', async () => {
+    const root = await createTempRoot();
+    const archive = await writeArchive(root, [
+      { name: 'plugin.source.json', contents: '{}' },
+    ], 1);
+
+    await expect(extractPluginSourceArchive(archive, root)).rejects.toMatchObject({
+      code: 'archive-invalid',
+    } satisfies Partial<PluginSourceArchiveError>);
   });
 
   it('supports PAX global and extended headers used by GitHub codeload', async () => {
