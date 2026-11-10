@@ -15,7 +15,7 @@
 | 平台适配层 | Platform Adapter | 提供明确的剪贴板、文件和运行信息操作；不提供通用 Node 或 Shell |
 | 任务执行器 | Task Runner | 管理计算队列、并发、取消、超时与结果归属；不隔离不可信插件 |
 | 第一方扩展 | First-Party Extension | 由本项目审查并随应用构建的代码；使用 SDK v0，不提供第三方隔离 |
-| 外部插件 | External Plugin | 用户安装的签名 `.itxs` 静态包；仅在 Electron 隔离窗口运行 |
+| 外部扩展 | External Extension | 用户安装的签名 v2 扩展包；通过独立扩展宿主和 RPC 运行，不能直接提供主窗口 HTML、CSS 或 Vue 组件 |
 | 插件清单 | Plugin Manifest | 声明身份、API 范围、入口、贡献项、请求能力、资源哈希与签名 |
 | 扩展宿主 | Extension Host | 管理注册、激活、停用与资源回收；第一方和外部插件各有实现 |
 | 能力代理 | Capability Broker | 校验来源、输入、宿主支持和用户授权，再执行受限操作 |
@@ -78,17 +78,17 @@ Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Nod
 
 第一方 [SDK v0](extension-sdk-v0.md)在仓库内注册受信任代码，按工具、命令、设置或数据访问事件激活。普通设置使用命名空间和结构版本迁移；迁移失败保留旧记录并采用默认值。该 SDK 的能力声明不约束同进程代码自行访问浏览器 API，不能用于运行不可信包。
 
-外部插件接口分别由[包格式](08-electron-plugin-package-format-v1.md)、[开发 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)和[使用说明](11-electron-plugin-mvp-quickstart.md)定义，不在本文复制字段和完整限额。当前实现如下：
+外部扩展 v2 的目标边界见[插件系统 v2 设计](22-plugin-architecture-v2.md)。现有 v1 HTML/webview 包格式、API、生命周期和使用说明保留为 legacy 兼容文档，不作为新扩展的默认接入方式。当前实现如下：
 
 1. `plugin:create` 生成源码清单、命名空间工具贡献、静态页面和 5 个自包含 SDK 声明；`plugin:validate` 在不读取私钥、不执行插件和不写包的情况下检查源码。
 2. `plugin:build` 将源码校验、可选的外部 TypeScript `--noEmit` 检查和 `plugin:pack` 签名打包串成一个命令；它仍要求签名私钥位于仓库外，并拒绝覆盖已有输出。
 3. `plugin:pack` 复用校验逻辑，使用 Ed25519 签名清单和资源哈希。安装器限制归档大小、文件数量、路径和展开资源；验证后从随机暂存目录切换到版本目录，不执行脚本或 `npm install`。
-3. 用户信任签名者后仍需单独授权能力。声明、宿主支持与用户授权是三个集合，签名不证明代码安全。
-4. `it-plugin://<plugin-id>/` 使用按包版本隔离的非持久 Session。插件窗口无 Node、无应用 preload，拒绝外部导航、新窗口、下载和直接外部网络。
-5. 宿主在插件运行前注入冻结的 `window.itTools`。API 版本来自[统一版本定义](../src/shared/plugin-api-version.ts)，当前为 `1.4.0`。
-6. 当前可执行能力仅为 `runtime.info`、`clipboard.write`、`settings.read`、`settings.write`。清单中的文件、摄像头和 OUI 等已知标识不表示宿主已实现，见[能力目录](../src/shared/plugin-capabilities.ts)。
-7. 工具贡献与包身份由宿主校验并注入。工具级故障、整包停用、签名者撤销及升级失败有各自恢复边界；旧窗口和旧请求不能保留授权。
-8. 宿主限制插件窗口和 Worker，探测无响应与渲染器退出，并清理资源。现有自动化覆盖不能直接扩大为全部目标平台均已通过。
+4. 用户信任签名者后仍需单独授权能力。声明、宿主支持与用户授权是三个集合，签名不证明代码安全。
+5. v1 legacy 路径使用 `it-plugin://<plugin-id>/` 和按包版本隔离的非持久 Session。该路径不能作为 v2 工具工作台的依赖。
+6. v2 外部扩展使用版本化 RPC 和声明式工具工作台；扩展 API 版本、工具字段和结果类型由宿主校验。旧版 `window.itTools` 只适用于 legacy 包。
+7. 当前可执行能力仅为 `runtime.info`、`clipboard.write`、`settings.read`、`settings.write`。清单中的文件、摄像头和 OUI 等已知标识不表示宿主已实现，见[能力目录](../src/shared/plugin-capabilities.ts)。
+8. 工具贡献与包身份由宿主校验并注入。工具级故障、整包停用、签名者撤销及升级失败有各自恢复边界；旧窗口和旧请求不能保留授权。
+9. 宿主限制插件窗口和 Worker，探测无响应与渲染器退出，并清理资源。现有自动化覆盖不能直接扩大为全部目标平台均已通过。
 
 外部插件没有网络能力，不能直接承载实时协作服务。[归档的 Excalidraw 评估](archive/18-excalidraw-integration-assessment.md)仅说明集成选项及其前提。
 

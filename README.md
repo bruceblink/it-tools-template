@@ -23,7 +23,7 @@ This repository is a maintained fork of [CorentinTh/it-tools](https://github.com
 
 - **117 web tools** in Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, and Data.
 - **Desktop workbenches** for PostgreSQL, MySQL, and SQLite databases; system monitoring; API requests; Git; S3-compatible object storage; and read-only Docker container browsing.
-- **Extensions and plugins:** trusted first-party extensions and signed external desktop plugins with separate signer trust and capability approval.
+- **Extensions and plugins:** trusted first-party extensions plus a v2 signed external extension model with host-rendered tools, isolated RPC execution, separate signer trust, and capability approval. The existing HTML/webview package flow remains legacy during migration.
 - **Desktop updates:** optional automatic checks and user-confirmed download and installation from GitHub Releases.
 - **Nine web languages:** English, Chinese, German, French, Spanish, Portuguese, Ukrainian, Vietnamese, and Norwegian.
 - **PWA support:** the application shell is precached; visited tool assets are cached by the service worker for later offline use.
@@ -166,7 +166,7 @@ pnpm electron:package:mac
 
 Run desktop smoke tests with pnpm test:e2e:electron. The platform matrix is maintained in [.github/workflows/electron-desktop.yml](.github/workflows/electron-desktop.yml).
 
-## Create an external plugin
+## Create a legacy external plugin
 
 Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, self-contained SDK type declarations, and a local README:
 
@@ -209,6 +209,8 @@ The source-build command does not run repository scripts, install dependencies, 
 
 In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. Each installed package also exposes its ID, version, active contribution, and lifecycle error code for recovery work.
 
+The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, and capability declarations. Host-mediated settings and data providers are reserved for the next protocol slice. IT Tools renders the tool page and runs extension code through an isolated RPC host. The current `plugin:create` command still creates legacy v1 HTML packages and is not the v2 authoring command.
+
 ## Plugin marketplace
 
 Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In the desktop app, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
@@ -225,7 +227,7 @@ The web and desktop apps share the same Vue application, tool catalog, routes, t
 | Tool registry (`src/tools/`) | Defines tool identity, category, supported platforms, data-processing mode, offline availability, and required capabilities. |
 | Web entry (`src/main.ts`) | Runs browser-supported tools and registers the PWA service worker after startup. |
 | Desktop host (`electron/`, `electron-renderer/`) | Reuses the shared UI and exposes local workbenches through a narrow preload and IPC interface. Main-process services own native operations and their resources. |
-| Extension host (`src/extensions/`, `electron/plugin-*`) | Loads trusted first-party extensions and manages signed external plugins in isolated desktop windows. |
+| Extension host (`src/extensions/`, v2 RPC boundary, `electron/plugin-*`) | Loads trusted first-party extensions, prepares host-rendered v2 contributions, and keeps legacy signed packages isolated during migration. |
 
 For example, a tool route is selected from the registry, filtered for the current platform, and loaded when the user opens it. Browser operations use the platform adapter. Desktop-only workbenches call the preload bridge, which forwards the request to the responsible host service. The web build must not include desktop drivers or IPC modules.
 
@@ -241,6 +243,7 @@ The [main development plan](docs/01-development-plan.md) is the only document th
 - [Plugin lifecycle](docs/10-electron-plugin-lifecycle-v1.md): install, enable, disable, rollback, and uninstall
 - [Plugin quickstart](docs/11-electron-plugin-mvp-quickstart.md): development and local validation
 - [First-party extension SDK v0](docs/extension-sdk-v0.md): trusted extensions bundled with the application
+- [Plugin system v2 design](docs/22-plugin-architecture-v2.md): host-rendered contributions, extension host RPC, capabilities, and migration boundaries
 - [Database and system workbenches](docs/13-database-system-monitor-design.md): desktop data and sampling boundaries
 - [Cross-project capability matrix](docs/14-cross-project-capability-matrix.md): independent project scope
 - [Object storage workbench](docs/15-object-storage-workbench-design.md): S3-compatible browsing and transfers
