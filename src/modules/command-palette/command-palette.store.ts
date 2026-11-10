@@ -10,6 +10,8 @@ import BugIcon from '~icons/mdi/bug-outline';
 import DiceIcon from '~icons/mdi/dice-5';
 import InfoIcon from '~icons/mdi/information-outline';
 import { config } from '@/config';
+import { Puzzle } from '@vicons/tabler';
+import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
 
 export const useCommandPaletteStore = defineStore('command-palette', () => {
   const toolStore = useToolStore();
@@ -24,6 +26,29 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
     to: tool.path,
     toolCategory: tool.category,
     category: 'Tools',
+  })));
+
+  const externalPluginV2Options = computed<PaletteOption[]>(() => externalPluginV2Registry.commands.value.map(command => ({
+    name: command.title,
+    description: command.description,
+    icon: Puzzle,
+    category: locale.value.toLowerCase().startsWith('zh') ? '插件工具' : 'Plugin tools',
+    keywords: [...command.keywords],
+    closeOnSelect: true,
+    actionErrorMessage: t('taskStatus.error'),
+    action: async () => {
+      if (command.targetPath) {
+        await router.push(command.targetPath);
+        return;
+      }
+      await command.execute({
+        pluginId: command.pluginId,
+        version: command.version,
+        toolId: command.toolId ?? command.id,
+        commandId: command.id,
+        input: {},
+      }, new AbortController().signal);
+    },
   })));
 
   const builtInSearchOptions: PaletteOption[] = [
@@ -79,6 +104,7 @@ export const useCommandPaletteStore = defineStore('command-palette', () => {
   const extensionSearchOptions = ref<PaletteOption[]>([]);
   const searchOptions = computed<PaletteOption[]>(() => [
     ...toolsOptions.value,
+    ...externalPluginV2Options.value,
     ...builtInSearchOptions,
     ...extensionSearchOptions.value,
   ]);

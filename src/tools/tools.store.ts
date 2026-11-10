@@ -7,6 +7,7 @@ import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.type
 import { projectExternalPluginTools as projectExternalPluginToolRegistry } from './external-plugin-tools';
 import { createQueuedRefresh } from './queued-refresh';
 import { toolsWithCategory } from './index';
+import { externalPluginV2Registry } from './external-plugin-v2-registry';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
 function projectDesktopExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
@@ -43,7 +44,11 @@ export const useToolStore = defineStore('tools', () => {
   onScopeDispose(() => disposePluginStateChange?.());
   void refreshExternalPluginTools();
 
-  const tools = computed<ToolWithCategory[]>(() => [...toolsWithCategory, ...externalPluginTools.value].map((tool) => {
+  const tools = computed<ToolWithCategory[]>(() => [
+    ...toolsWithCategory,
+    ...externalPluginTools.value,
+    ...externalPluginV2Registry.tools.value,
+  ].map((tool) => {
     return ({
       ...tool,
       name: t(`tools.${tool.translationKey}.title`, tool.name),

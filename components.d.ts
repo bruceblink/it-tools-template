@@ -98,6 +98,8 @@ declare module 'vue' {
     EtaCalculator: typeof import('./src/tools/eta-calculator/eta-calculator.vue')['default']
     ExtensionPluginManager: typeof import('./src/components/ExtensionPluginManager.vue')['default']
     'ExternalPluginTool.page': typeof import('./src/pages/ExternalPluginTool.page.vue')['default']
+    'ExternalPluginToolRoute.page': typeof import('./src/pages/ExternalPluginToolRoute.page.vue')['default']
+    'ExternalPluginV2Tool.page': typeof import('./src/pages/ExternalPluginV2Tool.page.vue')['default']
     FavoriteButton: typeof import('./src/components/FavoriteButton.vue')['default']
     FormatTransformer: typeof import('./src/components/FormatTransformer.vue')['default']
     GitMemo: typeof import('./src/tools/git-memo/git-memo.vue')['default']

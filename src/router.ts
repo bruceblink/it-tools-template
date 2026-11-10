@@ -5,6 +5,7 @@ import ToolRoutePage from './pages/ToolRoutePage.vue';
 import { tools } from './tools';
 import { config } from './config';
 import { layouts } from '@/layouts';
+import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
 
 const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, contentWidth, extensionOwned }) => ({
   path,
@@ -25,6 +26,14 @@ const toolsRoutes = tools.map(({ path, name, component, translationKey, descript
 const toolsRedirectRoutes = tools.flatMap(({ path, aliases, redirectFrom }) =>
   (aliases ?? redirectFrom ?? []).map(alias => ({ path: alias, redirect: path })),
 );
+
+const legacyExternalPluginToolMeta = {
+  name: 'External plugin tool',
+  description: 'Run an installed plugin tool inside the IT Tools workspace.',
+  keywords: ['plugin', 'external', 'desktop'],
+  translationKey: 'external-plugin-tool',
+  contentWidth: 'wide' as const,
+};
 
 const router = createRouter({
   history: createWebHistory(config.app.baseUrl),
@@ -53,14 +62,11 @@ const router = createRouter({
     {
       path: '/extensions/:pluginId/:version/:toolId',
       name: 'external-plugin-tool',
-      component: () => import('./pages/ExternalPluginTool.page.vue'),
+      component: () => import('./pages/ExternalPluginToolRoute.page.vue'),
       meta: {
         layout: layouts.toolLayout,
         isTool: true,
-        name: 'External plugin tool',
-        description: 'Run an installed plugin tool inside the IT Tools workspace.',
-        translationKey: 'external-plugin-tool',
-        contentWidth: 'wide',
+        ...legacyExternalPluginToolMeta,
       },
     },
     {
@@ -83,6 +89,18 @@ export async function registerDemoRoutes() {
 }
 
 router.beforeEach(async (to) => {
+  const v2Tool = externalPluginV2Registry.findByRoute(to.path);
+  if (v2Tool) {
+    to.meta.name = v2Tool.tool.name;
+    to.meta.description = v2Tool.tool.description;
+    to.meta.keywords = v2Tool.tool.keywords;
+    to.meta.translationKey = v2Tool.tool.translationKey;
+    to.meta.contentWidth = undefined;
+    return true;
+  }
+  if (to.name === 'external-plugin-tool') {
+    Object.assign(to.meta, legacyExternalPluginToolMeta);
+  }
   if (to.meta.extensionOwned === true) {
     const { activateExtensionToolRoute } = await import('./extensions/route-activation-runtime');
     await activateExtensionToolRoute(to.path);
