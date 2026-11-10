@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ExternalExtensionProcessTransport, type ExternalExtensionProcessLike } from './external-extension-process';
+import { ExternalExtensionProcessTransport, type ExternalExtensionProcessFork, type ExternalExtensionProcessLike } from './external-extension-process';
 import { ExternalExtensionRpcError } from './external-extension-rpc';
+import { parseExternalExtensionWorkerLaunchArguments } from './external-extension-worker-launch';
 import type { ExternalExtensionRpcRequest } from '../src/shared/desktop-services/external-extension-rpc';
 
 const pluginId = 'org.it-tools.process-demo';
@@ -53,7 +54,7 @@ function request(requestId: string): ExternalExtensionRpcRequest {
 describe('ExternalExtensionProcessTransport', () => {
   it('starts one isolated process and filters response identity', async () => {
     const child = new FakeProcess();
-    const fork = vi.fn(() => child);
+    const fork = vi.fn<ExternalExtensionProcessFork>(() => child);
     const transport = new ExternalExtensionProcessTransport({
       pluginId,
       workerPath: '/safe/worker.cjs',
@@ -72,6 +73,25 @@ describe('ExternalExtensionProcessTransport', () => {
     expect(fork).toHaveBeenCalledTimes(1);
     transport.dispose();
     expect(child.killed).toBe(true);
+  });
+
+  it('passes verified WASM launch metadata to its matching worker', async () => {
+    const child = new FakeProcess();
+    const fork = vi.fn<ExternalExtensionProcessFork>(() => child);
+    const launchConfig = {
+      pluginId,
+      version: '1.0.0',
+      packageRoot: '/safe/plugin/1.0.0',
+      entrypoint: 'extension.wasm',
+      entrypointSha256: 'a'.repeat(64),
+    };
+    const transport = new ExternalExtensionProcessTransport({ pluginId, workerPath: '/safe/worker.cjs', launchConfig, fork });
+    const pending = transport.send(request('request-launch'), new AbortController().signal);
+    const args = fork.mock.calls[0]![1] as string[];
+    expect(parseExternalExtensionWorkerLaunchArguments(args)).toEqual(launchConfig);
+    child.respond({ protocolVersion: 1, requestId: 'request-launch', pluginId, ok: true, result: true });
+    await expect(pending).resolves.toMatchObject({ ok: true });
+    transport.dispose();
   });
 
   it('sends a cancel message and rejects the pending request', async () => {

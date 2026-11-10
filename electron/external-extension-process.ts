@@ -6,6 +6,10 @@ import {
   type ExternalExtensionRpcRequest,
 } from '../src/shared/desktop-services/external-extension-rpc';
 import { ExternalExtensionRpcError, type ExternalExtensionRpcTransport } from './external-extension-rpc';
+import {
+  encodeExternalExtensionWorkerLaunchArgument,
+  type ExternalExtensionWorkerLaunchConfig,
+} from './external-extension-worker-launch';
 
 /** 传输层需要的最小进程接口，测试可以用内存对象替换 Electron 进程。 */
 export interface ExternalExtensionProcessLike {
@@ -27,6 +31,8 @@ export type ExternalExtensionProcessFork = (
 export interface ExternalExtensionProcessTransportOptions {
   pluginId: string;
   workerPath: string;
+  /** 主进程验签并复核文件后的 WASM 入口信息。 */
+  launchConfig?: ExternalExtensionWorkerLaunchConfig;
   /** 同步计算无法响应取消消息时，终止进程以结束计算。 */
   terminateOnCancel?: boolean;
   serviceName?: string;
@@ -51,6 +57,9 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
 
   constructor(private readonly options: ExternalExtensionProcessTransportOptions) {
     this.fork = options.fork ?? defaultFork;
+    if (options.launchConfig && options.launchConfig.pluginId !== options.pluginId) {
+      throw new TypeError('The extension worker identity does not match the transport.');
+    }
   }
 
   send(request: ExternalExtensionRpcRequest, signal: AbortSignal): Promise<unknown> {
@@ -157,7 +166,7 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     }
     const child = this.fork(
       this.options.workerPath,
-      [],
+      this.options.launchConfig ? [encodeExternalExtensionWorkerLaunchArgument(this.options.launchConfig)] : [],
       {
         env: getSafeEnvironment(this.options.environment),
         stdio: 'ignore',
