@@ -46,8 +46,10 @@ import type {
   DesktopPluginMarketplaceInstallProgress,
   DesktopPluginSourceBuildInput,
   DesktopPluginSourceBuildProgress,
+  DesktopPluginV2Snapshot,
 } from '../src/shared/desktop-services/plugins';
 import type { DesktopUpdateState } from '../src/shared/desktop-services/updates';
+import type { PluginToolCommandResult, PluginToolInputValueMap } from '../src/shared/plugin-tool-workbench';
 
 contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   updates: Object.freeze({
@@ -149,6 +151,8 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     return () => ipcRenderer.removeListener('desktop:system-monitor:sample', listener);
   },
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
+  listPluginV2Packages: (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:list'),
   onPluginStateChanged: (callback: (event: DesktopPluginStateChangeEvent) => void) => {
     const listener = (_event: IpcRendererEvent, value: unknown) => {
       if (isDesktopPluginStateChangeEvent(value)) {
@@ -159,6 +163,8 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     return () => ipcRenderer.removeListener('desktop:plugins:changed', listener);
   },
   installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
+  installPluginV2Package: (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:install'),
   installPluginFromMarketplace: (input: DesktopPluginMarketplaceInstallInput) =>
     ipcRenderer.invoke('desktop:plugins:install-from-marketplace', input),
   cancelPluginMarketplaceInstall: (requestId: string) =>
@@ -199,6 +205,15 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   disablePlugin: (pluginId: string) => ipcRenderer.invoke('desktop:plugins:disable', { pluginId }),
   uninstallPlugin: (pluginId: string, version: string) =>
     ipcRenderer.invoke('desktop:plugins:uninstall', { pluginId, version }),
+  uninstallPluginV2Package: (pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:uninstall', { pluginId, version }),
+  executePluginV2Command: (input: {
+    pluginId: string;
+    version: string;
+    commandId: string;
+    input: PluginToolInputValueMap;
+  }): Promise<DesktopPluginOperationResult<PluginToolCommandResult>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:execute', input),
   listTrustedPluginSigners: () => ipcRenderer.invoke('desktop:plugins:trusted-signers:list'),
   previewPluginSigner: (input: unknown) => ipcRenderer.invoke('desktop:plugins:trusted-signers:preview', input),
   trustPluginSigner: (input: unknown, confirmedFingerprint: string) =>

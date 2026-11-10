@@ -1,3 +1,5 @@
+import type { ExternalPluginV2Manifest } from '../external-plugin-v2';
+
 /** Stable error codes returned by the trusted desktop plugin bridge. */
 export const desktopPluginErrorCodes = Object.freeze([
   'invalid-package',
@@ -164,6 +166,17 @@ export interface DesktopPluginStateChangeEvent {
   readonly version: string;
   readonly reason: DesktopPluginStateChangeReason;
   readonly contributionId?: string;
+}
+
+/** 已验签 v2 包的静态快照；不包含安装路径、签名或入口脚本内容。 */
+export interface DesktopPluginV2Snapshot {
+  readonly pluginId: string;
+  readonly name: string;
+  readonly version: string;
+  readonly runtime: 'process' | 'wasm';
+  readonly manifest: ExternalPluginV2Manifest;
+  readonly status: 'installed' | 'invalid';
+  readonly errorCode?: string;
 }
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;

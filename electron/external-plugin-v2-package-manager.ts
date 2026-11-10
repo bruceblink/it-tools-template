@@ -23,6 +23,7 @@ export interface ExternalPluginV2PackageSnapshot {
   readonly name: string;
   readonly version: string;
   readonly runtime: ExternalPluginV2Runtime;
+  readonly manifest: import('../src/shared/external-plugin-v2').ExternalPluginV2Manifest;
   readonly requestedCapabilities: readonly string[];
   readonly contributions: ExternalPluginV2Contributions;
   readonly status: ExternalPluginV2PackageStatus;
@@ -102,6 +103,10 @@ export class ExternalPluginV2PackageManager {
     });
   }
 
+  async getInstalledManifest(pluginId: string, version: string): Promise<ExternalPluginV2PackageManifest> {
+    return this.runExclusive(async () => this.readInstalledManifest(await this.getInstalledPackageRoot(pluginId, version)));
+  }
+
   private stageOptions(archivePath: string): StagePluginPackageOptions {
     return {
       archivePath,
@@ -168,6 +173,16 @@ function toSnapshot(manifest: ExternalPluginV2PackageManifest): ExternalPluginV2
     name: manifest.name,
     version: manifest.version,
     runtime: manifest.runtime,
+    manifest: {
+      formatVersion: manifest.formatVersion,
+      id: manifest.id,
+      name: manifest.name,
+      version: manifest.version,
+      apiVersion: manifest.apiVersion,
+      requestedCapabilities: [...manifest.requestedCapabilities],
+      activationEvents: [...manifest.activationEvents],
+      contributions: manifest.contributions,
+    },
     requestedCapabilities: [...manifest.requestedCapabilities],
     contributions: manifest.contributions,
     status: 'installed',
@@ -180,6 +195,16 @@ function invalidSnapshot(pluginId: string, version: string, errorCode: string): 
     name: pluginId,
     version,
     runtime: 'process',
+    manifest: {
+      formatVersion: 2,
+      id: pluginId,
+      name: pluginId,
+      version,
+      apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
+      requestedCapabilities: [],
+      activationEvents: [],
+      contributions: { tools: [], commands: [] },
+    },
     requestedCapabilities: [],
     contributions: { tools: [], commands: [] },
     status: 'invalid',

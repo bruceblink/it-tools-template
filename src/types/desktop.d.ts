@@ -45,6 +45,7 @@ import type {
 } from '../shared/desktop-services/container-workbench';
 import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../tools/tools.types';
 import type { PluginHostCapability } from '../shared/plugin-capabilities';
+import type { PluginToolCommandResult, PluginToolInputValueMap } from '../shared/plugin-tool-workbench';
 import type {
   DesktopPluginErrorCode as SharedDesktopPluginErrorCode,
   DesktopPluginMarketplaceInstallInput as SharedDesktopPluginMarketplaceInstallInput,
@@ -57,6 +58,7 @@ import type {
   DesktopPluginInstallSource as SharedDesktopPluginInstallSource,
   DesktopPluginSourceSnapshotInstallSource as SharedDesktopPluginSourceSnapshotInstallSource,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
+  DesktopPluginV2Snapshot as SharedDesktopPluginV2Snapshot,
   DesktopPluginRuntimeFailureCode,
   DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
 } from '../shared/desktop-services/plugins';
@@ -76,6 +78,7 @@ declare global {
   type DesktopPluginSourceSnapshotInstallSource = SharedDesktopPluginSourceSnapshotInstallSource;
   type DesktopPluginInstallSource = SharedDesktopPluginInstallSource;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
+  type DesktopPluginV2Snapshot = SharedDesktopPluginV2Snapshot;
   type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
 
   interface DesktopPluginSnapshot {
@@ -200,8 +203,10 @@ declare global {
       stopSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
       onSystemMonitorSample?(callback: (sample: SystemMonitorSample) => void): () => void;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
+      listPluginV2Packages?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>>;
       onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
+      installPluginV2Package?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>>;
       installPluginFromMarketplace?(
         input: DesktopPluginMarketplaceInstallInput,
       ): Promise<DesktopPluginOperationResult<DesktopPluginMarketplaceInstallResult>>;
@@ -224,6 +229,13 @@ declare global {
       ): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       disablePlugin?(pluginId: string): Promise<DesktopPluginOperationResult<boolean>>;
       uninstallPlugin?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;
+      uninstallPluginV2Package?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;
+      executePluginV2Command?(input: {
+        pluginId: string;
+        version: string;
+        commandId: string;
+        input: PluginToolInputValueMap;
+      }): Promise<DesktopPluginOperationResult<PluginToolCommandResult>>;
       listTrustedPluginSigners?(): Promise<DesktopPluginOperationResult<DesktopPluginSignerSnapshot[]>>;
       previewPluginSigner?(input: DesktopPluginSignerInput): Promise<DesktopPluginOperationResult<DesktopPluginSignerSnapshot>>;
       trustPluginSigner?(

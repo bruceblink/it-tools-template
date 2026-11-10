@@ -8,13 +8,103 @@ import { projectExternalPluginTools as projectExternalPluginToolRegistry } from 
 import { createQueuedRefresh } from './queued-refresh';
 import { toolsWithCategory } from './index';
 import { externalPluginV2Registry } from './external-plugin-v2-registry';
+import { projectExternalPluginV2Manifest } from './external-plugin-v2-tools';
+import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
+import type { PluginToolCommandExecutor, PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
+const externalPluginV2ToolComponent = () => import('@/pages/ExternalPluginV2Tool.page.vue');
 function projectDesktopExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
   return projectExternalPluginToolRegistry(snapshots, {
     component: externalPluginToolComponent,
     icon: Puzzle,
   });
+}
+
+function createExternalPluginV2CommandExecutor(): PluginToolCommandExecutor {
+  return async (request, signal): Promise<PluginToolCommandResult> => {
+    if (signal.aborted) {
+      throw new Error('The plugin command was cancelled.');
+    }
+    const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
+    if (!bridge?.executePluginV2Command) {
+      throw new Error('The v2 plugin command bridge is not available.');
+    }
+    const result = await bridge.executePluginV2Command({
+      pluginId: request.pluginId,
+      version: request.version,
+      commandId: request.commandId,
+      input: request.input,
+    });
+    if (!result.ok) {
+      throw new Error(result.error);
+    }
+    if (!isPluginToolCommandResult(result.value)) {
+      throw new Error('The v2 plugin returned an invalid command result.');
+    }
+    return result.value;
+  };
+}
+
+function isPluginToolCommandResult(value: unknown): value is PluginToolCommandResult {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const record = value as Record<string, unknown>;
+  if (record.kind === 'text') {
+    return typeof record.value === 'string';
+  }
+  return record.kind === 'json' && isJsonValue(record.value);
+}
+
+function isJsonValue(value: unknown, depth = 0): boolean {
+  if (depth > 16 || value === null || typeof value === 'string' || typeof value === 'boolean') {
+    return value === null || typeof value === 'string' || typeof value === 'boolean';
+  }
+  if (typeof value === 'number') {
+    return Number.isFinite(value);
+  }
+  if (Array.isArray(value)) {
+    return value.every(item => isJsonValue(item, depth + 1));
+  }
+  if (typeof value !== 'object') {
+    return false;
+  }
+  return Object.values(value).every(item => isJsonValue(item, depth + 1));
+}
+
+async function refreshExternalPluginV2Tools(): Promise<void> {
+  const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
+  if (!bridge?.listPluginV2Packages) {
+    return;
+  }
+  externalPluginV2Registry.clear();
+  try {
+    const result = await bridge.listPluginV2Packages();
+    if (!result.ok) {
+      return;
+    }
+    const execute = createExternalPluginV2CommandExecutor();
+    for (const snapshot of result.value) {
+      if (snapshot.status !== 'installed') {
+        continue;
+      }
+      try {
+        const manifest = validateExternalPluginV2Manifest(snapshot.manifest);
+        const projection = projectExternalPluginV2Manifest(manifest, {
+          component: externalPluginV2ToolComponent,
+          icon: Puzzle,
+        });
+        externalPluginV2Registry.register(projection, execute);
+      }
+      catch {
+        // 单个包的静态元数据无效时跳过该包，保留其他工具和导航。
+      }
+    }
+  }
+  catch {
+    externalPluginV2Registry.clear();
+  }
 }
 
 export const useToolStore = defineStore('tools', () => {
@@ -23,13 +113,17 @@ export const useToolStore = defineStore('tools', () => {
   const externalPluginTools = shallowRef<ToolWithCategory[]>([]);
   const refreshExternalPluginTools = createQueuedRefresh(async () => {
     const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
-    if (!bridge?.listPlugins) {
+    if (!bridge) {
       externalPluginTools.value = [];
+      externalPluginV2Registry.clear();
       return;
     }
     try {
-      const result = await bridge.listPlugins();
-      externalPluginTools.value = result.ok ? projectDesktopExternalPluginTools(result.value) : [];
+      const [legacyResult] = await Promise.all([
+        bridge.listPlugins?.() ?? Promise.resolve({ ok: true as const, value: [] as DesktopPluginSnapshot[] }),
+        refreshExternalPluginV2Tools(),
+      ]);
+      externalPluginTools.value = legacyResult.ok ? projectDesktopExternalPluginTools(legacyResult.value) : [];
     }
     catch {
       externalPluginTools.value = [];
