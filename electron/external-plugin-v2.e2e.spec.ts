@@ -45,7 +45,10 @@ test.beforeAll(async () => {
     toolId,
     toolTitle: 'Signed WASM echo',
     commandTitle: 'Run signed WASM echo',
-    toolInputs: [{ id: 'spin', kind: 'boolean', label: 'Spin forever', description: 'Enable the timeout test.', defaultValue: false }],
+    toolInputs: [
+      { id: 'spin', kind: 'boolean', label: 'Spin forever', description: 'Enable the timeout test.', defaultValue: false },
+      { id: 'whole-number', kind: 'number', label: 'Whole number', integer: true, step: 1 },
+    ],
     wasmBytes: signedWasmBytes,
   }));
 
@@ -147,6 +150,10 @@ test('installs and runs signed WASM tools through navigation, search, failure, a
   expect(await page.locator('.plugin-tool-workbench').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
   await electronApp!.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1280, 850));
 
+  await page.getByLabel('Whole number').locator('input').fill('1.5');
+  await page.getByRole('button', { name: 'Run' }).click();
+  await expect(page.getByRole('alert')).toContainText('Whole number must be a safe integer.');
+  await page.getByLabel('Whole number').locator('input').fill('21');
   await page.getByRole('button', { name: 'Run' }).click();
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"engine": "wasm"');
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"status": "complete"');

@@ -49,6 +49,47 @@ describe('external plugin v2 manifest', () => {
     expect(manifest.contributions.commands[0]?.toolId).toBe(`${pluginId}/summary`);
   });
 
+  it('accepts the optional integer constraint and keeps older number fields valid', () => {
+    const base = createManifest();
+    const numberField = { kind: 'number' as const, id: 'count', label: 'Count', minimum: 0, maximum: 100, step: 1 };
+    const legacyManifest = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, inputs: [numberField] }],
+      },
+    };
+    const integerManifest = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, inputs: [{ ...numberField, integer: true }] }],
+      },
+    };
+
+    expect(validateExternalPluginV2Manifest(legacyManifest).contributions.tools[0]?.inputs[0]).toEqual(numberField);
+    expect(validateExternalPluginV2Manifest(integerManifest).contributions.tools[0]?.inputs[0]).toEqual({
+      ...numberField,
+      integer: true,
+    });
+  });
+
+  it('rejects a non-boolean integer declaration', () => {
+    const base = createManifest();
+    const invalidManifest = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        tools: [{
+          ...base.contributions.tools[0]!,
+          inputs: [{ kind: 'number', id: 'count', label: 'Count', integer: 'true' }],
+        }],
+      },
+    };
+
+    expect(() => validateExternalPluginV2Manifest(invalidManifest)).toThrow(/integer must be a boolean/);
+  });
+
   it('rejects undeclared activation targets and capabilities', () => {
     const missingActivation = {
       ...createManifest(),

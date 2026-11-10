@@ -19,6 +19,7 @@ export type PluginToolInputField =
   | (PluginToolInputFieldBase & {
     readonly type: 'number';
     readonly defaultValue?: number;
+    readonly integer?: boolean;
     readonly minimum?: number;
     readonly maximum?: number;
     readonly step?: number;

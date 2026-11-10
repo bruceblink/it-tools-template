@@ -81,7 +81,7 @@ describe('external plugin v2 registry projection', () => {
         tools: [{
           ...manifest.contributions.tools[0]!,
           inputs: [
-            { kind: 'number', id: 'count', label: 'Count', minimum: 1 },
+            { kind: 'number', id: 'count', label: 'Count', integer: true, minimum: 1, step: 1 },
             { kind: 'boolean', id: 'pretty', label: 'Pretty', defaultValue: true },
             { kind: 'select', id: 'format', label: 'Format', options: [{ value: 'compact', label: 'Compact' }] },
           ],
@@ -94,7 +94,7 @@ describe('external plugin v2 registry projection', () => {
       icon: {} as Component,
     });
     expect(projection.registrations[0]?.workbench.fields).toEqual([
-      expect.objectContaining({ type: 'number', id: 'count', minimum: 1 }),
+      expect.objectContaining({ type: 'number', id: 'count', integer: true, minimum: 1, step: 1 }),
       expect.objectContaining({ type: 'boolean', id: 'pretty', defaultValue: true }),
       expect.objectContaining({ type: 'select', id: 'format', options: [{ value: 'compact', label: 'Compact' }] }),
     ]);

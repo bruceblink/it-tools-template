@@ -24,6 +24,7 @@ const labels = computed(() => locale.value === 'zh'
       required: '此字段为必填项。',
       tooLong: '输入超过最大长度。',
       invalidNumber: '请输入有效数字。',
+      invalidInteger: '请输入安全整数。',
       belowMinimum: '输入小于允许的最小值。',
       aboveMaximum: '输入大于允许的最大值。',
       invalidOption: '请选择有效选项。',
@@ -38,6 +39,7 @@ const labels = computed(() => locale.value === 'zh'
       required: 'is required.',
       tooLong: 'exceeds the maximum length.',
       invalidNumber: 'must be a valid number.',
+      invalidInteger: 'must be a safe integer.',
       belowMinimum: 'is below the minimum allowed.',
       aboveMaximum: 'is above the maximum allowed.',
       invalidOption: 'must be a valid option.',
@@ -118,6 +120,11 @@ function validateInput(): PluginToolInputValueMap | undefined {
     if (field.type === 'number' && value !== null && value !== undefined) {
       if (typeof value !== 'number' || !Number.isFinite(value)) {
         inputError.value = fieldError(field.label, labels.value.invalidNumber);
+        return undefined;
+      }
+      // 整数字段只提交安全整数，避免插件收到无法精确表示的整数值。
+      if (field.integer && !Number.isSafeInteger(value)) {
+        inputError.value = fieldError(field.label, labels.value.invalidInteger);
         return undefined;
       }
       if (field.minimum !== undefined && value < field.minimum) {

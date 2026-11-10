@@ -32,6 +32,7 @@
             "required": true,
             "minimum": 0,
             "maximum": 1000000,
+            "integer": true,
             "step": 1
           }
         ],

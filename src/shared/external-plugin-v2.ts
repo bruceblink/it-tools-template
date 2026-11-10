@@ -43,6 +43,7 @@ export interface ExternalPluginV2TextField extends ExternalPluginV2InputFieldBas
 
 export interface ExternalPluginV2NumberField extends ExternalPluginV2InputFieldBase {
   readonly kind: 'number';
+  readonly integer?: boolean;
   readonly minimum?: number;
   readonly maximum?: number;
   readonly step?: number;
@@ -359,14 +360,15 @@ function readInputField(value: unknown, toolId: string, index: number): External
     return { ...base, kind: 'text', ...(value.multiline === undefined ? {} : { multiline: readBoolean(value.multiline, `Tool ${toolId} input ${id} multiline`) }), ...(value.placeholder === undefined ? {} : { placeholder: readBoundedString(value.placeholder, `Tool ${toolId} input ${id} placeholder`, externalPluginV2Limits.maximumStringLength, false) }), ...(maxLength === undefined ? {} : { maxLength }) };
   }
   if (value.kind === 'number') {
-    assertExactKeys(value, ['kind', 'id', 'label'], ['description', 'required', 'minimum', 'maximum', 'step'], `Tool ${toolId} input ${id}`);
+    assertExactKeys(value, ['kind', 'id', 'label'], ['description', 'required', 'integer', 'minimum', 'maximum', 'step'], `Tool ${toolId} input ${id}`);
+    const integer = value.integer === undefined ? undefined : readBoolean(value.integer, `Tool ${toolId} input ${id} integer`);
     const minimum = readOptionalNumber(value.minimum, `Tool ${toolId} input ${id} minimum`);
     const maximum = readOptionalNumber(value.maximum, `Tool ${toolId} input ${id} maximum`);
     const step = readOptionalNumber(value.step, `Tool ${toolId} input ${id} step`);
     if (minimum !== undefined && maximum !== undefined && minimum > maximum) {
       throw new Error(`Tool ${toolId} input ${id} range is invalid.`);
     }
-    return { ...base, kind: 'number', ...(minimum === undefined ? {} : { minimum }), ...(maximum === undefined ? {} : { maximum }), ...(step === undefined ? {} : { step }) };
+    return { ...base, kind: 'number', ...(integer === undefined ? {} : { integer }), ...(minimum === undefined ? {} : { minimum }), ...(maximum === undefined ? {} : { maximum }), ...(step === undefined ? {} : { step }) };
   }
   if (value.kind === 'boolean') {
     assertExactKeys(value, ['kind', 'id', 'label'], ['description', 'required', 'defaultValue'], `Tool ${toolId} input ${id}`);

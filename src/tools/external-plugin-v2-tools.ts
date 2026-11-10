@@ -178,6 +178,7 @@ function toWorkbenchField(field: ExternalPluginV2InputField): PluginToolInputFie
     return {
       ...base,
       type: 'number',
+      ...(field.integer === undefined ? {} : { integer: field.integer }),
       ...(field.minimum === undefined ? {} : { minimum: field.minimum }),
       ...(field.maximum === undefined ? {} : { maximum: field.maximum }),
       ...(field.step === undefined ? {} : { step: field.step }),
