@@ -19,6 +19,7 @@ export default defineConfig({
           main: resolve(projectRoot, 'electron/main.ts'),
           'database-worker': resolve(projectRoot, 'electron/database/worker.ts'),
           'system-monitor-worker': resolve(projectRoot, 'electron/system-monitor/worker.ts'),
+          'external-extension-worker': resolve(projectRoot, 'electron/external-extension-worker.ts'),
         },
         formats: ['cjs'],
       },

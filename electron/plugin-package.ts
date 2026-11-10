@@ -18,6 +18,13 @@ import type {
   StagePluginPackageOptions,
   StagedPluginPackage,
 } from './plugin-package-manifest';
+import {
+  parseExternalPluginV2PackageManifest,
+} from './plugin-package-v2';
+import type {
+  ExternalPluginV2PackageFile,
+  ExternalPluginV2PackageManifest,
+} from './plugin-package-v2';
 
 export {
   getPluginPackageSigningPayload,
@@ -37,6 +44,17 @@ export type {
   StagePluginPackageOptions,
   StagedPluginPackage,
 } from './plugin-package-manifest';
+export type {
+  ExternalPluginV2PackageFile,
+  ExternalPluginV2PackageManifest,
+  ExternalPluginV2Runtime,
+  ExternalPluginV2UnsignedPackageManifest,
+} from './plugin-package-v2';
+export {
+  getExternalPluginV2PackageSigningPayload,
+  parseExternalPluginV2PackageManifest,
+  validateExternalPluginV2PackageManifest,
+} from './plugin-package-v2';
 
 const unixRegularFile = 0o100000;
 const unixDirectory = 0o040000;
@@ -58,6 +76,206 @@ interface ParsedArchive {
 }
 
 const installQueues = new Map<string, Promise<void>>();
+
+export type PluginPackageArchiveInspection =
+  | {
+      readonly formatVersion: 1;
+      readonly manifest: PluginPackageManifest;
+      readonly archiveBytes: number;
+      readonly expandedBytes: number;
+    }
+  | {
+      readonly formatVersion: 2;
+      readonly manifest: ExternalPluginV2PackageManifest;
+      readonly archiveBytes: number;
+      readonly expandedBytes: number;
+    };
+
+export interface StagedExternalPluginV2Package {
+  readonly formatVersion: 2;
+  readonly manifest: ExternalPluginV2PackageManifest;
+  readonly packageRoot: string;
+  readonly archiveBytes: number;
+  readonly expandedBytes: number;
+}
+
+/** 读取并验证 v1/v2 包的静态内容，不创建安装目录，也不执行入口文件。 */
+export async function inspectPluginPackageArchive(
+  options: StagePluginPackageOptions,
+): Promise<PluginPackageArchiveInspection> {
+  if (!basename(options.archivePath).toLowerCase().endsWith('.itxs')) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive must use the .itxs extension.');
+  }
+  const archiveMetadata = await stat(options.archivePath).catch((error: unknown) => {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive cannot be read.', { cause: error });
+  });
+  if (!archiveMetadata.isFile() || archiveMetadata.size <= 0) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive must be a non-empty file.');
+  }
+  if (archiveMetadata.size > pluginPackageLimits.maximumArchiveBytes) {
+    throw new PluginPackageError('resource-limit', 'The plugin package archive exceeds the compressed size limit.');
+  }
+
+  let zipFile: ZipFile | undefined;
+  try {
+    zipFile = await yauzl.openPromise(options.archivePath, {
+      autoClose: false,
+      decodeStrings: true,
+      lazyEntries: true,
+      strictFileNames: true,
+      validateEntrySizes: true,
+    });
+    if (zipFile.fileSize > pluginPackageLimits.maximumArchiveBytes) {
+      throw new PluginPackageError('resource-limit', 'The plugin package archive exceeds the compressed size limit.');
+    }
+    const archive = await inspectArchive(zipFile);
+    const manifestBytes = await readEntryBytes(zipFile, archive.manifestEntry.entry, pluginPackageLimits.maximumManifestBytes);
+    const formatVersion = readManifestFormatVersion(manifestBytes);
+    if (formatVersion === 2) {
+      const manifest = parseExternalPluginV2PackageManifest(manifestBytes, options.hostApiVersion, options.trustedSigningKeys);
+      validateArchiveMatchesExternalV2Manifest(archive, manifest);
+      await verifyArchiveFileHashes(zipFile, archive, manifest.files);
+      return { formatVersion: 2, manifest, archiveBytes: archiveMetadata.size, expandedBytes: archive.expandedBytes };
+    }
+    const manifest = parsePluginPackageManifest(manifestBytes, options.hostApiVersion, options.trustedSigningKeys);
+    validateArchiveMatchesManifest(archive, manifest);
+    await verifyArchiveFileHashes(zipFile, archive, manifest.files);
+    return { formatVersion: 1, manifest, archiveBytes: archiveMetadata.size, expandedBytes: archive.expandedBytes };
+  }
+  catch (error) {
+    if (error instanceof PluginPackageError) {
+      throw error;
+    }
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive could not be inspected safely.', { cause: error });
+  }
+  finally {
+    if (zipFile?.isOpen) {
+      zipFile.close();
+    }
+  }
+}
+
+/** 安全安装 v2 静态文件并保存清单；该函数不会执行入口文件。 */
+export async function stageExternalPluginV2PackageArchive(
+  options: StagePluginPackageOptions,
+): Promise<StagedExternalPluginV2Package> {
+  if (!basename(options.archivePath).toLowerCase().endsWith('.itxs')) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive must use the .itxs extension.');
+  }
+  const archiveMetadata = await stat(options.archivePath).catch((error: unknown) => {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive cannot be read.', { cause: error });
+  });
+  if (!archiveMetadata.isFile() || archiveMetadata.size <= 0) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive must be a non-empty file.');
+  }
+  if (archiveMetadata.size > pluginPackageLimits.maximumArchiveBytes) {
+    throw new PluginPackageError('resource-limit', 'The plugin package archive exceeds the compressed size limit.');
+  }
+  await mkdir(options.installRoot, { recursive: true, mode: 0o700 });
+  const canonicalInstallRoot = await realpath(options.installRoot);
+  return withInstallQueue(canonicalInstallRoot, async () => {
+    await cleanupInterruptedStaging(canonicalInstallRoot);
+    const inspection = await inspectPluginPackageArchive(options);
+    if (inspection.formatVersion !== 2) {
+      throw new PluginPackageError('invalid-package', 'The archive is a legacy v1 package, not an external plugin v2 package.');
+    }
+    return stageExternalPluginV2ArchiveInInstallRoot(options, canonicalInstallRoot, archiveMetadata.size, inspection.manifest);
+  });
+}
+
+async function stageExternalPluginV2ArchiveInInstallRoot(
+  options: StagePluginPackageOptions,
+  installRoot: string,
+  archiveBytes: number,
+  expectedManifest: ExternalPluginV2PackageManifest,
+): Promise<StagedExternalPluginV2Package> {
+  let zipFile: ZipFile | undefined;
+  let stagingRoot: string | undefined;
+  try {
+    zipFile = await yauzl.openPromise(options.archivePath, {
+      autoClose: false,
+      decodeStrings: true,
+      lazyEntries: true,
+      strictFileNames: true,
+      validateEntrySizes: true,
+    });
+    const archive = await inspectArchive(zipFile);
+    const manifestBytes = await readEntryBytes(zipFile, archive.manifestEntry.entry, pluginPackageLimits.maximumManifestBytes);
+    const manifest = parseExternalPluginV2PackageManifest(manifestBytes, options.hostApiVersion, options.trustedSigningKeys);
+    if (manifest.id !== expectedManifest.id || manifest.version !== expectedManifest.version) {
+      throw new PluginPackageError('invalid-package', 'The external plugin v2 package changed while it was being staged.');
+    }
+    validateArchiveMatchesExternalV2Manifest(archive, manifest);
+    stagingRoot = await mkdtemp(resolve(installRoot, stagingDirectoryPrefix));
+    let totalWrittenBytes = 0;
+    for (const file of manifest.files) {
+      const archiveEntry = archive.entries.find(candidate => !candidate.isDirectory && candidate.path === file.path);
+      if (!archiveEntry) {
+        throw new PluginPackageError('invalid-package', `The external plugin v2 package is missing ${file.path}.`);
+      }
+      const targetPath = resolve(stagingRoot, ...file.path.split('/'));
+      if (!isContainedPath(stagingRoot, targetPath)) {
+        throw new PluginPackageError('unsafe-archive-entry', 'The external plugin v2 package contains an unsafe file path.');
+      }
+      await mkdir(dirname(targetPath), { recursive: true, mode: 0o700 });
+      totalWrittenBytes = await extractAndVerifyFile(zipFile, archiveEntry.entry, targetPath, file.sha256, totalWrittenBytes);
+    }
+    const installedManifestBytes = Buffer.from(JSON.stringify(manifest), 'utf8');
+    await writeFileExclusive(resolve(stagingRoot, packageManifestPath), installedManifestBytes);
+    const pluginRoot = resolve(installRoot, manifest.id);
+    try {
+      await mkdir(pluginRoot, { mode: 0o700 });
+    }
+    catch (error) {
+      if (!isNodeError(error) || error.code !== 'EEXIST') {
+        throw error;
+      }
+    }
+    const pluginRootMetadata = await lstat(pluginRoot);
+    if (!pluginRootMetadata.isDirectory() || pluginRootMetadata.isSymbolicLink()) {
+      throw new PluginPackageError('unsafe-archive-entry', 'The external plugin v2 install directory must be a real directory.');
+    }
+    const canonicalPluginRoot = await realpath(pluginRoot);
+    if (!isContainedPath(installRoot, canonicalPluginRoot)) {
+      throw new PluginPackageError('unsafe-archive-entry', 'The external plugin v2 install directory escaped its trusted root.');
+    }
+    const destination = resolve(canonicalPluginRoot, manifest.version);
+    if (!isContainedPath(installRoot, destination)) {
+      throw new PluginPackageError('unsafe-archive-entry', 'The external plugin v2 install path escaped its trusted root.');
+    }
+    if (await pathExists(destination)) {
+      throw new PluginPackageError('already-installed', 'This plugin version is already installed.');
+    }
+    await rename(stagingRoot, destination).catch((error: unknown) => {
+      if (isNodeError(error) && (error.code === 'EEXIST' || error.code === 'ENOTEMPTY')) {
+        throw new PluginPackageError('already-installed', 'This plugin version is already installed.', { cause: error });
+      }
+      throw error;
+    });
+    stagingRoot = undefined;
+    return {
+      formatVersion: 2,
+      manifest,
+      packageRoot: destination,
+      archiveBytes,
+      expandedBytes: totalWrittenBytes + installedManifestBytes.length,
+    };
+  }
+  catch (error) {
+    if (error instanceof PluginPackageError) {
+      throw error;
+    }
+    throw new PluginPackageError('invalid-archive', 'The external plugin v2 package archive could not be staged safely.', { cause: error });
+  }
+  finally {
+    if (zipFile?.isOpen) {
+      zipFile.close();
+    }
+    if (stagingRoot) {
+      await rm(stagingRoot, { recursive: true, force: true });
+    }
+  }
+}
 
 /** Stage a signed, prebuilt package without executing scripts or modifying an installed version. */
 export async function stagePluginPackageArchive(options: StagePluginPackageOptions): Promise<StagedPluginPackage> {
@@ -295,6 +513,63 @@ function validateArchiveMatchesManifest(archive: ParsedArchive, manifest: Plugin
   if (archiveFiles.some(file => !manifestPaths.has(file.path))) {
     throw new PluginPackageError('invalid-package', 'The plugin package contains an unlisted file.');
   }
+}
+
+function validateArchiveMatchesExternalV2Manifest(
+  archive: ParsedArchive,
+  manifest: ExternalPluginV2PackageManifest,
+): void {
+  const archiveFiles = archive.entries.filter(entry => !entry.isDirectory && entry.path !== packageManifestPath);
+  if (archiveFiles.length !== manifest.files.length) {
+    throw new PluginPackageError('invalid-package', 'The external plugin v2 file list does not match its archive.');
+  }
+  const manifestPaths = new Set(manifest.files.map(file => file.path));
+  if (archiveFiles.some(file => !manifestPaths.has(file.path))) {
+    throw new PluginPackageError('invalid-package', 'The external plugin v2 package contains an unlisted file.');
+  }
+}
+
+async function verifyArchiveFileHashes(
+  zipFile: ZipFile,
+  archive: ParsedArchive,
+  files: readonly (PluginPackageFileLike | ExternalPluginV2PackageFile)[],
+): Promise<void> {
+  for (const file of files) {
+    const archiveEntry = archive.entries.find(candidate => !candidate.isDirectory && candidate.path === file.path);
+    if (!archiveEntry) {
+      throw new PluginPackageError('invalid-package', `The plugin package is missing ${file.path}.`);
+    }
+    const stream = await zipFile.openReadStreamPromise(archiveEntry.entry, { decodeFileData: true });
+    const hash = createHash('sha256');
+    let bytesRead = 0;
+    for await (const chunk of stream) {
+      const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      bytesRead += bytes.length;
+      hash.update(bytes);
+    }
+    if (bytesRead !== archiveEntry.entry.uncompressedSize) {
+      throw new PluginPackageError('invalid-archive', 'The plugin package file size does not match its archive.');
+    }
+    if (hash.digest('hex') !== file.sha256) {
+      throw new PluginPackageError('file-hash-mismatch', `The plugin package file hash does not match ${file.path}.`);
+    }
+  }
+}
+
+function readManifestFormatVersion(bytes: Buffer): number | undefined {
+  try {
+    const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown;
+    return isRecordValue(value) && typeof value.formatVersion === 'number' ? value.formatVersion : undefined;
+  }
+  catch {
+    return undefined;
+  }
+}
+
+type PluginPackageFileLike = Pick<PluginPackageManifest['files'][number], 'path' | 'sha256'>;
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 async function readEntryBytes(zipFile: ZipFile, entry: Entry, maximumBytes: number): Promise<Buffer> {
