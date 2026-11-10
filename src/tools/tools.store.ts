@@ -107,6 +107,7 @@ function isJsonValue(value: unknown, depth = 0): boolean {
 async function refreshExternalPluginV2Tools(): Promise<void> {
   const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
   if (!bridge?.listPluginV2Packages) {
+    externalPluginV2Registry.initialized.value = true;
     return;
   }
   try {
@@ -144,6 +145,9 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
   catch (error) {
     console.warn('Could not register installed v2 plugin tools.', error instanceof Error ? error.message : 'Unknown registry error.');
   }
+  finally {
+    externalPluginV2Registry.initialized.value = true;
+  }
 }
 
 export const useToolStore = defineStore('tools', () => {
@@ -155,6 +159,7 @@ export const useToolStore = defineStore('tools', () => {
     if (!bridge) {
       externalPluginTools.value = [];
       externalPluginV2Registry.clear();
+      externalPluginV2Registry.initialized.value = true;
       return;
     }
     try {

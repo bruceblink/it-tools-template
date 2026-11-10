@@ -24,6 +24,7 @@ export interface ExternalPluginV2CommandIndexRegistration extends ExternalPlugin
  * 注册表不执行插件代码；调用方必须显式提供扩展宿主 RPC 执行器。
  */
 export class ExternalPluginV2Registry {
+  readonly initialized = shallowRef(false);
   readonly tools: ShallowRef<readonly ToolWithCategory[]> = shallowRef([]);
   readonly commands: ShallowRef<readonly ExternalPluginV2CommandIndexRegistration[]> = shallowRef([]);
 

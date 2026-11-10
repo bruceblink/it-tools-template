@@ -50,7 +50,10 @@ function createProjection() {
   });
 }
 
-afterEach(() => externalPluginV2Registry.clear());
+afterEach(() => {
+  externalPluginV2Registry.clear();
+  externalPluginV2Registry.initialized.value = false;
+});
 
 describe('ExternalPluginToolRoute', () => {
   it('updates legacy route metadata when the v2 registry loads after a deep link', async () => {
@@ -84,8 +87,10 @@ describe('ExternalPluginToolRoute', () => {
 
     expect(router.currentRoute.value.meta.name).toBe('External plugin tool');
     expect(wrapper.findComponent(ExternalPluginV2ToolPage).exists()).toBe(false);
+    expect(wrapper.get('[role="status"]').text()).toBe('Loading plugin tools…');
 
     externalPluginV2Registry.register(createProjection(), async () => ({ kind: 'text', value: '' }));
+    externalPluginV2Registry.initialized.value = true;
     await flushPromises();
 
     expect(router.currentRoute.value.meta).toMatchObject({

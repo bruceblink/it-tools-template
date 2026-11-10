@@ -12,6 +12,7 @@ const registration = computed(() => externalPluginV2Registry.tools.value
   ? externalPluginV2Registry.findByRoute(route.path)
   : undefined);
 const isV2 = computed(() => registration.value !== undefined);
+const registryReady = externalPluginV2Registry.initialized;
 
 // 直接打开链接时，注册表可能晚于路由页面加载，因此要在工具出现后补齐元数据。
 watch(registration, (tool) => {
@@ -24,6 +25,9 @@ watch(registration, (tool) => {
 </script>
 
 <template>
-  <ExternalPluginV2ToolPage v-if="isV2" />
+  <div v-if="!registryReady" role="status">
+    Loading plugin tools…
+  </div>
+  <ExternalPluginV2ToolPage v-else-if="isV2" />
   <LegacyPage v-else />
 </template>

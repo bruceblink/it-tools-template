@@ -125,6 +125,12 @@ test('installs and runs signed WASM tools through navigation, search, failure, a
   await searchCommand.click();
   await expect(page).toHaveURL(`app://bundle${toolRoute}`);
 
+  // 直接刷新插件链接时，等待注册完成后仍应显示宿主工作台。
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Signed WASM echo' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'External plugin tool', exact: true })).toHaveCount(0);
+
   await page.getByRole('button', { name: 'Run' }).click();
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"engine": "wasm"');
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"status": "complete"');

@@ -14,6 +14,7 @@ describe('external plugin v2 command bridge', () => {
   afterEach(() => {
     Object.defineProperty(window, 'itToolsDesktop', { configurable: true, writable: true, value: previousBridge });
     externalPluginV2Registry.clear();
+    externalPluginV2Registry.initialized.value = false;
   });
 
   it('cancels an IPC request when its signal aborts before the response settles', async () => {
@@ -117,7 +118,9 @@ describe('external plugin v2 command bridge', () => {
     });
     app.mount(document.createElement('div'));
     try {
+      expect(externalPluginV2Registry.initialized.value).toBe(false);
       await flushPromises();
+      expect(externalPluginV2Registry.initialized.value).toBe(true);
       expect(store?.tools.some(tool => tool.path === `/extensions/${pluginId}/1.0.0/echo`)).toBe(true);
       const path = `/extensions/${pluginId}/1.0.0/echo`;
       const registration = externalPluginV2Registry.findByRoute(path);
