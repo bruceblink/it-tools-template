@@ -6,6 +6,14 @@
 
 TypeScript 插件可以引用 [`plugins/sdk/it-tools-plugin.d.ts`](../plugins/sdk/it-tools-plugin.d.ts) 获得运行时 API 类型，并引用 [`plugins/sdk/it-tools-plugin-package.d.ts`](../plugins/sdk/it-tools-plugin-package.d.ts) 获得 `plugin.source.json` 清单和工具贡献类型。五个 SDK 声明文件（运行时、包清单、能力目录、API 版本和错误码）可以一起复制到插件项目；它们不依赖仓库内部的 `src/` 路径。JavaScript 插件可直接使用相同的接口。
 
+## SDK 交付和版本策略
+
+SDK v1 采用源码随项目复制的交付方式，不发布运行时依赖包，也不让插件在安装或运行时执行 `npm install`。`plugin:create` 会把 `plugins/sdk/` 下的五个声明文件复制到生成项目的 `types/` 目录；外部项目可以只保留这些声明和自己的源码完成类型检查、源码校验与 `.itxs` 打包。声明文件的相对引用必须保持在 `types/` 目录内。
+
+宿主 API 版本、SDK 版本类型和示例清单的 `apiVersion.minInclusive` 必须保持一致。当前值为 `1.4.0`，包格式仍为 v1；宿主可以执行的能力是声明能力的子集。新增或修改 API 时，必须同步更新宿主实现、`plugins/sdk/` 声明、脚手架、能力错误码回归和独立项目回归。删除或改变字段时应提升 API 主版本，并保留旧版本的兼容边界；仅增加可选字段或新的错误码时，需明确旧插件的行为。
+
+SDK 声明只描述接口和元数据，不授予能力。能力授权、签名信任、包完整性和生命周期状态仍由 Electron 宿主分别检查。
+
 ```ts
 const runtime = await window.itTools.capabilities.runtime.getInfo();
 document.querySelector('#platform')!.textContent = runtime.platform;
