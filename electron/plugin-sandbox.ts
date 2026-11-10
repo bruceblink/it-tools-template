@@ -298,7 +298,6 @@ export async function createPluginEmbeddedWindow(
   }
 
   const partition = getPluginSessionPartition(registration.pluginId, packageRoot);
-  embeddedPartitions.set(partition, registration.pluginId);
   const pluginSession = electronSession.fromPartition(partition, { cache: true });
   const declaredCapabilities = registration.requestedCapabilities ?? [];
   const requestedCapabilities = filterSupportedPluginCapabilities(declaredCapabilities);
@@ -331,6 +330,10 @@ export async function createPluginEmbeddedWindow(
     registration.pluginId,
     onWebContentsCreated,
   );
+  // Register the partition only after the session policy and adapter are ready.
+  // A failed activation must not leave a stale partition authorized for a later
+  // host webview attachment.
+  embeddedPartitions.set(partition, registration.pluginId);
   // The host renderer remains trusted application content. The guest session
   // is isolated by its partition and is authorized by the session policy.
   return adapter as unknown as EmbeddedPluginWindowTarget;
@@ -384,7 +387,7 @@ class EmbeddedPluginWindow extends EventEmitter {
       return;
     }
     this.destroyed = true;
-    if (embeddedPartitions.get(this.partition) === this.sessionPolicy.pluginContext.id) {
+    if (embeddedPartitions.get(this.partition) === this.pluginId) {
       embeddedPartitions.delete(this.partition);
     }
     this.hostContents.removeListener('did-attach-webview', this.onAttached);
