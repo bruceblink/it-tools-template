@@ -10,12 +10,22 @@ class FakeProcess implements ExternalExtensionProcessLike {
   readonly messages: unknown[] = [];
   readonly pid = 42;
   killed = false;
+  killCalls = 0;
+  killResults: Array<boolean | Error> = [];
   private messageListener?: (message: unknown) => void;
   private exitListener?: (code: number) => void;
 
   postMessage(message: unknown): void { this.messages.push(message); }
 
-  kill(): boolean { this.killed = true; return true; }
+  kill(): boolean {
+    this.killCalls += 1;
+    const result = this.killResults.shift() ?? true;
+    if (result instanceof Error) {
+      throw result;
+    }
+    this.killed ||= result;
+    return result;
+  }
 
   on(event: 'message' | 'exit', listener: ((message: unknown) => void) | ((code: number) => void)): this {
     if (event === 'message') {
@@ -272,6 +282,66 @@ describe('ExternalExtensionProcessTransport', () => {
 
     child.exit(0);
     await expect(transport.dispose()).resolves.toBeUndefined();
+  });
+
+  // kill() 返回 false 时保留旧进程，下一次 dispose 重试，并继续禁止启动新进程。
+  it('retries a rejected kill on a later dispose without restarting before exit', async () => {
+    const child = new FakeProcess();
+    child.killResults = [false, true];
+    const fork = vi.fn<ExternalExtensionProcessFork>(() => child);
+    const onStopped = vi.fn();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      stopTimeoutMs: 5,
+      onStopped,
+      fork,
+    });
+    const pending = transport.send(request('request-kill-false'), new AbortController().signal);
+    const firstStop = transport.dispose();
+
+    await expect(pending).rejects.toMatchObject({ code: 'disposed' });
+    expect(child.killCalls).toBe(1);
+    await expect(transport.send(request('request-before-retry'), new AbortController().signal))
+      .rejects.toMatchObject({ code: 'disposed' });
+    await expect(firstStop).rejects.toMatchObject({ code: 'timeout' });
+
+    const retry = transport.dispose();
+    expect(child.killCalls).toBe(2);
+    expect(fork).toHaveBeenCalledTimes(1);
+    expect(onStopped).not.toHaveBeenCalled();
+    child.exit(0);
+    await expect(retry).resolves.toBeUndefined();
+    expect(onStopped).toHaveBeenCalledOnce();
+  });
+
+  // kill() 抛错时也保留旧进程并允许后续 dispose 重试停止请求。
+  it('retries a thrown kill on a later dispose and waits for exit confirmation', async () => {
+    const child = new FakeProcess();
+    child.killResults = [new Error('temporary kill failure'), true];
+    const fork = vi.fn<ExternalExtensionProcessFork>(() => child);
+    const onStopped = vi.fn();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      stopTimeoutMs: 5,
+      onStopped,
+      fork,
+    });
+    const pending = transport.send(request('request-kill-throw'), new AbortController().signal);
+    const firstStop = transport.dispose();
+
+    await expect(pending).rejects.toMatchObject({ code: 'disposed' });
+    expect(child.killCalls).toBe(1);
+    await expect(firstStop).rejects.toMatchObject({ code: 'timeout' });
+
+    const retry = transport.dispose();
+    expect(child.killCalls).toBe(2);
+    expect(fork).toHaveBeenCalledTimes(1);
+    expect(onStopped).not.toHaveBeenCalled();
+    child.exit(0);
+    await expect(retry).resolves.toBeUndefined();
+    expect(onStopped).toHaveBeenCalledOnce();
   });
 
   // 真实 RPC host 必须等待进程退出事件，不能只等待 worker 的 dispose 响应。

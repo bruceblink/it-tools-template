@@ -55,6 +55,8 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
   private child: ExternalExtensionProcessLike | null = null;
   private disposed = false;
   private stopping = false;
+  /** 只有 kill() 接受停止请求后才置位；失败时保留后续重试机会。 */
+  private killAccepted = false;
   private stoppedNotified = false;
   /** 并发释放时共用一次有界等待。 */
   private disposePromise: Promise<void> | null = null;
@@ -195,15 +197,19 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
   private stopChild(error: ExternalExtensionRpcError): void {
     const child = this.child;
     this.rejectPending(error);
-    if (!child || this.stopping) {
+    if (!child) {
       return;
     }
     this.stopping = true;
+    if (this.killAccepted) {
+      return;
+    }
     try {
-      child.kill();
+      this.killAccepted = child.kill();
     }
     catch {
-      // 保留退出监听并阻止新进程启动，避免旧进程仍在运行时重复启动。
+      // 保留退出监听并阻止新进程启动；后续 dispose 会重试停止请求。
+      this.killAccepted = false;
     }
   }
 
@@ -246,6 +252,7 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     const child = this.child;
     this.child = null;
     this.stopping = false;
+    this.killAccepted = false;
     child?.removeListener('message', this.onMessage);
     child?.removeListener('exit', this.onExit);
     if (!this.disposed) {
