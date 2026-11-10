@@ -1,0 +1,51 @@
+{
+  "formatVersion": 2,
+  "id": "org.example.wasm.double",
+  "name": "WASM 整数加倍示例",
+  "version": "1.0.0",
+  "apiVersion": {
+    "minInclusive": "2.0.0",
+    "maxExclusive": "3.0.0"
+  },
+  "requestedCapabilities": [],
+  "activationEvents": [
+    "onTool:org.example.wasm.double/double",
+    "onCommand:org.example.wasm.double/run-double"
+  ],
+  "contributions": {
+    "tools": [
+      {
+        "id": "org.example.wasm.double/double",
+        "title": "WASM 整数加倍",
+        "description": "把 0 到 1000000 之间的整数乘以 2。",
+        "keywords": ["wasm", "integer", "double"],
+        "categoryId": "development",
+        "dataProcessing": "memory-only",
+        "offline": "available",
+        "capabilities": [],
+        "inputs": [
+          {
+            "id": "number",
+            "kind": "number",
+            "label": "输入整数",
+            "description": "输入 0 到 1000000 之间的整数。",
+            "required": true,
+            "minimum": 0,
+            "maximum": 1000000,
+            "step": 1
+          }
+        ],
+        "output": { "kind": "json", "label": "计算结果" }
+      }
+    ],
+    "commands": [
+      {
+        "id": "org.example.wasm.double/run-double",
+        "title": "运行整数加倍示例",
+        "description": "用受限 WASM 计算整数的两倍。",
+        "keywords": ["wasm", "integer", "double"],
+        "toolId": "org.example.wasm.double/double"
+      }
+    ]
+  }
+}

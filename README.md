@@ -230,6 +230,8 @@ pnpm run plugin:pack:v2 \
 
 The package contains the signed v2 manifest and the selected WASM file. The packer uses the host's shared v2 manifest validator, then checks the signing key, entrypoint path, and file limits. The desktop installer rechecks the manifest, signer trust, and file hashes; the extension host checks the WASM ABI when it executes the module. Run `pnpm run test:plugin-pack:v2` for a packer-to-installer-to-WASM execution check. Signing does not grant requested capabilities.
 
+For a complete C-to-WASM example, see [the WASM integer doubling plugin](plugins/wasm-double/README.md). It includes a declarative manifest, a Zig build command, and an opt-in test against the production WASM executor.
+
 ## Plugin marketplace
 
 Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In the desktop app, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
