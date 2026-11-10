@@ -32,6 +32,7 @@ export class ExternalPluginV2Registry {
   register(
     projection: ExternalPluginV2RegistryProjection,
     execute: PluginToolCommandExecutor,
+    fingerprint?: string,
   ): void {
     const pluginId = projection.registrations[0]?.workbench.pluginId
       ?? projection.commands[0]?.pluginId;
@@ -41,9 +42,24 @@ export class ExternalPluginV2Registry {
       throw new Error('An external plugin v2 projection must declare a plugin identity.');
     }
     const packageKey = getPackageKey(pluginId, version);
-    const registration = createPackageRegistration(projection, execute, pluginId, version);
+    const registration = createPackageRegistration(projection, execute, pluginId, version, fingerprint);
     this.assertNoConflicts(packageKey, registration);
     this.packages.set(packageKey, registration);
+    this.rebuildIndexes();
+  }
+
+  /** 一次替换完整索引；清单未变化的工具保留对象引用和工作台输入。 */
+  replaceFrom(next: ExternalPluginV2Registry): void {
+    const packages = [...next.packages.entries()].map(([key, registration]) => {
+      const existing = this.packages.get(key);
+      return [key, existing?.fingerprint !== undefined && existing.fingerprint === registration.fingerprint
+        ? existing
+        : registration] as const;
+    });
+    this.packages.clear();
+    for (const [key, registration] of packages) {
+      this.packages.set(key, registration);
+    }
     this.rebuildIndexes();
   }
 
@@ -117,6 +133,7 @@ export class ExternalPluginV2Registry {
 
 interface PackageRegistration {
   readonly key: string;
+  readonly fingerprint?: string;
   readonly tools: readonly ExternalPluginV2RuntimeRegistration[];
   readonly commands: readonly ExternalPluginV2CommandIndexRegistration[];
 }
@@ -126,6 +143,7 @@ function createPackageRegistration(
   execute: PluginToolCommandExecutor,
   pluginId: string,
   version: string,
+  fingerprint?: string,
 ): PackageRegistration {
   const commandsById = new Map(projection.commands.map(command => [command.id, command]));
   const tools = projection.registrations.map(({ tool, workbench }) => ({
@@ -146,6 +164,7 @@ function createPackageRegistration(
   }
   return {
     key: getPackageKey(pluginId, version),
+    fingerprint,
     tools,
     commands,
   };

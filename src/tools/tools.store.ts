@@ -7,7 +7,7 @@ import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.type
 import { projectExternalPluginTools as projectExternalPluginToolRegistry } from './external-plugin-tools';
 import { createQueuedRefresh } from './queued-refresh';
 import { toolsWithCategory } from './index';
-import { externalPluginV2Registry } from './external-plugin-v2-registry';
+import { ExternalPluginV2Registry, externalPluginV2Registry } from './external-plugin-v2-registry';
 import { projectExternalPluginV2Manifest } from './external-plugin-v2-tools';
 import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
 import type { PluginToolCommandExecutor, PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
@@ -109,7 +109,6 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
   if (!bridge?.listPluginV2Packages) {
     return;
   }
-  externalPluginV2Registry.clear();
   try {
     const result = await bridge.listPluginV2Packages();
     if (!result.ok) {
@@ -117,6 +116,7 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
       return;
     }
     const execute = createExternalPluginV2CommandExecutor();
+    const nextRegistry = new ExternalPluginV2Registry();
     for (const snapshot of result.value) {
       if (snapshot.status !== 'installed') {
         continue;
@@ -127,7 +127,7 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
           component: externalPluginV2ToolComponent,
           icon: Puzzle,
         });
-        externalPluginV2Registry.register(projection, execute);
+        nextRegistry.register(projection, execute, JSON.stringify(manifest));
       }
       catch (error) {
         // 单个包的静态元数据无效时跳过该包，保留其他工具和导航。
@@ -138,9 +138,10 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
         });
       }
     }
+    // 先完成清单检查，再替换索引，避免刷新时卸载正在使用的工作台。
+    externalPluginV2Registry.replaceFrom(nextRegistry);
   }
   catch (error) {
-    externalPluginV2Registry.clear();
     console.warn('Could not register installed v2 plugin tools.', error instanceof Error ? error.message : 'Unknown registry error.');
   }
 }

@@ -6,12 +6,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createExternalPluginV2CommandExecutor } from './tools.store';
 import type { PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
 import { useToolStore } from './tools.store';
+import { externalPluginV2Registry } from './external-plugin-v2-registry';
 
 describe('external plugin v2 command bridge', () => {
   const previousBridge = window.itToolsDesktop;
 
   afterEach(() => {
     Object.defineProperty(window, 'itToolsDesktop', { configurable: true, writable: true, value: previousBridge });
+    externalPluginV2Registry.clear();
   });
 
   it('cancels an IPC request when its signal aborts before the response settles', async () => {
@@ -97,18 +99,47 @@ describe('external plugin v2 command bridge', () => {
     app.use(pinia);
     app.use(createI18n({ legacy: false, locale: 'en', messages: { en: {} }, missingWarn: false, fallbackWarn: false, warnHtmlMessage: false }));
     setActivePinia(pinia);
+    let notifyChange!: () => void;
+    let finishRefresh!: (result: DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>) => void;
+    const listV2 = vi.fn()
+      .mockResolvedValueOnce({ ok: true, value: [snapshot] })
+      .mockImplementationOnce(() => new Promise(resolve => { finishRefresh = resolve; }))
+      .mockResolvedValueOnce({ ok: false, error: 'operation-failed' })
+      .mockResolvedValueOnce({ ok: true, value: [] });
     Object.defineProperty(window, 'itToolsDesktop', {
       configurable: true,
       writable: true,
       value: {
         listPlugins: vi.fn(async () => ({ ok: true as const, value: [] })),
-        listPluginV2Packages: vi.fn(async () => ({ ok: true as const, value: [snapshot] })),
+        listPluginV2Packages: listV2,
+        onPluginStateChanged: (callback: () => void) => { notifyChange = callback; return () => {}; },
       },
     });
     app.mount(document.createElement('div'));
     try {
       await flushPromises();
       expect(store?.tools.some(tool => tool.path === `/extensions/${pluginId}/1.0.0/echo`)).toBe(true);
+      const path = `/extensions/${pluginId}/1.0.0/echo`;
+      const registration = externalPluginV2Registry.findByRoute(path);
+
+      // 刷新期间和同一清单重新加载后都保留原工作台，避免丢失输入或取消命令。
+      notifyChange();
+      expect(externalPluginV2Registry.findByRoute(path)).toBe(registration);
+      finishRefresh({ ok: true, value: [snapshot] });
+      await flushPromises();
+      expect(externalPluginV2Registry.findByRoute(path)).toBe(registration);
+
+      // 读取失败保留上一份索引；下一次成功读取仍会移除已卸载插件。
+      const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      notifyChange();
+      await flushPromises();
+      expect(externalPluginV2Registry.findByRoute(path)).toBe(registration);
+      expect(warning).toHaveBeenCalled();
+      warning.mockRestore();
+
+      notifyChange();
+      await flushPromises();
+      expect(externalPluginV2Registry.findByRoute(path)).toBeUndefined();
     }
     finally {
       app.unmount();
