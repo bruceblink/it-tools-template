@@ -45,7 +45,7 @@ test.beforeAll(async () => {
     toolId,
     toolTitle: 'Signed WASM echo',
     commandTitle: 'Run signed WASM echo',
-    toolInputs: [{ id: 'spin', kind: 'boolean', label: 'Spin forever', defaultValue: false }],
+    toolInputs: [{ id: 'spin', kind: 'boolean', label: 'Spin forever', description: 'Enable the timeout test.', defaultValue: false }],
     wasmBytes: signedWasmBytes,
   }));
 
@@ -130,6 +130,22 @@ test('installs and runs signed WASM tools through navigation, search, failure, a
   await expect(page.getByRole('heading', { name: 'Signed WASM echo' }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run', exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'External plugin tool', exact: true })).toHaveCount(0);
+
+  // 字段说明应位于控件下方，不能与控件挤在同一行。
+  const fieldControl = await page.getByRole('switch', { name: 'Spin forever' }).boundingBox();
+  const fieldDescription = await page.getByText('Enable the timeout test.').boundingBox();
+  expect(fieldControl).not.toBeNull();
+  expect(fieldDescription).not.toBeNull();
+  expect(fieldDescription!.y).toBeGreaterThanOrEqual(fieldControl!.y + fieldControl!.height);
+
+  await electronApp!.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(820, 700));
+  const narrowControl = await page.getByRole('switch', { name: 'Spin forever' }).boundingBox();
+  const narrowDescription = await page.getByText('Enable the timeout test.').boundingBox();
+  expect(narrowControl).not.toBeNull();
+  expect(narrowDescription).not.toBeNull();
+  expect(narrowDescription!.y).toBeGreaterThanOrEqual(narrowControl!.y + narrowControl!.height);
+  expect(await page.locator('.plugin-tool-workbench').evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+  await electronApp!.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.setSize(1280, 850));
 
   await page.getByRole('button', { name: 'Run' }).click();
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"engine": "wasm"');

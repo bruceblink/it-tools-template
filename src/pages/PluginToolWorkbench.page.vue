@@ -215,7 +215,8 @@ onUnmounted(() => activeController?.abort());
           :show-feedback="false"
           label-placement="top"
         >
-          <n-input
+          <div class="plugin-tool-workbench-field">
+            <n-input
             v-if="field.type === 'text' || field.type === 'textarea'"
             :value="getStringValue(field.id)"
             :type="field.type === 'textarea' ? 'textarea' : 'text'"
@@ -252,9 +253,10 @@ onUnmounted(() => activeController?.abort());
             :aria-label="field.label"
             @update:value="value => setInputValue(field.id, value)"
           />
-          <small v-if="field.description" class="plugin-tool-workbench-field-description">
-            {{ field.description }}
-          </small>
+            <small v-if="field.description" class="plugin-tool-workbench-field-description">
+              {{ field.description }}
+            </small>
+          </div>
         </n-form-item>
 
         <n-alert v-if="inputError" type="error" :show-icon="false" role="alert">
@@ -297,6 +299,11 @@ onUnmounted(() => activeController?.abort());
 .plugin-tool-workbench-form {
   display: grid;
   gap: 16px;
+}
+
+.plugin-tool-workbench-field {
+  width: 100%;
+  min-width: 0;
 }
 
 .plugin-tool-workbench-field-description {
