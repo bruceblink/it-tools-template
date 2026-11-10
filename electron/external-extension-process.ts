@@ -27,6 +27,8 @@ export type ExternalExtensionProcessFork = (
 export interface ExternalExtensionProcessTransportOptions {
   pluginId: string;
   workerPath: string;
+  /** 同步计算无法响应取消消息时，终止进程以结束计算。 */
+  terminateOnCancel?: boolean;
   serviceName?: string;
   environment?: NodeJS.ProcessEnv;
   fork?: ExternalExtensionProcessFork;
@@ -100,6 +102,10 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     }
     this.pending.delete(requestId);
     pending.reject(new ExternalExtensionRpcError('cancelled'));
+    if (this.options.terminateOnCancel) {
+      this.stopChild(new ExternalExtensionRpcError('transport-error'));
+      return;
+    }
     const child = this.child;
     if (!child) {
       return;
@@ -124,9 +130,14 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
       return;
     }
     this.disposed = true;
+    this.stopChild(new ExternalExtensionRpcError('disposed'));
+  }
+
+  /** 取消同步计算时同时拒绝其他请求，后续请求重新创建进程。 */
+  private stopChild(error: ExternalExtensionRpcError): void {
     const child = this.child;
     this.child = null;
-    this.rejectPending(new ExternalExtensionRpcError('disposed'));
+    this.rejectPending(error);
     if (!child) {
       return;
     }

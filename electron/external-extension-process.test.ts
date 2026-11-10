@@ -104,6 +104,31 @@ describe('ExternalExtensionProcessTransport', () => {
     transport.dispose();
   });
 
+  it('terminates a synchronous worker on cancellation and starts a fresh process later', async () => {
+    const first = new FakeProcess();
+    const second = new FakeProcess();
+    const fork = vi.fn().mockReturnValueOnce(first).mockReturnValueOnce(second);
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      terminateOnCancel: true,
+      fork,
+    });
+    const pending = transport.send(request('request-cancel'), new AbortController().signal);
+    const other = transport.send(request('request-other'), new AbortController().signal);
+
+    transport.cancel('request-cancel');
+    await expect(pending).rejects.toMatchObject({ code: 'cancelled' });
+    await expect(other).rejects.toMatchObject({ code: 'transport-error' });
+    expect(first.killed).toBe(true);
+
+    const restarted = transport.send(request('request-restart'), new AbortController().signal);
+    second.respond({ protocolVersion: 1, requestId: 'request-restart', pluginId, ok: true, result: true });
+    await expect(restarted).resolves.toMatchObject({ ok: true });
+    expect(fork).toHaveBeenCalledTimes(2);
+    transport.dispose();
+  });
+
   it('rejects in-flight requests after process exit and blocks later sends after dispose', async () => {
     const child = new FakeProcess();
     const transport = new ExternalExtensionProcessTransport({ pluginId, workerPath: '/safe/worker.cjs', fork: () => child });
