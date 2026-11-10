@@ -28,6 +28,8 @@ const labels = computed(() => locale.value === 'zh'
       aboveMaximum: '输入大于允许的最大值。',
       invalidOption: '请选择有效选项。',
       unexpectedResult: '插件返回了未声明的结果类型。',
+      commandTimedOut: '插件命令执行超时。',
+      commandCancelled: '插件命令已取消。',
       commandFailed: '插件命令执行失败。',
     }
   : {
@@ -40,6 +42,8 @@ const labels = computed(() => locale.value === 'zh'
       aboveMaximum: 'is above the maximum allowed.',
       invalidOption: 'must be a valid option.',
       unexpectedResult: 'The plugin returned an unexpected result type.',
+      commandTimedOut: 'The plugin command timed out.',
+      commandCancelled: 'The plugin command was cancelled.',
       commandFailed: 'The plugin command could not be completed.',
     });
 
@@ -166,9 +170,14 @@ async function runCommand(): Promise<void> {
     }
     result.value = nextResult;
   }
-  catch {
+  catch (error) {
     if (!controller.signal.aborted) {
-      commandError.value = labels.value.commandFailed;
+      const code = getPluginCommandFailureCode(error);
+      commandError.value = code === 'timeout'
+        ? labels.value.commandTimedOut
+        : code === 'cancelled'
+          ? labels.value.commandCancelled
+          : labels.value.commandFailed;
     }
   }
   finally {
@@ -176,6 +185,14 @@ async function runCommand(): Promise<void> {
       isRunning.value = false;
     }
   }
+}
+
+/** 只识别宿主传递的固定错误码，不显示异常消息或插件返回内容。 */
+function getPluginCommandFailureCode(error: unknown): 'timeout' | 'cancelled' | undefined {
+  if (typeof error !== 'object' || error === null || !('code' in error)) {
+    return undefined;
+  }
+  return error.code === 'timeout' || error.code === 'cancelled' ? error.code : undefined;
 }
 
 onUnmounted(() => activeController?.abort());

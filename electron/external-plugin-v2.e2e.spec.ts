@@ -137,7 +137,7 @@ test('installs and runs signed WASM tools through navigation, search, failure, a
 
   await page.getByRole('switch', { name: 'Spin forever' }).click();
   await page.getByRole('button', { name: 'Run' }).click();
-  await expect(page.getByRole('alert')).toContainText('The plugin command could not be completed.');
+  await expect(page.getByRole('alert')).toContainText('The plugin command timed out.');
 
   await page.getByRole('switch', { name: 'Spin forever' }).click();
   await page.getByRole('button', { name: 'Run' }).click();

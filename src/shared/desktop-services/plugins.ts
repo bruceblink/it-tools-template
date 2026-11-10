@@ -43,6 +43,8 @@ export const desktopPluginErrorCodes = Object.freeze([
   'source-build-cancelled',
   'source-build-busy',
   'source-build-failed',
+  'cancelled',
+  'timeout',
   'operation-failed',
 ] as const);
 

@@ -14,20 +14,41 @@ import type { DesktopPluginOperationResult } from '../src/shared/desktop-service
 const control = vi.hoisted(() => {
   type StopWaiter = { resolve: () => void; reject: (error: unknown) => void };
   type RpcRequest = { protocolVersion: number; requestId: string; pluginId: string; method: string };
+  type RpcFailure = 'timeout' | 'cancelled' | 'extension-failed';
   const handlers = new Map<string, unknown>();
   const pendingStops = new Set<StopWaiter>();
+  const heldExecutions = new Set<{ request: RpcRequest; resolve: (value: unknown) => void }>();
   let onStopped: (() => void) | undefined;
-  const send = vi.fn(async (request: RpcRequest) => ({
-    protocolVersion: request.protocolVersion,
-    requestId: request.requestId,
-    pluginId: request.pluginId,
-    ok: true,
-    result: request.method === 'activate'
-      ? { ready: true, runtime: 'wasm' }
-      : request.method === 'executeCommand'
-        ? { kind: 'text', value: 'completed' }
-        : true,
-  }));
+  let executeError: RpcFailure | undefined;
+  let holdExecution = false;
+  const responseFor = (request: RpcRequest) => {
+    if (request.method === 'executeCommand' && executeError) {
+      return {
+        protocolVersion: request.protocolVersion,
+        requestId: request.requestId,
+        pluginId: request.pluginId,
+        ok: false as const,
+        error: executeError,
+      };
+    }
+    return {
+      protocolVersion: request.protocolVersion,
+      requestId: request.requestId,
+      pluginId: request.pluginId,
+      ok: true as const,
+      result: request.method === 'activate'
+        ? { ready: true, runtime: 'wasm' }
+        : request.method === 'executeCommand'
+          ? { kind: 'text', value: 'completed' }
+          : true,
+    };
+  };
+  const send = vi.fn((request: RpcRequest) => {
+    if (request.method === 'executeCommand' && holdExecution) {
+      return new Promise(resolve => heldExecutions.add({ request, resolve }));
+    }
+    return Promise.resolve(responseFor(request));
+  });
   const dispose = vi.fn(() => new Promise<void>((resolve, reject) => {
     pendingStops.add({ resolve, reject });
   }));
@@ -35,8 +56,15 @@ const control = vi.hoisted(() => {
     handlers,
     send,
     dispose,
+    setExecuteError: (code: RpcFailure | undefined) => { executeError = code; },
+    holdExecuteCommand: () => { holdExecution = true; },
     setStoppedCallback: (callback: (() => void) | undefined) => { onStopped = callback; },
     finishStop: () => {
+      for (const pending of [...heldExecutions]) {
+        heldExecutions.delete(pending);
+        pending.resolve(responseFor(pending.request));
+      }
+      holdExecution = false;
       const callback = onStopped;
       onStopped = undefined;
       callback?.();
@@ -55,6 +83,9 @@ const control = vi.hoisted(() => {
       handlers.clear();
       onStopped = undefined;
       pendingStops.clear();
+      heldExecutions.clear();
+      executeError = undefined;
+      holdExecution = false;
       send.mockClear();
       dispose.mockClear();
     },
@@ -96,6 +127,7 @@ afterEach(async () => {
   lifecycle = undefined;
   await Promise.all(temporaryDirectories.splice(0).map(path => rm(path, { recursive: true, force: true })));
   control.reset();
+  vi.restoreAllMocks();
 });
 
 describe('v2 plugin uninstall IPC', () => {
@@ -124,13 +156,45 @@ describe('v2 plugin uninstall IPC', () => {
     const uninstall = invoke('desktop:plugins:v2:uninstall', { pluginId, version });
 
     control.rejectStop(new ExternalExtensionRpcError('timeout'));
-    await expect(uninstall).resolves.toMatchObject({ ok: false, error: 'operation-failed' });
-    await expect(command).resolves.toMatchObject({ ok: false, error: 'operation-failed' });
+    await expect(uninstall).resolves.toMatchObject({ ok: false, error: 'timeout' });
+    await expect(command).resolves.toMatchObject({ ok: false, error: 'timeout' });
     expect(await exists(state.packageRoot)).toBe(true);
 
     const reusedRequest = await invoke('desktop:plugins:v2:execute', commandRequest) as DesktopPluginOperationResult<unknown>;
     expect(reusedRequest).toEqual({ ok: false, error: 'active-limit' });
     control.finishStop();
+  });
+
+  // RPC 超时和取消保留稳定错误码；其他扩展错误只返回通用失败码。
+  it.each([
+    { rpcError: 'timeout', ipcError: 'timeout' },
+    { rpcError: 'cancelled', ipcError: 'cancelled' },
+    { rpcError: 'extension-failed', ipcError: 'operation-failed' },
+  ] as const)('maps RPC $rpcError to the safe IPC code $ipcError', async ({ rpcError, ipcError }) => {
+    await registerFixture();
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    control.setExecuteError(rpcError);
+    const command = invoke('desktop:plugins:v2:execute', createCommandRequest(`request-${rpcError}`));
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+
+    control.finishStop();
+    await expect(command).resolves.toMatchObject({ ok: false, error: ipcError });
+    expect(warning).toHaveBeenCalledWith('V2 plugin command failed.', expect.objectContaining({ code: rpcError }));
+  });
+
+  it('returns cancelled when the v2 cancel IPC aborts an active command', async () => {
+    await registerFixture();
+    control.holdExecuteCommand();
+    const requestId = 'request-ipc-cancel';
+    const command = invoke('desktop:plugins:v2:execute', createCommandRequest(requestId));
+    await vi.waitFor(() => expect(
+      control.send.mock.calls.some(([request]) => request.method === 'executeCommand'),
+    ).toBe(true));
+
+    await expect(invoke('desktop:plugins:v2:cancel', { requestId })).resolves.toEqual({ ok: true, value: true });
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+    control.finishStop();
+    await expect(command).resolves.toMatchObject({ ok: false, error: 'cancelled' });
   });
 });
 

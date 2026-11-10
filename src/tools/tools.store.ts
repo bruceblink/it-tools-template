@@ -11,6 +11,7 @@ import { ExternalPluginV2Registry, externalPluginV2Registry } from './external-p
 import { projectExternalPluginV2Manifest } from './external-plugin-v2-tools';
 import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
 import type { PluginToolCommandExecutor, PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
+import type { DesktopPluginErrorCode } from '@/shared/desktop-services/plugins';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
 const externalPluginV2ToolComponent = () => import('@/pages/ExternalPluginV2Tool.page.vue');
@@ -24,7 +25,7 @@ function projectDesktopExternalPluginTools(snapshots: readonly DesktopPluginSnap
 export function createExternalPluginV2CommandExecutor(): PluginToolCommandExecutor {
   return async (request, signal): Promise<PluginToolCommandResult> => {
     if (signal.aborted) {
-      throw new Error('The plugin command was cancelled.');
+      throw createPluginToolCommandError('cancelled');
     }
     const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
     if (!bridge?.executePluginV2Command) {
@@ -53,7 +54,7 @@ export function createExternalPluginV2CommandExecutor(): PluginToolCommandExecut
       if (signal.aborted) {
         cancel();
         void settledResultPromise;
-        throw new Error('The plugin command was cancelled.');
+        throw createPluginToolCommandError('cancelled');
       }
       const settled = await settledResultPromise;
       if (!settled.ok) {
@@ -61,10 +62,10 @@ export function createExternalPluginV2CommandExecutor(): PluginToolCommandExecut
       }
       const result = settled.result;
       if (signal.aborted) {
-        throw new Error('The plugin command was cancelled.');
+        throw createPluginToolCommandError('cancelled');
       }
       if (!result.ok) {
-        throw new Error(result.error);
+        throw createPluginToolCommandError(result.error);
       }
       if (!isPluginToolCommandResult(result.value)) {
         throw new Error('The v2 plugin returned an invalid command result.');
@@ -75,6 +76,16 @@ export function createExternalPluginV2CommandExecutor(): PluginToolCommandExecut
       signal.removeEventListener('abort', cancel);
     }
   };
+}
+
+/** 只向工作台传递稳定错误码；不把 IPC 错误文本或插件输入放进异常消息。 */
+function createPluginToolCommandError(code: DesktopPluginErrorCode): Error & {
+  readonly code: 'timeout' | 'cancelled' | 'operation-failed';
+} {
+  const safeCode: 'timeout' | 'cancelled' | 'operation-failed' = code === 'timeout' || code === 'cancelled'
+    ? code
+    : 'operation-failed';
+  return Object.assign(new Error('The plugin command could not be completed.'), { code: safeCode });
 }
 
 function isPluginToolCommandResult(value: unknown): value is PluginToolCommandResult {

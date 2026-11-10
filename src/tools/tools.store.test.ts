@@ -43,11 +43,37 @@ describe('external plugin v2 command bridge', () => {
       commandId: 'org.example.demo/echo',
       input: {},
     }, controller.signal);
-    await expect(execution).rejects.toThrow('cancelled');
+    await expect(execution).rejects.toMatchObject({ code: 'cancelled' });
     expect(cancel).toHaveBeenCalledWith(executionInput?.requestId);
 
     rejectExecution(new Error('late IPC failure'));
     await Promise.resolve();
+  });
+
+  // 工作台只接收 IPC 的固定错误码，其他失败统一归为普通命令错误。
+  it('preserves timeout and cancellation codes without exposing IPC details', async () => {
+    const executor = createExternalPluginV2CommandExecutor();
+    const request = {
+      pluginId: 'org.example.demo',
+      version: '1.0.0',
+      toolId: 'org.example.demo/echo',
+      commandId: 'org.example.demo/echo',
+      input: {},
+    };
+    for (const code of ['timeout', 'cancelled', 'operation-failed'] as const) {
+      Object.defineProperty(window, 'itToolsDesktop', {
+        configurable: true,
+        writable: true,
+        value: {
+          executePluginV2Command: vi.fn(async () => ({ ok: false as const, error: code })),
+        },
+      });
+      const expectedCode = code === 'timeout' || code === 'cancelled' ? code : 'operation-failed';
+      await expect(executor(request, new AbortController().signal)).rejects.toMatchObject({
+        code: expectedCode,
+        message: 'The plugin command could not be completed.',
+      });
+    }
   });
 
   it('registers the signed WASM E2E manifest shape after the desktop list refresh', async () => {

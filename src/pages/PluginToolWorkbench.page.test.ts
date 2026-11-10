@@ -57,4 +57,27 @@ describe('PluginToolWorkbench', () => {
     expect(execute).not.toHaveBeenCalled();
     expect(wrapper.get('[role="alert"]').text()).toContain('Name is required.');
   });
+
+  // 超时和取消显示固定提示；其他异常仍显示通用提示，不暴露异常详情。
+  it.each([
+    { locale: 'en', code: 'timeout', message: 'The plugin command timed out.' },
+    { locale: 'zh', code: 'timeout', message: '插件命令执行超时。' },
+    { locale: 'en', code: 'cancelled', message: 'The plugin command was cancelled.' },
+    { locale: 'en', code: 'operation-failed', message: 'The plugin command could not be completed.' },
+  ] as const)('shows a safe $code message in $locale', async ({ locale, code, message }) => {
+    const execute = vi.fn(async () => {
+      throw Object.assign(new Error('private plugin details'), { code });
+    });
+    const wrapper = mount(PluginToolWorkbench, {
+      props: { tool, execute },
+      global: { plugins: [createI18n({ legacy: false, locale, messages: { en: {}, zh: {} } })] },
+    });
+
+    await wrapper.get('input').setValue('Ada');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe(message);
+    expect(wrapper.text()).not.toContain('private plugin details');
+  });
 });

@@ -558,6 +558,10 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
   if (error instanceof PluginIpcInputError) {
     return error.code;
   }
+  if (error instanceof ExternalExtensionRpcError) {
+    // 只公开 RPC 的超时与取消分类；其他运行时细节统一折叠为普通失败。
+    return error.code === 'timeout' || error.code === 'cancelled' ? error.code : 'operation-failed';
+  }
   if (error instanceof ExternalPluginV2CapabilityPolicyError) {
     return error.code === 'unsupported-capability' ? 'unsupported-capability' : 'permission-denied';
   }
@@ -777,7 +781,7 @@ function parseExternalPluginV2CancelRequest(value: unknown): string {
 
 function throwIfV2CommandAborted(signal: AbortSignal): void {
   if (signal.aborted) {
-    throw new PluginIpcInputError('operation-failed', 'The v2 plugin command was cancelled.');
+    throw new ExternalExtensionRpcError('cancelled');
   }
 }
 
