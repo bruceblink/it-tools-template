@@ -6,6 +6,7 @@ import { tools } from './tools';
 import { config } from './config';
 import { layouts } from '@/layouts';
 import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
+import { applyExternalPluginV2RouteMeta, legacyExternalPluginToolMeta } from '@/pages/external-plugin-v2-route-meta';
 
 const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, contentWidth, extensionOwned }) => ({
   path,
@@ -26,14 +27,6 @@ const toolsRoutes = tools.map(({ path, name, component, translationKey, descript
 const toolsRedirectRoutes = tools.flatMap(({ path, aliases, redirectFrom }) =>
   (aliases ?? redirectFrom ?? []).map(alias => ({ path: alias, redirect: path })),
 );
-
-const legacyExternalPluginToolMeta = {
-  name: 'External plugin tool',
-  description: 'Run an installed plugin tool inside the IT Tools workspace.',
-  keywords: ['plugin', 'external', 'desktop'],
-  translationKey: 'external-plugin-tool',
-  contentWidth: 'wide' as const,
-};
 
 const router = createRouter({
   history: createWebHistory(config.app.baseUrl),
@@ -91,11 +84,7 @@ export async function registerDemoRoutes() {
 router.beforeEach(async (to) => {
   const v2Tool = externalPluginV2Registry.findByRoute(to.path);
   if (v2Tool) {
-    to.meta.name = v2Tool.tool.name;
-    to.meta.description = v2Tool.tool.description;
-    to.meta.keywords = v2Tool.tool.keywords;
-    to.meta.translationKey = v2Tool.tool.translationKey;
-    to.meta.contentWidth = undefined;
+    applyExternalPluginV2RouteMeta(to.meta, v2Tool.tool);
     return true;
   }
   if (to.name === 'external-plugin-tool') {

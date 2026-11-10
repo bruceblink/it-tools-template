@@ -6,28 +6,34 @@ import type { ReactiveHead } from '@unhead/vue';
 import BaseLayout from './base.layout.vue';
 import FavoriteButton from '@/components/FavoriteButton.vue';
 import { clearLegacyToolContent, hasMemoryOnlyContent } from '@/tools/input-privacy';
+import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
 
 const route = useRoute();
+const { t } = useI18n();
+// Vue Router 的路由 meta 不深度响应；v2 工具元数据从响应式注册表读取。
+const v2Tool = computed(() => externalPluginV2Registry.tools.value.find(({ path }) => path === route.path));
+const toolName = computed(() => String(v2Tool.value?.name ?? route.meta.name));
+const toolDescriptionValue = computed(() => String(v2Tool.value?.description ?? route.meta.description));
+const translationKey = computed<string>(() => String(v2Tool.value?.translationKey ?? route.meta.translationKey ?? route.path.trim().replace('/', '')));
+const toolKeywords = computed<readonly string[]>(() => v2Tool.value?.keywords ?? (route.meta.keywords as string[] | undefined) ?? []);
+const contentWidth = computed(() => v2Tool.value ? undefined : route.meta.contentWidth);
+const toolTitle = computed<string>(() => t(`tools.${translationKey.value}.title`, toolName.value));
+const toolDescription = computed<string>(() => t(`tools.${translationKey.value}.description`, toolDescriptionValue.value));
 
 const head = computed<ReactiveHead>(() => ({
-  title: `${route.meta.name} - IT Tools`,
+  title: `${toolTitle.value} - IT Tools`,
   meta: [
     {
       name: 'description',
-      content: route.meta?.description as string,
+      content: toolDescriptionValue.value,
     },
     {
       name: 'keywords',
-      content: ((route.meta.keywords ?? []) as string[]).join(','),
+      content: toolKeywords.value.join(','),
     },
   ],
 }));
 useHead(head);
-const { t } = useI18n();
-
-const i18nKey = computed<string>(() => String(route.meta.translationKey ?? route.path.trim().replace('/', '')));
-const toolTitle = computed<string>(() => t(`tools.${i18nKey.value}.title`, String(route.meta.name)));
-const toolDescription = computed<string>(() => t(`tools.${i18nKey.value}.description`, String(route.meta.description)));
 const hasPrivateContent = computed(() => hasMemoryOnlyContent(route.path));
 const contentCleanupFailed = ref(false);
 
@@ -40,7 +46,7 @@ watch(() => route.path, (toolPath) => {
 
 <template>
   <BaseLayout>
-    <div class="tool-layout" :class="{ 'tool-layout--wide': route.meta.contentWidth === 'wide' }">
+    <div class="tool-layout" :class="{ 'tool-layout--wide': contentWidth === 'wide' }">
       <div class="tool-header">
         <div flex flex-nowrap items-center justify-between>
           <n-h1>
@@ -48,7 +54,7 @@ watch(() => route.path, (toolPath) => {
           </n-h1>
 
           <div>
-            <FavoriteButton :tool="{ name: String(route.meta.name), path: route.path }" />
+            <FavoriteButton :tool="{ name: toolName, path: route.path }" />
           </div>
         </div>
 
@@ -73,7 +79,7 @@ watch(() => route.path, (toolPath) => {
       </div>
     </div>
 
-    <div class="tool-content" :class="{ 'tool-content--wide': route.meta.contentWidth === 'wide' }">
+    <div class="tool-content" :class="{ 'tool-content--wide': contentWidth === 'wide' }">
       <slot />
     </div>
   </BaseLayout>
