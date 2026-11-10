@@ -16,6 +16,7 @@ const notice = ref<string>();
 const plugin = ref<DesktopPluginSnapshot>();
 const contribution = ref<DesktopPluginToolContribution>();
 const embeddedError = ref(false);
+const operation = ref<'run' | 'stop'>();
 
 type ExternalPluginBridge = {
   activatePlugin: NonNullable<NonNullable<Window['itToolsDesktop']>['activatePlugin']>;
@@ -33,7 +34,9 @@ const messages = {
     package: 'Plugin package',
     info: 'The signed plugin tool runs inside the IT Tools workspace. Its renderer stays isolated and uses only the capabilities you approve.',
     run: 'Run plugin',
+    runInProgress: 'Starting plugin tool…',
     stop: 'Stop plugin',
+    stopInProgress: 'Stopping plugin tool…',
     runStarted: 'Plugin tool started.',
     stopped: 'Plugin tool stopped.',
     running: 'Running this tool',
@@ -56,7 +59,9 @@ const messages = {
     package: '插件包',
     info: '已签名的插件工具直接运行在 IT Tools 工作区内。插件渲染器保持隔离，只能使用你批准的能力。',
     run: '运行插件',
+    runInProgress: '正在启动插件工具…',
     stop: '停止插件',
+    stopInProgress: '正在停止插件工具…',
     runStarted: '插件工具已启动。',
     stopped: '插件工具已停止。',
     running: '当前工具正在运行',
@@ -153,6 +158,7 @@ watch(
   () => {
     operationError.value = undefined;
     notice.value = undefined;
+    operation.value = undefined;
     void loadContribution();
   },
 );
@@ -164,6 +170,7 @@ async function runPlugin(): Promise<void> {
     return;
   }
 
+  operation.value = 'run';
   isBusy.value = true;
   operationError.value = undefined;
   notice.value = undefined;
@@ -191,6 +198,7 @@ async function runPlugin(): Promise<void> {
     operationError.value = text('operationFailed');
   }
   finally {
+    operation.value = undefined;
     isBusy.value = false;
   }
 }
@@ -202,6 +210,7 @@ async function stopPlugin(): Promise<void> {
     return;
   }
 
+  operation.value = 'stop';
   isBusy.value = true;
   operationError.value = undefined;
   notice.value = undefined;
@@ -220,6 +229,7 @@ async function stopPlugin(): Promise<void> {
     operationError.value = text('operationFailed');
   }
   finally {
+    operation.value = undefined;
     isBusy.value = false;
   }
 }
@@ -262,6 +272,9 @@ onUnmounted(() => {
       <n-alert v-if="runtimeError" type="warning" role="status" :show-icon="false">
         {{ runtimeError }}
       </n-alert>
+      <n-alert v-if="operation" type="info" role="status" aria-live="polite" :show-icon="false">
+        {{ operation === 'run' ? text('runInProgress') : text('stopInProgress') }}
+      </n-alert>
       <n-empty
         v-if="isDesktop && !isLoading && !loadError && (!contribution || !plugin)"
         :description="text('notFound')"
@@ -296,7 +309,7 @@ onUnmounted(() => {
             :loading="isBusy"
             @click="stopPlugin"
           >
-            {{ text('stop') }}
+            {{ operation === 'stop' ? text('stopInProgress') : text('stop') }}
           </n-button>
           <n-button
             v-else-if="plugin.status !== 'invalid'"
@@ -304,7 +317,7 @@ onUnmounted(() => {
             :loading="isBusy"
             @click="runPlugin"
           >
-            {{ text('run') }}
+            {{ operation === 'run' ? text('runInProgress') : text('run') }}
           </n-button>
           <RouterLink to="/settings">
             <n-button>{{ text('manage') }}</n-button>
