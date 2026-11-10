@@ -141,6 +141,10 @@ describe('ExternalExtensionProcessTransport', () => {
     await expect(pending).rejects.toMatchObject({ code: 'cancelled' });
     await expect(other).rejects.toMatchObject({ code: 'transport-error' });
     expect(first.killed).toBe(true);
+    await expect(transport.send(request('request-before-exit'), new AbortController().signal))
+      .rejects.toMatchObject({ code: 'transport-error' });
+    expect(fork).toHaveBeenCalledTimes(1);
+    first.exit(0);
 
     const restarted = transport.send(request('request-restart'), new AbortController().signal);
     second.respond({ protocolVersion: 1, requestId: 'request-restart', pluginId, ok: true, result: true });

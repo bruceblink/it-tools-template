@@ -50,6 +50,7 @@ type PendingRequest = {
 export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTransport {
   private child: ExternalExtensionProcessLike | null = null;
   private disposed = false;
+  private stopping = false;
   private readonly pending = new Map<string, PendingRequest>();
   private readonly fork: ExternalExtensionProcessFork;
   private readonly onMessage = (message: unknown) => this.handleMessage(message);
@@ -142,26 +143,27 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     this.stopChild(new ExternalExtensionRpcError('disposed'));
   }
 
-  /** 取消同步计算时同时拒绝其他请求，后续请求重新创建进程。 */
+  /** 取消同步计算时拒绝活动请求，并等待旧进程退出后才允许重启。 */
   private stopChild(error: ExternalExtensionRpcError): void {
     const child = this.child;
-    this.child = null;
     this.rejectPending(error);
-    if (!child) {
+    if (!child || this.stopping) {
       return;
     }
-    child.removeListener('message', this.onMessage);
-    child.removeListener('exit', this.onExit);
+    this.stopping = true;
     try {
       child.kill();
     }
     catch {
-      // 进程退出属于尽力清理，活动请求已经被拒绝。
+      // 保留退出监听并阻止新进程启动，避免旧进程仍在运行时重复启动。
     }
   }
 
   private getOrStartProcess(): ExternalExtensionProcessLike {
     if (this.child) {
+      if (this.stopping) {
+        throw new ExternalExtensionRpcError('transport-error');
+      }
       return this.child;
     }
     const child = this.fork(
@@ -193,7 +195,11 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
   }
 
   private handleExit(): void {
+    const child = this.child;
     this.child = null;
+    this.stopping = false;
+    child?.removeListener('message', this.onMessage);
+    child?.removeListener('exit', this.onExit);
     if (!this.disposed) {
       this.rejectPending(new ExternalExtensionRpcError('transport-error'));
     }
