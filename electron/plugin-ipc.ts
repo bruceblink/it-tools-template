@@ -40,7 +40,10 @@ import type {
   DesktopPluginSourceBuildProgress,
 } from '../src/shared/desktop-services/plugins';
 import type { PluginToolCommandResult, PluginToolInputValueMap } from '../src/shared/plugin-tool-workbench';
-import type { ExternalExtensionRpcJsonValue } from '../src/shared/desktop-services/external-extension-rpc';
+import type {
+  ExternalExtensionCapabilityContext,
+  ExternalExtensionRpcJsonValue,
+} from '../src/shared/desktop-services/external-extension-rpc';
 
 export interface PluginIpcDependencies {
   userDataRoot: string;
@@ -211,8 +214,24 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       const tool = command.toolId === undefined
         ? undefined
         : manifest.contributions.tools.find(candidate => candidate.id === command.toolId);
-      const policy = createExternalPluginV2CapabilityPolicy(manifest, []);
-      const requiredCapabilities = tool ? policy.authorizeTool(tool.id) : [];
+      const requestedPolicy = createExternalPluginV2CapabilityPolicy(manifest, []);
+      const requestedCapabilities = tool ? requestedPolicy.getToolCapabilities(tool.id) : [];
+      throwIfV2CommandAborted(activeRequest.controller.signal);
+      if (requestedCapabilities.length > 0) {
+        if (requestedCapabilities.length !== 1 || requestedCapabilities[0] !== 'runtime.info') {
+          throw new ExternalPluginV2CapabilityPolicyError('unsupported-capability');
+        }
+        const approved = await confirmExternalPluginV2RuntimeInfo(dependencies, manifest.id, manifest.name, tool!.title);
+        if (!approved) {
+          throw new ExternalPluginV2CapabilityPolicyError('permission-denied');
+        }
+      }
+      throwIfV2CommandAborted(activeRequest.controller.signal);
+      const policy = createExternalPluginV2CapabilityPolicy(manifest, requestedCapabilities);
+      const grantedCapabilities = tool ? policy.authorizeTool(tool.id) : [];
+      const capabilityContext: ExternalExtensionCapabilityContext | undefined = grantedCapabilities.includes('runtime.info')
+        ? { runtimeInfo: { platform: process.platform, appVersion: app.getVersion() } }
+        : undefined;
       const key = `${request.pluginId}@${request.version}`;
       host = new ExternalExtensionRpcHost({
         pluginId: request.pluginId,
@@ -243,8 +262,9 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       const result = await host.executeCommand(
         request.commandId,
         request.input as ExternalExtensionRpcJsonValue,
-        requiredCapabilities,
+        grantedCapabilities,
         activeRequest.controller.signal,
+        capabilityContext,
       );
       return parsePluginToolCommandResult(result);
     }
@@ -487,6 +507,25 @@ async function confirmPluginCapabilities(
     return requestedGrants;
   }
   return confirmation.response === 1 ? [] : null;
+}
+
+/** 每次执行只向用户申请该工具签名声明的 runtime.info，不保存授权结果。 */
+async function confirmExternalPluginV2RuntimeInfo(
+  dependencies: PluginIpcDependencies,
+  pluginId: string,
+  pluginName: string,
+  toolTitle: string,
+): Promise<boolean> {
+  const confirmation = await dialog.showMessageBox(getPluginManagementWindow(dependencies), {
+    type: 'warning',
+    title: 'Plugin capability request / 插件能力请求',
+    message: `${pluginName} (${pluginId}) requests runtime.info for ${toolTitle}.`,
+    detail: 'This command can read the platform and app version. Approval applies only to this command. / 此命令可以读取运行平台和应用版本。本次授权仅对当前命令有效。',
+    buttons: ['Allow once / 本次允许', 'Cancel / 取消'],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  return confirmation.response === 0;
 }
 
 async function executePluginCapability(

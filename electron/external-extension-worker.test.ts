@@ -80,6 +80,43 @@ describe('ExternalExtensionWorkerRuntime', () => {
     }))).resolves.toMatchObject({ ok: false, error: 'permission-denied' });
   });
 
+  // worker 只在当前命令进程内接受 runtime.info 授权，并要求执行请求带匹配上下文。
+  it('accepts only a one-command runtime.info grant and its context', async () => {
+    const { config, runtime } = await createRuntime();
+    await expect(runtime.handle(request('activate', config, {
+      version: config.version,
+      grantedCapabilities: ['runtime.info'],
+    }))).resolves.toMatchObject({ ok: true, result: { ready: true, runtime: 'wasm' } });
+
+    await expect(runtime.handle({
+      protocolVersion: 1,
+      requestId: 'runtime-info-1',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/echo`,
+        input: { text: 'hello' },
+        requiredCapabilities: ['runtime.info'],
+        capabilityContext: { runtimeInfo: { platform: 'darwin', appVersion: '1.0.0' } },
+      },
+    } satisfies ExternalExtensionRpcRequest)).resolves.toMatchObject({
+      ok: true,
+      result: { kind: 'text', value: 'ok' },
+    });
+
+    await expect(runtime.handle({
+      protocolVersion: 1,
+      requestId: 'runtime-info-2',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/echo`,
+        input: {},
+        requiredCapabilities: ['runtime.info'],
+      },
+    } satisfies ExternalExtensionRpcRequest)).resolves.toBeUndefined();
+  });
+
   it('rejects unsupported host APIs and clears loaded bytes on disposal', async () => {
     const { config, runtime } = await createRuntime();
     await runtime.handle(request('activate', config));

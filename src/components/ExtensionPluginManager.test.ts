@@ -110,7 +110,7 @@ describe('desktop plugin wording', () => {
     try {
       await flushPromises();
       expect(wrapper.text()).toContain('Host-rendered plugin packages (v2)');
-      expect(wrapper.text()).toContain('WASM tools that do not use host capabilities can run.');
+      expect(wrapper.text()).toContain('WASM tools can request runtime information with your approval for each run.');
       expect(wrapper.text()).toContain('Demo plugin');
       expect(wrapper.text()).toContain('Return the submitted value.');
 

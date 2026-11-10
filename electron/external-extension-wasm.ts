@@ -1,4 +1,7 @@
-import type { ExternalExtensionRpcJsonValue } from '../src/shared/desktop-services/external-extension-rpc';
+import type {
+  ExternalExtensionCapabilityContext,
+  ExternalExtensionRpcJsonValue,
+} from '../src/shared/desktop-services/external-extension-rpc';
 
 export const externalExtensionWasmLimits = Object.freeze({
   maximumModuleBytes: 16 * 1024 * 1024,
@@ -48,8 +51,9 @@ export function executeExternalExtensionWasmCommand(
   moduleBytes: Uint8Array,
   commandId: string,
   input: ExternalExtensionRpcJsonValue,
+  capabilityContext?: ExternalExtensionCapabilityContext,
 ): ExternalExtensionRpcJsonValue {
-  const requestBytes = encodeRequest(commandId, input);
+  const requestBytes = encodeRequest(commandId, input, capabilityContext);
   if (moduleBytes.byteLength === 0 || moduleBytes.byteLength > externalExtensionWasmLimits.maximumModuleBytes) {
     throw new ExternalExtensionWasmError('resource-limit', 'The WASM module exceeds its byte limit.');
   }
@@ -76,11 +80,20 @@ export function executeExternalExtensionWasmCommand(
   }
 }
 
-function encodeRequest(commandId: string, input: ExternalExtensionRpcJsonValue): Uint8Array {
+function encodeRequest(
+  commandId: string,
+  input: ExternalExtensionRpcJsonValue,
+  capabilityContext?: ExternalExtensionCapabilityContext,
+): Uint8Array {
   if (!commandId || !isJsonValue(input)) {
     throw new ExternalExtensionWasmError('invalid-input');
   }
-  const encoded = new TextEncoder().encode(JSON.stringify({ commandId, input }));
+  const encodedRequest = {
+    commandId,
+    input,
+    ...(capabilityContext === undefined ? {} : { capabilityContext }),
+  };
+  const encoded = new TextEncoder().encode(JSON.stringify(encodedRequest));
   if (encoded.byteLength > externalExtensionWasmLimits.maximumRequestBytes) {
     throw new ExternalExtensionWasmError('resource-limit', 'The WASM command input exceeds its byte limit.');
   }

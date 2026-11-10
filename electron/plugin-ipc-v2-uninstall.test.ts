@@ -3,17 +3,25 @@ import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { BrowserWindow } from 'electron';
 import { ExternalExtensionRpcError } from './external-extension-rpc';
 import {
   getExternalPluginV2PackageSigningPayload,
   type ExternalPluginV2UnsignedPackageManifest,
 } from './plugin-package-v2';
 import type { DesktopPluginOperationResult } from '../src/shared/desktop-services/plugins';
+import type { PluginCapabilityId } from '../src/shared/plugin-capabilities';
 
 // 由测试控制进程退出通知，验证 IPC 不会提前删除已安装包。
 const control = vi.hoisted(() => {
   type StopWaiter = { resolve: () => void; reject: (error: unknown) => void };
-  type RpcRequest = { protocolVersion: number; requestId: string; pluginId: string; method: string };
+  type RpcRequest = {
+    protocolVersion: number;
+    requestId: string;
+    pluginId: string;
+    method: string;
+    payload?: Record<string, unknown>;
+  };
   type RpcFailure = 'timeout' | 'cancelled' | 'extension-failed';
   const handlers = new Map<string, unknown>();
   const pendingStops = new Set<StopWaiter>();
@@ -21,6 +29,7 @@ const control = vi.hoisted(() => {
   let onStopped: (() => void) | undefined;
   let executeError: RpcFailure | undefined;
   let holdExecution = false;
+  const messageBox = vi.fn(async () => ({ response: 0 }));
   const responseFor = (request: RpcRequest) => {
     if (request.method === 'executeCommand' && executeError) {
       return {
@@ -56,6 +65,7 @@ const control = vi.hoisted(() => {
     handlers,
     send,
     dispose,
+    messageBox,
     setExecuteError: (code: RpcFailure | undefined) => { executeError = code; },
     holdExecuteCommand: () => { holdExecution = true; },
     setStoppedCallback: (callback: (() => void) | undefined) => { onStopped = callback; },
@@ -88,6 +98,8 @@ const control = vi.hoisted(() => {
       holdExecution = false;
       send.mockClear();
       dispose.mockClear();
+      messageBox.mockReset();
+      messageBox.mockResolvedValue({ response: 0 });
     },
   };
 });
@@ -96,7 +108,7 @@ vi.mock('electron', () => ({
   app: { getAppPath: () => '/test/app', getVersion: () => '1.0.0' },
   BrowserWindow: class BrowserWindow {},
   clipboard: { writeText: vi.fn() },
-  dialog: { showMessageBox: vi.fn(), showOpenDialog: vi.fn() },
+  dialog: { showMessageBox: control.messageBox, showOpenDialog: vi.fn() },
   ipcMain: {
     handle: (channel: string, handler: unknown) => control.handlers.set(channel, handler),
     removeHandler: (channel: string) => control.handlers.delete(channel),
@@ -196,15 +208,146 @@ describe('v2 plugin uninstall IPC', () => {
     control.finishStop();
     await expect(command).resolves.toMatchObject({ ok: false, error: 'cancelled' });
   });
+
+  // 只有签名清单和对应工具都声明 runtime.info 时，主进程才请求本次授权并发送受限上下文。
+  it('asks for runtime.info and sends only the approved platform and app version', async () => {
+    await registerFixture({
+      requestedCapabilities: ['runtime.info'],
+      toolCapabilities: ['runtime.info'],
+      withMainWindow: true,
+    });
+
+    const command = invoke('desktop:plugins:v2:execute', createCommandRequest('request-runtime-info'));
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+
+    expect(control.messageBox).toHaveBeenCalledOnce();
+    expect(control.messageBox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      detail: expect.stringContaining('Approval applies only to this command.'),
+      buttons: ['Allow once / 本次允许', 'Cancel / 取消'],
+      cancelId: 1,
+    }));
+    const activateRequest = control.send.mock.calls.find(([request]) => request.method === 'activate')?.[0];
+    const executeRequest = control.send.mock.calls.find(([request]) => request.method === 'executeCommand')?.[0];
+    expect(activateRequest?.payload).toEqual({ version, grantedCapabilities: ['runtime.info'] });
+    expect(executeRequest?.payload).toEqual({
+      commandId,
+      input: {},
+      requiredCapabilities: ['runtime.info'],
+      capabilityContext: { runtimeInfo: { platform: process.platform, appVersion: '1.0.0' } },
+    });
+
+    control.finishStop();
+    await expect(command).resolves.toMatchObject({ ok: true, value: { kind: 'text', value: 'completed' } });
+  });
+
+  // Electron 对取消或关闭返回 cancelId；主进程不得启动 worker，也不得给出上下文。
+  it('denies runtime.info when the native confirmation is cancelled or closed', async () => {
+    await registerFixture({
+      requestedCapabilities: ['runtime.info'],
+      toolCapabilities: ['runtime.info'],
+      withMainWindow: true,
+    });
+    control.messageBox.mockResolvedValue({ response: 1 });
+
+    await expect(invoke('desktop:plugins:v2:execute', createCommandRequest('request-runtime-info-denied')))
+      .resolves.toMatchObject({ ok: false, error: 'permission-denied' });
+    expect(control.send).not.toHaveBeenCalled();
+    expect(control.dispose).not.toHaveBeenCalled();
+  });
+
+  // 主进程取消 IPC 在授权窗口等待期间生效，用户随后点击允许也不能启动 worker。
+  it('does not start a worker if the command is cancelled while the native prompt is open', async () => {
+    let resolvePrompt: ((value: { response: number }) => void) | undefined;
+    await registerFixture({
+      requestedCapabilities: ['runtime.info'],
+      toolCapabilities: ['runtime.info'],
+      withMainWindow: true,
+    });
+    control.messageBox.mockImplementation(() => new Promise(resolve => { resolvePrompt = resolve; }));
+    const requestId = 'request-runtime-info-cancel';
+    const command = invoke('desktop:plugins:v2:execute', createCommandRequest(requestId));
+    await vi.waitFor(() => expect(control.messageBox).toHaveBeenCalledOnce());
+
+    await expect(invoke('desktop:plugins:v2:cancel', { requestId })).resolves.toEqual({ ok: true, value: true });
+    resolvePrompt?.({ response: 0 });
+
+    await expect(command).resolves.toMatchObject({ ok: false, error: 'cancelled' });
+    expect(control.send).not.toHaveBeenCalled();
+    expect(control.dispose).not.toHaveBeenCalled();
+  });
+
+  // renderer 的请求格式不含授权字段；额外传入上下文或授权列表时，入口直接拒绝。
+  it('rejects renderer supplied grants and capability context', async () => {
+    await registerFixture();
+
+    await expect(invoke('desktop:plugins:v2:execute', {
+      ...createCommandRequest('request-renderer-context'),
+      grantedCapabilities: ['runtime.info'],
+      capabilityContext: { runtimeInfo: { platform: 'darwin', appVersion: '1.0.0' } },
+    })).resolves.toEqual({ ok: false, error: 'invalid-request' });
+    expect(control.messageBox).not.toHaveBeenCalled();
+    expect(control.send).not.toHaveBeenCalled();
+  });
+
+  // 清单请求能力不能替代工具声明；工具没有 runtime.info 时不提示，也不发送上下文。
+  it('does not prompt when the signed tool does not declare runtime.info', async () => {
+    await registerFixture({
+      requestedCapabilities: ['runtime.info'],
+      toolCapabilities: [],
+    });
+    const command = invoke('desktop:plugins:v2:execute', createCommandRequest('request-runtime-info-unused'));
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+
+    const activateRequest = control.send.mock.calls.find(([request]) => request.method === 'activate')?.[0];
+    const executeRequest = control.send.mock.calls.find(([request]) => request.method === 'executeCommand')?.[0];
+    expect(control.messageBox).not.toHaveBeenCalled();
+    expect(activateRequest?.payload).toEqual({ version, grantedCapabilities: [] });
+    expect(executeRequest?.payload).toEqual({ commandId, input: {}, requiredCapabilities: [] });
+
+    control.finishStop();
+    await expect(command).resolves.toMatchObject({ ok: true, value: { kind: 'text', value: 'completed' } });
+  });
+
+  // 首版策略不支持其他能力，必须在任何原生授权提示或 worker 启动前拒绝。
+  it('keeps every capability except runtime.info denied', async () => {
+    await registerFixture({
+      requestedCapabilities: ['clipboard.write'],
+      toolCapabilities: ['clipboard.write'],
+      withMainWindow: true,
+    });
+
+    await expect(invoke('desktop:plugins:v2:execute', createCommandRequest('request-clipboard-denied')))
+      .resolves.toEqual({ ok: false, error: 'unsupported-capability' });
+    expect(control.messageBox).not.toHaveBeenCalled();
+    expect(control.send).not.toHaveBeenCalled();
+  });
 });
 
 /** 创建真实签名 v2 WASM 包，并注册 Electron IPC 处理器。 */
-async function registerFixture(): Promise<{ packageRoot: string }> {
+async function registerFixture(options: {
+  requestedCapabilities?: readonly PluginCapabilityId[];
+  toolCapabilities?: readonly PluginCapabilityId[];
+  withMainWindow?: boolean;
+} = {}): Promise<{ packageRoot: string }> {
   control.reset();
   const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-ipc-'));
   temporaryDirectories.push(root);
   const publicKey = signingPair.publicKey.export({ type: 'spki', format: 'pem' }).toString();
   const wasmBytes = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+  const toolId = `${pluginId}/runtime-info`;
+  const toolCapabilities = options.toolCapabilities;
+  const tool = toolCapabilities === undefined ? undefined : {
+    id: toolId,
+    title: 'Runtime info tool',
+    description: 'Read the host runtime information.',
+    keywords: ['runtime'],
+    categoryId: 'development',
+    dataProcessing: 'memory-only' as const,
+    offline: 'available' as const,
+    capabilities: toolCapabilities,
+    inputs: [],
+    output: { kind: 'text' as const },
+  };
   const unsignedManifest: ExternalPluginV2UnsignedPackageManifest = {
     formatVersion: 2,
     id: pluginId,
@@ -213,11 +356,20 @@ async function registerFixture(): Promise<{ packageRoot: string }> {
     apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
     runtime: 'wasm',
     entrypoint: 'extension.wasm',
-    requestedCapabilities: [],
-    activationEvents: [`onCommand:${commandId}`],
+    requestedCapabilities: options.requestedCapabilities ?? [],
+    activationEvents: [
+      `onCommand:${commandId}` as const,
+      ...(tool ? [`onTool:${toolId}` as const] : []),
+    ],
     contributions: {
-      tools: [],
-      commands: [{ id: commandId, title: 'Run', description: 'Run the test command.', keywords: ['test'] }],
+      tools: tool ? [tool] : [],
+      commands: [{
+        id: commandId,
+        title: 'Run',
+        description: 'Run the test command.',
+        keywords: ['test'],
+        ...(tool ? { toolId } : {}),
+      }],
     },
     files: [{ path: 'extension.wasm', sha256: createHash('sha256').update(wasmBytes).digest('hex') }],
   };
@@ -243,7 +395,9 @@ async function registerFixture(): Promise<{ packageRoot: string }> {
   await writeFile(join(packageRoot, 'extension.wasm'), wasmBytes);
   lifecycle = await registerPluginLifecycleIpc({
     userDataRoot: root,
-    getMainWindow: () => null,
+    getMainWindow: () => options.withMainWindow
+      ? ({ isDestroyed: () => false } as unknown as BrowserWindow)
+      : null,
     getTrustedRendererUrl: () => 'app://bundle/',
     onPluginWebContentsCreated: () => undefined,
   });

@@ -8,10 +8,10 @@ import type {
 } from '../src/shared/plugin-capabilities';
 import {
   isPluginCapabilityId,
-  pluginHostCapabilityIds,
 } from '../src/shared/plugin-capabilities';
 
-const supportedCapabilities = new Set<PluginHostCapability>(pluginHostCapabilityIds);
+// v2 当前只开放主进程能逐命令批准的只读运行时信息能力。
+const supportedCapabilities = new Set<PluginHostCapability>(['runtime.info']);
 
 export const externalPluginV2CapabilityErrorCodes = Object.freeze([
   'invalid-policy',
@@ -37,6 +37,8 @@ export interface ExternalPluginV2CapabilityPolicy {
   readonly requestedCapabilities: readonly PluginCapabilityId[];
   readonly supportedCapabilities: readonly PluginHostCapability[];
   readonly grantedCapabilities: readonly PluginHostCapability[];
+  /** 返回工具已请求且 v2 当前可提供的能力，供主进程在授权前展示提示。 */
+  getToolCapabilities(toolId: string): readonly PluginHostCapability[];
   /** 返回工具实际可使用的能力；缺少任一能力时抛出稳定错误。 */
   authorizeTool(toolId: string): readonly PluginHostCapability[];
 }
@@ -56,17 +58,21 @@ export function createExternalPluginV2CapabilityPolicy(
   const supported = requested.filter((capability): capability is PluginHostCapability => supportedCapabilities.has(capability as PluginHostCapability));
   const granted = readGrantedCapabilities(grantedCapabilities, requestedSet);
   const toolById = new Map(manifest.contributions.tools.map(tool => [tool.id, tool]));
+  const getToolCapabilities = (toolId: string): readonly PluginHostCapability[] => {
+    const tool = toolById.get(toolId);
+    if (!tool) {
+      throw new ExternalPluginV2CapabilityPolicyError('invalid-policy', `The v2 tool ${toolId} is not declared.`);
+    }
+    return validateToolCapabilities(tool, requestedSet);
+  };
 
   return {
     requestedCapabilities: requested,
     supportedCapabilities: supported,
     grantedCapabilities: granted,
+    getToolCapabilities,
     authorizeTool(toolId) {
-      const tool = toolById.get(toolId);
-      if (!tool) {
-        throw new ExternalPluginV2CapabilityPolicyError('invalid-policy', `The v2 tool ${toolId} is not declared.`);
-      }
-      return authorizeToolCapabilities(tool, requestedSet, granted);
+      return authorizeToolCapabilities(getToolCapabilities(toolId), granted);
     },
   };
 }
@@ -97,11 +103,22 @@ function readGrantedCapabilities(
 }
 
 function authorizeToolCapabilities(
-  tool: ExternalPluginV2ToolDeclaration,
-  requested: ReadonlySet<PluginCapabilityId>,
+  requiredCapabilities: readonly PluginHostCapability[],
   granted: readonly PluginHostCapability[],
 ): readonly PluginHostCapability[] {
   const grantedSet = new Set(granted);
+  return requiredCapabilities.map((capability): PluginHostCapability => {
+    if (!grantedSet.has(capability)) {
+      throw new ExternalPluginV2CapabilityPolicyError('permission-denied', `The capability ${capability} was not approved.`);
+    }
+    return capability;
+  });
+}
+
+function validateToolCapabilities(
+  tool: ExternalPluginV2ToolDeclaration,
+  requested: ReadonlySet<PluginCapabilityId>,
+): readonly PluginHostCapability[] {
   if (new Set(tool.capabilities).size !== tool.capabilities.length) {
     throw new ExternalPluginV2CapabilityPolicyError('invalid-policy', `The v2 tool ${tool.id} declares duplicate capabilities.`);
   }
@@ -111,9 +128,6 @@ function authorizeToolCapabilities(
     }
     if (!supportedCapabilities.has(capability as PluginHostCapability)) {
       throw new ExternalPluginV2CapabilityPolicyError('unsupported-capability', `The host does not support ${capability}.`);
-    }
-    if (!grantedSet.has(capability as PluginHostCapability)) {
-      throw new ExternalPluginV2CapabilityPolicyError('permission-denied', `The capability ${capability} was not approved.`);
     }
     return capability as PluginHostCapability;
   });

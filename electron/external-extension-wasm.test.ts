@@ -29,6 +29,25 @@ describe('external extension WASM runner', () => {
     });
   });
 
+  // 批准后的最小上下文作为有界 JSON 输入传入，WASM 导入列表保持不变。
+  it('passes the approved runtime.info context as bounded JSON without adding a WASM import', () => {
+    const capabilityContext = {
+      runtimeInfo: { platform: 'darwin' as const, appVersion: '1.2.3' },
+    };
+    const result = executeExternalExtensionWasmCommand(
+      createWasmModuleFixture({ executeBody: echoRequestBody() }),
+      'org.example.echo/run',
+      { text: 'hello' },
+      capabilityContext,
+    );
+
+    expect(result).toEqual({
+      commandId: 'org.example.echo/run',
+      input: { text: 'hello' },
+      capabilityContext,
+    });
+  });
+
   it('rejects function imports and other host functions', () => {
     expect(() => executeExternalExtensionWasmCommand(
       createWasmModuleFixture({ extraFunctionImport: true }),

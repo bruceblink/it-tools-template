@@ -22,6 +22,33 @@ export const externalExtensionRpcMethods = Object.freeze([
 
 export type ExternalExtensionRpcMethod = typeof externalExtensionRpcMethods[number];
 
+export const externalExtensionRuntimePlatforms = Object.freeze([
+  'aix',
+  'android',
+  'cygwin',
+  'darwin',
+  'freebsd',
+  'haiku',
+  'linux',
+  'netbsd',
+  'openbsd',
+  'sunos',
+  'win32',
+] as const);
+
+export type ExternalExtensionRuntimePlatform = typeof externalExtensionRuntimePlatforms[number];
+
+/** WASM 纯计算命令可读取的最小、只读宿主信息。 */
+export interface ExternalExtensionRuntimeInfoContext {
+  readonly platform: ExternalExtensionRuntimePlatform;
+  readonly appVersion: string;
+}
+
+/** 当前只承载经用户本次批准的 runtime.info 数据。 */
+export interface ExternalExtensionCapabilityContext {
+  readonly runtimeInfo: ExternalExtensionRuntimeInfoContext;
+}
+
 /** 扩展宿主适配器只返回这些稳定错误码。 */
 export const externalExtensionRpcErrorCodes = Object.freeze([
   'invalid-request',
@@ -59,6 +86,7 @@ export type ExternalExtensionRpcRequest =
         readonly commandId: string;
         readonly input: ExternalExtensionRpcJsonValue;
         readonly requiredCapabilities: readonly ToolCapability[];
+        readonly capabilityContext?: ExternalExtensionCapabilityContext;
       };
     })
   | (ExternalExtensionRpcRequestBase & {
@@ -154,16 +182,23 @@ export function parseExternalExtensionRpcRequest(value: unknown): ExternalExtens
           } }
         : null;
     case 'executeCommand':
-      return hasExactKeys(value.payload, ['commandId', 'input', 'requiredCapabilities'])
+      return (hasExactKeys(value.payload, ['commandId', 'input', 'requiredCapabilities'])
+        || hasExactKeys(value.payload, ['commandId', 'input', 'requiredCapabilities', 'capabilityContext']))
         && typeof value.payload.commandId === 'string'
         && contributionIdPattern.test(value.payload.commandId)
         && value.payload.commandId.startsWith(`${value.pluginId}/`)
         && isJsonValue(value.payload.input)
         && isCapabilityList(value.payload.requiredCapabilities)
+        && (value.payload.requiredCapabilities.includes('runtime.info')
+          ? isExternalExtensionCapabilityContext(value.payload.capabilityContext)
+          : value.payload.capabilityContext === undefined)
         ? { ...base, method: 'executeCommand', payload: {
             commandId: value.payload.commandId,
             input: value.payload.input,
             requiredCapabilities: value.payload.requiredCapabilities,
+            ...(value.payload.capabilityContext === undefined
+              ? {}
+              : { capabilityContext: value.payload.capabilityContext as ExternalExtensionCapabilityContext }),
           } }
         : null;
     case 'readData':
@@ -261,6 +296,18 @@ function isCapabilityList(value: unknown): value is readonly ToolCapability[] {
   return Array.isArray(value)
     && new Set(value).size === value.length
     && value.every(capability => typeof capability === 'string' && capabilityIds.has(capability as ToolCapability));
+}
+
+function isExternalExtensionCapabilityContext(value: unknown): value is ExternalExtensionCapabilityContext {
+  return isRecord(value)
+    && hasExactKeys(value, ['runtimeInfo'])
+    && isRecord(value.runtimeInfo)
+    && hasExactKeys(value.runtimeInfo, ['platform', 'appVersion'])
+    && typeof value.runtimeInfo.platform === 'string'
+    && externalExtensionRuntimePlatforms.includes(value.runtimeInfo.platform as ExternalExtensionRuntimePlatform)
+    && typeof value.runtimeInfo.appVersion === 'string'
+    && value.runtimeInfo.appVersion.length > 0
+    && value.runtimeInfo.appVersion.length <= 64;
 }
 
 function isJsonValue(value: unknown, depth = 0): value is ExternalExtensionRpcJsonValue {

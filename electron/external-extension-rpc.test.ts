@@ -27,6 +27,81 @@ describe('external extension RPC protocol', () => {
     })).toMatchObject({ method: 'executeCommand', pluginId });
     expect(parseExternalExtensionRpcRequest({
       protocolVersion: 1,
+      requestId: 'request-runtime-info',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-info`,
+        input: {},
+        requiredCapabilities: ['runtime.info'],
+        capabilityContext: { runtimeInfo: { platform: 'darwin', appVersion: '1.0.0' } },
+      },
+    })).toMatchObject({
+      method: 'executeCommand',
+      payload: { requiredCapabilities: ['runtime.info'] },
+    });
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-runtime-info-missing',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-info`,
+        input: {},
+        requiredCapabilities: ['runtime.info'],
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-runtime-info-extra',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-info`,
+        input: {},
+        requiredCapabilities: [],
+        capabilityContext: { runtimeInfo: { platform: 'darwin', appVersion: '1.0.0' } },
+      },
+    })).toBeNull();
+    // 上下文限制平台白名单、版本长度和字段集合，避免借可选 JSON 扩大暴露面。
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-runtime-info-oversized',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-info`,
+        input: {},
+        requiredCapabilities: ['runtime.info'],
+        capabilityContext: { runtimeInfo: { platform: 'darwin', appVersion: 'x'.repeat(65) } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-runtime-info-unknown-platform',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-info`,
+        input: {},
+        requiredCapabilities: ['runtime.info'],
+        capabilityContext: { runtimeInfo: { platform: 'unknown', appVersion: '1.0.0' } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-runtime-info-extra-field',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-info`,
+        input: {},
+        requiredCapabilities: ['runtime.info'],
+        capabilityContext: { runtimeInfo: { platform: 'darwin', appVersion: '1.0.0', executablePath: '/app' } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
       requestId: 'request-1',
       pluginId,
       method: 'executeCommand',
@@ -134,6 +209,48 @@ describe('ExternalExtensionRpcHost', () => {
     expect(send).toHaveBeenCalledTimes(1);
     await expect(host.executeCommand(`${pluginId}/copy`, 'text', ['clipboard.write']))
       .rejects.toMatchObject({ code: 'not-active' });
+  });
+
+  // 只有获得 runtime.info 本次授权的主进程调用方可以附带上下文。
+  it('sends runtime.info context only with the matching one-command grant', async () => {
+    const requests: ExternalExtensionRpcRequest[] = [];
+    const transport = createInProcessExternalExtensionRpcTransport(request => {
+      requests.push(request);
+      return {
+        protocolVersion: 1,
+        requestId: request.requestId,
+        pluginId,
+        ok: true,
+        result: null,
+      };
+    });
+    const host = new ExternalExtensionRpcHost({
+      pluginId,
+      version: '1.0.0',
+      grantedCapabilities: ['runtime.info'],
+      transport,
+    });
+    const capabilityContext = { runtimeInfo: { platform: 'darwin' as const, appVersion: '1.0.0' } };
+
+    await host.activate();
+    await host.executeCommand(`${pluginId}/runtime-info`, {}, ['runtime.info'], undefined, capabilityContext);
+    await host.dispose();
+
+    expect(requests.find(request => request.method === 'executeCommand')).toMatchObject({
+      payload: {
+        requiredCapabilities: ['runtime.info'],
+        capabilityContext,
+      },
+    });
+  });
+
+  it('does not construct a v2 host with capabilities outside runtime.info', () => {
+    expect(() => new ExternalExtensionRpcHost({
+      pluginId,
+      version: '1.0.0',
+      grantedCapabilities: ['clipboard.write'],
+      transport: { send: vi.fn(), dispose: vi.fn() },
+    })).toThrowError(expect.objectContaining<Partial<ExternalExtensionRpcError>>({ code: 'permission-denied' }));
   });
 
   it('returns stable timeout and cancellation errors', async () => {

@@ -23,7 +23,7 @@ const manifest: ExternalPluginV2Manifest = {
       categoryId: 'development',
       dataProcessing: 'memory-only',
       offline: 'available',
-      capabilities: ['clipboard.write'],
+      capabilities: ['runtime.info'],
       inputs: [],
       output: { kind: 'text' },
     }],
@@ -39,16 +39,25 @@ const manifest: ExternalPluginV2Manifest = {
 
 describe('v2 capability policy', () => {
   it('keeps requested, supported, and granted sets separate', () => {
-    const policy = createExternalPluginV2CapabilityPolicy(manifest, ['clipboard.write']);
+    const policy = createExternalPluginV2CapabilityPolicy(manifest, ['runtime.info']);
 
     expect(policy.requestedCapabilities).toEqual(['runtime.info', 'clipboard.write']);
-    expect(policy.supportedCapabilities).toEqual(['runtime.info', 'clipboard.write']);
-    expect(policy.grantedCapabilities).toEqual(['clipboard.write']);
-    expect(policy.authorizeTool('org.it-tools.capability-demo/copy')).toEqual(['clipboard.write']);
+    expect(policy.supportedCapabilities).toEqual(['runtime.info']);
+    expect(policy.grantedCapabilities).toEqual(['runtime.info']);
+    expect(policy.getToolCapabilities('org.it-tools.capability-demo/copy')).toEqual(['runtime.info']);
+    expect(policy.authorizeTool('org.it-tools.capability-demo/copy')).toEqual(['runtime.info']);
   });
 
   it('rejects a grant that was not declared by the package', () => {
-    expect(() => createExternalPluginV2CapabilityPolicy(manifest, ['settings.read'])).toThrowError(
+    const manifestWithoutRuntimeInfo = {
+      ...manifest,
+      requestedCapabilities: ['clipboard.write'] as const,
+      contributions: {
+        ...manifest.contributions,
+        tools: [{ ...manifest.contributions.tools[0]!, capabilities: [] as const }],
+      },
+    };
+    expect(() => createExternalPluginV2CapabilityPolicy(manifestWithoutRuntimeInfo, ['runtime.info'])).toThrowError(
       expect.objectContaining<Partial<ExternalPluginV2CapabilityPolicyError>>({ code: 'capability-not-requested' }),
     );
   });
@@ -83,7 +92,7 @@ describe('v2 capability policy', () => {
         tools: [{ ...manifest.contributions.tools[0]!, capabilities: ['settings.read'] as const }],
       },
     };
-    const policy = createExternalPluginV2CapabilityPolicy(undeclaredToolManifest, ['clipboard.write']);
+    const policy = createExternalPluginV2CapabilityPolicy(undeclaredToolManifest, []);
 
     expect(() => policy.authorizeTool('org.it-tools.capability-demo/copy')).toThrowError(
       expect.objectContaining<Partial<ExternalPluginV2CapabilityPolicyError>>({ code: 'capability-not-requested' }),
@@ -106,11 +115,28 @@ describe('v2 capability policy', () => {
     );
   });
 
+  it('exposes only runtime.info to v2 even when v1 supports another requested capability', () => {
+    const policy = createExternalPluginV2CapabilityPolicy(manifest, []);
+    const clipboardTool = {
+      ...manifest,
+      contributions: {
+        ...manifest.contributions,
+        tools: [{ ...manifest.contributions.tools[0]!, capabilities: ['clipboard.write'] as const }],
+      },
+    };
+    const clipboardPolicy = createExternalPluginV2CapabilityPolicy(clipboardTool, []);
+
+    expect(() => clipboardPolicy.getToolCapabilities('org.it-tools.capability-demo/copy')).toThrowError(
+      expect.objectContaining<Partial<ExternalPluginV2CapabilityPolicyError>>({ code: 'unsupported-capability' }),
+    );
+    expect(policy.supportedCapabilities).toEqual(['runtime.info']);
+  });
+
   it('rejects duplicate grants and unknown tools', () => {
-    expect(() => createExternalPluginV2CapabilityPolicy(manifest, ['clipboard.write', 'clipboard.write'])).toThrowError(
+    expect(() => createExternalPluginV2CapabilityPolicy(manifest, ['runtime.info', 'runtime.info'])).toThrowError(
       expect.objectContaining<Partial<ExternalPluginV2CapabilityPolicyError>>({ code: 'invalid-policy' }),
     );
-    const policy = createExternalPluginV2CapabilityPolicy(manifest, ['clipboard.write']);
+    const policy = createExternalPluginV2CapabilityPolicy(manifest, ['runtime.info']);
     expect(() => policy.authorizeTool('org.it-tools.capability-demo/missing')).toThrowError(
       expect.objectContaining<Partial<ExternalPluginV2CapabilityPolicyError>>({ code: 'invalid-policy' }),
     );

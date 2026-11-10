@@ -4,6 +4,7 @@ import {
   externalExtensionRpcProtocolVersion,
   getExternalExtensionRpcPayloadBytes,
   parseExternalExtensionRpcResponse,
+  type ExternalExtensionCapabilityContext,
   type ExternalExtensionRpcErrorCode,
   type ExternalExtensionRpcJsonValue,
   type ExternalExtensionRpcRequest,
@@ -62,6 +63,10 @@ export class ExternalExtensionRpcHost {
 
   constructor(private readonly options: ExternalExtensionRpcHostOptions) {
     this.grantedCapabilities = new Set(options.grantedCapabilities ?? []);
+    // 首版 v2 只允许本次命令读取只读的 runtime.info 上下文。
+    if ([...this.grantedCapabilities].some(capability => capability !== 'runtime.info')) {
+      throw new ExternalExtensionRpcError('permission-denied');
+    }
     this.timeoutMs = options.timeoutMs ?? externalExtensionRpcDefaults.timeoutMs;
     this.maximumPayloadBytes = options.maximumPayloadBytes ?? externalExtensionRpcDefaults.maximumPayloadBytes;
     this.maximumConcurrentRequests = options.maximumConcurrentRequests ?? externalExtensionRpcDefaults.maximumConcurrentRequests;
@@ -96,12 +101,24 @@ export class ExternalExtensionRpcHost {
     input: ExternalExtensionRpcJsonValue,
     requiredCapabilities: readonly ToolCapability[] = [],
     signal?: AbortSignal,
+    capabilityContext?: ExternalExtensionCapabilityContext,
   ): Promise<ExternalExtensionRpcJsonValue | undefined> {
     this.assertActive();
     this.assertCapabilities(requiredCapabilities);
+    const requiresRuntimeInfo = requiredCapabilities.includes('runtime.info');
+    // 不能让 renderer 或其他调用方在无 grant 时附带宿主上下文。
+    if (requiredCapabilities.some(capability => capability !== 'runtime.info')
+      || requiresRuntimeInfo !== (capabilityContext !== undefined)) {
+      throw new ExternalExtensionRpcError('permission-denied');
+    }
     return this.call({
       method: 'executeCommand',
-      payload: { commandId, input, requiredCapabilities },
+      payload: {
+        commandId,
+        input,
+        requiredCapabilities,
+        ...(capabilityContext === undefined ? {} : { capabilityContext }),
+      },
     }, signal);
   }
 

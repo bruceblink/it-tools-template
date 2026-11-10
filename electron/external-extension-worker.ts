@@ -20,6 +20,8 @@ export class ExternalExtensionWorkerRuntime {
   private active = false;
   private disposed = false;
   private moduleBytes: Uint8Array | undefined;
+  /** 本次命令进程只保存已批准的 runtime.info 授权，dispose 时清空。 */
+  private readonly grantedCapabilities = new Set<string>();
 
   constructor(private readonly launchConfig: ExternalExtensionWorkerLaunchConfig | undefined) {}
 
@@ -44,6 +46,7 @@ export class ExternalExtensionWorkerRuntime {
     if (request.method === 'dispose') {
       this.active = false;
       this.moduleBytes = undefined;
+      this.grantedCapabilities.clear();
       this.disposed = true;
       return success(request, true);
     }
@@ -66,19 +69,28 @@ export class ExternalExtensionWorkerRuntime {
     if (request.payload.version !== this.launchConfig?.version) {
       return failure(request, 'invalid-request');
     }
-    if (request.payload.grantedCapabilities.length > 0) {
+    if (request.payload.grantedCapabilities.some(capability => capability !== 'runtime.info')) {
       return failure(request, 'permission-denied');
     }
     if (this.active) {
-      return success(request, { ready: true, runtime: 'wasm' });
+      const grantsMatch = request.payload.grantedCapabilities.length === this.grantedCapabilities.size
+        && request.payload.grantedCapabilities.every(capability => this.grantedCapabilities.has(capability));
+      return grantsMatch
+        ? success(request, { ready: true, runtime: 'wasm' })
+        : failure(request, 'permission-denied');
     }
     try {
-      this.moduleBytes = await readVerifiedWasmEntrypoint(this.launchConfig);
+      const moduleBytes = await readVerifiedWasmEntrypoint(this.launchConfig);
+      this.moduleBytes = moduleBytes;
+      for (const capability of request.payload.grantedCapabilities) {
+        this.grantedCapabilities.add(capability);
+      }
       this.active = true;
       return success(request, { ready: true, runtime: 'wasm' });
     }
     catch {
       this.moduleBytes = undefined;
+      this.grantedCapabilities.clear();
       this.active = false;
       return failure(request, 'extension-failed');
     }
@@ -87,7 +99,12 @@ export class ExternalExtensionWorkerRuntime {
   private executeCommand(
     request: Extract<ExternalExtensionRpcRequest, { method: 'executeCommand' }>,
   ): ExternalExtensionRpcResponse {
-    if (request.payload.requiredCapabilities.length > 0) {
+    if (request.payload.requiredCapabilities.some(capability => (
+      capability !== 'runtime.info' || !this.grantedCapabilities.has(capability)
+    ))) {
+      return failure(request, 'permission-denied');
+    }
+    if (request.payload.requiredCapabilities.includes('runtime.info') !== (request.payload.capabilityContext !== undefined)) {
       return failure(request, 'permission-denied');
     }
     if (!this.moduleBytes) {
@@ -98,6 +115,7 @@ export class ExternalExtensionWorkerRuntime {
         this.moduleBytes,
         request.payload.commandId,
         request.payload.input,
+        request.payload.capabilityContext,
       );
       if (!isPluginToolCommandResult(result)) {
         return failure(request, 'extension-failed');
