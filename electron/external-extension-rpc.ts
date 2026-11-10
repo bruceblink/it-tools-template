@@ -187,9 +187,6 @@ export class ExternalExtensionRpcHost {
       return this.unwrap(parsed);
     }
     catch (error) {
-      if (error instanceof ExternalExtensionRpcError) {
-        throw error;
-      }
       if (signal?.aborted) {
         this.options.transport.cancel?.(request.requestId);
         throw new ExternalExtensionRpcError('cancelled');
@@ -197,6 +194,9 @@ export class ExternalExtensionRpcHost {
       if (controller.signal.aborted) {
         this.options.transport.cancel?.(request.requestId);
         throw new ExternalExtensionRpcError('timeout');
+      }
+      if (error instanceof ExternalExtensionRpcError) {
+        throw error;
       }
       throw new ExternalExtensionRpcError('transport-error');
     }

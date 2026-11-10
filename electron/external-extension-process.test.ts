@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ExternalExtensionProcessTransport, type ExternalExtensionProcessFork, type ExternalExtensionProcessLike } from './external-extension-process';
-import { ExternalExtensionRpcError } from './external-extension-rpc';
+import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
 import { parseExternalExtensionWorkerLaunchArguments } from './external-extension-worker-launch';
 import type { ExternalExtensionRpcRequest } from '../src/shared/desktop-services/external-extension-rpc';
 
@@ -122,6 +122,62 @@ describe('ExternalExtensionProcessTransport', () => {
       payload: { targetRequestId: 'request-abort' },
     });
     transport.dispose();
+  });
+
+  it('preserves timeout classification when the process transport rejects cancellation first', async () => {
+    const child = new FakeProcess();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      terminateOnCancel: true,
+      fork: () => child,
+    });
+    const host = new ExternalExtensionRpcHost({ pluginId, version: '1.0.0', transport, timeoutMs: 10 });
+
+    const activation = host.activate();
+    const activationRequest = child.messages[0] as ExternalExtensionRpcRequest;
+    child.respond({
+      protocolVersion: 1,
+      requestId: activationRequest.requestId,
+      pluginId,
+      ok: true,
+      result: { ready: true },
+    });
+    await activation;
+
+    await expect(host.executeCommand(`${pluginId}/slow`, null)).rejects.toMatchObject({ code: 'timeout' });
+    expect(child.killed).toBe(true);
+    await host.dispose();
+    child.exit(0);
+  });
+
+  it('keeps explicit process request cancellation classified as cancelled', async () => {
+    const child = new FakeProcess();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      terminateOnCancel: true,
+      fork: () => child,
+    });
+    const host = new ExternalExtensionRpcHost({ pluginId, version: '1.0.0', transport, timeoutMs: 1_000 });
+    const activation = host.activate();
+    const activationRequest = child.messages[0] as ExternalExtensionRpcRequest;
+    child.respond({
+      protocolVersion: 1,
+      requestId: activationRequest.requestId,
+      pluginId,
+      ok: true,
+      result: { ready: true },
+    });
+    await activation;
+
+    const controller = new AbortController();
+    const pending = host.executeCommand(`${pluginId}/cancel`, null, [], controller.signal);
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: 'cancelled' });
+    expect(child.killed).toBe(true);
+    await host.dispose();
+    child.exit(0);
   });
 
   it('terminates a synchronous worker on cancellation and starts a fresh process later', async () => {
