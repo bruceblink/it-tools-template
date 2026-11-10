@@ -71,8 +71,10 @@ describe('ExternalExtensionProcessTransport', () => {
     child.respond({ protocolVersion: 1, requestId: 'request-1', pluginId, ok: true, result: { ready: true } });
     await expect(pending).resolves.toMatchObject({ ok: true, result: { ready: true } });
     expect(fork).toHaveBeenCalledTimes(1);
-    transport.dispose();
+    const stopping = transport.dispose();
     expect(child.killed).toBe(true);
+    child.exit(0);
+    await stopping;
   });
 
   it('passes verified WASM launch metadata to its matching worker', async () => {
@@ -91,7 +93,9 @@ describe('ExternalExtensionProcessTransport', () => {
     expect(parseExternalExtensionWorkerLaunchArguments(args)).toEqual(launchConfig);
     child.respond({ protocolVersion: 1, requestId: 'request-launch', pluginId, ok: true, result: true });
     await expect(pending).resolves.toMatchObject({ ok: true });
-    transport.dispose();
+    const stopping = transport.dispose();
+    child.exit(0);
+    await stopping;
   });
 
   it('sends a cancel message and rejects the pending request', async () => {
@@ -106,7 +110,9 @@ describe('ExternalExtensionProcessTransport', () => {
       pluginId,
       payload: { targetRequestId: 'request-2' },
     });
-    transport.dispose();
+    const stopping = transport.dispose();
+    child.exit(0);
+    await stopping;
   });
 
   it('turns an AbortSignal into a protocol cancel request', async () => {
@@ -121,7 +127,9 @@ describe('ExternalExtensionProcessTransport', () => {
       method: 'cancel',
       payload: { targetRequestId: 'request-abort' },
     });
-    transport.dispose();
+    const stopping = transport.dispose();
+    child.exit(0);
+    await stopping;
   });
 
   it('preserves timeout classification when the process transport rejects cancellation first', async () => {
@@ -147,8 +155,9 @@ describe('ExternalExtensionProcessTransport', () => {
 
     await expect(host.executeCommand(`${pluginId}/slow`, null)).rejects.toMatchObject({ code: 'timeout' });
     expect(child.killed).toBe(true);
-    await host.dispose();
+    const disposal = host.dispose();
     child.exit(0);
+    await disposal;
   });
 
   it('keeps explicit process request cancellation classified as cancelled', async () => {
@@ -176,8 +185,9 @@ describe('ExternalExtensionProcessTransport', () => {
     controller.abort();
     await expect(pending).rejects.toMatchObject({ code: 'cancelled' });
     expect(child.killed).toBe(true);
-    await host.dispose();
+    const disposal = host.dispose();
     child.exit(0);
+    await disposal;
   });
 
   it('terminates a synchronous worker on cancellation and starts a fresh process later', async () => {
@@ -206,7 +216,9 @@ describe('ExternalExtensionProcessTransport', () => {
     second.respond({ protocolVersion: 1, requestId: 'request-restart', pluginId, ok: true, result: true });
     await expect(restarted).resolves.toMatchObject({ ok: true });
     expect(fork).toHaveBeenCalledTimes(2);
-    transport.dispose();
+    const stopping = transport.dispose();
+    second.exit(0);
+    await stopping;
   });
 
   it('reports disposal only after the worker exits', async () => {
@@ -219,12 +231,13 @@ describe('ExternalExtensionProcessTransport', () => {
       fork: () => child,
     });
     const pending = transport.send(request('request-dispose'), new AbortController().signal);
-    transport.dispose();
+    const disposal = transport.dispose();
     await expect(pending).rejects.toMatchObject({ code: 'disposed' });
     expect(onStopped).not.toHaveBeenCalled();
     child.exit(0);
+    await disposal;
     expect(onStopped).toHaveBeenCalledOnce();
-    transport.dispose();
+    await transport.dispose();
     expect(onStopped).toHaveBeenCalledOnce();
   });
 
@@ -237,8 +250,68 @@ describe('ExternalExtensionProcessTransport', () => {
     await expect(pending).rejects.toBeInstanceOf(ExternalExtensionRpcError);
     await expect(pending).rejects.toMatchObject({ code: 'transport-error' });
 
-    transport.dispose();
+    await transport.dispose();
     await expect(transport.send(request('request-4'), new AbortController().signal))
       .rejects.toMatchObject({ code: 'disposed' });
+  });
+
+  // 模拟 kill 已发出但系统尚未报告退出，确认超时不会变成成功，也不会无限等待。
+  it('does not complete disposal before the process exits and bounds the wait', async () => {
+    const child = new FakeProcess();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      stopTimeoutMs: 5,
+      fork: () => child,
+    });
+    const requestPromise = transport.send(request('request-bounded-stop'), new AbortController().signal);
+    const stopping = transport.dispose();
+    await expect(requestPromise).rejects.toMatchObject({ code: 'disposed' });
+    await expect(stopping).rejects.toMatchObject({ code: 'timeout' });
+    expect(child.killed).toBe(true);
+
+    child.exit(0);
+    await expect(transport.dispose()).resolves.toBeUndefined();
+  });
+
+  // 真实 RPC host 必须等待进程退出事件，不能只等待 worker 的 dispose 响应。
+  it('waits for confirmed worker exit before the RPC host disposal resolves', async () => {
+    const child = new FakeProcess();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      fork: () => child,
+    });
+    const host = new ExternalExtensionRpcHost({ pluginId, version: '1.0.0', transport });
+    const activation = host.activate();
+    const activationRequest = child.messages[0] as ExternalExtensionRpcRequest;
+    child.respond({
+      protocolVersion: 1,
+      requestId: activationRequest.requestId,
+      pluginId,
+      ok: true,
+      result: { ready: true },
+    });
+    await activation;
+
+    const disposal = host.dispose();
+    const disposeRequest = child.messages[1] as ExternalExtensionRpcRequest;
+    expect(disposeRequest.method).toBe('dispose');
+    child.respond({
+      protocolVersion: 1,
+      requestId: disposeRequest.requestId,
+      pluginId,
+      ok: true,
+      result: true,
+    });
+    let disposalCompleted = false;
+    const settled = disposal.then(() => { disposalCompleted = true; });
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(disposalCompleted).toBe(false);
+    expect(child.killed).toBe(true);
+
+    child.exit(0);
+    await settled;
+    expect(disposalCompleted).toBe(true);
   });
 });

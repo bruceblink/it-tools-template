@@ -124,6 +124,8 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   });
   const v2Hosts = new Map<string, ExternalExtensionRpcHost>();
   const activeV2Commands = new ExternalPluginV2CommandRequests();
+  // 卸载期间阻止同一包启动新进程，直到已确认退出并完成文件删除。
+  const v2Uninstalling = new Set<string>();
   // 首版只允许一个 WASM 进程；进程确认退出后才释放名额。
   let v2WorkerBusy = false;
   const fetchReleaseAsset = createMarketplaceReleaseFetcher(net);
@@ -180,6 +182,9 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   }));
   ipcMain.handle('desktop:plugins:v2:execute', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parseExternalPluginV2CommandRequest(value);
+    if (v2Uninstalling.has(`${request.pluginId}@${request.version}`)) {
+      throw new PluginIpcInputError('active-limit', 'The requested v2 plugin package is being uninstalled.');
+    }
     const activeRequest = activeV2Commands.register(request.requestId, request);
     if (!activeRequest) {
       throw new PluginIpcInputError('invalid-request', 'The v2 command request ID is already active.');
@@ -253,13 +258,18 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       throw error;
     }
     finally {
-      if (host) {
-        await host.dispose();
+      try {
+        if (host) {
+          await host.dispose();
+        }
+        else if (ownsWorkerSlot) {
+          v2WorkerBusy = false;
+        }
       }
-      else if (ownsWorkerSlot) {
-        v2WorkerBusy = false;
+      finally {
+        // 即使进程停止超时，也释放请求 ID，避免活动请求表残留。
+        activeV2Commands.release(request.requestId, activeRequest);
       }
-      activeV2Commands.release(request.requestId, activeRequest);
     }
   }));
   ipcMain.handle('desktop:plugins:v2:cancel', (event, value: unknown) => runPluginManagementIpc(
@@ -349,9 +359,19 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   }));
   ipcMain.handle('desktop:plugins:v2:uninstall', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parsePluginVersionRequest(value);
-    activeV2Commands.abortPackage(request.pluginId, request.version);
-    await disposeV2Host(v2Hosts, request.pluginId, request.version);
-    return v2PackageManager.uninstall(request.pluginId, request.version);
+    const key = `${request.pluginId}@${request.version}`;
+    if (v2Uninstalling.has(key)) {
+      throw new PluginIpcInputError('active-limit', 'The requested v2 plugin package is already being uninstalled.');
+    }
+    v2Uninstalling.add(key);
+    try {
+      activeV2Commands.abortPackage(request.pluginId, request.version);
+      await disposeV2Host(v2Hosts, request.pluginId, request.version);
+      return await v2PackageManager.uninstall(request.pluginId, request.version);
+    }
+    finally {
+      v2Uninstalling.delete(key);
+    }
   }));
   ipcMain.handle('desktop:plugins:trusted-signers:list', event => runPluginManagementIpc(
     event,
@@ -802,13 +822,13 @@ async function disposeV2Host(hosts: Map<string, ExternalExtensionRpcHost>, plugi
   if (!host) {
     return;
   }
-  hosts.delete(key);
+  // 保留宿主映射直到真实进程退出；等待超时后，后续卸载仍可继续等待。
   await host.dispose();
 }
 
 async function disposeAllV2Hosts(hosts: Map<string, ExternalExtensionRpcHost>): Promise<void> {
   const activeHosts = [...hosts.values()];
-  hosts.clear();
+  // 退出回调负责移除已停止的宿主；超时的宿主留在表中，便于诊断和重试。
   await Promise.all(activeHosts.map(host => host.dispose()));
 }
 

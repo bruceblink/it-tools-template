@@ -37,6 +37,8 @@ export interface ExternalExtensionProcessTransportOptions {
   terminateOnCancel?: boolean;
   /** 释放后在进程确认退出时通知调用方；未启动进程则立即通知。 */
   onStopped?: () => void;
+  /** 等待进程退出的最长时间；超时后释放操作失败，调用方可稍后重试等待。 */
+  stopTimeoutMs?: number;
   serviceName?: string;
   environment?: NodeJS.ProcessEnv;
   fork?: ExternalExtensionProcessFork;
@@ -54,6 +56,12 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
   private disposed = false;
   private stopping = false;
   private stoppedNotified = false;
+  /** 并发释放时共用一次有界等待。 */
+  private disposePromise: Promise<void> | null = null;
+  /** 等待 Electron 确认进程退出的调用方。 */
+  private readonly stopWaiters = new Set<() => void>();
+  /** 防止停机等待无限挂起。 */
+  private readonly stopTimeoutMs: number;
   private readonly pending = new Map<string, PendingRequest>();
   private readonly fork: ExternalExtensionProcessFork;
   private readonly onMessage = (message: unknown) => this.handleMessage(message);
@@ -61,6 +69,10 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
 
   constructor(private readonly options: ExternalExtensionProcessTransportOptions) {
     this.fork = options.fork ?? defaultFork;
+    this.stopTimeoutMs = options.stopTimeoutMs ?? 5_000;
+    if (!Number.isSafeInteger(this.stopTimeoutMs) || this.stopTimeoutMs < 1) {
+      throw new RangeError('The extension worker stop timeout must be a positive integer.');
+    }
     if (options.launchConfig && options.launchConfig.pluginId !== options.pluginId) {
       throw new TypeError('The extension worker identity does not match the transport.');
     }
@@ -138,15 +150,45 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     }
   }
 
-  dispose(): void {
-    if (this.disposed) {
-      return;
+  /** 请求停止进程，并在有限时间内等待 Electron 确认进程退出。 */
+  dispose(): Promise<void> {
+    if (this.stoppedNotified) {
+      return Promise.resolve();
     }
     this.disposed = true;
     this.stopChild(new ExternalExtensionRpcError('disposed'));
     if (!this.child) {
       this.notifyStopped();
     }
+    if (this.stoppedNotified) {
+      return Promise.resolve();
+    }
+    if (!this.disposePromise) {
+      const pending = new Promise<void>((resolve, reject) => {
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const onStopped = () => {
+          if (timeout !== undefined) {
+            clearTimeout(timeout);
+          }
+          this.stopWaiters.delete(onStopped);
+          resolve();
+        };
+        this.stopWaiters.add(onStopped);
+        timeout = setTimeout(() => {
+          this.stopWaiters.delete(onStopped);
+          reject(new ExternalExtensionRpcError('timeout'));
+        }, this.stopTimeoutMs);
+        if (this.stoppedNotified) {
+          onStopped();
+        }
+      }).finally(() => {
+        if (this.disposePromise === pending) {
+          this.disposePromise = null;
+        }
+      });
+      this.disposePromise = pending;
+    }
+    return this.disposePromise;
   }
 
   /** 取消同步计算时拒绝活动请求，并等待旧进程退出后才允许重启。 */
@@ -217,6 +259,9 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
   private notifyStopped(): void {
     if (!this.stoppedNotified) {
       this.stoppedNotified = true;
+      for (const resolve of [...this.stopWaiters]) {
+        resolve();
+      }
       this.options.onStopped?.();
     }
   }

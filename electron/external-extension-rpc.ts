@@ -22,7 +22,7 @@ export interface ExternalExtensionRpcTransport {
   /** 请求传输层取消仍在运行的请求。 */
   cancel?(requestId: string): void;
   /** 释放传输层和扩展宿主资源。 */
-  dispose(): void;
+  dispose(): void | Promise<void>;
 }
 
 export interface ExternalExtensionRpcHostOptions {
@@ -57,6 +57,8 @@ export class ExternalExtensionRpcHost {
   private active = false;
   private disposed = false;
   private inFlight = 0;
+  /** 并发释放共享同一个完成结果；超时后允许再次等待传输层退出。 */
+  private disposePromise: Promise<void> | null = null;
 
   constructor(private readonly options: ExternalExtensionRpcHostOptions) {
     this.grantedCapabilities = new Set(options.grantedCapabilities ?? []);
@@ -126,8 +128,24 @@ export class ExternalExtensionRpcHost {
     return this.call({ method: 'setSetting', payload: { settingId, value } }, signal);
   }
 
-  async dispose(): Promise<void> {
+  dispose(): Promise<void> {
+    if (this.disposePromise) {
+      return this.disposePromise;
+    }
+    const pending = this.disposeOnce();
+    this.disposePromise = pending;
+    pending.catch(() => {
+      if (this.disposePromise === pending) {
+        this.disposePromise = null;
+      }
+    });
+    return pending;
+  }
+
+  /** 先请求扩展清理，再等待底层进程或传输完成停止。 */
+  private async disposeOnce(): Promise<void> {
     if (this.disposed) {
+      await this.options.transport.dispose();
       return;
     }
     if (this.active) {
@@ -135,7 +153,7 @@ export class ExternalExtensionRpcHost {
     }
     this.active = false;
     this.disposed = true;
-    this.options.transport.dispose();
+    await this.options.transport.dispose();
   }
 
   private async call(
