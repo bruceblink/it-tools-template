@@ -74,7 +74,7 @@ export class ExternalExtensionRpcHost {
     }
   }
 
-  async activate(): Promise<void> {
+  async activate(signal?: AbortSignal): Promise<void> {
     this.assertUsable();
     if (this.active) {
       return;
@@ -85,7 +85,7 @@ export class ExternalExtensionRpcHost {
         version: this.options.version,
         grantedCapabilities: [...this.grantedCapabilities],
       },
-    });
+    }, signal);
     this.active = true;
   }
 

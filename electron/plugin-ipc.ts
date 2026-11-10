@@ -27,6 +27,7 @@ import {
   PluginSourceBuildControllerError,
 } from './plugin-source-build-controller';
 import { ExternalPluginV2PackageManager } from './external-plugin-v2-package-manager';
+import { ExternalPluginV2CommandRequests } from './external-plugin-v2-command-requests';
 import { ExternalExtensionRpcHost } from './external-extension-rpc';
 import { createExternalExtensionProcessTransport } from './external-extension-process';
 import type {
@@ -121,6 +122,7 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     },
   });
   const v2Hosts = new Map<string, ExternalExtensionRpcHost>();
+  const activeV2Commands = new ExternalPluginV2CommandRequests();
   const fetchReleaseAsset = createMarketplaceReleaseFetcher(net);
   const marketplaceController = new PluginMarketplaceInstallController({
     tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
@@ -175,36 +177,55 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   }));
   ipcMain.handle('desktop:plugins:v2:execute', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parseExternalPluginV2CommandRequest(value);
-    const manifest = await v2PackageManager.getInstalledManifest(request.pluginId, request.version);
-    const command = manifest.contributions.commands.find(candidate => candidate.id === request.commandId);
-    if (!command) {
-      throw new PluginIpcInputError('invalid-request', 'The v2 plugin command is not declared.');
+    const activeRequest = activeV2Commands.register(request.requestId, request);
+    if (!activeRequest) {
+      throw new PluginIpcInputError('invalid-request', 'The v2 command request ID is already active.');
     }
-    const tool = command.toolId === undefined
-      ? undefined
-      : manifest.contributions.tools.find(candidate => candidate.id === command.toolId);
-    const key = `${request.pluginId}@${request.version}`;
-    let host = v2Hosts.get(key);
-    if (!host) {
-      host = new ExternalExtensionRpcHost({
-        pluginId: request.pluginId,
-        version: request.version,
-        grantedCapabilities: [],
-        transport: createExternalExtensionProcessTransport({
+    try {
+      const manifest = await v2PackageManager.getInstalledManifest(request.pluginId, request.version);
+      throwIfV2CommandAborted(activeRequest.controller.signal);
+      const command = manifest.contributions.commands.find(candidate => candidate.id === request.commandId);
+      if (!command) {
+        throw new PluginIpcInputError('invalid-request', 'The v2 plugin command is not declared.');
+      }
+      const tool = command.toolId === undefined
+        ? undefined
+        : manifest.contributions.tools.find(candidate => candidate.id === command.toolId);
+      const key = `${request.pluginId}@${request.version}`;
+      let host = v2Hosts.get(key);
+      if (!host) {
+        host = new ExternalExtensionRpcHost({
           pluginId: request.pluginId,
-          workerPath: resolve(app.getAppPath(), 'out/main/external-extension-worker.cjs'),
-        }),
-      });
-      v2Hosts.set(key, host);
+          version: request.version,
+          grantedCapabilities: [],
+          transport: createExternalExtensionProcessTransport({
+            pluginId: request.pluginId,
+            workerPath: resolve(app.getAppPath(), 'out/main/external-extension-worker.cjs'),
+          }),
+        });
+        v2Hosts.set(key, host);
+      }
+      await host.activate(activeRequest.controller.signal);
+      const result = await host.executeCommand(
+        request.commandId,
+        request.input as ExternalExtensionRpcJsonValue,
+        tool?.capabilities ?? [],
+        activeRequest.controller.signal,
+      );
+      return parsePluginToolCommandResult(result);
     }
-    await host.activate();
-    const result = await host.executeCommand(
-      request.commandId,
-      request.input as ExternalExtensionRpcJsonValue,
-      tool?.capabilities ?? [],
-    );
-    return parsePluginToolCommandResult(result);
+    finally {
+      activeV2Commands.release(request.requestId, activeRequest);
+    }
   }));
+  ipcMain.handle('desktop:plugins:v2:cancel', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    () => {
+      const requestId = parseExternalPluginV2CancelRequest(value);
+      return activeV2Commands.cancel(requestId);
+    },
+  ));
   ipcMain.handle('desktop:plugins:install-from-marketplace', (event, value: unknown) => runPluginManagementIpc(
     event,
     dependencies,
@@ -284,6 +305,7 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   }));
   ipcMain.handle('desktop:plugins:v2:uninstall', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parsePluginVersionRequest(value);
+    activeV2Commands.abortPackage(request.pluginId, request.version);
     await disposeV2Host(v2Hosts, request.pluginId, request.version);
     return v2PackageManager.uninstall(request.pluginId, request.version);
   }));
@@ -342,12 +364,14 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   return {
     // 主窗口关闭只停止活动插件；市场和源码构建控制器必须继续保留到应用退出。
     stopActivePlugins: async () => {
+      activeV2Commands.abortAll();
       await lifecycleManager.stopActivePlugins();
       await disposeAllV2Hosts(v2Hosts);
     },
     shutdown: async () => {
       await marketplaceController.dispose();
       await sourceBuildController.dispose();
+      activeV2Commands.abortAll();
       ipcMain.removeHandler('desktop:plugins:install-from-marketplace');
       ipcMain.removeHandler('desktop:plugins:install-from-marketplace:cancel');
       ipcMain.removeHandler('desktop:plugins:build-source');
@@ -355,6 +379,7 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       ipcMain.removeHandler('desktop:plugins:v2:list');
       ipcMain.removeHandler('desktop:plugins:v2:install');
       ipcMain.removeHandler('desktop:plugins:v2:execute');
+      ipcMain.removeHandler('desktop:plugins:v2:cancel');
       ipcMain.removeHandler('desktop:plugins:v2:uninstall');
       await disposeAllV2Hosts(v2Hosts);
       await lifecycleManager.shutdown();
@@ -648,13 +673,16 @@ function parsePluginVersionRequest(value: unknown): { pluginId: string; version:
 }
 
 function parseExternalPluginV2CommandRequest(value: unknown): {
+  requestId: string;
   pluginId: string;
   version: string;
   commandId: string;
   input: PluginToolInputValueMap;
 } {
   if (!isRecord(value)
-    || !hasExactKeys(value, ['pluginId', 'version', 'commandId', 'input'])
+    || !hasExactKeys(value, ['requestId', 'pluginId', 'version', 'commandId', 'input'])
+    || typeof value.requestId !== 'string'
+    || !/^[A-Za-z0-9_-]{1,64}$/.test(value.requestId)
     || typeof value.pluginId !== 'string'
     || typeof value.version !== 'string'
     || typeof value.commandId !== 'string'
@@ -662,11 +690,28 @@ function parseExternalPluginV2CommandRequest(value: unknown): {
     throw new PluginIpcInputError();
   }
   return {
+    requestId: value.requestId,
     pluginId: value.pluginId,
     version: value.version,
     commandId: value.commandId,
     input: value.input,
   };
+}
+
+function parseExternalPluginV2CancelRequest(value: unknown): string {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['requestId'])
+    || typeof value.requestId !== 'string'
+    || !/^[A-Za-z0-9_-]{1,64}$/.test(value.requestId)) {
+    throw new PluginIpcInputError();
+  }
+  return value.requestId;
+}
+
+function throwIfV2CommandAborted(signal: AbortSignal): void {
+  if (signal.aborted) {
+    throw new PluginIpcInputError('operation-failed', 'The v2 plugin command was cancelled.');
+  }
 }
 
 function isPluginToolInputMap(value: unknown): value is PluginToolInputValueMap {

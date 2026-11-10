@@ -7,6 +7,7 @@ import {
 import {
   parseExternalExtensionRpcRequest,
   parseExternalExtensionRpcResponse,
+  type ExternalExtensionRpcRequest,
 } from '../src/shared/desktop-services/external-extension-rpc';
 
 const pluginId = 'org.it-tools.rpc-demo';
@@ -154,6 +155,25 @@ describe('ExternalExtensionRpcHost', () => {
     controller.abort();
     await expect(cancelled).rejects.toBeInstanceOf(ExternalExtensionRpcError);
     await expect(cancelled).rejects.toMatchObject({ code: 'cancelled' });
+    await host.dispose();
+  });
+
+  it('cancels activation while the transport request is pending', async () => {
+    const transport = {
+      send(_request: ExternalExtensionRpcRequest, signal: AbortSignal) {
+        return new Promise<unknown>((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+        });
+      },
+      cancel: vi.fn(),
+      dispose: vi.fn(),
+    };
+    const host = new ExternalExtensionRpcHost({ pluginId, version: '1.0.0', transport });
+    const controller = new AbortController();
+    const activation = host.activate(controller.signal);
+    controller.abort();
+
+    await expect(activation).rejects.toMatchObject({ code: 'cancelled' });
     await host.dispose();
   });
 });

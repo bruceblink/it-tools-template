@@ -21,7 +21,7 @@ function projectDesktopExternalPluginTools(snapshots: readonly DesktopPluginSnap
   });
 }
 
-function createExternalPluginV2CommandExecutor(): PluginToolCommandExecutor {
+export function createExternalPluginV2CommandExecutor(): PluginToolCommandExecutor {
   return async (request, signal): Promise<PluginToolCommandResult> => {
     if (signal.aborted) {
       throw new Error('The plugin command was cancelled.');
@@ -30,19 +30,50 @@ function createExternalPluginV2CommandExecutor(): PluginToolCommandExecutor {
     if (!bridge?.executePluginV2Command) {
       throw new Error('The v2 plugin command bridge is not available.');
     }
-    const result = await bridge.executePluginV2Command({
+    const requestId = crypto.randomUUID();
+    const resultPromise = bridge.executePluginV2Command({
+      requestId,
       pluginId: request.pluginId,
       version: request.version,
       commandId: request.commandId,
       input: request.input,
     });
-    if (!result.ok) {
-      throw new Error(result.error);
+    const settledResultPromise = resultPromise.then(
+      result => ({ ok: true as const, result }),
+      error => ({ ok: false as const, error }),
+    );
+    const cancel = () => {
+      const cancelPromise = bridge.cancelPluginV2Command?.(requestId);
+      if (cancelPromise) {
+        void cancelPromise.catch(() => undefined);
+      }
+    };
+    signal.addEventListener('abort', cancel, { once: true });
+    try {
+      if (signal.aborted) {
+        cancel();
+        void settledResultPromise;
+        throw new Error('The plugin command was cancelled.');
+      }
+      const settled = await settledResultPromise;
+      if (!settled.ok) {
+        throw settled.error;
+      }
+      const result = settled.result;
+      if (signal.aborted) {
+        throw new Error('The plugin command was cancelled.');
+      }
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+      if (!isPluginToolCommandResult(result.value)) {
+        throw new Error('The v2 plugin returned an invalid command result.');
+      }
+      return result.value;
     }
-    if (!isPluginToolCommandResult(result.value)) {
-      throw new Error('The v2 plugin returned an invalid command result.');
+    finally {
+      signal.removeEventListener('abort', cancel);
     }
-    return result.value;
   };
 }
 

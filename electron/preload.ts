@@ -208,12 +208,15 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   uninstallPluginV2Package: (pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>> =>
     ipcRenderer.invoke('desktop:plugins:v2:uninstall', { pluginId, version }),
   executePluginV2Command: (input: {
+    requestId: string;
     pluginId: string;
     version: string;
     commandId: string;
     input: PluginToolInputValueMap;
   }): Promise<DesktopPluginOperationResult<PluginToolCommandResult>> =>
     ipcRenderer.invoke('desktop:plugins:v2:execute', input),
+  cancelPluginV2Command: (requestId: string): Promise<DesktopPluginOperationResult<boolean>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:cancel', { requestId }),
   listTrustedPluginSigners: () => ipcRenderer.invoke('desktop:plugins:trusted-signers:list'),
   previewPluginSigner: (input: unknown) => ipcRenderer.invoke('desktop:plugins:trusted-signers:preview', input),
   trustPluginSigner: (input: unknown, confirmedFingerprint: string) =>

@@ -231,11 +231,13 @@ declare global {
       uninstallPlugin?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;
       uninstallPluginV2Package?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;
       executePluginV2Command?(input: {
+        requestId: string;
         pluginId: string;
         version: string;
         commandId: string;
         input: PluginToolInputValueMap;
       }): Promise<DesktopPluginOperationResult<PluginToolCommandResult>>;
+      cancelPluginV2Command?(requestId: string): Promise<DesktopPluginOperationResult<boolean>>;
       listTrustedPluginSigners?(): Promise<DesktopPluginOperationResult<DesktopPluginSignerSnapshot[]>>;
       previewPluginSigner?(input: DesktopPluginSignerInput): Promise<DesktopPluginOperationResult<DesktopPluginSignerSnapshot>>;
       trustPluginSigner?(
