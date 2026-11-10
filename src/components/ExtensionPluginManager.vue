@@ -18,12 +18,16 @@ type PluginManagerBridge = Required<Pick<NonNullable<Window['itToolsDesktop']>,
   | 'buildPluginSource'
   | 'cancelPluginSourceBuild'
   | 'onPluginSourceBuildProgress'
+  | 'listPluginV2Packages'
+  | 'installPluginV2Package'
+  | 'uninstallPluginV2Package'
 >;
 
 const isDesktop = computed(() => typeof window !== 'undefined' && Boolean(getPluginBridge()));
 const isLoading = ref(true);
 const isBusy = ref(false);
 const plugins = ref<DesktopPluginSnapshot[]>([]);
+const v2Packages = ref<DesktopPluginV2Snapshot[]>([]);
 const signers = ref<DesktopPluginSignerSnapshot[]>([]);
 const pluginError = ref<string>();
 const trustStoreError = ref<string>();
@@ -72,6 +76,10 @@ const canBuildSource = computed(() => {
   const bridge = getPluginBridge();
   return Boolean(bridge?.buildPluginSource && bridge.cancelPluginSourceBuild && bridge.onPluginSourceBuildProgress);
 });
+const canManageV2Packages = computed(() => {
+  const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
+  return Boolean(bridge?.listPluginV2Packages && bridge.installPluginV2Package && bridge.uninstallPluginV2Package);
+});
 
 function getPluginBridge(): PluginManagerBridge | undefined {
   const bridge = window.itToolsDesktop;
@@ -113,6 +121,18 @@ const messages = {
     refresh: 'Refresh',
     install: 'Install signed package',
     browseMarketplace: 'Browse plugin marketplace',
+    v2Title: 'Host-rendered plugin packages (v2)',
+    v2Intro: 'These packages contribute tools to the existing navigation and command search. The host renders their declared fields using the same workspace UI.',
+    v2Install: 'Install v2 package',
+    v2Empty: 'No v2 plugin packages are installed.',
+    v2ExecutionPending: 'Command execution is still under development. Installed tools can appear in navigation and search, but they cannot run yet.',
+    v2Uninstall: 'Uninstall package',
+    v2Installed: 'Signed v2 package installed. Supported tools can appear in navigation and search.',
+    v2Uninstalled: 'V2 package removed.',
+    v2Tools: 'Declared tools',
+    v2Runtime: 'Runtime',
+    v2Invalid: 'Invalid package',
+    v2StatusInstalled: 'Installed',
     sourceBuildTitle: 'Build and install a fixed source snapshot',
     sourceBuildIntro: 'Use a full commit SHA. Trust the matching public key below first. The desktop app then downloads the reviewed snapshot, asks for an external signing key, validates it, and installs the signed package.',
     sourceOwner: 'GitHub owner',
@@ -211,6 +231,18 @@ const messages = {
     refresh: '刷新',
     install: '安装已签名的插件包',
     browseMarketplace: '浏览插件市场',
+    v2Title: '宿主渲染插件包（v2）',
+    v2Intro: '这些插件会把工具加入现有导航和命令搜索。宿主会使用统一工作区界面渲染清单声明的输入和结果。',
+    v2Install: '安装 v2 插件包',
+    v2Empty: '尚未安装 v2 插件包。',
+    v2ExecutionPending: '命令执行功能仍在开发中。已安装工具可以进入导航和搜索，但暂时无法运行。',
+    v2Uninstall: '卸载插件包',
+    v2Installed: '已安装签名 v2 插件包。受支持的工具可以显示在导航和搜索中。',
+    v2Uninstalled: '已卸载 v2 插件包。',
+    v2Tools: '声明的工具',
+    v2Runtime: '运行时',
+    v2Invalid: '插件包无效',
+    v2StatusInstalled: '已安装',
     sourceBuildTitle: '从固定源码快照构建并安装',
     sourceBuildIntro: '使用完整 commit SHA。请先在下方信任匹配的公钥。桌面应用随后下载已审查的源码快照，要求选择外部签名私钥，完成校验后安装签名包。',
     sourceOwner: 'GitHub 所有者',
@@ -308,6 +340,10 @@ const activeMessages = computed(() => messages[language.value]);
 const text = (key: keyof typeof messages.en) => activeMessages.value[key];
 
 function packageKey(plugin: DesktopPluginSnapshot): string {
+  return `${plugin.pluginId}:${plugin.version}`;
+}
+
+function v2PackageKey(plugin: DesktopPluginV2Snapshot): string {
   return `${plugin.pluginId}:${plugin.version}`;
 }
 
@@ -503,9 +539,10 @@ const refresh = createQueuedRefresh(async () => {
   pluginError.value = undefined;
   trustStoreError.value = undefined;
   try {
-    const [pluginResult, signerResult] = await Promise.all([
+    const [pluginResult, signerResult, v2Result] = await Promise.all([
       bridge.listPlugins(),
       bridge.listTrustedPluginSigners(),
+      bridge.listPluginV2Packages?.() ?? Promise.resolve({ ok: true as const, value: [] as DesktopPluginV2Snapshot[] }),
     ]);
     if (pluginResult.ok) {
       plugins.value = pluginResult.value;
@@ -531,6 +568,10 @@ const refresh = createQueuedRefresh(async () => {
     else {
       trustStoreError.value = displayPluginError(signerResult.error);
     }
+    v2Packages.value = v2Result.ok ? v2Result.value : [];
+    if (!v2Result.ok) {
+      pluginError.value = displayPluginError(v2Result.error);
+    }
   }
   catch {
     pluginError.value = text('operationFailed');
@@ -555,6 +596,58 @@ async function installPlugin(): Promise<void> {
     }
     else if (result.value) {
       notice.value = text('pluginInstalled');
+      await refresh();
+    }
+  }
+  catch {
+    pluginError.value = text('operationFailed');
+  }
+  finally {
+    isBusy.value = false;
+  }
+}
+
+async function installV2Plugin(): Promise<void> {
+  const bridge = getPluginBridge();
+  if (!bridge?.installPluginV2Package) {
+    return;
+  }
+  isBusy.value = true;
+  pluginError.value = undefined;
+  notice.value = undefined;
+  try {
+    const result = await bridge.installPluginV2Package();
+    if (!result.ok) {
+      pluginError.value = displayPluginError(result.error);
+    }
+    else if (result.value) {
+      notice.value = text('v2Installed');
+      await refresh();
+    }
+  }
+  catch {
+    pluginError.value = text('operationFailed');
+  }
+  finally {
+    isBusy.value = false;
+  }
+}
+
+async function uninstallV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void> {
+  const bridge = getPluginBridge();
+  if (!bridge?.uninstallPluginV2Package) {
+    return;
+  }
+  isBusy.value = true;
+  pluginError.value = undefined;
+  notice.value = undefined;
+  try {
+    const result = await bridge.uninstallPluginV2Package(plugin.pluginId, plugin.version);
+    if (!result.ok) {
+      pluginError.value = displayPluginError(result.error);
+    }
+    else if (result.value) {
+      notice.value = text('v2Uninstalled');
       await refresh();
     }
   }
@@ -846,7 +939,7 @@ onUnmounted(() => {
 
     <template v-else>
       <n-card
-        v-if="!isLoading && plugins.length === 0 && signers.length === 0 && !trustStoreError"
+        v-if="!isLoading && plugins.length === 0 && v2Packages.length === 0 && signers.length === 0 && !trustStoreError"
         class="plugin-onboarding-card"
         data-test-id="plugin-manager-onboarding"
       >
@@ -1035,6 +1128,59 @@ onUnmounted(() => {
         </div>
       </n-spin>
 
+      <n-card v-if="canManageV2Packages" class="v2-plugin-package-card" :title="text('v2Title')">
+        <div class="v2-plugin-section-heading">
+          <p>{{ text('v2Intro') }}</p>
+          <n-button type="primary" :disabled="isBusy || isLoading" @click="installV2Plugin">
+            {{ text('v2Install') }}
+          </n-button>
+        </div>
+        <n-alert type="info" :show-icon="false" mb-4>
+          {{ text('v2ExecutionPending') }}
+        </n-alert>
+        <n-empty v-if="v2Packages.length === 0" :description="text('v2Empty')" />
+        <div v-else class="plugin-package-list">
+          <n-card
+            v-for="plugin in v2Packages"
+            :key="v2PackageKey(plugin)"
+            :title="plugin.name"
+            class="plugin-package-card"
+            :data-test-id="`plugin-v2-package-${plugin.pluginId}-${plugin.version}`"
+          >
+            <div class="plugin-package-meta">
+              <n-text>{{ plugin.pluginId }} · {{ plugin.version }}</n-text>
+              <n-tag :type="plugin.status === 'installed' ? 'success' : 'error'">
+                {{ plugin.status === 'installed' ? text('v2StatusInstalled') : text('v2Invalid') }}
+              </n-tag>
+            </div>
+            <div class="plugin-diagnostics" :aria-label="text('diagnostics')">
+              <span>{{ text('packageId') }}: <code>{{ plugin.pluginId }}</code></span>
+              <span>{{ text('packageVersion') }}: <code>{{ plugin.version }}</code></span>
+              <span>{{ text('v2Runtime') }}: <code>{{ plugin.runtime }}</code></span>
+              <span v-if="plugin.errorCode" class="plugin-error-code">
+                {{ text('errorCode') }}: <code>{{ plugin.errorCode }}</code>
+              </span>
+            </div>
+            <div v-if="plugin.manifest.contributions.tools.length > 0" class="plugin-contribution-list">
+              <n-text strong>{{ text('v2Tools') }}</n-text>
+              <div v-for="tool in plugin.manifest.contributions.tools" :key="tool.id" class="plugin-contribution-row">
+                <n-text strong>{{ tool.title }}</n-text>
+                <n-text depth="3">{{ tool.description }}</n-text>
+              </div>
+            </div>
+            <div class="plugin-package-actions">
+              <n-button
+                quaternary
+                :disabled="isBusy"
+                @click="uninstallV2Plugin(plugin)"
+              >
+                {{ text('v2Uninstall') }}
+              </n-button>
+            </div>
+          </n-card>
+        </div>
+      </n-card>
+
       <n-card :title="text('signerTitle')" class="trusted-signer-card">
         <p>{{ text('signerIntro') }}</p>
         <n-alert v-if="signers.length === 0" type="info" :show-icon="false" mb-4>
@@ -1123,7 +1269,20 @@ onUnmounted(() => {
   gap: 8px;
 }
 
+.v2-plugin-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 @media (max-width: 560px) {
+  .v2-plugin-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .plugin-section-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1149,6 +1308,7 @@ onUnmounted(() => {
 }
 
 .plugin-section-heading p,
+.v2-plugin-section-heading p,
 .trusted-signer-card > p {
   margin: 0;
   color: var(--n-text-color-3);

@@ -83,3 +83,36 @@ test('keeps plugin heading and actions aligned in English and Chinese', async ()
   }
   expect(errors).toEqual([]);
 });
+
+test('keeps v2 package controls usable across themes and narrow widths', async () => {
+  test.setTimeout(90_000);
+  for (const language of ['en', 'zh']) {
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(({ locale, colorScheme }) => {
+        localStorage.setItem('locale', locale);
+        localStorage.setItem('vueuse-color-scheme', colorScheme);
+      }, { locale: language, colorScheme: theme });
+      await page.reload();
+      for (const width of [1280, 560, 390]) {
+        await page.setViewportSize({ width, height: 900 });
+        const card = page.locator('.v2-plugin-package-card');
+        await card.scrollIntoViewIfNeeded();
+        const heading = card.locator('.v2-plugin-section-heading');
+        const description = await heading.locator('p').boundingBox();
+        const button = heading.getByRole('button', { name: language === 'zh' ? '安装 v2 插件包' : 'Install v2 package' });
+        const buttonBox = await button.boundingBox();
+        const bounds = await heading.boundingBox();
+        expect(description).not.toBeNull();
+        expect(buttonBox).not.toBeNull();
+        expect(buttonBox!.x).toBeGreaterThanOrEqual(bounds!.x - 1);
+        expect(buttonBox!.x + buttonBox!.width).toBeLessThanOrEqual(bounds!.x + bounds!.width + 1);
+        if (width <= 560) {
+          expect(buttonBox!.y).toBeGreaterThanOrEqual(description!.y + description!.height);
+        }
+        expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+        await button.focus();
+        await expect(button).toBeFocused();
+      }
+    }
+  }
+});
