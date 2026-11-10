@@ -5,6 +5,7 @@ import { defineComponent } from 'vue';
 import { afterEach, describe, expect, it } from 'vitest';
 import ExternalPluginToolRoute from './ExternalPluginToolRoute.page.vue';
 import ExternalPluginV2ToolPage from './ExternalPluginV2Tool.page.vue';
+import PluginToolWorkbench from './PluginToolWorkbench.page.vue';
 import { projectExternalPluginV2Manifest } from '@/tools/external-plugin-v2-tools';
 import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
 import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
@@ -12,7 +13,7 @@ import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
 const pluginId = 'org.example.deep-link';
 const toolPath = `/extensions/${pluginId}/1.0.0/echo`;
 
-function createProjection() {
+function createProjection(title = 'Echo tool') {
   const manifest = validateExternalPluginV2Manifest({
     formatVersion: 2,
     id: pluginId,
@@ -24,7 +25,7 @@ function createProjection() {
     contributions: {
       tools: [{
         id: `${pluginId}/echo`,
-        title: 'Echo tool',
+        title,
         description: 'Return the supplied value.',
         keywords: ['echo'],
         categoryId: 'development',
@@ -56,6 +57,23 @@ afterEach(() => {
 });
 
 describe('ExternalPluginToolRoute', () => {
+  it('updates the workbench when the registration changes without changing its route', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/extensions/:pluginId/:version/:toolId', component: ExternalPluginV2ToolPage }],
+    });
+    await router.push(toolPath);
+    await router.isReady();
+    externalPluginV2Registry.register(createProjection(), async () => ({ kind: 'text', value: '' }));
+    const wrapper = shallowMount(ExternalPluginV2ToolPage, { global: { plugins: [router] } });
+    expect(wrapper.getComponent(PluginToolWorkbench).props('tool').title).toBe('Echo tool');
+
+    externalPluginV2Registry.register(createProjection('Updated echo tool'), async () => ({ kind: 'text', value: '' }));
+    await flushPromises();
+    expect(wrapper.getComponent(PluginToolWorkbench).props('tool').title).toBe('Updated echo tool');
+    wrapper.unmount();
+  });
+
   it('updates legacy route metadata when the v2 registry loads after a deep link', async () => {
     const router = createRouter({
       history: createMemoryHistory(),

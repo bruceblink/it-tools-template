@@ -6,7 +6,11 @@ import PluginToolWorkbench from './PluginToolWorkbench.page.vue';
 import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
 
 const route = useRoute();
-const registration = computed(() => externalPluginV2Registry.findByRoute(route.path));
+// 注册表索引变化时重新查询，确保同一路径的插件更新也能刷新工作台。
+const registration = computed(() => externalPluginV2Registry.tools.value
+  .some(tool => tool.path === route.path)
+  ? externalPluginV2Registry.findByRoute(route.path)
+  : undefined);
 </script>
 
 <template>
