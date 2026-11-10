@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, mkdir, opendir, readFile, readdir, realpath, rm, rmdir } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
-import { PluginPackageError } from './plugin-package-manifest';
+import { pluginPackageLimits, PluginPackageError } from './plugin-package-manifest';
 import type { PluginPackageSigningKey, StagePluginPackageOptions } from './plugin-package-manifest';
 import {
   stageExternalPluginV2PackageArchive,
@@ -247,6 +247,7 @@ async function verifyInstalledFiles(
   packageRoot: string,
   manifest: ExternalPluginV2PackageManifest,
 ): Promise<void> {
+  let totalBytes = 0;
   for (const file of manifest.files) {
     const filePath = resolve(packageRoot, ...file.path.split('/'));
     if (!isContainedPath(packageRoot, filePath)) {
@@ -255,6 +256,10 @@ async function verifyInstalledFiles(
     const metadata = await lstat(filePath);
     if (!metadata.isFile() || metadata.isSymbolicLink()) {
       throw new PluginPackageError('unsafe-archive-entry', `The installed v2 file is not a regular file: ${file.path}.`);
+    }
+    totalBytes += metadata.size;
+    if (metadata.size > pluginPackageLimits.maximumAssetBytes || totalBytes > pluginPackageLimits.maximumExpandedBytes) {
+      throw new PluginPackageError('resource-limit', 'The installed v2 files exceed their size limit.');
     }
     const canonicalPath = await realpath(filePath);
     if (!isContainedPath(packageRoot, canonicalPath)) {

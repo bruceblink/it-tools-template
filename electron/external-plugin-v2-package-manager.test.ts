@@ -1,5 +1,5 @@
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rm, truncate, writeFile } from 'node:fs/promises';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,7 +12,7 @@ import {
   getExternalPluginV2PackageSigningPayload,
   type ExternalPluginV2UnsignedPackageManifest,
 } from './plugin-package-v2';
-import type { PluginPackageSigningKey } from './plugin-package-manifest';
+import { pluginPackageLimits, type PluginPackageSigningKey } from './plugin-package-manifest';
 
 const pluginId = 'org.example.manager-demo';
 const signingPair = generateKeyPairSync('ed25519');
@@ -106,6 +106,9 @@ describe('ExternalPluginV2PackageManager', () => {
     await writeFile(join(packageRoot, 'helper.mjs'), 'export const value = 2;');
     await expect(manager.getInstalledExecutionContext(pluginId, '1.0.0'))
       .rejects.toMatchObject({ code: 'file-hash-mismatch' });
+    await truncate(join(packageRoot, 'helper.mjs'), pluginPackageLimits.maximumAssetBytes + 1);
+    await expect(manager.getInstalledExecutionContext(pluginId, '1.0.0'))
+      .rejects.toMatchObject({ code: 'resource-limit' });
   });
 });
 
