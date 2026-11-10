@@ -153,6 +153,25 @@ describe('ExternalExtensionProcessTransport', () => {
     transport.dispose();
   });
 
+  it('reports disposal only after the worker exits', async () => {
+    const child = new FakeProcess();
+    const onStopped = vi.fn();
+    const transport = new ExternalExtensionProcessTransport({
+      pluginId,
+      workerPath: '/safe/worker.cjs',
+      onStopped,
+      fork: () => child,
+    });
+    const pending = transport.send(request('request-dispose'), new AbortController().signal);
+    transport.dispose();
+    await expect(pending).rejects.toMatchObject({ code: 'disposed' });
+    expect(onStopped).not.toHaveBeenCalled();
+    child.exit(0);
+    expect(onStopped).toHaveBeenCalledOnce();
+    transport.dispose();
+    expect(onStopped).toHaveBeenCalledOnce();
+  });
+
   it('rejects in-flight requests after process exit and blocks later sends after dispose', async () => {
     const child = new FakeProcess();
     const transport = new ExternalExtensionProcessTransport({ pluginId, workerPath: '/safe/worker.cjs', fork: () => child });

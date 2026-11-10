@@ -35,6 +35,8 @@ export interface ExternalExtensionProcessTransportOptions {
   launchConfig?: ExternalExtensionWorkerLaunchConfig;
   /** 同步计算无法响应取消消息时，终止进程以结束计算。 */
   terminateOnCancel?: boolean;
+  /** 释放后在进程确认退出时通知调用方；未启动进程则立即通知。 */
+  onStopped?: () => void;
   serviceName?: string;
   environment?: NodeJS.ProcessEnv;
   fork?: ExternalExtensionProcessFork;
@@ -51,6 +53,7 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
   private child: ExternalExtensionProcessLike | null = null;
   private disposed = false;
   private stopping = false;
+  private stoppedNotified = false;
   private readonly pending = new Map<string, PendingRequest>();
   private readonly fork: ExternalExtensionProcessFork;
   private readonly onMessage = (message: unknown) => this.handleMessage(message);
@@ -141,6 +144,9 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     }
     this.disposed = true;
     this.stopChild(new ExternalExtensionRpcError('disposed'));
+    if (!this.child) {
+      this.notifyStopped();
+    }
   }
 
   /** 取消同步计算时拒绝活动请求，并等待旧进程退出后才允许重启。 */
@@ -202,6 +208,16 @@ export class ExternalExtensionProcessTransport implements ExternalExtensionRpcTr
     child?.removeListener('exit', this.onExit);
     if (!this.disposed) {
       this.rejectPending(new ExternalExtensionRpcError('transport-error'));
+    }
+    if (this.disposed) {
+      this.notifyStopped();
+    }
+  }
+
+  private notifyStopped(): void {
+    if (!this.stoppedNotified) {
+      this.stoppedNotified = true;
+      this.options.onStopped?.();
     }
   }
 
