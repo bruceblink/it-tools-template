@@ -647,15 +647,15 @@ async function runCli(argv) {
     process.stdout.write(`Valid plugin source: ${result.manifest.id} ${result.manifest.version} (${result.files.length} files, ${result.expandedBytes} bytes)\n`);
     return;
   }
-  throw new Error('Unknown plugin package command. Run `pnpm run plugin:pack -- --help` for usage.');
+  throw new Error('Unknown plugin package command. Run `pnpm run plugin:pack --help` for usage.');
 }
 
 function getUsage() {
   return [
     'IT Tools signed Electron plugin package commands',
-    '  pnpm run plugin:keygen -- --key-id <publisher> --output-directory <outside-repo-directory>',
-    '  pnpm run plugin:validate -- --source <plugin-directory>',
-    '  pnpm run plugin:pack -- --source <plugin-directory> --private-key <external.pem> --key-id <publisher> --output <package.itxs>',
+    '  pnpm run plugin:keygen --key-id <publisher> --output-directory <outside-repo-directory>',
+    '  pnpm run plugin:validate --source <plugin-directory>',
+    '  pnpm run plugin:pack --source <plugin-directory> --private-key <external.pem> --key-id <publisher> --output <package.itxs>',
     '',
   ].join('\n');
 }

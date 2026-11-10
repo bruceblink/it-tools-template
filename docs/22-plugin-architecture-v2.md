@@ -16,7 +16,7 @@
 | 工具工作台 | Plugin Tool Workbench | 宿主提供的声明式工具页面。它使用统一的布局、主题、控件、错误和结果样式。 |
 | 能力代理 | Capability Broker | 主进程中的权限检查和执行边界。它只执行已声明、已支持并已批准的能力。 |
 | RPC | External Extension RPC | 宿主与扩展宿主之间的版本化 JSON 消息通道；不是任意 Electron IPC 转发。 |
-| 受限计算插件 | WASM Plugin | 运行纯计算、解析、转换和校验逻辑的 WASM/WASI 插件；不负责复杂桌面界面。 |
+| 受限计算插件 | WASM Plugin | 运行纯计算、解析、转换和校验逻辑的非 WASI WASM 插件；不负责复杂桌面界面。 |
 
 ## 1. 设计目标
 
@@ -32,7 +32,7 @@ Electron `utilityProcess` 只提供进程和崩溃隔离，本身不会限制 No
 
 1. 内置扩展继续使用当前的第一方 `FirstPartyExtensionHost`，保持最佳性能和完整 UI 能力。
 2. 外部扩展优先使用独立扩展宿主和 RPC，适合需要命令、工具和宿主服务的第三方功能。
-3. 纯计算逻辑使用 WASM/WASI 运行时，限制文件、网络和进程访问，不承载复杂界面。
+3. 纯计算逻辑使用非 WASI WASM 运行时，限制文件、网络和进程访问，不承载复杂界面。
 
 ## 2. 总体结构
 
@@ -100,6 +100,25 @@ flowchart LR
 宿主校验以下内容后才注册贡献点：插件 ID、版本、API 范围；贡献 ID 是否属于插件命名空间；工具字段类型、数量、长度和结果类型；命令、工具和激活事件是否一一对应；能力是否属于已知目录。工具元数据必须完整存在于签名清单中，不能等扩展代码启动后再改变导航和搜索结构。
 
 运行时入口和签名属于安装包封套，而不是渲染器使用的贡献清单。安装器单独校验 `runtime`、`entrypoint`、文件哈希和 Ed25519 签名，再把通过校验的贡献清单交给本节的静态注册器。执行前还须重新核验安装目录中每个签名文件的哈希。这样渲染器不需要信任入口脚本，也不会把安装包路径暴露给工具页面。
+
+### v2 WASM 包打包
+
+开发者可以复用已有的 v2 静态清单和 `.wasm` 文件。`plugin:pack:v2` 不编译插件，也不生成清单。输入清单只包含本节定义的贡献声明；打包器会在签名封套中加入 `runtime: "wasm"`、入口路径、文件 SHA-256 和 Ed25519 签名。v2 清单的 `apiVersion` 必须包含当前宿主 API `2.0.0`。
+
+```sh
+pnpm run plugin:keygen --key-id example-publisher --output-directory "$HOME/.config/it-tools/plugin-keys"
+pnpm run plugin:pack:v2 \
+  --manifest ./plugin.manifest.json \
+  --wasm ./build/plugin.wasm \
+  --entrypoint extension.wasm \
+  --private-key "$HOME/.config/it-tools/plugin-keys/example-publisher.private.pem" \
+  --key-id example-publisher \
+  --output ./artifacts/example-plugin.itxs
+```
+
+`--manifest` 指向不含 `runtime`、`entrypoint`、`files` 和 `signature` 的 v2 静态清单。`--wasm` 指向开发者已有的 WASM 文件；`--entrypoint` 指定它在安装包内的相对路径。当前打包命令只收录这一份 WASM 文件，不收录额外资源。输出包使用与 v1 相同的确定性未压缩 ZIP 容器和 `.itxs` 扩展名，但采用 `IT Tools Electron Plugin Package v2` 签名域。
+
+打包器调用 `validateExternalPluginV2Manifest` 检查完整静态清单和 API 兼容范围，再检查入口路径、文件大小和密钥类型。它为 WASM 文件计算小写十六进制 SHA-256 并签名，但不会编译或执行 WASM。安装器在安装时会再次校验 v2 清单、可信签名者和所有文件哈希；扩展宿主在执行时再检查 WASM ABI 和模块资源。签名密钥必须存放在仓库外，输出文件已存在时命令会失败且不会覆盖。
 
 ## 4. 宿主渲染的工具模型
 

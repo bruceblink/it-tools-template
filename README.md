@@ -171,19 +171,19 @@ Run desktop smoke tests with pnpm test:e2e:electron. The platform matrix is main
 Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, self-contained SDK type declarations, and a local README:
 
 ~~~sh
-pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
+pnpm run plugin:create --id org.example.my-plugin --name "My plugin"
 ~~~
 
 The default output is `plugins/org.example.my-plugin`. Use `--directory` for a project outside the repository, and review `plugin.source.json` before signing. The `types/` directory contains five self-contained SDK declarations for TypeScript projects. The scaffold targets renderer API `1.4.0`, keeps signing keys outside the source directory, and accepts optional capability declarations:
 
 ~~~sh
-pnpm plugin:create -- --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
+pnpm run plugin:create --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
 ~~~
 
 The generated package is metadata and UI only. Validate it before creating signing material:
 
 ~~~sh
-pnpm plugin:validate -- --source plugins/org.example.my-plugin
+pnpm run plugin:validate --source plugins/org.example.my-plugin
 ~~~
 
 The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the desktop host and user approve it.
@@ -191,7 +191,7 @@ The command checks the source manifest, API range, contribution namespace, capab
 For a repeatable external-project build, run one command. It validates the source, runs the repository TypeScript compiler when you provide an external `tsconfig.json`, and signs without overwriting an existing package:
 
 ~~~sh
-pnpm plugin:build -- --source ./dist/plugin --tsconfig ./tsconfig.json \
+pnpm run plugin:build --source ./dist/plugin --tsconfig ./tsconfig.json \
   --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
   --key-id plugin-publisher --output ./artifacts/plugin.itxs
 ~~~
@@ -209,7 +209,26 @@ The source-build command does not run repository scripts, install dependencies, 
 
 In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. It also lists, installs, and removes signed v2 packages and shows their declared tools. V2 WASM tools can run when they do not require host capabilities; the process runtime and v2 capability broker are not available yet.
 
-The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, and capability declarations. IT Tools renders supported tool pages and registers them for navigation and search. The WASM runtime limits linear memory, module and message sizes, and concurrent workers; it does not enforce an OS-level total memory limit. The capability broker, settings, and data providers are not complete. The current `plugin:create` command still creates legacy v1 HTML packages and is not the v2 authoring command.
+The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, and capability declarations. IT Tools renders supported tool pages and registers them for navigation and search. The WASM runtime limits linear memory, module and message sizes, and concurrent workers; it does not enforce an OS-level total memory limit. The capability broker, settings, and data providers are not complete. The current `plugin:create` command creates legacy v1 HTML packages. To sign an existing v2 static manifest and WASM module, use the v2 packer below.
+
+## Sign a v2 WASM plugin
+
+Use Node.js 24 and the repository's pinned pnpm version. Create a `plugin.manifest.json` containing the v2 static manifest fields shown in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). Do not add `runtime`, `entrypoint`, `files`, or `signature`; the packer creates those package fields. The manifest API range must include host API `2.0.0`.
+
+Create a signing key outside the repository, then pack the existing WASM module:
+
+~~~sh
+pnpm run plugin:keygen --key-id example-publisher --output-directory "$HOME/.config/it-tools/plugin-keys"
+pnpm run plugin:pack:v2 \
+  --manifest ./plugin.manifest.json \
+  --wasm ./build/plugin.wasm \
+  --entrypoint extension.wasm \
+  --private-key "$HOME/.config/it-tools/plugin-keys/example-publisher.private.pem" \
+  --key-id example-publisher \
+  --output ./artifacts/example-plugin.itxs
+~~~
+
+The package contains the signed v2 manifest and the selected WASM file. The packer uses the host's shared v2 manifest validator, then checks the signing key, entrypoint path, and file limits. The desktop installer rechecks the manifest, signer trust, and file hashes; the extension host checks the WASM ABI when it executes the module. Run `pnpm run test:plugin-pack:v2` for a packer-to-installer-to-WASM execution check. Signing does not grant requested capabilities.
 
 ## Plugin marketplace
 

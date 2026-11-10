@@ -9,7 +9,7 @@
 可以使用脚手架创建新的插件源目录，再按需参考 [`plugins/capability-demo/`](../plugins/capability-demo/) 修改 `plugin.source.json`、HTML、CSS 和 JavaScript：
 
 ```powershell
-pnpm plugin:create -- --id org.example.my-plugin --name "My plugin"
+pnpm run plugin:create --id org.example.my-plugin --name "My plugin"
 ```
 
 脚手架默认写入 `plugins/org.example.my-plugin`，也可以用 `--directory` 指定仓库外目录。它不会覆盖已有目录，并生成一个插件命名空间内的工具贡献和 `types/` 目录。`types/` 包含 5 个自包含的 SDK 声明文件，TypeScript 插件不需要解析仓库内部的 `src/` 路径。清单声明插件 ID、插件版本、宿主 API 兼容范围、入口文件和请求能力。请求能力必须使用包格式已知的能力 ID；当前宿主只执行其中已实现的能力，其他已知声明会在沙箱启动时被过滤。打包器检查文件类型、路径、大小和清单字段。它不运行插件代码，也不运行 `npm install`。
@@ -98,7 +98,7 @@ MVP 提供四个宿主能力：读取平台与应用版本、写入文本到系�
 在创建签名密钥前，先运行不需要私钥的源码校验：
 
 ```powershell
-pnpm run plugin:validate -- --source plugins/capability-demo
+pnpm run plugin:validate --source plugins/capability-demo
 ```
 
 该命令只读取插件目录。它校验清单、当前宿主 API 兼容范围、工具贡献命名空间、能力声明、入口文件、路径规则、文件类型和资源上限，并输出文件数量与展开字节数。它不运行插件代码、不安装依赖、不写入源码目录，也不生成 `.itxs`。`plugin:pack` 在签名时会重复同一校验。
@@ -108,7 +108,7 @@ pnpm run plugin:validate -- --source plugins/capability-demo
 使用 Node.js 24 和仓库指定的 pnpm 版本。把密钥放在仓库以外、仅当前用户可访问的目录。密钥目录应有受限 ACL，并保留离线备份。
 
 ```powershell
-pnpm run plugin:keygen -- --key-id capability-demo-publisher --output-directory "D:\secure-keys\it-tools"
+pnpm run plugin:keygen --key-id capability-demo-publisher --output-directory "D:\secure-keys\it-tools"
 ```
 
 命令输出私钥文件路径、公钥文件路径和 SHA-256 指纹。命令不会输出私钥内容。它拒绝把密钥写进仓库，并且不会覆盖已有密钥文件。
@@ -118,7 +118,7 @@ pnpm run plugin:keygen -- --key-id capability-demo-publisher --output-directory 
 源码校验通过后再创建签名包：
 
 ```powershell
-pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itxs"
+pnpm run plugin:pack --source plugins/capability-demo --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itxs"
 ```
 
 打包器生成确定性的未压缩 ZIP。它把每个文件的 SHA-256 写入签名清单，并用 Ed25519 私钥签名清单。包不包含 `plugin.source.json` 或签名私钥。安装器会再次检查包签名、清单、文件路径和每个文件哈希。
@@ -128,7 +128,7 @@ pnpm run plugin:pack -- --source plugins/capability-demo --private-key "D:\secur
 如果源码项目另有 TypeScript 配置，可以用 `plugin:build` 收敛校验、类型检查和签名打包。`--tsconfig` 可以指向源码包目录之外的项目配置，避免把开发源码和配置误放进最终静态包：
 
 ```powershell
-pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin-project\tsconfig.json" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itxs"
+pnpm run plugin:build --source "D:\plugin-project\dist" --tsconfig "D:\plugin-project\tsconfig.json" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\capability-demo.itxs"
 ```
 
 该命令先执行与 `plugin:validate` 相同的源码检查；存在 `tsconfig.json` 时使用仓库固定的 TypeScript 编译器执行 `--noEmit`，失败时不会写入包。没有 TypeScript 配置时会明确报告跳过类型检查。输出包已存在时仍会失败，不覆盖旧包。
@@ -138,7 +138,7 @@ pnpm run plugin:build -- --source "D:\plugin-project\dist" --tsconfig "D:\plugin
 需要审查 GitHub 源码时，使用完整的 40 位 commit SHA。命令会重新核验公开仓库、`it-tools-plugin` topic 和 commit 身份，再下载受限的 gzip 快照。解压过程拒绝路径穿越、链接、特殊文件、重复路径和超出资源上限的归档。
 
 ```powershell
-corepack pnpm plugin:build-source -- --owner example --name my-plugin --commit "<40-character-commit-sha>" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\my-plugin.itxs"
+corepack pnpm run plugin:build-source --owner example --name my-plugin --commit "<40-character-commit-sha>" --private-key "D:\secure-keys\it-tools\capability-demo-publisher.private.pem" --key-id capability-demo-publisher --output "D:\plugin-build\my-plugin.itxs"
 ```
 
 该命令只执行源码清单校验、可选的仓库 TypeScript `--noEmit` 检查和签名打包。它不运行仓库脚本，不执行 `npm install`，不加载原始源码窗口。临时快照和解压目录在成功或失败后都会删除。也可以先在桌面设置中信任公钥，再在“从固定源码快照构建并安装”卡片填写相同的仓库、commit 和签名者 key ID；主进程会打开私钥选择器，构建后直接交给本地安装器。两种入口都仍需单独完成能力授权。
