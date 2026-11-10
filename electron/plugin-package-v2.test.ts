@@ -169,6 +169,62 @@ describe('external plugin v2 package manifest', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it('rejects a changed v2 entry file before creating an installed package', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-v2-hash-'));
+    try {
+      const signedSource = 'export const activate = () => undefined;';
+      const manifest = createUnsignedManifest({
+        files: [{
+          path: 'extension.mjs',
+          sha256: createHash('sha256').update(signedSource).digest('hex'),
+        }],
+      });
+      const archivePath = join(root, 'tampered.itxs');
+      await writeFile(archivePath, makeZip([
+        { path: 'plugin.json', contents: JSON.stringify(signManifest(manifest)) },
+        { path: 'extension.mjs', contents: 'export const activate = () => { throw new Error("tampered"); };' },
+      ]));
+
+      await expect(stageExternalPluginV2PackageArchive({
+        archivePath,
+        installRoot: join(root, 'installed'),
+        hostApiVersion: '2.0.0',
+        trustedSigningKeys,
+      })).rejects.toMatchObject({ code: 'file-hash-mismatch' });
+      await expect(readFile(join(root, 'installed', pluginId, '1.0.0', 'extension.mjs'), 'utf8'))
+        .rejects.toMatchObject({ code: 'ENOENT' });
+    }
+    finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects an archive file that is not declared by the v2 manifest', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-v2-files-'));
+    try {
+      const source = 'export const activate = () => undefined;';
+      const manifest = createUnsignedManifest({
+        files: [{ path: 'extension.mjs', sha256: createHash('sha256').update(source).digest('hex') }],
+      });
+      const archivePath = join(root, 'extra-file.itxs');
+      await writeFile(archivePath, makeZip([
+        { path: 'plugin.json', contents: JSON.stringify(signManifest(manifest)) },
+        { path: 'extension.mjs', contents: source },
+        { path: 'README.md', contents: 'not declared by the signed manifest' },
+      ]));
+
+      await expect(stageExternalPluginV2PackageArchive({
+        archivePath,
+        installRoot: join(root, 'installed'),
+        hostApiVersion: '2.0.0',
+        trustedSigningKeys,
+      })).rejects.toMatchObject({ code: 'invalid-package' });
+    }
+    finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 interface ZipEntry {
