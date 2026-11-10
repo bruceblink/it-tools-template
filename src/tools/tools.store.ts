@@ -113,6 +113,7 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
   try {
     const result = await bridge.listPluginV2Packages();
     if (!result.ok) {
+      console.warn('Could not list installed v2 plugin packages.', result.error);
       return;
     }
     const execute = createExternalPluginV2CommandExecutor();
@@ -128,13 +129,19 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
         });
         externalPluginV2Registry.register(projection, execute);
       }
-      catch {
+      catch (error) {
         // 单个包的静态元数据无效时跳过该包，保留其他工具和导航。
+        console.warn('Skipping invalid v2 plugin contribution.', {
+          pluginId: snapshot.pluginId,
+          version: snapshot.version,
+          error: error instanceof Error ? error.message : 'Unknown validation error.',
+        });
       }
     }
   }
-  catch {
+  catch (error) {
     externalPluginV2Registry.clear();
+    console.warn('Could not register installed v2 plugin tools.', error instanceof Error ? error.message : 'Unknown registry error.');
   }
 }
 

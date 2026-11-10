@@ -1,6 +1,11 @@
+import { createApp, defineComponent } from 'vue';
+import { createPinia, setActivePinia } from 'pinia';
+import { flushPromises } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createExternalPluginV2CommandExecutor } from './tools.store';
 import type { PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
+import { useToolStore } from './tools.store';
 
 describe('external plugin v2 command bridge', () => {
   const previousBridge = window.itToolsDesktop;
@@ -40,5 +45,74 @@ describe('external plugin v2 command bridge', () => {
 
     rejectExecution(new Error('late IPC failure'));
     await Promise.resolve();
+  });
+
+  it('registers the signed WASM E2E manifest shape after the desktop list refresh', async () => {
+    const pluginId = 'org.it-tools.wasm-e2e';
+    const snapshot: DesktopPluginV2Snapshot = {
+      pluginId,
+      name: 'WASM execution demo',
+      version: '1.0.0',
+      runtime: 'wasm',
+      status: 'installed',
+      manifest: {
+        formatVersion: 2,
+        id: pluginId,
+        name: 'WASM execution demo',
+        version: '1.0.0',
+        apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
+        requestedCapabilities: [],
+        activationEvents: [`onTool:${pluginId}/echo`, `onCommand:${pluginId}/run-echo`],
+        contributions: {
+          tools: [{
+            id: `${pluginId}/echo`,
+            title: 'Signed WASM echo',
+            description: 'Run a signed WASM command with the host-rendered workspace.',
+            keywords: ['wasm', 'signed', 'extension'],
+            categoryId: 'development',
+            dataProcessing: 'memory-only',
+            offline: 'available',
+            capabilities: [],
+            inputs: [{ id: 'spin', kind: 'boolean', label: 'Spin forever', defaultValue: false }],
+            output: { kind: 'json' },
+          }],
+          commands: [{
+            id: `${pluginId}/run-echo`,
+            title: 'Run signed WASM echo',
+            description: 'Run a signed WASM extension command.',
+            keywords: ['wasm', 'signed', 'extension'],
+            toolId: `${pluginId}/echo`,
+          }],
+        },
+      },
+    };
+    let store: ReturnType<typeof useToolStore> | undefined;
+    const pinia = createPinia();
+    const app = createApp(defineComponent({
+      setup() {
+        store = useToolStore();
+        return () => null;
+      },
+    }));
+    app.use(pinia);
+    app.use(createI18n({ legacy: false, locale: 'en', messages: { en: {} }, missingWarn: false, fallbackWarn: false, warnHtmlMessage: false }));
+    setActivePinia(pinia);
+    Object.defineProperty(window, 'itToolsDesktop', {
+      configurable: true,
+      writable: true,
+      value: {
+        listPlugins: vi.fn(async () => ({ ok: true as const, value: [] })),
+        listPluginV2Packages: vi.fn(async () => ({ ok: true as const, value: [snapshot] })),
+      },
+    });
+    app.mount(document.createElement('div'));
+    try {
+      await flushPromises();
+      expect(store?.tools.some(tool => tool.path === `/extensions/${pluginId}/1.0.0/echo`)).toBe(true);
+    }
+    finally {
+      app.unmount();
+      setActivePinia(undefined);
+    }
   });
 });

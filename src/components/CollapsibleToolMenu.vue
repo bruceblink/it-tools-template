@@ -68,7 +68,8 @@ const themeVars = useThemeVars();
       </span>
     </div>
 
-    <n-collapse-transition v-if="!isCollapsed" :show="true">
+    <!-- 折叠容器会缓存槽内容；工具路径变化时重建，保证导航同步。 -->
+    <n-collapse-transition v-if="!isCollapsed" :key="tools.map(tool => tool.key).join('|')" :show="true">
       <div class="menu-wrapper">
         <div class="toggle-bar" @click="toggleCategoryCollapse({ name })" />
 
