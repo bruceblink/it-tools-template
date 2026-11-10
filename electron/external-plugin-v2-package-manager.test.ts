@@ -1,5 +1,5 @@
 import { createHash, generateKeyPairSync, sign } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -73,6 +73,39 @@ describe('ExternalPluginV2PackageManager', () => {
       status: 'invalid',
       errorCode: 'invalid-package',
     })]);
+  });
+
+  it('checks every signed file before providing an execution context', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-manager-execution-'));
+    temporaryDirectories.push(root);
+    const packageRoot = join(root, pluginId, '1.0.0');
+    await mkdir(packageRoot, { recursive: true });
+    const helper = 'export const value = 1;';
+    const baseManifest = createManifest();
+    const manifest = {
+      ...baseManifest,
+      files: [
+        ...baseManifest.files,
+        { path: 'helper.mjs', sha256: createHash('sha256').update(helper).digest('hex') },
+      ],
+    };
+    await writeFile(join(packageRoot, 'plugin.json'), JSON.stringify(signManifest(manifest)));
+    await writeFile(join(packageRoot, 'extension.mjs'), 'export const activate = () => undefined;');
+    await writeFile(join(packageRoot, 'helper.mjs'), helper);
+    const manager = new ExternalPluginV2PackageManager({
+      installRoot: root,
+      hostApiVersion: '2.0.0',
+      trustedSigningKeys,
+    });
+
+    await expect(manager.getInstalledExecutionContext(pluginId, '1.0.0')).resolves.toMatchObject({
+      packageRoot: await realpath(packageRoot),
+      entrypoint: 'extension.mjs',
+      entrypointSha256: manifest.files[0]!.sha256,
+    });
+    await writeFile(join(packageRoot, 'helper.mjs'), 'export const value = 2;');
+    await expect(manager.getInstalledExecutionContext(pluginId, '1.0.0'))
+      .rejects.toMatchObject({ code: 'file-hash-mismatch' });
   });
 });
 

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { lstat, mkdir, opendir, readFile, readdir, realpath, rm, rmdir } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { PluginPackageError } from './plugin-package-manifest';
@@ -28,6 +29,13 @@ export interface ExternalPluginV2PackageSnapshot {
   readonly contributions: ExternalPluginV2Contributions;
   readonly status: ExternalPluginV2PackageStatus;
   readonly errorCode?: string;
+}
+
+export interface ExternalPluginV2ExecutionContext {
+  readonly manifest: ExternalPluginV2PackageManifest;
+  readonly packageRoot: string;
+  readonly entrypoint: string;
+  readonly entrypointSha256: string;
 }
 
 export interface ExternalPluginV2PackageStateChangeEvent {
@@ -105,6 +113,25 @@ export class ExternalPluginV2PackageManager {
 
   async getInstalledManifest(pluginId: string, version: string): Promise<ExternalPluginV2PackageManifest> {
     return this.runExclusive(async () => this.readInstalledManifest(await this.getInstalledPackageRoot(pluginId, version)));
+  }
+
+  /** 读取并复核已安装包的所有文件，避免安装后篡改入口或依赖文件。 */
+  async getInstalledExecutionContext(pluginId: string, version: string): Promise<ExternalPluginV2ExecutionContext> {
+    return this.runExclusive(async () => {
+      const packageRoot = await this.getInstalledPackageRoot(pluginId, version);
+      const manifest = await this.readInstalledManifest(packageRoot);
+      await verifyInstalledFiles(packageRoot, manifest);
+      const entrypointFile = manifest.files.find(file => file.path === manifest.entrypoint);
+      if (!entrypointFile) {
+        throw new PluginPackageError('invalid-package', 'The installed v2 entrypoint is missing from its signed file list.');
+      }
+      return {
+        manifest,
+        packageRoot,
+        entrypoint: manifest.entrypoint,
+        entrypointSha256: entrypointFile.sha256,
+      };
+    });
   }
 
   private stageOptions(archivePath: string): StagePluginPackageOptions {
@@ -214,6 +241,30 @@ function invalidSnapshot(pluginId: string, version: string, errorCode: string): 
 
 function getErrorCode(error: unknown): string {
   return error instanceof PluginPackageError ? error.code : 'invalid-package';
+}
+
+async function verifyInstalledFiles(
+  packageRoot: string,
+  manifest: ExternalPluginV2PackageManifest,
+): Promise<void> {
+  for (const file of manifest.files) {
+    const filePath = resolve(packageRoot, ...file.path.split('/'));
+    if (!isContainedPath(packageRoot, filePath)) {
+      throw new PluginPackageError('unsafe-archive-entry', 'The installed v2 file escaped its package root.');
+    }
+    const metadata = await lstat(filePath);
+    if (!metadata.isFile() || metadata.isSymbolicLink()) {
+      throw new PluginPackageError('unsafe-archive-entry', `The installed v2 file is not a regular file: ${file.path}.`);
+    }
+    const canonicalPath = await realpath(filePath);
+    if (!isContainedPath(packageRoot, canonicalPath)) {
+      throw new PluginPackageError('unsafe-archive-entry', 'The installed v2 file escaped its package root.');
+    }
+    const actualHash = createHash('sha256').update(await readFile(canonicalPath)).digest('hex');
+    if (actualHash !== file.sha256) {
+      throw new PluginPackageError('file-hash-mismatch', `The installed v2 file hash does not match ${file.path}.`);
+    }
+  }
 }
 
 function isContainedPath(root: string, candidate: string): boolean {
