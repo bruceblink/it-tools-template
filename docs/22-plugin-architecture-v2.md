@@ -155,7 +155,13 @@ discover -> validate -> register -> activate -> ready
 
 响应只允许成功结果或稳定错误码：`invalid-request`、`unsupported-method`、`not-active`、`permission-denied`、`payload-too-large`、`too-many-requests`、`timeout`、`cancelled`、`transport-error`、`extension-failed` 和 `disposed`。
 
-每个请求都设置超时、取消入口和响应大小上限。宿主限制并发数、自动重启次数和未完成请求数量。`cancel` 只取消目标请求，不改变其他插件会话。关闭或停用时先拒绝新请求，再取消活动请求，最后销毁传输资源。
+每个请求都设置超时、取消入口和响应大小上限。宿主限制并发数、自动重启次数和未完成请求数量。普通 `cancel` 只取消目标请求；同步 WASM 计算需要终止其扩展进程，同一进程的其他活动请求也会失败，其他插件会话不受影响。关闭或停用时先拒绝新请求，再取消活动请求，最后销毁传输资源。
+
+### WASM 纯计算接口
+
+独立的实验执行器使用 UTF-8 JSON 请求 `{ "commandId": "...", "input": ... }`。模块只能导入宿主提供的 `env.memory`，并且只能导出 `alloc(size)`、`execute(pointer, length)` 和 `free(pointer, length)`。`execute` 返回的 64 位值以高 32 位表示结果指针，低 32 位表示结果字节长度；结果必须是 UTF-8 JSON。宿主内存初始为 16 页，上限为 256 页；模块上限为 16 MiB，请求和结果各不超过 16 KiB。模块不能导入 WASI、文件、网络或其他宿主函数。
+
+当前执行器只通过了独立模块测试，尚未接入扩展宿主或插件页面。WASM 调用是同步的；实际接入时，主进程必须在超时或取消后终止承载计算的 utility process，再清理该进程的活动请求。内存上限和导入检查也不代替对模块编译、表和其他进程资源的限制与验收。
 
 ## 7. 能力、存储和故障边界
 
