@@ -23,27 +23,29 @@ afterEach(async () => {
 
 function createFetchMock(options: {
   readonly archive: Uint8Array;
+  readonly repository?: PluginSourceSnapshotInput;
   readonly responseUrl?: string;
   readonly omitContentLength?: boolean;
   readonly topics?: readonly string[];
   readonly commit?: string;
 }) {
-  const archiveUrl = 'https://codeload.github.com/example/demo-plugin/tar.gz/' + repository.commitSha;
+  const selectedRepository = options.repository ?? repository;
+  const archiveUrl = `https://codeload.github.com/${selectedRepository.owner}/${selectedRepository.name}/tar.gz/${selectedRepository.commitSha}`;
   const calls: string[] = [];
   const fetcher = async (url: string, _init?: RequestInit): Promise<Response> => {
     calls.push(url);
-    if (url.endsWith('/repos/example/demo-plugin')) {
+    if (url.endsWith(`/repos/${selectedRepository.owner}/${selectedRepository.name}`)) {
       return new Response(JSON.stringify({
-        full_name: 'example/demo-plugin',
-        html_url: 'https://github.com/example/demo-plugin',
+        full_name: `${selectedRepository.owner}/${selectedRepository.name}`,
+        html_url: `https://github.com/${selectedRepository.owner}/${selectedRepository.name}`,
         archived: false,
         disabled: false,
         fork: false,
         topics: options.topics ?? ['it-tools-plugin'],
       }));
     }
-    if (url.endsWith(`/commits/${repository.commitSha}`)) {
-      return new Response(JSON.stringify({ sha: options.commit ?? repository.commitSha }));
+    if (url.endsWith(`/commits/${selectedRepository.commitSha}`)) {
+      return new Response(JSON.stringify({ sha: options.commit ?? selectedRepository.commitSha }));
     }
     if (url === archiveUrl) {
       const response = new Response(Buffer.from(options.archive), {
@@ -105,6 +107,25 @@ describe('GitHub source snapshot downloader', () => {
       fetch: fetcher,
       processArchive: async () => 'ok',
     })).resolves.toMatchObject({ source: { archiveBytes: archive.byteLength } });
+  });
+
+  it('accepts a valid single-character GitHub owner for source snapshots', async () => {
+    const tempRoot = await createTempRoot();
+    const shortOwnerRepository = {
+      owner: 'A',
+      name: 'demo-plugin',
+      commitSha: 'b'.repeat(40),
+    } as const;
+    const archive = new Uint8Array([0x1f, 0x8b, 0x08]);
+    const { fetcher } = createFetchMock({ archive, repository: shortOwnerRepository });
+
+    await expect(downloadPluginSourceSnapshot(shortOwnerRepository, {
+      tempRoot,
+      fetch: fetcher,
+      processArchive: async () => 'accepted',
+    })).resolves.toMatchObject({
+      source: { repository: 'A/demo-plugin', commitSha: shortOwnerRepository.commitSha },
+    });
   });
 
   it('rejects a repository without the plugin topic', async () => {

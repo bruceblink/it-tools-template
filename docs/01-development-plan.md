@@ -63,7 +63,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | --- | --- | --- | --- | --- |
 | P0 | MARKETPLACE-RELEASE-REDIRECT-001 | 已完成逐跳校验和 GitHub CDN 查询参数兼容；定向测试已覆盖允许和拒绝地址 | 使用真实 GitHub Release 资产和 Electron 窗口完成最终验收 | 带查询参数的 GitHub 资产可安装；未批准地址被拒绝；完成真实窗口安装验收 |
 | P0 | PLUGIN-DEVEX-FOUNDATION-001 | 已完成固定提交源码下载、受限 tar.gz 解压、资源边界、源码校验、可选 TypeScript 检查、外部私钥签名、`plugin:build-source` CLI，以及桌面设置中的源码构建、安装、取消、`.itxs` 包格式和 `source-snapshot` 来源记录；市场详情可预填仓库身份；普通 Release 直装仍使用独立流程；Electron 插件流程已通过真实窗口 E2E | 使用真实 GitHub 源码和 Release 资产完成最终安装验收；继续打磨固定 commit 的审查提示 | 新开发者可在仓库外从零完成创建、编写、校验、打包、安装和运行；命令、桌面错误、来源摘要和文档一致；私钥不进入渲染器或源码 |
-| P1 | PLUGIN-HOST-UX-001 | Electron 管理器已支持安装、信任、能力授权、贡献工具、停用和卸载；首次使用引导、能力状态摘要、包诊断信息、贡献工具工作区嵌入和中英文窄窗口布局已具备；本次加固了嵌入式分区失败清理 | 完成物理桌面人工检查；继续打磨签名者流程、失败提示、升级回退和恢复动作；补齐 macOS 重开窗口证据 | 安装、信任、授权、运行、停止、升级回退和卸载均有清晰可见状态；失败后可按提示恢复；宿主设置和内置工具继续可用 |
+| P1 | PLUGIN-HOST-UX-001 | Electron 管理器已支持安装、信任、能力授权、贡献工具、停用和卸载；首次使用引导、能力状态摘要、包诊断信息、贡献工具工作区嵌入和中英文窄窗口布局已具备；市场清单详情现在会预检宿主能力；运行、停止和卸载会显示逐插件的进行中状态；本次加固了嵌入式分区失败清理 | 完成物理桌面人工检查；继续打磨签名者流程、失败提示、升级回退和恢复动作；补齐 macOS 重开窗口证据 | 安装、信任、授权、运行、停止、升级回退和卸载均有清晰可见状态；失败后可按提示恢复；宿主设置和内置工具继续可用 |
 | P2 | PLUGIN-SDK-API-001 | API `1.4.0`、五个自包含声明、四项宿主能力、独立项目回归和源码复制交付约定已具备；未执行能力的边界已在能力目录中区分 | 使用真实插件项目完成一次 SDK 升级回归；新增能力前补充权限、资源限制、错误处理和回退说明 | 仓库外项目无需引用内部 `src/` 即可类型检查和打包；版本兼容、能力状态和错误处理有可复制的示例 |
 | P3 | PLUGIN-RUNTIME-VALIDATION-001 | 沙箱、签名信任、能力代理、资源上限和生命周期基础实现已存在；目标平台真实窗口验收仍不完整 | 在平台建设稳定后补取消边界、资源诊断、关闭恢复、安装升级和自然故障验证；只扩展有明确权限和资源口径的能力 | Linux、macOS、Windows 的权限、停用、崩溃、卡死、Worker 限额、升级回退和卸载流程都有可追溯证据 |
 | P4 | PLUGIN-PUBLISHING-001 | 包格式、本地签名工具、只读 GitHub 插件导航目录和 Electron GitHub Release 直装已交付；直装已有流式校验、进度/取消和来源摘要；生产签名者、公共包目录和自动更新仍未启用 | 整理发布者密钥、可复现构建、包校验、版本兼容和回滚清单；不把源码直载作为普通安装回退 | 可复现生成并审查插件包，发布资产、签名者和回滚步骤可核对；目录只提供仓库和清单参考，不承诺市场托管插件包 |
@@ -121,8 +121,8 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 ### 维护队列：已确认缺陷与工作台证据
 
-- `MARKETPLACE-OWNER-001`：[`electron/plugin-marketplace-installer.ts`](../electron/plugin-marketplace-installer.ts)、[`electron/plugin-source-snapshot.ts`](../electron/plugin-source-snapshot.ts) 和 [`electron/plugin-provenance-store.ts`](../electron/plugin-provenance-store.ts) 的 owner 正则要求至少两个字符；[`src/modules/plugin-marketplace/plugin-marketplace.service.ts`](../src/modules/plugin-marketplace/plugin-marketplace.service.ts) 的可配置 owner 同样如此。GitHub API 本次确认用户 `A` 存在。因此单字符 owner 的有效仓库无法通过安装或源码快照入口；本次没有验证该用户存在符合市场要求的插件仓库。修复时统一输入和来源记录规则，覆盖单字符及无效 owner，并保留既有身份和 topic 校验。
-- `MAC-REOPEN-001`：macOS 关闭主窗口后，插件管理器永久进入 `shutting-down`。证据：[`electron/main.ts`](../electron/main.ts) 的 `closed` 处理（481–490 行）调用 `stopExternalPlugins()`，而 `activate`（139–142 行）只重建主窗口；[`electron/plugin-lifecycle.ts`](../electron/plugin-lifecycle.ts) 的 `shutdown()`（359–385 行）永久设置关闭状态，后续写操作由 `assertOperational()`（714–720 行）拒绝。macOS 关闭全部窗口后不会退出应用，因此从 Dock 重开后，插件安装、启用、停用和卸载不能恢复，列表仍可读取。该缺陷由完整调用链确认；本机 Windows 没有执行 macOS 真实窗口复现。修复应区分“关闭主窗口并停止活动插件”和“最终退出应用”，保留真正退出时的永久关闭检查。验收：macOS 激活签名插件、关闭主窗口、确认插件进程清理、从 Dock 重开，再执行安装、启用、停用和卸载；补对应 E2E，并确认 Windows/Linux 退出行为不变。回退只撤销本项生命周期调度和测试，不删除插件包、设置或信任记录。
+- `MARKETPLACE-OWNER-001`：已关闭。安装器、源码快照、来源记录和市场配置统一接受单字符 GitHub owner；安装器和源码快照回归分别覆盖 owner `A`，并继续保留仓库身份、topic、签名和来源校验。仍需真实 GitHub 仓库资产验收，但单字符 owner 不再被本地格式校验误拒。
+- `MAC-REOPEN-001`：代码已区分“关闭主窗口并停止活动插件”和“最终退出应用”。[`electron/main.ts`](../electron/main.ts) 关闭主窗口时调用 `stopExternalPlugins()`，[`electron/plugin-lifecycle.ts`](../electron/plugin-lifecycle.ts) 保留 `shutdown()` 的永久退出语义；当前插件生命周期定向回归和 Linux Xorg dummy display Electron E2E 通过。真实 macOS 从 Dock 重开后的安装、启用、停用和卸载仍未执行，继续作为平台证据缺口，不再作为已确认代码缺陷。
 - `MONITOR-SORT-001`：系统监视器会把缺失 CPU 指标的进程排在有效值前面。证据：[`electron/system-monitor/system-info.ts`](../electron/system-monitor/system-info.ts) 的排序调用（142–148 行）交换比较参数，但 `compareMetric()`（220–230 行）的空值顺序没有一起反转。此前调用真实 `normalizeProcessSnapshot()` 复现：`cpu=NaN` 排在 `cpu=80` 前；2,000 条缺失指标与一条 `cpu=99` 的数据经过上限截断后，有效高 CPU 进程被丢弃。前端重新排序无法恢复已丢弃行。修复只调整有效值降序与空值末尾规则，保留 2,000 行上限。验收覆盖有效值与空值混排、CPU 相同后的内存排序、全部空值及超过上限的输入，再检查页面排序和分页。回退只撤销排序与对应测试，不改采集协议。
 - 数据库、系统监视、对象存储和容器工作台的完整真实窗口流程尚未统一验收。覆盖连接、分页、筛选、查询、编辑冲突、文件选择、传输确认、取消、断开和关闭；按模块实际支持范围执行。
 - 系统监视器需要睡眠恢复、PID 重用和更完整的服务、连接、订阅、监听器及缓存点计数。Windows 已有 30 分钟与 20 次路由切换报告，不能据此推断所有计数均已覆盖。
@@ -132,7 +132,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 ### 维护队列：API 清理与 SDK 回归
 
-- `API-TIMER-001`：插件客户端在 `fetch()` 快速失败时保留 10 秒计时器。证据：[`electron/plugin-api-v1.ts`](../electron/plugin-api-v1.ts) 创建计时器后，传输失败分支直接抛出；清理只位于后续处理的 `try/finally`。此前用真实生成脚本和受控传输失败执行，得到 `transport-error` 后仍有一个待执行计时器。单次影响较小，重复传输失败会增加短时计时器与对象保留；这不是调用永久挂起。修复应让一个 `finally` 覆盖传输和响应处理。验收覆盖成功、快速拒绝、读取失败、超时和无重复清理，并保持错误码不变。回退只撤销请求清理和对应测试。
+- `API-TIMER-001`：已关闭。[`electron/plugin-api-v1.ts`](../electron/plugin-api-v1.ts) 的请求计时器清理覆盖传输和响应处理，插件 API 定向回归覆盖快速拒绝、读取失败、超时和成功路径；后续维护只保留回归，不再将该项列为待修复缺陷。
 - 保持 `plugin:create` 生成项目中的 SDK 声明、API 兼容范围、贡献 ID、能力声明、错误码和使用说明一致。`scripts/plugin-project.test.mjs` 已在仓库外生成项目，完成 TypeScript 声明编译、源码校验和签名打包；此前的 `pnpm check` 包含该回归，不再将独立项目校验列为尚未实现。
 - 生成声明继续只使用相对 SDK 引用，不依赖仓库内部 `src/` 路径；新增或修改接口时，同步执行独立项目、`plugin:validate` 与 `plugin:pack` 回归。
 - 使用签名样例覆盖不兼容 API、未声明能力、未授权调用、设置迁移、工具级故障、整包停用和恢复；保持第一方 SDK v0 与外部插件 v1 的边界。
@@ -177,10 +177,10 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | 插件市场定向回归 | Release 下载、安装器、控制器测试通过；真实 GitHub CDN 查询参数和逐跳重定向由受控响应覆盖 |
 | 插件源码构建定向回归 | `pnpm test:plugin-source-build`；4 个文件、37 项测试通过，覆盖 PAX、完整 tar 结束标记、资源上限、路径和链接拒绝、取消、构建编排、单飞控制器和 dispose；插件市场下载/安装、包暂存、来源存储、生命周期和桥接回归 6 个文件、73 项测试通过；`pnpm typecheck:electron`、`pnpm typecheck:app` 和 ESLint 通过 |
 | Electron 插件真实窗口回归 | `DISPLAY=:99 pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts electron/plugin-sandbox.e2e.spec.ts` 通过 2/2（36.2 秒）；`DISPLAY=:100 pnpm test:e2e:electron electron/plugin-manager-layout.e2e.spec.ts` 通过 1/1（33.9 秒）；覆盖安装、信任、能力授权、贡献工具、停止、升级回退、崩溃清理、沙箱网络/Worker 边界和中英文窄窗口布局；使用 Xorg dummy display，不替代物理桌面人工检查 |
-| 本次收尾验证 | `pnpm test:unit --run` 通过 157 个文件、1008 项测试（2 个文件、18 项跳过）；插件市场 Chromium E2E 2/2 通过；WebKit 因环境缺少 GTK 依赖未执行 |
+| 本次收尾验证 | 重新构建 Web 产物；`pnpm typecheck:app`、`pnpm lint --max-warnings 0`、`git diff --check` 通过；插件市场安装器和源码快照定向回归 21/21 通过；插件市场 Chromium E2E 2/2 通过；WebKit 因环境缺少 GTK 依赖未执行 |
 | CLI 启动检查 | `corepack pnpm plugin:build-source -- --help` 正常输出；缺少参数时返回稳定错误和使用说明 |
 | owner 核对 | GitHub API 返回单字符用户 `A`；本次未验证该用户有符合市场要求的插件仓库 |
-| 旧问题核对 | `MAC-REOPEN-001`、`MONITOR-SORT-001`、`API-TIMER-001` 的相关调用和排序代码仍在；本次未重跑旧复现实验，也没有 macOS 真实窗口证据 |
+| 旧问题核对 | `MARKETPLACE-OWNER-001`、`API-TIMER-001` 已由实现和定向测试关闭；`MAC-REOPEN-001` 已修复生命周期调度，真实 macOS 重开窗口证据仍缺；`MONITOR-SORT-001` 仍在维护队列 |
 | 未完成或不适用 | 完整 `pnpm check`、真实 GitHub Release 安装、Docker 集成、性能测量和物理桌面人工检查未完成；Electron E2E 已在 Xorg dummy display 通过；未查询或监测 CI。 |
 
 自动化和受控响应结果不能代替真实窗口安装验收。历史 Linux 完整检查、Chromium/WebKit 元标签测试和旧问题复现仅适用于当时记录的源码与环境；Firefox 当时因 `spawn UNKNOWN` 未完成，不计为通过。
@@ -195,7 +195,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | 插件市场直装流程 | `pnpm exec vitest run electron/plugin-marketplace-download.test.ts electron/plugin-marketplace-installer.test.ts electron/plugin-marketplace-controller.test.ts electron/plugin-provenance-store.test.ts electron/plugin-source-snapshot.test.ts --reporter=dot`、`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`；受控响应验证逐跳地址、大小、摘要、临时文件清理和签名安装；真实 GitHub Release 与 Electron 窗口验收仍待补充；普通模式不允许原始源码直载 |
 | 插件平台 P0 开发闭环 | `pnpm test:plugin-source-build`、源码来源和生命周期定向回归、`pnpm typecheck:electron`、`pnpm typecheck:app`；使用 CLI 或桌面设置源码卡片完成固定提交下载、受限解压、校验、可选类型检查、签名打包、安装和来源记录，再信任、授权并运行；真实窗口验收仍待补充 |
 | 插件平台 P1/P3 宿主与运行时 | `pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts electron/plugin-sandbox.e2e.spec.ts`；记录安装、信任、能力授权、贡献工具、停止、升级回退、崩溃和清理的真实窗口范围 |
-| 维护队列中的三个缺陷 | `MAC-REOPEN-001`：macOS 执行 `pnpm test:e2e:electron electron/plugin-sandbox.e2e.spec.ts electron/plugin-manager.e2e.spec.ts`，补重开窗口流程；`MONITOR-SORT-001`：`pnpm exec vitest run electron/system-monitor/system-info.test.ts`；`API-TIMER-001`：`pnpm exec vitest run electron/plugin-api-v1.test.ts`；按维护优先级执行，发布前仍需纳入适用的 `pnpm check` |
+| 维护队列中的缺陷 | `MAC-REOPEN-001`：在 macOS 执行真实重开窗口流程并补平台证据；`MONITOR-SORT-001`：`pnpm exec vitest run electron/system-monitor/system-info.test.ts`；已关闭的 owner 和 API timer 项保留现有回归，发布前纳入适用的 `pnpm check` |
 | 插件 CLI 与 SDK | `pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`、`pnpm test:plugin-project`；复核独立生成项目 |
 | Web/PWA | `pnpm test:e2e`；离线定向检查 `pnpm test:e2e src/pwa-cache.e2e.spec.ts` |
 | Electron 与插件 | `pnpm test:e2e:electron`；真实窗口优先使用 Computer Use，不可用时记录有限启动、恢复检查和无头测试范围 |

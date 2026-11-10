@@ -77,6 +77,11 @@ pluginMarketplace:
   manifestLabel: 'Plugin manifest'
   manifestNotice: 'This manifest is read from the repository for reference. The marketplace does not execute or host the plugin.'
   manifestMissing: 'This repository does not expose a readable plugin.source.json manifest.'
+  capabilities: 'Requested capabilities'
+  capabilitySupported: 'Supported by this desktop host'
+  capabilityUnsupported: 'Not currently supported by this desktop host'
+  permissionNotice: 'Installing a package does not grant capabilities. Review and approve permissions in Desktop Settings before running it.'
+  reviewPermissions: 'Review permissions in Desktop Settings'
   sort:
     updated: 'Recently updated'
     stars: 'Most starred'

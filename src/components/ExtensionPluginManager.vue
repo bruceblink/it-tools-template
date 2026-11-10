@@ -63,6 +63,8 @@ function applySourceBuildPrefill(): void {
 const sourceBuildRequestId = ref<string>();
 const sourceBuildProgress = ref<DesktopPluginSourceBuildProgress>();
 const sourceBuildError = ref<string>();
+type PluginAction = 'run' | 'stop' | 'remove';
+const pluginAction = ref<{ key: string; action: PluginAction }>();
 const canBuildSource = computed(() => {
   if (typeof window === 'undefined') {
     return false;
@@ -152,8 +154,11 @@ const messages = {
     noCapabilities: 'This package requests no host capabilities.',
     unsupported: 'Not supported by this host',
     run: 'Run plugin',
+    runInProgress: 'Starting plugin…',
     stop: 'Stop plugin',
+    stopInProgress: 'Stopping plugin…',
     remove: 'Uninstall version',
+    removeInProgress: 'Removing version…',
     noGrant: 'A capability is used only after you select it and approve the desktop prompt.',
     diagnostics: 'Diagnostics',
     packageId: 'Package ID',
@@ -247,8 +252,11 @@ const messages = {
     noCapabilities: '此插件包没有请求宿主能力。',
     unsupported: '此宿主尚不支持',
     run: '运行插件',
+    runInProgress: '正在启动插件…',
     stop: '停止插件',
+    stopInProgress: '正在停止插件…',
     remove: '卸载此版本',
+    removeInProgress: '正在删除此版本…',
     noGrant: '只有在你选中能力并确认桌面提示后，插件才能使用该能力。',
     diagnostics: '诊断信息',
     packageId: '插件包 ID',
@@ -450,6 +458,21 @@ function displayPluginError(error: string): string {
   return `${text('operationFailed')} (${error})`;
 }
 
+function isPluginAction(plugin: DesktopPluginSnapshot, action: PluginAction): boolean {
+  return pluginAction.value?.key === packageKey(plugin) && pluginAction.value.action === action;
+}
+
+function pluginActionMessage(plugin: DesktopPluginSnapshot): string {
+  const action = pluginAction.value?.key === packageKey(plugin) ? pluginAction.value.action : undefined;
+  if (action === 'run') {
+    return text('runInProgress');
+  }
+  if (action === 'stop') {
+    return text('stopInProgress');
+  }
+  return text('removeInProgress');
+}
+
 const sourceBuildProgressMessage = computed(() => {
   const progress = sourceBuildProgress.value;
   if (!progress) {
@@ -594,6 +617,7 @@ async function activatePlugin(plugin: DesktopPluginSnapshot): Promise<void> {
   if (!bridge) {
     return;
   }
+  pluginAction.value = { key: packageKey(plugin), action: 'run' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
@@ -612,6 +636,7 @@ async function activatePlugin(plugin: DesktopPluginSnapshot): Promise<void> {
     pluginError.value = text('operationFailed');
   }
   finally {
+    pluginAction.value = undefined;
     isBusy.value = false;
   }
 }
@@ -621,6 +646,7 @@ async function disablePlugin(plugin: DesktopPluginSnapshot): Promise<void> {
   if (!bridge) {
     return;
   }
+  pluginAction.value = { key: packageKey(plugin), action: 'stop' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
@@ -638,6 +664,7 @@ async function disablePlugin(plugin: DesktopPluginSnapshot): Promise<void> {
     pluginError.value = text('operationFailed');
   }
   finally {
+    pluginAction.value = undefined;
     isBusy.value = false;
   }
 }
@@ -647,6 +674,7 @@ async function uninstallPlugin(plugin: DesktopPluginSnapshot): Promise<void> {
   if (!bridge) {
     return;
   }
+  pluginAction.value = { key: packageKey(plugin), action: 'remove' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
@@ -665,6 +693,7 @@ async function uninstallPlugin(plugin: DesktopPluginSnapshot): Promise<void> {
     pluginError.value = text('operationFailed');
   }
   finally {
+    pluginAction.value = undefined;
     isBusy.value = false;
   }
 }
@@ -937,6 +966,16 @@ onUnmounted(() => {
             <n-alert v-else-if="plugin.errorCode" type="warning" :show-icon="false" mt-3>
               {{ displayPluginError(plugin.errorCode) }}
             </n-alert>
+            <n-alert
+              v-if="pluginAction?.key === packageKey(plugin)"
+              type="info"
+              :show-icon="false"
+              role="status"
+              aria-live="polite"
+              mt-3
+            >
+              {{ pluginActionMessage(plugin) }}
+            </n-alert>
 
             <div class="plugin-capability-list">
               <n-text strong>{{ text('requested') }}</n-text>
@@ -969,24 +1008,27 @@ onUnmounted(() => {
                 v-if="plugin.status === 'active'"
                 type="warning"
                 :disabled="isBusy"
+                :loading="isPluginAction(plugin, 'stop')"
                 @click="disablePlugin(plugin)"
               >
-                {{ text('stop') }}
+                {{ isPluginAction(plugin, 'stop') ? text('stopInProgress') : text('stop') }}
               </n-button>
               <n-button
                 v-else
                 type="primary"
                 :disabled="isBusy || plugin.status === 'invalid'"
+                :loading="isPluginAction(plugin, 'run')"
                 @click="activatePlugin(plugin)"
               >
-                {{ text('run') }}
+                {{ isPluginAction(plugin, 'run') ? text('runInProgress') : text('run') }}
               </n-button>
               <n-button
                 quaternary
                 :disabled="isBusy || plugin.version === 'unknown'"
+                :loading="isPluginAction(plugin, 'remove')"
                 @click="uninstallPlugin(plugin)"
               >
-                {{ text('remove') }}
+                {{ isPluginAction(plugin, 'remove') ? text('removeInProgress') : text('remove') }}
               </n-button>
             </div>
           </n-card>

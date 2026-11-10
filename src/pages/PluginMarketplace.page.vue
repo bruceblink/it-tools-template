@@ -12,6 +12,7 @@ import {
   type PluginMarketplaceRepository,
   type PluginMarketplaceSort,
 } from '@/modules/plugin-marketplace/plugin-marketplace.service';
+import { pluginHostCapabilityIds } from '@/shared/plugin-capabilities';
 
 const { locale, t } = useI18n();
 useHead({ title: computed(() => t('pluginMarketplace.pageTitle')) });
@@ -38,6 +39,7 @@ const installErrorRepository = ref<PluginMarketplaceRepository>();
 const installRequestId = ref<string>();
 const installProgress = ref<DesktopPluginMarketplaceInstallProgress>();
 const cancellingInstall = ref(false);
+const hostCapabilities = new Set<string>(pluginHostCapabilityIds);
 
 const canInstallFromMarketplace = computed(() => (
   supportsPluginMarketplaceDirectInstall(pluginMarketplaceConfig.apiBaseUrl)
@@ -139,6 +141,10 @@ function formatBytes(value: number): string {
     unit = units[index]!;
   }
   return `${size.toFixed(size >= 10 ? 0 : 1)} ${unit}`;
+}
+
+function isHostCapabilitySupported(capability: string): boolean {
+  return hostCapabilities.has(capability);
 }
 
 function repositoryTopics(repository: PluginMarketplaceRepository): readonly string[] {
@@ -611,10 +617,27 @@ onBeforeUnmount(() => {
             </div>
             <p>{{ t('pluginMarketplace.manifestNotice') }}</p>
             <div v-if="selectedManifest.requestedCapabilities.length > 0" class="repository-topics">
-              <n-tag v-for="capability in selectedManifest.requestedCapabilities" :key="capability" size="small">
-                {{ capability }}
-              </n-tag>
+              <div class="manifest-capability-list" :aria-label="t('pluginMarketplace.capabilities')">
+                <div v-for="capability in selectedManifest.requestedCapabilities" :key="capability" class="manifest-capability-row">
+                  <n-tag size="small" :type="isHostCapabilitySupported(capability) ? 'success' : 'warning'">
+                    {{ capability }}
+                  </n-tag>
+                  <n-text depth="3">
+                    {{ isHostCapabilitySupported(capability)
+                      ? t('pluginMarketplace.capabilitySupported')
+                      : t('pluginMarketplace.capabilityUnsupported') }}
+                  </n-text>
+                </div>
+              </div>
             </div>
+            <n-alert type="info" :show-icon="false" class="manifest-permission-notice">
+              <div class="manifest-permission-notice-content">
+                <span>{{ t('pluginMarketplace.permissionNotice') }}</span>
+                <n-button tag="a" href="/settings" size="small" secondary>
+                  {{ t('pluginMarketplace.reviewPermissions') }}
+                </n-button>
+              </div>
+            </n-alert>
             <ul v-if="selectedManifest.toolContributions.length > 0" class="manifest-tools">
               <li v-for="tool in selectedManifest.toolContributions" :key="tool.id">
                 <strong>{{ tool.title }}</strong>
@@ -738,6 +761,36 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.manifest-capability-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.manifest-capability-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manifest-permission-notice {
+  margin-top: 16px;
+}
+
+.manifest-permission-notice-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .manifest-permission-notice-content {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .marketplace-progress-content {

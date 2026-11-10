@@ -23,20 +23,23 @@ function createFetchMock(options: {
   readonly asset: Uint8Array;
   readonly assetUrl?: string;
   readonly repositoryUrl?: string;
+  readonly repository?: PluginMarketplaceRepositoryInput;
   readonly omitContentLength?: boolean;
   readonly topics?: readonly string[];
   readonly assets?: readonly Record<string, unknown>[];
   readonly commit?: string;
 }) {
-  const assetUrl = options.assetUrl ?? 'https://github.com/example/demo-plugin/releases/download/v1.0.0/demo.itxs';
+  const selectedRepository = options.repository ?? repository;
+  const assetUrl = options.assetUrl
+    ?? `https://github.com/${selectedRepository.owner}/${selectedRepository.name}/releases/download/v1.0.0/demo.itxs`;
   const digest = createHash('sha256').update(options.asset).digest('hex');
   const calls: string[] = [];
   const fetcher = async (url: string, _init?: RequestInit): Promise<Response> => {
     calls.push(url);
-    if (url.endsWith('/repos/example/demo-plugin')) {
+    if (url.endsWith(`/repos/${selectedRepository.owner}/${selectedRepository.name}`)) {
       return new Response(JSON.stringify({
-        full_name: 'example/demo-plugin',
-        html_url: options.repositoryUrl ?? 'https://github.com/example/demo-plugin',
+        full_name: `${selectedRepository.owner}/${selectedRepository.name}`,
+        html_url: options.repositoryUrl ?? `https://github.com/${selectedRepository.owner}/${selectedRepository.name}`,
         archived: false,
         disabled: false,
         fork: false,
@@ -54,7 +57,7 @@ function createFetchMock(options: {
         }],
       }), { status: 200 });
     }
-    if (url.endsWith('/commits/v1.0.0')) {
+    if (url.endsWith(`/commits/v1.0.0`)) {
       return new Response(JSON.stringify({ sha: options.commit ?? commitSha }), { status: 200 });
     }
     if (url === assetUrl) {
@@ -125,6 +128,22 @@ describe('GitHub release plugin installer', () => {
       installArchive: async () => ({ installed: true }),
     })).resolves.toMatchObject({
       source: { archiveBytes: asset.byteLength },
+    });
+  });
+
+  it('accepts a valid single-character GitHub owner across repository validation', async () => {
+    const tempRoot = await createTempRoot();
+    const shortOwnerRepository = { owner: 'A', name: 'demo-plugin' } as const;
+    const asset = new Uint8Array([80, 75, 3, 4]);
+    const { fetcher } = createFetchMock({ asset, repository: shortOwnerRepository });
+
+    await expect(installPluginMarketplaceRelease(shortOwnerRepository, {
+      tempRoot,
+      fetch: fetcher,
+      fetchReleaseAsset: fetcher,
+      installArchive: async () => ({ installed: true }),
+    })).resolves.toMatchObject({
+      source: { repository: 'A/demo-plugin' },
     });
   });
 

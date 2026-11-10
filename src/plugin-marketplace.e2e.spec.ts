@@ -69,6 +69,12 @@ test('plugin marketplace lists repositories and opens manifest reference details
   await page.getByRole('button', { name: 'Details' }).click();
   await expect(page.getByText('Demo plugin · 1.0.0', { exact: true })).toBeVisible();
   await expect(page.getByText('runtime.info', { exact: true })).toBeVisible();
+  await expect(page.getByText('Supported by this desktop host', { exact: true })).toBeVisible();
+  await expect(page.getByText('Installing a package does not grant capabilities.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Review permissions in Desktop Settings', exact: true })).toHaveAttribute(
+    'href',
+    '/settings',
+  );
 
   expect(apiRequests).toHaveLength(2);
   expect(apiRequests.every(url => !url.includes('.itxs'))).toBe(true);

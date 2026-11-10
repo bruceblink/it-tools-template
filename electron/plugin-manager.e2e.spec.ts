@@ -138,7 +138,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   );
   await homeContributionLink.click();
   await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/capability-demo');
-  await expect(page.getByText('This page displays signed metadata only.', { exact: false })).toBeVisible();
+  await expect(page.getByText('The signed plugin tool runs inside the IT Tools workspace.', { exact: false })).toBeVisible();
   await electronApp.evaluate(({ dialog }) => {
     Object.defineProperty(dialog, 'showMessageBox', {
       configurable: true,
@@ -146,7 +146,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     });
   });
   await page.getByRole('button', { name: 'Run plugin' }).click();
-  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool started.', { exact: true })).toBeVisible();
   await expect.poll(async () => (
     await electronApp.windows()
   ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
@@ -220,7 +220,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
     }, null, 2),
     contentType: 'application/json',
   });
-  await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool stopped.', { exact: true })).toBeVisible();
 
   await page.goto('app://bundle/settings');
   const futureContributionLink = page.getByTestId(`plugin-package-${pluginId}-1.0.0`)
@@ -233,7 +233,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/future-capability-demo');
   pluginStartupErrors.length = 0;
   await page.getByRole('button', { name: 'Run plugin' }).click();
-  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool started.', { exact: true })).toBeVisible();
   await expect.poll(async () => (
     await electronApp.windows()
   ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
@@ -262,7 +262,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   const futurePluginWindowClosed = futurePluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await futurePluginWindowClosed;
-  await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool stopped.', { exact: true })).toBeVisible();
 
   await page.goto('app://bundle/settings');
   await expect(page.getByTestId(`plugin-package-${pluginId}-1.0.0`)).toBeVisible();
@@ -275,7 +275,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await recoveryContributionLink.click();
   await expect(page).toHaveURL('app://bundle/extensions/org.it-tools.capability-demo/1.0.0/recovery-demo');
   await page.getByRole('button', { name: 'Run plugin' }).click();
-  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool started.', { exact: true })).toBeVisible();
   await expect.poll(async () => (
     await electronApp.windows()
   ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);
@@ -293,7 +293,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect(page.getByRole('button', { name: 'Stop plugin' })).toBeHidden();
   const switchedPluginWindowClosed = recoveryPluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Run plugin' }).click();
-  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool started.', { exact: true })).toBeVisible();
   await switchedPluginWindowClosed;
   await expect.poll(async () => (
     await electronApp.windows()
@@ -309,7 +309,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   const switchedPluginWindowClosedByRoute = switchedPluginWindow.waitForEvent('close');
   await page.getByRole('button', { name: 'Stop plugin' }).click();
   await switchedPluginWindowClosedByRoute;
-  await expect(page.getByText('Plugin window stopped.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool stopped.', { exact: true })).toBeVisible();
   await page.goto('app://bundle/settings');
   await expect(page.getByText('Installed', { exact: true })).toBeVisible();
 
@@ -728,7 +728,7 @@ test('trusts a signer, installs a package, applies a capability grant, revokes, 
   await expect(page.getByText('The plugin renderer stopped unexpectedly.', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Run plugin' })).toBeVisible();
   await page.getByRole('button', { name: 'Run plugin' }).click();
-  await expect(page.getByText('Plugin window started.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Plugin tool started.', { exact: true })).toBeVisible();
   await expect.poll(async () => (
     await electronApp.windows()
   ).filter(window => window.url().startsWith(`it-plugin://${pluginId}/`)).length).toBe(1);

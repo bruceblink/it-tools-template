@@ -77,6 +77,11 @@ pluginMarketplace:
   manifestLabel: '插件清单'
   manifestNotice: '此清单从仓库读取，仅供参考；插件市场不会执行或托管插件。'
   manifestMissing: '此仓库没有可读取的 plugin.source.json 清单。'
+  capabilities: '请求的能力'
+  capabilitySupported: '当前桌面宿主支持'
+  capabilityUnsupported: '当前桌面宿主暂不支持'
+  permissionNotice: '安装插件包不会自动授予能力。运行前请到桌面设置检查并确认权限。'
+  reviewPermissions: '在桌面设置中检查权限'
   sort:
     updated: '最近更新'
     stars: '最多 Star'
