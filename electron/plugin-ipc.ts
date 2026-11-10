@@ -28,7 +28,8 @@ import {
 } from './plugin-source-build-controller';
 import { ExternalPluginV2PackageManager } from './external-plugin-v2-package-manager';
 import { ExternalPluginV2CommandRequests } from './external-plugin-v2-command-requests';
-import { ExternalExtensionRpcHost } from './external-extension-rpc';
+import { createExternalPluginV2CapabilityPolicy, ExternalPluginV2CapabilityPolicyError } from './external-plugin-v2-capability-policy';
+import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
 import { createExternalExtensionProcessTransport } from './external-extension-process';
 import type {
   DesktopPluginErrorCode,
@@ -123,6 +124,8 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   });
   const v2Hosts = new Map<string, ExternalExtensionRpcHost>();
   const activeV2Commands = new ExternalPluginV2CommandRequests();
+  // 首版只允许一个 WASM 进程；进程确认退出后才释放名额。
+  let v2WorkerBusy = false;
   const fetchReleaseAsset = createMarketplaceReleaseFetcher(net);
   const marketplaceController = new PluginMarketplaceInstallController({
     tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
@@ -181,9 +184,21 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     if (!activeRequest) {
       throw new PluginIpcInputError('invalid-request', 'The v2 command request ID is already active.');
     }
+    let host: ExternalExtensionRpcHost | undefined;
+    let ownsWorkerSlot = false;
+    let phase = 'verify';
     try {
-      const manifest = await v2PackageManager.getInstalledManifest(request.pluginId, request.version);
+      if (v2WorkerBusy) {
+        throw new PluginIpcInputError('active-limit', 'Another v2 extension command is still running or stopping.');
+      }
+      v2WorkerBusy = true;
+      ownsWorkerSlot = true;
+      const execution = await v2PackageManager.getInstalledExecutionContext(request.pluginId, request.version);
       throwIfV2CommandAborted(activeRequest.controller.signal);
+      const { manifest } = execution;
+      if (manifest.runtime !== 'wasm') {
+        throw new PluginIpcInputError('unsupported-runtime', 'The v2 process runtime is not available.');
+      }
       const command = manifest.contributions.commands.find(candidate => candidate.id === request.commandId);
       if (!command) {
         throw new PluginIpcInputError('invalid-request', 'The v2 plugin command is not declared.');
@@ -191,30 +206,59 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       const tool = command.toolId === undefined
         ? undefined
         : manifest.contributions.tools.find(candidate => candidate.id === command.toolId);
+      const policy = createExternalPluginV2CapabilityPolicy(manifest, []);
+      const requiredCapabilities = tool ? policy.authorizeTool(tool.id) : [];
       const key = `${request.pluginId}@${request.version}`;
-      let host = v2Hosts.get(key);
-      if (!host) {
-        host = new ExternalExtensionRpcHost({
+      host = new ExternalExtensionRpcHost({
+        pluginId: request.pluginId,
+        version: request.version,
+        grantedCapabilities: policy.grantedCapabilities,
+        maximumConcurrentRequests: 1,
+        transport: createExternalExtensionProcessTransport({
           pluginId: request.pluginId,
-          version: request.version,
-          grantedCapabilities: [],
-          transport: createExternalExtensionProcessTransport({
+          workerPath: resolve(app.getAppPath(), 'out/main/external-extension-worker.cjs'),
+          terminateOnCancel: true,
+          launchConfig: {
             pluginId: request.pluginId,
-            workerPath: resolve(app.getAppPath(), 'out/main/external-extension-worker.cjs'),
-          }),
-        });
-        v2Hosts.set(key, host);
-      }
+            version: request.version,
+            packageRoot: execution.packageRoot,
+            entrypoint: execution.entrypoint,
+            entrypointSha256: execution.entrypointSha256,
+          },
+          onStopped: () => {
+            v2Hosts.delete(key);
+            v2WorkerBusy = false;
+          },
+        }),
+      });
+      v2Hosts.set(key, host);
+      phase = 'activate';
       await host.activate(activeRequest.controller.signal);
+      phase = 'execute';
       const result = await host.executeCommand(
         request.commandId,
         request.input as ExternalExtensionRpcJsonValue,
-        tool?.capabilities ?? [],
+        requiredCapabilities,
         activeRequest.controller.signal,
       );
       return parsePluginToolCommandResult(result);
     }
+    catch (error) {
+      console.warn('V2 plugin command failed.', {
+        pluginId: request.pluginId,
+        version: request.version,
+        phase,
+        code: error instanceof ExternalExtensionRpcError ? error.code : getPluginOperationErrorCode(error),
+      });
+      throw error;
+    }
     finally {
+      if (host) {
+        await host.dispose();
+      }
+      else if (ownsWorkerSlot) {
+        v2WorkerBusy = false;
+      }
       activeV2Commands.release(request.requestId, activeRequest);
     }
   }));
@@ -493,6 +537,9 @@ function getPluginManagementWindow(dependencies: PluginIpcDependencies): Browser
 function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
   if (error instanceof PluginIpcInputError) {
     return error.code;
+  }
+  if (error instanceof ExternalPluginV2CapabilityPolicyError) {
+    return error.code === 'unsupported-capability' ? 'unsupported-capability' : 'permission-denied';
   }
   if (
     error instanceof PluginLifecycleError

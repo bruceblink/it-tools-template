@@ -23,7 +23,7 @@ This repository is a maintained fork of [CorentinTh/it-tools](https://github.com
 
 - **117 web tools** in Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, and Data.
 - **Desktop workbenches** for PostgreSQL, MySQL, and SQLite databases; system monitoring; API requests; Git; S3-compatible object storage; and read-only Docker container browsing.
-- **Extensions and plugins:** trusted first-party extensions and an evolving v2 signed external extension model with host-rendered tools, separate signer trust, and a planned restricted RPC runtime. The existing HTML/webview package flow remains legacy during migration.
+- **Extensions and plugins:** trusted first-party extensions and an evolving v2 signed external extension model with host-rendered tools, separate signer trust, and a restricted WASM runtime for pure computation. The existing HTML/webview package flow remains legacy during migration.
 - **Desktop updates:** optional automatic checks and user-confirmed download and installation from GitHub Releases.
 - **Nine web languages:** English, Chinese, German, French, Spanish, Portuguese, Ukrainian, Vietnamese, and Norwegian.
 - **PWA support:** the application shell is precached; visited tool assets are cached by the service worker for later offline use.
@@ -207,9 +207,9 @@ corepack pnpm plugin:build-source -- \
 
 The source-build command does not run repository scripts, install dependencies, or load source directly in Electron. You can also enter the owner, repository, full commit SHA, and signer key ID in the desktop Settings source-build card; the main process selects the private key and installs the generated package. Review the signer fingerprint and approve only the required capabilities. The snapshot commit and archive SHA-256 are reported for review; they do not prove that a published Release was built from that source.
 
-In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. It also lists, installs, and removes signed v2 packages and shows their declared tools. V2 command execution is not available yet.
+In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. It also lists, installs, and removes signed v2 packages and shows their declared tools. V2 WASM tools can run when they do not require host capabilities; the process runtime and v2 capability broker are not available yet.
 
-The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, and capability declarations. IT Tools renders supported tool pages and registers them for navigation and search. The restricted runtime, capability broker, settings, and data providers are not complete. The current `plugin:create` command still creates legacy v1 HTML packages and is not the v2 authoring command.
+The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, and capability declarations. IT Tools renders supported tool pages and registers them for navigation and search. The WASM runtime limits linear memory, module and message sizes, and concurrent workers; it does not enforce an OS-level total memory limit. The capability broker, settings, and data providers are not complete. The current `plugin:create` command still creates legacy v1 HTML packages and is not the v2 authoring command.
 
 ## Plugin marketplace
 

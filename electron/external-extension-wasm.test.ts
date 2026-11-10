@@ -7,6 +7,15 @@ import {
 import { createWasmModuleFixture } from './test-helpers/wasm-module-fixtures';
 
 describe('external extension WASM runner', () => {
+  it('executes the signed E2E module for a non-spinning input', () => {
+    const commandId = 'org.it-tools.wasm-e2e/run-echo';
+    const resultBytes = new TextEncoder().encode('{"kind":"json","value":{"status":"complete"}}');
+    expect(executeExternalExtensionWasmCommand(
+      createWasmModuleFixture({ commandId, spinOnTrueField: 'spin', resultBytes }),
+      commandId,
+      { spin: false },
+    )).toEqual({ kind: 'json', value: { status: 'complete' } });
+  });
   it('passes command input as UTF-8 JSON and returns JSON from the bounded memory', () => {
     const result = executeExternalExtensionWasmCommand(
       createWasmModuleFixture({ executeBody: echoRequestBody() }),

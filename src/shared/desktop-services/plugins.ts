@@ -13,6 +13,8 @@ export const desktopPluginErrorCodes = Object.freeze([
   'active-limit',
   'contribution-not-found',
   'unsupported-capability',
+  'unsupported-runtime',
+  'permission-denied',
   'activation-failed',
   'activation-rollback-failed',
   'window-close-timeout',

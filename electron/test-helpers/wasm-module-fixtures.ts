@@ -16,7 +16,7 @@ export interface WasmModuleFixtureOptions {
 export function createWasmModuleFixture(options: WasmModuleFixtureOptions = {}): Uint8Array {
   const memoryPointer = 1024;
   const resultBytes = options.resultBytes;
-  const resultPointer = options.resultPointer ?? memoryPointer;
+  const resultPointer = options.resultPointer ?? (resultBytes ? 4096 : memoryPointer);
   const resultLength = options.resultLength ?? resultBytes?.byteLength ?? 0;
   const packedResult = (BigInt(resultPointer) << 32n) | BigInt(resultLength);
   const typeEntries = [
