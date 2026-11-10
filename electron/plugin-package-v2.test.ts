@@ -11,6 +11,7 @@ import {
 } from './plugin-package-v2';
 import { stageExternalPluginV2PackageArchive } from './plugin-package';
 import type { PluginPackageSigningKey } from './plugin-package-manifest';
+import { createStoredZip } from './test-helpers/wasm-module-fixtures';
 
 const pluginId = 'org.example.json-tools';
 const signingPair = generateKeyPairSync('ed25519');
@@ -149,7 +150,7 @@ describe('external plugin v2 package manifest', () => {
       const manifest = createUnsignedManifest({
         files: [{ path: 'extension.mjs', sha256: createHash('sha256').update(source).digest('hex') }],
       });
-      const archive = makeZip([
+      const archive = createStoredZip([
         { path: 'plugin.json', contents: JSON.stringify(signManifest(manifest)) },
         { path: 'extension.mjs', contents: source },
       ]);
@@ -181,7 +182,7 @@ describe('external plugin v2 package manifest', () => {
         }],
       });
       const archivePath = join(root, 'tampered.itxs');
-      await writeFile(archivePath, makeZip([
+      await writeFile(archivePath, createStoredZip([
         { path: 'plugin.json', contents: JSON.stringify(signManifest(manifest)) },
         { path: 'extension.mjs', contents: 'export const activate = () => { throw new Error("tampered"); };' },
       ]));
@@ -208,7 +209,7 @@ describe('external plugin v2 package manifest', () => {
         files: [{ path: 'extension.mjs', sha256: createHash('sha256').update(source).digest('hex') }],
       });
       const archivePath = join(root, 'extra-file.itxs');
-      await writeFile(archivePath, makeZip([
+      await writeFile(archivePath, createStoredZip([
         { path: 'plugin.json', contents: JSON.stringify(signManifest(manifest)) },
         { path: 'extension.mjs', contents: source },
         { path: 'README.md', contents: 'not declared by the signed manifest' },
@@ -226,59 +227,3 @@ describe('external plugin v2 package manifest', () => {
     }
   });
 });
-
-interface ZipEntry {
-  readonly path: string;
-  readonly contents: string;
-}
-
-function makeZip(entries: readonly ZipEntry[]): Buffer {
-  const records = entries.map(({ path, contents }) => {
-    const name = Buffer.from(path, 'utf8');
-    const body = Buffer.from(contents, 'utf8');
-    const header = Buffer.alloc(30);
-    header.writeUInt32LE(0x04034b50, 0);
-    header.writeUInt16LE(20, 4);
-    header.writeUInt16LE(0x0800, 6);
-    header.writeUInt32LE(crc32(body), 14);
-    header.writeUInt32LE(body.length, 18);
-    header.writeUInt32LE(body.length, 22);
-    header.writeUInt16LE(name.length, 26);
-    return Buffer.concat([header, name, body]);
-  });
-  const central = entries.map(({ path, contents }, index) => {
-    const name = Buffer.from(path, 'utf8');
-    const body = Buffer.from(contents, 'utf8');
-    const header = Buffer.alloc(46);
-    header.writeUInt32LE(0x02014b50, 0);
-    header.writeUInt16LE((3 << 8) | 20, 4);
-    header.writeUInt16LE(20, 6);
-    header.writeUInt16LE(0x0800, 8);
-    header.writeUInt32LE(crc32(body), 16);
-    header.writeUInt32LE(body.length, 20);
-    header.writeUInt32LE(body.length, 24);
-    header.writeUInt16LE(name.length, 28);
-    header.writeUInt32LE(entries.slice(0, index).reduce((total, entry) => total + 30 + Buffer.byteLength(entry.path) + Buffer.byteLength(entry.contents), 0), 42);
-    return Buffer.concat([header, name]);
-  });
-  const localBytes = records.reduce((total, record) => total + record.length, 0);
-  const centralBytes = Buffer.concat(central);
-  const end = Buffer.alloc(22);
-  end.writeUInt32LE(0x06054b50, 0);
-  end.writeUInt16LE(entries.length, 8);
-  end.writeUInt16LE(entries.length, 10);
-  end.writeUInt32LE(centralBytes.length, 12);
-  end.writeUInt32LE(localBytes, 16);
-  return Buffer.concat([...records, centralBytes, end]);
-}
-
-function crc32(bytes: Buffer): number {
-  let crc = 0xffffffff;
-  for (const byte of bytes) {
-    crc ^= byte;
-    for (let bit = 0; bit < 8; bit += 1) {
-      crc = (crc >>> 1) ^ ((crc & 1) === 1 ? 0xedb88320 : 0);
-    }
-  }
-  return (crc ^ 0xffffffff) >>> 0;
-}

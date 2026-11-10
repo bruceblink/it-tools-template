@@ -53,7 +53,7 @@ export function executeExternalExtensionWasmCommand(
   if (moduleBytes.byteLength === 0 || moduleBytes.byteLength > externalExtensionWasmLimits.maximumModuleBytes) {
     throw new ExternalExtensionWasmError('resource-limit', 'The WASM module exceeds its byte limit.');
   }
-  validateNoDefinedMemory(moduleBytes);
+  validateModuleResources(moduleBytes);
   const module = compileModule(moduleBytes);
   validateImports(module);
   const memory = createMemory();
@@ -98,7 +98,8 @@ function compileModule(moduleBytes: Uint8Array): WebAssembly.Module {
   }
 }
 
-function validateNoDefinedMemory(moduleBytes: Uint8Array): void {
+/** 除受限导入内存外，不允许模块创建无界内存或函数表。 */
+function validateModuleResources(moduleBytes: Uint8Array): void {
   if (moduleBytes.byteLength < 8) {
     throw new ExternalExtensionWasmError('invalid-module');
   }
@@ -113,6 +114,9 @@ function validateNoDefinedMemory(moduleBytes: Uint8Array): void {
     }
     if (sectionId === 5 && sectionSize.value > 0) {
       throw new ExternalExtensionWasmError('invalid-abi', 'The WASM module must use only the imported host memory.');
+    }
+    if (sectionId === 4 && sectionSize.value > 0 && readUnsignedLeb(moduleBytes, sectionStart).value > 0) {
+      throw new ExternalExtensionWasmError('invalid-abi', 'The WASM module must not define tables.');
     }
     offset = sectionEnd;
   }

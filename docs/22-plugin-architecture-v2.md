@@ -159,7 +159,7 @@ discover -> validate -> register -> activate -> ready
 
 ### WASM 纯计算接口
 
-独立的实验执行器使用 UTF-8 JSON 请求 `{ "commandId": "...", "input": ... }`。模块只能导入宿主提供的 `env.memory`，并且只能导出 `alloc(size)`、`execute(pointer, length)` 和 `free(pointer, length)`。`execute` 返回的 64 位值以高 32 位表示结果指针，低 32 位表示结果字节长度；结果必须是 UTF-8 JSON。宿主内存初始为 16 页，上限为 256 页；模块上限为 16 MiB，请求和结果各不超过 16 KiB。模块不能导入 WASI、文件、网络或其他宿主函数。
+独立的实验执行器使用 UTF-8 JSON 请求 `{ "commandId": "...", "input": ... }`。模块只能导入宿主提供的 `env.memory`，并且只能导出 `alloc(size)`、`execute(pointer, length)` 和 `free(pointer, length)`。`execute` 返回的 64 位值以高 32 位表示结果指针，低 32 位表示结果字节长度；结果必须是 UTF-8 JSON。宿主内存初始为 16 页，上限为 256 页；模块上限为 16 MiB，请求和结果各不超过 16 KiB。模块不能自建内存或表，也不能导入 WASI、文件、网络或其他宿主函数。
 
 当前执行器只通过了独立模块测试，尚未接入扩展宿主或插件页面。WASM 调用是同步的；实际接入时，主进程必须在超时或取消后终止承载计算的 utility process，再清理该进程的活动请求。内存上限和导入检查也不代替对模块编译、表和其他进程资源的限制与验收。
 
