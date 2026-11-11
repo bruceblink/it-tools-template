@@ -8,6 +8,10 @@ export interface PluginV2RuntimeInfo {
 
 export interface PluginV2CapabilityContext {
   readonly runtimeInfo?: PluginV2RuntimeInfo;
+  /** 宿主按工具声明注入的非秘密设置快照。 */
+  readonly settings?: Readonly<Record<string, import('./plugin-v2-manifest').PluginV2SettingValue>>;
+  /** 宿主按工具声明注入的只读数据快照。 */
+  readonly data?: Readonly<Record<string, PluginV2JsonValue>>;
 }
 
 export interface PluginV2WasmRequest {

@@ -32,11 +32,13 @@ test('v2 scaffold types compile from a project outside the repository', async ()
     const consumerPath = join(consumerDirectory, 'consumer.ts');
     await writeFile(consumerPath, `
 import type {
+  PluginV2CapabilityContext,
   PluginV2CommandResult,
   PluginV2DataProviderContribution,
   PluginV2Manifest,
   PluginV2PackageManifest,
   PluginV2SettingContribution,
+  PluginV2WasmRequest,
   PluginV2WasmExports,
 } from '../external-plugin/types/it-tools-plugin-v2';
 
@@ -77,10 +79,21 @@ const manifest: PluginV2Manifest = {
   },
 };
 const result: PluginV2CommandResult = { kind: 'text', value: 'done' };
+const capabilityContext: PluginV2CapabilityContext = {
+  runtimeInfo: { platform: 'darwin', appVersion: '1.0.0' },
+  settings: { 'org.example.external/preferred-mode': true },
+  data: { 'org.example.external/oui-vendor': { vendor: 'Example vendor', dataVersion: '1.0.0' } },
+};
+const request: PluginV2WasmRequest = {
+  commandId: 'org.example.external/run-typed-tool',
+  input: { value: 'input' },
+  capabilityContext,
+};
 declare const wasm: PluginV2WasmExports;
 declare const packageManifest: PluginV2PackageManifest;
 void manifest;
 void result;
+void request;
 void wasm;
 void packageManifest;
 `);
