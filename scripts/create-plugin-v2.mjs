@@ -20,7 +20,7 @@ const categoryIdPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function usageError(message) {
-  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table] [--capability runtime.info]`);
+  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table] [--capability runtime.info|settings.read]`);
 }
 
 function parseOptionValues(argv) {
@@ -83,8 +83,8 @@ export function parseCreatePluginV2Arguments(argv) {
   if (outputKind !== 'text' && outputKind !== 'table') {
     throw usageError('Output kind must be text or table.');
   }
-  if (capability !== 'none' && capability !== 'runtime.info') {
-    throw usageError('Capability must be none or runtime.info.');
+  if (capability !== 'none' && capability !== 'runtime.info' && capability !== 'settings.read') {
+    throw usageError('Capability must be none, runtime.info, or settings.read.');
   }
   return {
     id,
@@ -103,6 +103,8 @@ export function parseCreatePluginV2Arguments(argv) {
 async function buildFiles(config) {
   const contributionId = `${config.id}/${config.toolId}`;
   const commandId = `${config.id}/run-${config.toolId}`;
+  const settingId = `${config.id}/preferred-mode`;
+  const usesSettings = config.capability === 'settings.read';
   const manifest = {
     formatVersion: 2,
     id: config.id,
@@ -121,7 +123,7 @@ async function buildFiles(config) {
         dataProcessing: 'memory-only',
         offline: 'available',
         capabilities: config.capability === 'none' ? [] : [config.capability],
-        settings: [],
+        settings: usesSettings ? [settingId] : [],
         dataProviders: [],
         inputs: [{
           kind: 'text',
@@ -141,7 +143,14 @@ async function buildFiles(config) {
         keywords: ['plugin', config.toolId],
         toolId: contributionId,
       }],
-      settings: [],
+      settings: usesSettings ? [{
+        id: settingId,
+        label: 'Preferred mode',
+        description: 'A non-secret setting supplied by the host.',
+        type: 'string',
+        defaultValue: 'default',
+        maxLength: 128,
+      }] : [],
       dataProviders: [],
     },
   };
@@ -202,7 +211,9 @@ function buildExtensionSource(outputKind, capability) {
     : '宿主会统一渲染文本结果；请在此处替换插件逻辑和输出内容。';
   const capabilityComment = capability === 'runtime.info'
     ? '宿主批准后，请从输入 JSON 的 capabilityContext.runtimeInfo 读取平台和应用版本。'
-    : '当前模板没有请求宿主能力。';
+    : capability === 'settings.read'
+      ? '宿主批准后，请从输入 JSON 的 capabilityContext.settings 读取清单声明的设置。'
+      : '当前模板没有请求宿主能力。';
   return `#include <stdint.h>
 
 #define REQUEST_CAPACITY (16u * 1024u)
@@ -235,7 +246,9 @@ function buildReadme(config, commandId) {
   const outputDescription = config.outputKind === 'table' ? '表格结果' : '文本结果';
   const capabilityDescription = config.capability === 'runtime.info'
     ? `插件请求 ${codeMark}runtime.info${codeMark}；宿主每次运行前会请求用户批准，并在请求的 ${codeMark}capabilityContext.runtimeInfo${codeMark} 中提供平台和应用版本。`
-    : '插件没有请求宿主能力。';
+    : config.capability === 'settings.read'
+      ? `插件请求 ${codeMark}settings.read${codeMark}；宿主每次运行前会请求用户批准，并在请求的 ${codeMark}capabilityContext.settings${codeMark} 中提供清单声明的非秘密设置。`
+      : '插件没有请求宿主能力。';
   return [
     `# ${config.name}`,
     '',

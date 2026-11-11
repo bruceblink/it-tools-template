@@ -119,6 +119,34 @@ test('creates a v2 scaffold with an approved runtime.info capability template', 
   assert.match(await readFile(join(directory, 'plugin', 'src', 'extension.c'), 'utf8'), /capabilityContext\.runtimeInfo/);
 });
 
+test('creates a v2 scaffold with a host-managed settings.read capability template', async () => {
+  const temporaryRoot = await mkdtemp(join(os.tmpdir(), 'it-tools-plugin-v2-settings-'));
+  const directory = resolve(temporaryRoot, 'settings-plugin');
+  const config = parseCreatePluginV2Arguments([
+    '--id', 'org.example.settings-scaffold',
+    '--name', 'Settings scaffold v2 plugin',
+    '--directory', directory,
+    '--capability', 'settings.read',
+  ]);
+  await createPluginV2Scaffold(config);
+
+  const manifest = JSON.parse(await readFile(join(directory, 'plugin.manifest.json'), 'utf8'));
+  const settingId = 'org.example.settings-scaffold/preferred-mode';
+  assert.deepEqual(manifest.requestedCapabilities, ['settings.read']);
+  assert.deepEqual(manifest.contributions.tools[0].capabilities, ['settings.read']);
+  assert.deepEqual(manifest.contributions.tools[0].settings, [settingId]);
+  assert.deepEqual(manifest.contributions.settings, [{
+    id: settingId,
+    label: 'Preferred mode',
+    description: 'A non-secret setting supplied by the host.',
+    type: 'string',
+    defaultValue: 'default',
+    maxLength: 128,
+  }]);
+  assert.match(await readFile(join(directory, 'README.md'), 'utf8'), /capabilityContext\.settings/);
+  assert.match(await readFile(join(directory, 'plugin', 'src', 'extension.c'), 'utf8'), /capabilityContext\.settings/);
+});
+
 test('rejects invalid v2 scaffold metadata before writing a directory', () => {
   assert.throws(() => parseCreatePluginV2Arguments(['--id', 'Org.Example', '--name', 'Bad']), /Plugin ID/);
   assert.throws(() => parseCreatePluginV2Arguments([
