@@ -296,6 +296,14 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
           v2WorkerBusy = false;
         }
       }
+      catch (error) {
+        // 清理超时不应覆盖命令结果；进程退出回调仍负责释放运行名额。
+        console.warn('V2 plugin host cleanup failed.', {
+          pluginId: request.pluginId,
+          version: request.version,
+          code: error instanceof ExternalExtensionRpcError ? error.code : getPluginOperationErrorCode(error),
+        });
+      }
       finally {
         // 即使进程停止超时，也释放请求 ID，避免活动请求表残留。
         activeV2Commands.release(request.requestId, activeRequest);

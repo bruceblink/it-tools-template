@@ -183,7 +183,7 @@ describe('v2 plugin uninstall IPC', () => {
 
     control.rejectStop(new ExternalExtensionRpcError('timeout'));
     await expect(uninstall).resolves.toMatchObject({ ok: false, error: 'timeout' });
-    await expect(command).resolves.toMatchObject({ ok: false, error: 'timeout' });
+    await expect(command).resolves.toMatchObject({ ok: true, value: { kind: 'text', value: 'completed' } });
     expect(await exists(state.packageRoot)).toBe(true);
 
     const reusedRequest = await invoke('desktop:plugins:v2:execute', commandRequest) as DesktopPluginOperationResult<unknown>;
@@ -206,6 +206,19 @@ describe('v2 plugin uninstall IPC', () => {
     control.finishStop();
     await expect(command).resolves.toMatchObject({ ok: false, error: ipcError });
     expect(warning).toHaveBeenCalledWith('V2 plugin command failed.', expect.objectContaining({ code: rpcError }));
+  });
+
+  it('preserves the command error when worker cleanup times out', async () => {
+    await registerFixture();
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    control.setExecuteError('extension-failed');
+    const command = invoke('desktop:plugins:v2:execute', createCommandRequest('request-cleanup-timeout'));
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+
+    control.rejectStop(new ExternalExtensionRpcError('timeout'));
+    await expect(command).resolves.toMatchObject({ ok: false, error: 'operation-failed' });
+    expect(warning).toHaveBeenCalledWith('V2 plugin host cleanup failed.', expect.objectContaining({ code: 'timeout' }));
+    control.finishStop();
   });
 
   it('returns cancelled when the v2 cancel IPC aborts an active command', async () => {
