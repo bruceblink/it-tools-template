@@ -134,4 +134,28 @@ describe('desktop plugin wording', () => {
       wrapper.unmount();
     }
   });
+
+  it('shows an explicit v2 install state while the native picker is still open', async () => {
+    setDesktopBridge(desktopBridge);
+    const wrapper = mount(ExtensionPluginManager, {
+      global: {
+        plugins: [createI18n({ legacy: false, locale: 'en', messages: { en: {} } })],
+        stubs: ['router-link'],
+      },
+    });
+    try {
+      await flushPromises();
+      v2Install.mockImplementationOnce(() => new Promise(() => undefined));
+      const installButton = wrapper.findAll('button').find(button => button.text().includes('Install v2 package'));
+      expect(installButton).toBeDefined();
+      await installButton!.trigger('click');
+      await flushPromises();
+
+      expect(wrapper.text()).toContain('Installing v2 package…');
+      expect(installButton!.classes()).toContain('n-button--loading');
+    }
+    finally {
+      wrapper.unmount();
+    }
+  });
 });

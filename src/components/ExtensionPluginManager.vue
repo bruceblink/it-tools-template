@@ -69,6 +69,8 @@ const sourceBuildProgress = ref<DesktopPluginSourceBuildProgress>();
 const sourceBuildError = ref<string>();
 type PluginAction = 'run' | 'stop' | 'remove';
 const pluginAction = ref<{ key: string; action: PluginAction }>();
+type V2PluginAction = 'install' | 'uninstall';
+const v2PluginAction = ref<{ key?: string; action: V2PluginAction }>();
 const canBuildSource = computed(() => {
   if (typeof window === 'undefined') {
     return false;
@@ -124,9 +126,11 @@ const messages = {
     v2Title: 'Host-rendered plugin packages (v2)',
     v2Intro: 'These packages contribute tools to the existing navigation and command search. The host renders their declared fields using the same workspace UI.',
     v2Install: 'Install v2 package',
+    v2InstallInProgress: 'Installing v2 package…',
     v2Empty: 'No v2 plugin packages are installed.',
     v2ExecutionPending: 'WASM tools can request runtime information with your approval for each run. Other host capabilities and the process runtime are not available yet.',
     v2Uninstall: 'Uninstall package',
+    v2UninstallInProgress: 'Uninstalling v2 package…',
     v2Installed: 'Signed v2 package installed. Supported tools can appear in navigation and search.',
     v2Uninstalled: 'V2 package removed.',
     v2Tools: 'Declared tools',
@@ -234,9 +238,11 @@ const messages = {
     v2Title: '宿主渲染插件包（v2）',
     v2Intro: '这些插件会把工具加入现有导航和命令搜索。宿主会使用统一工作区界面渲染清单声明的输入和结果。',
     v2Install: '安装 v2 插件包',
+    v2InstallInProgress: '正在安装 v2 插件包…',
     v2Empty: '尚未安装 v2 插件包。',
     v2ExecutionPending: 'WASM 工具每次运行时可请求运行时信息，需经你批准。其他宿主能力和进程运行时暂未开放。',
     v2Uninstall: '卸载插件包',
+    v2UninstallInProgress: '正在卸载 v2 插件包…',
     v2Installed: '已安装签名 v2 插件包。受支持的工具可以显示在导航和搜索中。',
     v2Uninstalled: '已卸载 v2 插件包。',
     v2Tools: '声明的工具',
@@ -345,6 +351,10 @@ function packageKey(plugin: DesktopPluginSnapshot): string {
 
 function v2PackageKey(plugin: DesktopPluginV2Snapshot): string {
   return `${plugin.pluginId}:${plugin.version}`;
+}
+
+function isV2PluginAction(plugin: DesktopPluginV2Snapshot, action: V2PluginAction): boolean {
+  return v2PluginAction.value?.action === action && v2PluginAction.value.key === v2PackageKey(plugin);
 }
 
 function packageStatus(plugin: DesktopPluginSnapshot): string {
@@ -612,6 +622,7 @@ async function installV2Plugin(): Promise<void> {
   if (!bridge?.installPluginV2Package) {
     return;
   }
+  v2PluginAction.value = { action: 'install' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
@@ -629,6 +640,7 @@ async function installV2Plugin(): Promise<void> {
     pluginError.value = text('operationFailed');
   }
   finally {
+    v2PluginAction.value = undefined;
     isBusy.value = false;
   }
 }
@@ -638,6 +650,7 @@ async function uninstallV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void>
   if (!bridge?.uninstallPluginV2Package) {
     return;
   }
+  v2PluginAction.value = { key: v2PackageKey(plugin), action: 'uninstall' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
@@ -655,6 +668,7 @@ async function uninstallV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void>
     pluginError.value = text('operationFailed');
   }
   finally {
+    v2PluginAction.value = undefined;
     isBusy.value = false;
   }
 }
@@ -1131,10 +1145,13 @@ onUnmounted(() => {
       <n-card v-if="canManageV2Packages" class="v2-plugin-package-card" :title="text('v2Title')">
         <div class="v2-plugin-section-heading">
           <p>{{ text('v2Intro') }}</p>
-          <n-button type="primary" :disabled="isBusy || isLoading" @click="installV2Plugin">
-            {{ text('v2Install') }}
+          <n-button type="primary" :disabled="isBusy || isLoading" :loading="v2PluginAction?.action === 'install'" @click="installV2Plugin">
+            {{ v2PluginAction?.action === 'install' ? text('v2InstallInProgress') : text('v2Install') }}
           </n-button>
         </div>
+        <n-alert v-if="v2PluginAction?.action === 'install'" type="info" :show-icon="false" role="status" aria-live="polite" mb-4>
+          {{ text('v2InstallInProgress') }}
+        </n-alert>
         <n-alert type="info" :show-icon="false" mb-4>
           {{ text('v2ExecutionPending') }}
         </n-alert>
@@ -1172,11 +1189,15 @@ onUnmounted(() => {
               <n-button
                 quaternary
                 :disabled="isBusy"
+                :loading="isV2PluginAction(plugin, 'uninstall')"
                 @click="uninstallV2Plugin(plugin)"
               >
-                {{ text('v2Uninstall') }}
+                {{ isV2PluginAction(plugin, 'uninstall') ? text('v2UninstallInProgress') : text('v2Uninstall') }}
               </n-button>
             </div>
+            <n-alert v-if="isV2PluginAction(plugin, 'uninstall')" type="info" :show-icon="false" role="status" aria-live="polite" mt-3>
+              {{ text('v2UninstallInProgress') }}
+            </n-alert>
           </n-card>
         </div>
       </n-card>
