@@ -22,6 +22,22 @@ export type PluginV2ToolDataProcessing =
 
 export type PluginV2ToolOfflineSupport = 'available' | 'requires-network' | 'conditional' | 'unknown';
 
+export type PluginV2SettingType = 'string' | 'number' | 'boolean';
+export type PluginV2SettingValue = string | number | boolean;
+
+/** 设置只声明宿主可统一渲染的非秘密标量值。 */
+export interface PluginV2SettingContribution {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly type: PluginV2SettingType;
+  readonly defaultValue: PluginV2SettingValue;
+  readonly integer?: boolean;
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly maxLength?: number;
+}
+
 export interface PluginV2TextInput {
   readonly kind: 'text';
   readonly id: string;
@@ -92,6 +108,8 @@ export interface PluginV2ToolContribution {
   readonly dataProcessing: PluginV2ToolDataProcessing;
   readonly offline: PluginV2ToolOfflineSupport;
   readonly capabilities: readonly PluginV2CapabilityId[];
+  /** 工具可以读取的设置贡献 ID。 */
+  readonly settings?: readonly string[];
   readonly inputs: readonly PluginV2Input[];
   readonly output: PluginV2OutputDeclaration;
 }
@@ -109,6 +127,7 @@ export type PluginV2ActivationEvent = `onTool:${string}` | `onCommand:${string}`
 export interface PluginV2Contributions {
   readonly tools: readonly PluginV2ToolContribution[];
   readonly commands: readonly PluginV2CommandContribution[];
+  readonly settings?: readonly PluginV2SettingContribution[];
 }
 
 /** 未签名 v2 清单；runtime、entrypoint、files 和 signature 属于安装包封套。 */

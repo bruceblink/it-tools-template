@@ -52,6 +52,125 @@ describe('external plugin v2 manifest', () => {
     const manifest = validateExternalPluginV2Manifest(createManifest());
     expect(manifest.contributions.tools[0]?.inputs[0]).toMatchObject({ kind: 'text', id: 'input' });
     expect(manifest.contributions.commands[0]?.toolId).toBe(`${pluginId}/summary`);
+    expect(manifest.contributions.settings).toBeUndefined();
+    expect(manifest.contributions.tools[0]?.settings).toBeUndefined();
+  });
+
+  it('accepts namespaced settings and tool references with settings.read', () => {
+    const settingId = `${pluginId}/endpoint`;
+    const manifest = validateExternalPluginV2Manifest({
+      ...createManifest(),
+      requestedCapabilities: ['settings.read'],
+      contributions: {
+        ...createManifest().contributions,
+        tools: [{
+          ...createManifest().contributions.tools[0]!,
+          capabilities: ['settings.read'],
+          settings: [settingId],
+        }],
+        settings: [{
+          id: settingId,
+          label: 'Endpoint',
+          description: 'The service endpoint used by this tool.',
+          type: 'string',
+          defaultValue: 'https://example.test',
+          maxLength: 256,
+        }],
+      },
+    });
+
+    expect(manifest.contributions.settings).toEqual([{
+      id: settingId,
+      label: 'Endpoint',
+      description: 'The service endpoint used by this tool.',
+      type: 'string',
+      defaultValue: 'https://example.test',
+      maxLength: 256,
+    }]);
+    expect(manifest.contributions.tools[0]?.settings).toEqual([settingId]);
+  });
+
+  it('rejects unknown setting references and references without settings.read', () => {
+    const settingId = `${pluginId}/endpoint`;
+    const base = createManifest();
+    const unknownSetting = {
+      ...base,
+      requestedCapabilities: ['settings.read'] as const,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, capabilities: ['settings.read'] as const, settings: [settingId] }],
+        settings: [],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(unknownSetting)).toThrow(/unknown setting/);
+
+    const missingCapability = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, settings: [settingId] }],
+        settings: [{
+          id: settingId,
+          label: 'Endpoint',
+          description: 'The service endpoint used by this tool.',
+          type: 'string',
+          defaultValue: 'https://example.test',
+        }],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(missingCapability)).toThrow(/settings\.read/);
+  });
+
+  it('rejects invalid setting declarations and duplicate references', () => {
+    const base = createManifest();
+    const settingId = `${pluginId}/endpoint`;
+    const invalidDefault = {
+      ...base,
+      requestedCapabilities: ['settings.read'] as const,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, capabilities: ['settings.read'] as const, settings: [settingId, settingId] }],
+        settings: [{
+          id: settingId,
+          label: 'Endpoint',
+          description: 'The service endpoint used by this tool.',
+          type: 'string',
+          defaultValue: 'https://example.test',
+        }],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(invalidDefault)).toThrow(/unique list/);
+
+    const wrongDefault = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        settings: [{
+          id: settingId,
+          label: 'Endpoint',
+          description: 'The service endpoint used by this tool.',
+          type: 'number',
+          defaultValue: 'https://example.test',
+        }],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(wrongDefault)).toThrow(/defaultValue/);
+
+    const invalidSecret = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        settings: [{
+          id: settingId,
+          label: 'Endpoint',
+          description: 'The service endpoint used by this tool.',
+          type: 'string',
+          defaultValue: 'value',
+          secret: false,
+        }],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(invalidSecret)).toThrow(/unsupported or missing fields/);
   });
 
   it('accepts the optional integer constraint and keeps older number fields valid', () => {

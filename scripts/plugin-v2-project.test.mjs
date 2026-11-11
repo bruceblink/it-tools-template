@@ -35,8 +35,17 @@ import type {
   PluginV2CommandResult,
   PluginV2Manifest,
   PluginV2PackageManifest,
+  PluginV2SettingContribution,
   PluginV2WasmExports,
 } from '../external-plugin/types/it-tools-plugin-v2';
+
+const setting: PluginV2SettingContribution = {
+  id: 'org.example.external/preferred-mode',
+  label: 'Preferred mode',
+  description: 'The default mode for this plugin.',
+  type: 'boolean',
+  defaultValue: true,
+};
 
 const manifest: PluginV2Manifest = {
   formatVersion: 2,
@@ -52,6 +61,7 @@ const manifest: PluginV2Manifest = {
   contributions: {
     tools: [],
     commands: [],
+    settings: [setting],
   },
 };
 const result: PluginV2CommandResult = { kind: 'text', value: 'done' };

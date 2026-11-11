@@ -21,6 +21,7 @@ const activationPrefixes = ['onTool', 'onCommand'] as const;
 export const externalPluginV2Limits = Object.freeze({
   maximumTools: 64,
   maximumCommands: 128,
+  maximumSettings: 64,
   maximumInputFields: 32,
   maximumSelectOptions: 64,
   maximumKeywords: 32,
@@ -28,6 +29,7 @@ export const externalPluginV2Limits = Object.freeze({
   maximumTitleLength: 120,
   maximumDescriptionLength: 240,
   maximumFieldLength: 64,
+  maximumSettingLength: 4_096,
   maximumTextLength: 16_384,
 });
 
@@ -82,6 +84,22 @@ export interface ExternalPluginV2OutputDeclaration {
   readonly label?: string;
 }
 
+export type ExternalPluginV2SettingType = 'string' | 'number' | 'boolean';
+export type ExternalPluginV2SettingValue = string | number | boolean;
+
+/** 设置只描述可由宿主统一渲染的非秘密标量值，不提供凭据或插件自定义控件。 */
+export interface ExternalPluginV2SettingDeclaration {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly type: ExternalPluginV2SettingType;
+  readonly defaultValue: ExternalPluginV2SettingValue;
+  readonly integer?: boolean;
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly maxLength?: number;
+}
+
 /** 工具只声明数据和交互结构，具体执行由扩展宿主 RPC 负责。 */
 export interface ExternalPluginV2ToolDeclaration {
   readonly id: string;
@@ -92,6 +110,8 @@ export interface ExternalPluginV2ToolDeclaration {
   readonly dataProcessing: ToolDataProcessing;
   readonly offline: ToolOfflineSupport;
   readonly capabilities: readonly PluginCapabilityId[];
+  /** 工具可读取的设置 ID；设置必须同时声明 settings.read 能力。 */
+  readonly settings?: readonly string[];
   readonly inputs: readonly ExternalPluginV2InputField[];
   readonly output: ExternalPluginV2OutputDeclaration;
 }
@@ -110,6 +130,8 @@ export type ExternalPluginV2ActivationEvent = `onTool:${string}` | `onCommand:${
 export interface ExternalPluginV2Contributions {
   readonly tools: readonly ExternalPluginV2ToolDeclaration[];
   readonly commands: readonly ExternalPluginV2CommandDeclaration[];
+  /** 旧版清单可以省略该字段，校验器会将其规范化为空列表。 */
+  readonly settings?: readonly ExternalPluginV2SettingDeclaration[];
 }
 
 /** v2 清单只包含宿主可审查的声明，不包含 HTML 页面入口。 */
@@ -286,31 +308,135 @@ function readContributions(
   if (!isRecord(value)) {
     throw new Error('Plugin contributions are invalid.');
   }
-  assertExactKeys(value, ['tools', 'commands'], [], 'Plugin contributions');
+  assertExactKeys(value, ['tools', 'commands'], ['settings'], 'Plugin contributions');
+  const hasSettings = Object.prototype.hasOwnProperty.call(value, 'settings');
+  const settings = readSettings(value.settings, pluginId);
+  const settingsById = new Map(settings.map(setting => [setting.id, setting]));
   if (!Array.isArray(value.tools) || value.tools.length > externalPluginV2Limits.maximumTools) {
     throw new Error('Plugin tools are invalid.');
   }
   if (!Array.isArray(value.commands) || value.commands.length > externalPluginV2Limits.maximumCommands) {
     throw new Error('Plugin commands are invalid.');
   }
-  const tools = value.tools.map((tool, index) => readTool(tool, pluginId, requestedCapabilities, index));
+  const tools = value.tools.map((tool, index) => readTool(tool, pluginId, requestedCapabilities, settingsById, index));
   const commands = value.commands.map((command, index) => readCommand(command, pluginId, tools, index));
   if (new Set(tools.map(tool => tool.id)).size !== tools.length || new Set(commands.map(command => command.id)).size !== commands.length) {
     throw new Error('Plugin contribution IDs must be unique.');
   }
-  return { tools, commands };
+  return { tools, commands, ...(hasSettings ? { settings } : {}) };
+}
+
+function readSettings(value: unknown, pluginId: string): ExternalPluginV2SettingDeclaration[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || value.length > externalPluginV2Limits.maximumSettings) {
+    throw new Error('Plugin settings are invalid.');
+  }
+  const settings = value.map((setting, index) => readSetting(setting, pluginId, index));
+  if (new Set(settings.map(setting => setting.id)).size !== settings.length) {
+    throw new Error('Plugin setting IDs must be unique.');
+  }
+  return settings;
+}
+
+function readSetting(value: unknown, pluginId: string, index: number): ExternalPluginV2SettingDeclaration {
+  if (!isRecord(value)) {
+    throw new Error(`Setting contribution ${index} is invalid.`);
+  }
+  assertExactKeys(
+    value,
+    ['id', 'label', 'description', 'type', 'defaultValue'],
+    ['integer', 'minimum', 'maximum', 'maxLength'],
+    `Setting contribution ${index}`,
+  );
+  const id = readContributionId(value.id, pluginId, `Setting contribution ${index} ID`);
+  const label = readBoundedString(value.label, `Setting ${id} label`, externalPluginV2Limits.maximumTitleLength);
+  const description = readBoundedString(value.description, `Setting ${id} description`, externalPluginV2Limits.maximumDescriptionLength);
+  if (value.type !== 'string' && value.type !== 'number' && value.type !== 'boolean') {
+    throw new Error(`Setting ${id} type is invalid.`);
+  }
+
+  const integer = value.integer === undefined ? undefined : readBoolean(value.integer, `Setting ${id} integer`);
+  const minimum = readOptionalNumber(value.minimum, `Setting ${id} minimum`);
+  const maximum = readOptionalNumber(value.maximum, `Setting ${id} maximum`);
+  const maxLength = value.maxLength === undefined ? undefined : readSafeInteger(value.maxLength, `Setting ${id} maxLength`);
+
+  if (value.type === 'string') {
+    if (integer !== undefined || minimum !== undefined || maximum !== undefined) {
+      throw new Error(`Setting ${id} uses numeric options for a string value.`);
+    }
+    if (maxLength !== undefined && (maxLength < 1 || maxLength > externalPluginV2Limits.maximumSettingLength)) {
+      throw new Error(`Setting ${id} string length is invalid.`);
+    }
+    if (typeof value.defaultValue !== 'string') {
+      throw new Error(`Setting ${id} defaultValue has the wrong type.`);
+    }
+    if (value.defaultValue.length > (maxLength ?? externalPluginV2Limits.maximumSettingLength)) {
+      throw new Error(`Setting ${id} defaultValue exceeds its string length limit.`);
+    }
+    return {
+      id,
+      label,
+      description,
+      type: 'string',
+      defaultValue: value.defaultValue,
+      ...(maxLength === undefined ? {} : { maxLength }),
+    };
+  }
+
+  if (maxLength !== undefined) {
+    throw new Error(`Setting ${id} uses a string limit for a non-string value.`);
+  }
+  if (value.type === 'boolean') {
+    if (integer !== undefined || minimum !== undefined || maximum !== undefined) {
+      throw new Error(`Setting ${id} uses numeric options for a boolean value.`);
+    }
+    if (typeof value.defaultValue !== 'boolean') {
+      throw new Error(`Setting ${id} defaultValue has the wrong type.`);
+    }
+    return { id, label, description, type: 'boolean', defaultValue: value.defaultValue };
+  }
+
+  if (typeof value.defaultValue !== 'number' || !Number.isFinite(value.defaultValue)) {
+    throw new Error(`Setting ${id} defaultValue has the wrong type.`);
+  }
+  if (minimum !== undefined && maximum !== undefined && minimum > maximum) {
+    throw new Error(`Setting ${id} numeric range is invalid.`);
+  }
+  if ((minimum !== undefined && value.defaultValue < minimum) || (maximum !== undefined && value.defaultValue > maximum)) {
+    throw new Error(`Setting ${id} defaultValue is outside its numeric range.`);
+  }
+  if (integer === true && (
+    !Number.isSafeInteger(value.defaultValue)
+    || (minimum !== undefined && !Number.isSafeInteger(minimum))
+    || (maximum !== undefined && !Number.isSafeInteger(maximum))
+  )) {
+    throw new Error(`Setting ${id} integer range is invalid.`);
+  }
+  return {
+    id,
+    label,
+    description,
+    type: 'number',
+    defaultValue: value.defaultValue,
+    ...(integer === undefined ? {} : { integer }),
+    ...(minimum === undefined ? {} : { minimum }),
+    ...(maximum === undefined ? {} : { maximum }),
+  };
 }
 
 function readTool(
   value: unknown,
   pluginId: string,
   requestedCapabilities: ReadonlySet<PluginCapabilityId>,
+  settingsById: ReadonlyMap<string, ExternalPluginV2SettingDeclaration>,
   index: number,
 ): ExternalPluginV2ToolDeclaration {
   if (!isRecord(value)) {
     throw new Error(`Tool contribution ${index} is invalid.`);
   }
-  assertExactKeys(value, ['id', 'title', 'description', 'keywords', 'categoryId', 'dataProcessing', 'offline', 'capabilities', 'inputs', 'output'], [], `Tool contribution ${index}`);
+  assertExactKeys(value, ['id', 'title', 'description', 'keywords', 'categoryId', 'dataProcessing', 'offline', 'capabilities', 'inputs', 'output'], ['settings'], `Tool contribution ${index}`);
   const id = readContributionId(value.id, pluginId, `Tool contribution ${index} ID`);
   const categoryId = readBoundedString(value.categoryId, `Tool contribution ${id} category`, 64);
   if (!categoryIdPattern.test(categoryId)) {
@@ -325,6 +451,11 @@ function readTool(
   const inputs = value.inputs.map((field, fieldIndex) => readInputField(field, id, fieldIndex));
   const output = readOutput(value.output, id);
   const capabilities = readCapabilities(value.capabilities, requestedCapabilities, `Tool contribution ${id} capabilities`);
+  const settings = readSettingReferences(value.settings, id, pluginId, settingsById);
+  const hasSettings = Object.prototype.hasOwnProperty.call(value, 'settings');
+  if (settings.length > 0 && !capabilities.includes('settings.read')) {
+    throw new Error(`Tool contribution ${id} must declare settings.read when it references settings.`);
+  }
   return {
     id,
     title: readBoundedString(value.title, `Tool contribution ${id} title`, externalPluginV2Limits.maximumTitleLength),
@@ -334,9 +465,31 @@ function readTool(
     dataProcessing: value.dataProcessing,
     offline: value.offline,
     capabilities,
+    ...(hasSettings ? { settings } : {}),
     inputs,
     output,
   };
+}
+
+function readSettingReferences(
+  value: unknown,
+  toolId: string,
+  pluginId: string,
+  settingsById: ReadonlyMap<string, ExternalPluginV2SettingDeclaration>,
+): string[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || new Set(value).size !== value.length) {
+    throw new Error(`Tool contribution ${toolId} settings must be a unique list.`);
+  }
+  return value.map((settingId, index) => {
+    const normalizedId = readContributionId(settingId, pluginId, `Tool contribution ${toolId} setting ${index}`);
+    if (!settingsById.has(normalizedId)) {
+      throw new Error(`Tool contribution ${toolId} references an unknown setting.`);
+    }
+    return normalizedId;
+  });
 }
 
 function readInputField(value: unknown, toolId: string, index: number): ExternalPluginV2InputField {

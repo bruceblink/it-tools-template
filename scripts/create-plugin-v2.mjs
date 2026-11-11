@@ -111,6 +111,7 @@ async function buildFiles(config) {
         dataProcessing: 'memory-only',
         offline: 'available',
         capabilities: [],
+        settings: [],
         inputs: [{
           kind: 'text',
           id: 'input',
@@ -129,6 +130,7 @@ async function buildFiles(config) {
         keywords: ['plugin', config.toolId],
         toolId: contributionId,
       }],
+      settings: [],
     },
   };
   const files = new Map([
