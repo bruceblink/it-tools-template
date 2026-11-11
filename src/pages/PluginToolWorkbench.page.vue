@@ -20,6 +20,7 @@ const { locale } = useI18n();
 const labels = computed(() => locale.value === 'zh'
   ? {
       run: '运行',
+      cancel: '取消',
       result: '结果',
       required: '此字段为必填项。',
       tooLong: '输入超过最大长度。',
@@ -35,6 +36,7 @@ const labels = computed(() => locale.value === 'zh'
     }
   : {
       run: 'Run',
+      cancel: 'Cancel',
       result: 'Result',
       required: 'is required.',
       tooLong: 'exceeds the maximum length.',
@@ -104,6 +106,14 @@ function getSelectOptions(field: PluginToolInputField) {
   return field.type === 'select'
     ? field.options.map(option => ({ label: option.label, value: option.value }))
     : [];
+}
+
+function cancelCommand(): void {
+  if (!isRunning.value || !activeController) {
+    return;
+  }
+  activeController.abort();
+  commandError.value = labels.value.commandCancelled;
 }
 
 function validateInput(): PluginToolInputValueMap | undefined {
@@ -269,9 +279,20 @@ onUnmounted(() => activeController?.abort());
         <n-alert v-if="inputError" type="error" :show-icon="false" role="alert">
           {{ inputError }}
         </n-alert>
-        <n-button attr-type="submit" type="primary" :loading="isRunning">
-          {{ labels.run }}
-        </n-button>
+        <div class="plugin-tool-workbench-actions">
+          <n-button attr-type="submit" type="primary" :loading="isRunning">
+            {{ labels.run }}
+          </n-button>
+          <n-button
+            v-if="isRunning"
+            type="warning"
+            secondary
+            :aria-label="labels.cancel"
+            @click="cancelCommand"
+          >
+            {{ labels.cancel }}
+          </n-button>
+        </div>
       </form>
 
       <n-alert v-if="commandError" type="error" :show-icon="false" role="alert" mt-4>
@@ -306,6 +327,12 @@ onUnmounted(() => activeController?.abort());
 .plugin-tool-workbench-form {
   display: grid;
   gap: 16px;
+}
+
+.plugin-tool-workbench-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .plugin-tool-workbench-field {

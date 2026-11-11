@@ -112,6 +112,31 @@ describe('PluginToolWorkbench', () => {
     expect(wrapper.text()).toContain('"count": 21');
   });
 
+  it('aborts a running command from the visible cancel action', async () => {
+    let executionSignal: AbortSignal | undefined;
+    const execute = vi.fn<PluginToolCommandExecutor>((_request, signal) => {
+      executionSignal = signal;
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => {
+          reject(Object.assign(new Error('cancelled'), { code: 'cancelled' }));
+        }, { once: true });
+      });
+    });
+    const wrapper = mount(PluginToolWorkbench, {
+      props: { tool, execute },
+      global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en: {} } })] },
+    });
+
+    await wrapper.get('input').setValue('Ada');
+    await wrapper.get('form').trigger('submit');
+    await wrapper.get('button[aria-label="Cancel"]').trigger('click');
+    await flushPromises();
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(executionSignal?.aborted).toBe(true);
+    expect(wrapper.get('[role="alert"]').text()).toBe('The plugin command was cancelled.');
+  });
+
   it('keeps step as a control increment when an older number field omits integer', async () => {
     const execute = vi.fn(async (request: Parameters<PluginToolCommandExecutor>[0]) => ({
       kind: 'json' as const,
