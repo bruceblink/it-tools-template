@@ -112,6 +112,7 @@ async function buildFiles(config) {
         offline: 'available',
         capabilities: [],
         settings: [],
+        dataProviders: [],
         inputs: [{
           kind: 'text',
           id: 'input',
@@ -131,6 +132,7 @@ async function buildFiles(config) {
         toolId: contributionId,
       }],
       settings: [],
+      dataProviders: [],
     },
   };
   const files = new Map([

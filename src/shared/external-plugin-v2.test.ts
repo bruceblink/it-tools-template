@@ -173,6 +173,100 @@ describe('external plugin v2 manifest', () => {
     expect(() => validateExternalPluginV2Manifest(invalidSecret)).toThrow(/unsupported or missing fields/);
   });
 
+  it('accepts a host-owned OUI provider reference with a text query input', () => {
+    const providerId = `${pluginId}/oui-vendor`;
+    const manifest = validateExternalPluginV2Manifest({
+      ...createManifest(),
+      requestedCapabilities: ['data.oui'],
+      contributions: {
+        ...createManifest().contributions,
+        tools: [{
+          ...createManifest().contributions.tools[0]!,
+          capabilities: ['data.oui'],
+          dataProviders: [{ id: providerId, queryInputId: 'input' }],
+        }],
+        dataProviders: [{
+          id: providerId,
+          label: 'OUI vendor data',
+          description: 'Host-owned OUI vendor records.',
+          kind: 'oui.vendor',
+          version: '1.0.0',
+          schemaVersion: 1,
+          maxBytes: 512,
+        }],
+      },
+    });
+
+    expect(manifest.contributions.dataProviders).toEqual([{
+      id: providerId,
+      label: 'OUI vendor data',
+      description: 'Host-owned OUI vendor records.',
+      kind: 'oui.vendor',
+      version: '1.0.0',
+      schemaVersion: 1,
+      maxBytes: 512,
+    }]);
+    expect(manifest.contributions.tools[0]?.dataProviders).toEqual([{ id: providerId, queryInputId: 'input' }]);
+  });
+
+  it('rejects invalid or unauthorized data provider references', () => {
+    const providerId = `${pluginId}/oui-vendor`;
+    const base = createManifest();
+    const provider = {
+      id: providerId,
+      label: 'OUI vendor data',
+      description: 'Host-owned OUI vendor records.',
+      kind: 'oui.vendor' as const,
+      version: '1.0.0',
+      schemaVersion: 1,
+      maxBytes: 512,
+    };
+    const missingCapability = {
+      ...base,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, dataProviders: [{ id: providerId, queryInputId: 'input' }] }],
+        dataProviders: [provider],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(missingCapability)).toThrow(/data\.oui/);
+
+    const unknownProvider = {
+      ...base,
+      requestedCapabilities: ['data.oui'] as const,
+      contributions: {
+        ...base.contributions,
+        tools: [{ ...base.contributions.tools[0]!, capabilities: ['data.oui'] as const, dataProviders: [{ id: providerId }] }],
+        dataProviders: [],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(unknownProvider)).toThrow(/unknown data provider/);
+
+    const invalidQueryInput = {
+      ...base,
+      requestedCapabilities: ['data.oui'] as const,
+      contributions: {
+        ...base.contributions,
+        tools: [{
+          ...base.contributions.tools[0]!,
+          capabilities: ['data.oui'] as const,
+          inputs: [{ id: 'count', kind: 'number' as const, label: 'Count' }],
+          dataProviders: [{ id: providerId, queryInputId: 'count' }],
+        }],
+        dataProviders: [provider],
+      },
+    };
+    expect(() => validateExternalPluginV2Manifest(invalidQueryInput)).toThrow(/must reference a text input/);
+
+    expect(() => validateExternalPluginV2Manifest({
+      ...base,
+      contributions: {
+        ...base.contributions,
+        dataProviders: [{ ...provider, kind: 'arbitrary' }],
+      },
+    })).toThrow(/kind is not supported/);
+  });
+
   it('accepts the optional integer constraint and keeps older number fields valid', () => {
     const base = createManifest();
     const numberField = { kind: 'number' as const, id: 'count', label: 'Count', minimum: 0, maximum: 100, step: 1 };

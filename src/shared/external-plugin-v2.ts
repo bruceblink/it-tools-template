@@ -23,6 +23,7 @@ export const externalPluginV2Limits = Object.freeze({
   maximumTools: 64,
   maximumCommands: 128,
   maximumSettings: 64,
+  maximumDataProviders: 32,
   maximumInputFields: 32,
   maximumSelectOptions: 64,
   maximumKeywords: 32,
@@ -31,6 +32,7 @@ export const externalPluginV2Limits = Object.freeze({
   maximumDescriptionLength: 240,
   maximumFieldLength: 64,
   maximumSettingLength: 4_096,
+  maximumDataProviderBytes: 512 * 1024,
   maximumTextLength: 16_384,
 });
 
@@ -101,6 +103,25 @@ export interface ExternalPluginV2SettingDeclaration {
   readonly maxLength?: number;
 }
 
+export type ExternalPluginV2DataProviderKind = 'oui.vendor';
+
+/** 数据提供者只声明宿主拥有的数据集，不允许插件提供 loader 或任意代码。 */
+export interface ExternalPluginV2DataProviderDeclaration {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly kind: ExternalPluginV2DataProviderKind;
+  readonly version: string;
+  readonly schemaVersion: number;
+  readonly maxBytes: number;
+}
+
+/** 工具对宿主数据集的受限引用；查询字段由宿主从已校验的 text 输入读取。 */
+export interface ExternalPluginV2DataProviderReference {
+  readonly id: string;
+  readonly queryInputId?: string;
+}
+
 /** 工具只声明数据和交互结构，具体执行由扩展宿主 RPC 负责。 */
 export interface ExternalPluginV2ToolDeclaration {
   readonly id: string;
@@ -113,6 +134,8 @@ export interface ExternalPluginV2ToolDeclaration {
   readonly capabilities: readonly PluginCapabilityId[];
   /** 工具可读取的设置 ID；设置必须同时声明 settings.read 能力。 */
   readonly settings?: readonly string[];
+  /** 工具可读取的数据集；引用必须同时声明对应的宿主数据能力。 */
+  readonly dataProviders?: readonly ExternalPluginV2DataProviderReference[];
   readonly inputs: readonly ExternalPluginV2InputField[];
   readonly output: ExternalPluginV2OutputDeclaration;
 }
@@ -133,6 +156,8 @@ export interface ExternalPluginV2Contributions {
   readonly commands: readonly ExternalPluginV2CommandDeclaration[];
   /** 旧版清单可以省略该字段，校验器会将其规范化为空列表。 */
   readonly settings?: readonly ExternalPluginV2SettingDeclaration[];
+  /** 旧版清单可以省略该字段；当前首个数据集类型为 oui.vendor。 */
+  readonly dataProviders?: readonly ExternalPluginV2DataProviderDeclaration[];
 }
 
 /** v2 清单只包含宿主可审查的声明，不包含 HTML 页面入口。 */
@@ -309,22 +334,30 @@ function readContributions(
   if (!isRecord(value)) {
     throw new Error('Plugin contributions are invalid.');
   }
-  assertExactKeys(value, ['tools', 'commands'], ['settings'], 'Plugin contributions');
+  assertExactKeys(value, ['tools', 'commands'], ['settings', 'dataProviders'], 'Plugin contributions');
   const hasSettings = Object.prototype.hasOwnProperty.call(value, 'settings');
   const settings = readSettings(value.settings, pluginId);
   const settingsById = new Map(settings.map(setting => [setting.id, setting]));
+  const hasDataProviders = Object.prototype.hasOwnProperty.call(value, 'dataProviders');
+  const dataProviders = readDataProviders(value.dataProviders, pluginId);
+  const dataProvidersById = new Map(dataProviders.map(provider => [provider.id, provider]));
   if (!Array.isArray(value.tools) || value.tools.length > externalPluginV2Limits.maximumTools) {
     throw new Error('Plugin tools are invalid.');
   }
   if (!Array.isArray(value.commands) || value.commands.length > externalPluginV2Limits.maximumCommands) {
     throw new Error('Plugin commands are invalid.');
   }
-  const tools = value.tools.map((tool, index) => readTool(tool, pluginId, requestedCapabilities, settingsById, index));
+  const tools = value.tools.map((tool, index) => readTool(tool, pluginId, requestedCapabilities, settingsById, dataProvidersById, index));
   const commands = value.commands.map((command, index) => readCommand(command, pluginId, tools, index));
   if (new Set(tools.map(tool => tool.id)).size !== tools.length || new Set(commands.map(command => command.id)).size !== commands.length) {
     throw new Error('Plugin contribution IDs must be unique.');
   }
-  return { tools, commands, ...(hasSettings ? { settings } : {}) };
+  return {
+    tools,
+    commands,
+    ...(hasSettings ? { settings } : {}),
+    ...(hasDataProviders ? { dataProviders } : {}),
+  };
 }
 
 function readSettings(value: unknown, pluginId: string): ExternalPluginV2SettingDeclaration[] {
@@ -339,6 +372,56 @@ function readSettings(value: unknown, pluginId: string): ExternalPluginV2Setting
     throw new Error('Plugin setting IDs must be unique.');
   }
   return settings;
+}
+
+function readDataProviders(
+  value: unknown,
+  pluginId: string,
+): ExternalPluginV2DataProviderDeclaration[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || value.length > externalPluginV2Limits.maximumDataProviders) {
+    throw new Error('Plugin data providers are invalid.');
+  }
+  const providers = value.map((provider, index) => readDataProvider(provider, pluginId, index));
+  if (new Set(providers.map(provider => provider.id)).size !== providers.length) {
+    throw new Error('Plugin data provider IDs must be unique.');
+  }
+  return providers;
+}
+
+function readDataProvider(
+  value: unknown,
+  pluginId: string,
+  index: number,
+): ExternalPluginV2DataProviderDeclaration {
+  if (!isRecord(value)) {
+    throw new Error(`Data provider contribution ${index} is invalid.`);
+  }
+  assertExactKeys(
+    value,
+    ['id', 'label', 'description', 'kind', 'version', 'schemaVersion', 'maxBytes'],
+    [],
+    `Data provider contribution ${index}`,
+  );
+  const id = readContributionId(value.id, pluginId, `Data provider contribution ${index} ID`);
+  const label = readBoundedString(value.label, `Data provider ${id} label`, externalPluginV2Limits.maximumTitleLength);
+  const description = readBoundedString(value.description, `Data provider ${id} description`, externalPluginV2Limits.maximumDescriptionLength);
+  if (value.kind !== 'oui.vendor') {
+    throw new Error(`Data provider ${id} kind is not supported.`);
+  }
+  const version = readBoundedString(value.version, `Data provider ${id} version`, 32);
+  parseStableVersion(version, `Data provider ${id} version`);
+  const schemaVersion = readSafeInteger(value.schemaVersion, `Data provider ${id} schemaVersion`);
+  if (schemaVersion < 1) {
+    throw new Error(`Data provider ${id} schemaVersion is invalid.`);
+  }
+  const maxBytes = readSafeInteger(value.maxBytes, `Data provider ${id} maxBytes`);
+  if (maxBytes < 1 || maxBytes > externalPluginV2Limits.maximumDataProviderBytes) {
+    throw new Error(`Data provider ${id} maxBytes is invalid.`);
+  }
+  return { id, label, description, kind: 'oui.vendor', version, schemaVersion, maxBytes };
 }
 
 function readSetting(value: unknown, pluginId: string, index: number): ExternalPluginV2SettingDeclaration {
@@ -432,12 +515,13 @@ function readTool(
   pluginId: string,
   requestedCapabilities: ReadonlySet<PluginCapabilityId>,
   settingsById: ReadonlyMap<string, ExternalPluginV2SettingDeclaration>,
+  dataProvidersById: ReadonlyMap<string, ExternalPluginV2DataProviderDeclaration>,
   index: number,
 ): ExternalPluginV2ToolDeclaration {
   if (!isRecord(value)) {
     throw new Error(`Tool contribution ${index} is invalid.`);
   }
-  assertExactKeys(value, ['id', 'title', 'description', 'keywords', 'categoryId', 'dataProcessing', 'offline', 'capabilities', 'inputs', 'output'], ['settings'], `Tool contribution ${index}`);
+  assertExactKeys(value, ['id', 'title', 'description', 'keywords', 'categoryId', 'dataProcessing', 'offline', 'capabilities', 'inputs', 'output'], ['settings', 'dataProviders'], `Tool contribution ${index}`);
   const id = readContributionId(value.id, pluginId, `Tool contribution ${index} ID`);
   const categoryId = readBoundedString(value.categoryId, `Tool contribution ${id} category`, 64);
   if (!categoryIdPattern.test(categoryId)) {
@@ -453,9 +537,13 @@ function readTool(
   const output = readOutput(value.output, id);
   const capabilities = readCapabilities(value.capabilities, requestedCapabilities, `Tool contribution ${id} capabilities`);
   const settings = readSettingReferences(value.settings, id, pluginId, settingsById);
+  const dataProviders = readDataProviderReferences(value.dataProviders, id, pluginId, inputs, dataProvidersById);
   const hasSettings = Object.prototype.hasOwnProperty.call(value, 'settings');
   if (settings.length > 0 && !capabilities.includes('settings.read')) {
     throw new Error(`Tool contribution ${id} must declare settings.read when it references settings.`);
+  }
+  if (dataProviders.length > 0 && !capabilities.includes('data.oui')) {
+    throw new Error(`Tool contribution ${id} must declare data.oui when it references data providers.`);
   }
   return {
     id,
@@ -467,6 +555,7 @@ function readTool(
     offline: value.offline,
     capabilities,
     ...(hasSettings ? { settings } : {}),
+    ...(Object.prototype.hasOwnProperty.call(value, 'dataProviders') ? { dataProviders } : {}),
     inputs,
     output,
   };
@@ -490,6 +579,45 @@ function readSettingReferences(
       throw new Error(`Tool contribution ${toolId} references an unknown setting.`);
     }
     return normalizedId;
+  });
+}
+
+function readDataProviderReferences(
+  value: unknown,
+  toolId: string,
+  pluginId: string,
+  inputs: readonly ExternalPluginV2InputField[],
+  dataProvidersById: ReadonlyMap<string, ExternalPluginV2DataProviderDeclaration>,
+): ExternalPluginV2DataProviderReference[] {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || new Set(value.map(reference => isRecord(reference) ? reference.id : reference)).size !== value.length) {
+    throw new Error(`Tool contribution ${toolId} dataProviders must be a unique list.`);
+  }
+  return value.map((reference, index) => {
+    if (!isRecord(reference)) {
+      throw new Error(`Tool contribution ${toolId} data provider ${index} is invalid.`);
+    }
+    assertExactKeys(reference, ['id'], ['queryInputId'], `Tool contribution ${toolId} data provider ${index}`);
+    const id = readContributionId(reference.id, pluginId, `Tool contribution ${toolId} data provider ${index} ID`);
+    const provider = dataProvidersById.get(id);
+    if (!provider) {
+      throw new Error(`Tool contribution ${toolId} references an unknown data provider.`);
+    }
+    if (provider.kind !== 'oui.vendor') {
+      throw new Error(`Tool contribution ${toolId} references an unsupported data provider.`);
+    }
+    const queryInputId = reference.queryInputId === undefined
+      ? undefined
+      : readBoundedString(reference.queryInputId, `Tool contribution ${toolId} data provider ${id} queryInputId`, externalPluginV2Limits.maximumFieldLength);
+    if (queryInputId !== undefined) {
+      const input = inputs.find(candidate => candidate.id === queryInputId);
+      if (!input || input.kind !== 'text') {
+        throw new Error(`Tool contribution ${toolId} data provider ${id} queryInputId must reference a text input.`);
+      }
+    }
+    return { id, ...(queryInputId === undefined ? {} : { queryInputId }) };
   });
 }
 

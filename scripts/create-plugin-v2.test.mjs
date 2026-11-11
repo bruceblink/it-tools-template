@@ -46,6 +46,7 @@ test('creates a buildable v2 WASM scaffold with a host-rendered text tool', asyn
     offline: 'available',
     capabilities: [],
     settings: [],
+    dataProviders: [],
     inputs: [{
       kind: 'text',
       id: 'input',
@@ -59,6 +60,7 @@ test('creates a buildable v2 WASM scaffold with a host-rendered text tool', asyn
   });
   assert.equal(manifest.contributions.commands[0].id, 'org.example.scaffold/run-hello-world');
   assert.deepEqual(manifest.contributions.settings, []);
+  assert.deepEqual(manifest.contributions.dataProviders, []);
   execFileSync(process.execPath, [join(directory, 'plugin', 'build.mjs'), '--output', join(directory, 'extension.wasm')], {
     cwd: directory,
     stdio: 'pipe',

@@ -38,6 +38,19 @@ export interface PluginV2SettingContribution {
   readonly maxLength?: number;
 }
 
+export type PluginV2DataProviderKind = 'oui.vendor';
+
+/** 数据提供者声明宿主拥有的数据集，不包含插件 loader。 */
+export interface PluginV2DataProviderContribution {
+  readonly id: string;
+  readonly label: string;
+  readonly description: string;
+  readonly kind: PluginV2DataProviderKind;
+  readonly version: string;
+  readonly schemaVersion: number;
+  readonly maxBytes: number;
+}
+
 export interface PluginV2TextInput {
   readonly kind: 'text';
   readonly id: string;
@@ -110,6 +123,11 @@ export interface PluginV2ToolContribution {
   readonly capabilities: readonly PluginV2CapabilityId[];
   /** 工具可以读取的设置贡献 ID。 */
   readonly settings?: readonly string[];
+  /** 工具可以读取的宿主数据集引用。 */
+  readonly dataProviders?: readonly {
+    readonly id: string;
+    readonly queryInputId?: string;
+  }[];
   readonly inputs: readonly PluginV2Input[];
   readonly output: PluginV2OutputDeclaration;
 }
@@ -128,6 +146,7 @@ export interface PluginV2Contributions {
   readonly tools: readonly PluginV2ToolContribution[];
   readonly commands: readonly PluginV2CommandContribution[];
   readonly settings?: readonly PluginV2SettingContribution[];
+  readonly dataProviders?: readonly PluginV2DataProviderContribution[];
 }
 
 /** 未签名 v2 清单；runtime、entrypoint、files 和 signature 属于安装包封套。 */

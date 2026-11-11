@@ -93,7 +93,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 - 现有基础：Electron 管理器已经覆盖安装包、签名者信任、能力勾选、贡献工具路由、运行、停止和卸载；能力示例覆盖运行时信息、剪贴板和持久设置。
 - 已完成：管理器在无插件的首次使用状态显示“市场 → 信任 → 安装/授权”的三步引导，并提供只读市场入口；能力行和摘要区分宿主支持、下次运行将授权和当前已授权；包卡片显示插件 ID、版本、活动贡献项和错误码。
 - 主要缺口：现有 v1 HTML/webview 模型不能提供与原生工具一致的 UI，不能继续作为 v2 默认路径；v2 的设置写入能力、数据提供者和进程运行时仍未完成。
-- 已完成切片：新增 [`docs/22-plugin-architecture-v2.md`](22-plugin-architecture-v2.md)、声明式 v2 清单校验、签名包安装、宿主 `PluginToolWorkbench`、工具与命令注册、设置页管理、WASM 命令执行、文本/JSON/受限表格结果渲染、可见取消按钮和 v2 包安装/卸载进行中状态。已安装 v2 文件篡改会在列表中显示为无效诊断，执行入口仍会拒绝。主进程限制并发，在超时或取消时请求终止扩展进程，并等待退出后释放运行名额；执行前复核签名文件和入口哈希。新增 `contributions.settings` 和 `tool.settings` 校验，宿主设置页可以编辑插件命名空间中的非秘密值，工具运行时按声明接收 `settings.read` 快照；`runtime.info` 和 `settings.read` 需要用户逐次批准，`settings.write` 和其他 v2 能力尚未开放。v1 HTML 包只保留为 legacy 迁移边界。
+- 已完成切片：新增 [`docs/22-plugin-architecture-v2.md`](22-plugin-architecture-v2.md)、声明式 v2 清单校验、签名包安装、宿主 `PluginToolWorkbench`、工具与命令注册、设置页管理、WASM 命令执行、文本/JSON/受限表格结果渲染、可见取消按钮和 v2 包安装/卸载进行中状态。已安装 v2 文件篡改会在列表中显示为无效诊断，执行入口仍会拒绝。主进程限制并发，在超时或取消时请求终止扩展进程，并等待退出后释放运行名额；执行前复核签名文件和入口哈希。新增 `contributions.settings`、`tool.settings`、`contributions.dataProviders` 和 `tool.dataProviders` 校验，宿主设置页可以编辑插件命名空间中的非秘密值，工具运行时按声明接收 `settings.read` 快照；`runtime.info` 和 `settings.read` 需要用户逐次批准，`data.oui` 数据集声明已完成静态校验，运行时数据读取仍未开放，`settings.write` 和其他 v2 能力尚未开放。v1 HTML 包只保留为 legacy 迁移边界。
 - 下一步：按实际需求补充其他宿主能力、设置和数据提供者；普通 Node `utilityProcess` 不作为能力沙箱。WASM 线性内存和并发数已有上限，但进程总内存没有跨平台硬配额，需分别评估目标平台资源控制。继续验证停用、卸载、重启、版本切换和跨平台真实窗口行为。
 - 验收：新插件不提供 HTML、CSS 或 Vue 组件；安装后工具进入同一导航和搜索索引；打开工具时按需激活扩展宿主；插件异常不阻塞设置页和内置工具。
 

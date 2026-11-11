@@ -33,11 +33,22 @@ test('v2 scaffold types compile from a project outside the repository', async ()
     await writeFile(consumerPath, `
 import type {
   PluginV2CommandResult,
+  PluginV2DataProviderContribution,
   PluginV2Manifest,
   PluginV2PackageManifest,
   PluginV2SettingContribution,
   PluginV2WasmExports,
 } from '../external-plugin/types/it-tools-plugin-v2';
+
+const provider: PluginV2DataProviderContribution = {
+  id: 'org.example.external/oui-vendor',
+  label: 'OUI vendor data',
+  description: 'Host-owned OUI vendor records.',
+  kind: 'oui.vendor',
+  version: '1.0.0',
+  schemaVersion: 1,
+  maxBytes: 512,
+};
 
 const setting: PluginV2SettingContribution = {
   id: 'org.example.external/preferred-mode',
@@ -53,7 +64,7 @@ const manifest: PluginV2Manifest = {
   name: 'External v2 plugin',
   version: '0.1.0',
   apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
-  requestedCapabilities: [],
+  requestedCapabilities: ['data.oui'],
   activationEvents: [
     'onTool:org.example.external/typed-tool',
     'onCommand:org.example.external/run-typed-tool',
@@ -62,6 +73,7 @@ const manifest: PluginV2Manifest = {
     tools: [],
     commands: [],
     settings: [setting],
+    dataProviders: [provider],
   },
 };
 const result: PluginV2CommandResult = { kind: 'text', value: 'done' };
