@@ -20,7 +20,7 @@ const categoryIdPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function usageError(message) {
-  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>]`);
+  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table]`);
 }
 
 function parseOptionValues(argv) {
@@ -33,7 +33,7 @@ function parseOptionValues(argv) {
     const separator = option.indexOf('=');
     const name = option.slice(2, separator < 0 ? undefined : separator);
     const value = separator < 0 ? argv[index + 1] : option.slice(separator + 1);
-    if (!['id', 'name', 'directory', 'version', 'tool-id', 'tool-title', 'description', 'category-id'].includes(name)) {
+    if (!['id', 'name', 'directory', 'version', 'tool-id', 'tool-title', 'description', 'category-id', 'output-kind'].includes(name)) {
       throw usageError(`Unknown option: --${name}`);
     }
     if (!value || value.startsWith('--') || values.has(name)) {
@@ -47,7 +47,7 @@ function parseOptionValues(argv) {
   return values;
 }
 
-/** 解析 v2 脚手架参数，生成无能力、可由宿主统一渲染的文本工具。 */
+/** 解析 v2 脚手架参数，生成无能力、可由宿主统一渲染的工具。 */
 export function parseCreatePluginV2Arguments(argv) {
   const values = parseOptionValues(argv);
   const id = values.get('id');
@@ -57,6 +57,7 @@ export function parseCreatePluginV2Arguments(argv) {
   const toolTitle = values.get('tool-title')?.trim() ?? name;
   const description = values.get('description')?.trim() ?? 'A starting point for an IT Tools v2 plugin.';
   const categoryId = values.get('category-id') ?? 'development';
+  const outputKind = values.get('output-kind') ?? 'text';
   if (!id || !pluginIdPattern.test(id) || id.length > 128) {
     throw usageError('Plugin ID must use lowercase dot or dash separated segments and be at most 128 characters.');
   }
@@ -78,6 +79,9 @@ export function parseCreatePluginV2Arguments(argv) {
   if (!categoryIdPattern.test(categoryId)) {
     throw usageError('Category ID must use lowercase kebab-case and be at most 64 characters.');
   }
+  if (outputKind !== 'text' && outputKind !== 'table') {
+    throw usageError('Output kind must be text or table.');
+  }
   return {
     id,
     name,
@@ -86,6 +90,7 @@ export function parseCreatePluginV2Arguments(argv) {
     toolTitle,
     description,
     categoryId,
+    outputKind,
     directory: resolve(values.get('directory') ?? join(defaultPluginsDirectory, `${id}-v2`)),
   };
 }
@@ -122,7 +127,7 @@ async function buildFiles(config) {
           required: false,
           maxLength: 16_384,
         }],
-        output: { kind: 'text' },
+        output: { kind: config.outputKind },
       }],
       commands: [{
         id: commandId,
@@ -138,7 +143,7 @@ async function buildFiles(config) {
   const files = new Map([
     ['plugin.manifest.json', `${JSON.stringify(manifest, null, 2)}\n`],
     ['plugin/build.mjs', buildScript],
-    ['plugin/src/extension.c', buildExtensionSource()],
+    ['plugin/src/extension.c', buildExtensionSource(config.outputKind)],
     ['README.md', buildReadme(config, commandId)],
   ]);
   for (const fileName of sdkV2TypeFiles) {
@@ -183,12 +188,18 @@ function readOutputPath(arguments_) {
 }
 `;
 
-function buildExtensionSource() {
+function buildExtensionSource(outputKind) {
+  const resultText = outputKind === 'table'
+    ? '{\\"kind\\":\\"table\\",\\"value\\":{\\"columns\\":[{\\"id\\":\\"column1\\",\\"label\\":\\"Column\\"}],\\"rows\\":[[\\"Replace this row\\"]]}}'
+    : '{\\"kind\\":\\"text\\",\\"value\\":\\"Replace this WASM command result.\\"}';
+  const resultComment = outputKind === 'table'
+    ? '宿主会统一渲染表格结果；请替换列、行和插件逻辑。'
+    : '宿主会统一渲染文本结果；请在此处替换插件逻辑和输出内容。';
   return `#include <stdint.h>
 
 #define REQUEST_CAPACITY (16u * 1024u)
 static uint8_t request_buffer[REQUEST_CAPACITY];
-static const char result_text[] = "{\\"kind\\":\\"text\\",\\"value\\":\\"Replace this WASM command result.\\"}";
+static const char result_text[] = "${resultText}";
 
 // 宿主每次执行都会新建模块实例，因此固定请求缓冲区足以支持一次命令调用。
 uint32_t alloc(uint32_t size) {
@@ -201,7 +212,7 @@ void free(uint32_t pointer, uint32_t length) {
   (void)length;
 }
 
-// 返回宿主统一渲染的文本结果。请在此处替换插件逻辑和输出内容。
+// ${resultComment}
 uint64_t execute(uint32_t pointer, uint32_t length) {
   (void)pointer;
   (void)length;
@@ -212,10 +223,11 @@ uint64_t execute(uint32_t pointer, uint32_t length) {
 
 function buildReadme(config, commandId) {
   const codeMark = String.fromCharCode(96);
+  const outputDescription = config.outputKind === 'table' ? '表格结果' : '文本结果';
   return [
     `# ${config.name}`,
     '',
-    `这是一个 IT Tools 插件系统 v2 WASM 脚手架。工具贡献 ${codeMark}${config.id}/${config.toolId}${codeMark} 使用宿主统一工作台渲染文本字段和文本结果。插件没有请求宿主能力。`,
+    `这是一个 IT Tools 插件系统 v2 WASM 脚手架。工具贡献 ${codeMark}${config.id}/${config.toolId}${codeMark} 使用宿主统一工作台渲染文本字段和${outputDescription}。插件没有请求宿主能力。`,
     '',
     '## 开发',
     '',
@@ -224,7 +236,7 @@ function buildReadme(config, commandId) {
     `- 运行 ${codeMark}node plugin/build.mjs${codeMark} 生成 ${codeMark}plugin/build/extension.wasm${codeMark}。`,
     `- 运行宿主的 ${codeMark}plugin:pack:v2${codeMark} 为清单和 WASM 文件签名。`,
     '',
-    `命令 ID 为 ${codeMark}${commandId}${codeMark}。当前模块只返回占位文本。它使用 ${codeMark}wasm32-freestanding${codeMark}，不导入 WASI、文件、网络或其他宿主函数。`,
+    `命令 ID 为 ${codeMark}${commandId}${codeMark}。当前模块只返回占位${outputDescription}。它使用 ${codeMark}wasm32-freestanding${codeMark}，不导入 WASI、文件、网络或其他宿主函数。`,
     '',
     '## 打包',
     '',
@@ -272,7 +284,7 @@ async function main(argv) {
   const config = parseCreatePluginV2Arguments(argv);
   const result = await createPluginV2Scaffold(config);
   process.stdout.write(`Created plugin v2 scaffold: ${result.directory}\n`);
-  process.stdout.write('Runtime: WASM; capabilities: none; output: host-rendered text.\n');
+  process.stdout.write(`Runtime: WASM; capabilities: none; output: host-rendered ${config.outputKind}.\n`);
   process.stdout.write('Build the module with `node plugin/build.mjs`, then sign it with `plugin:pack:v2`.\n');
 }
 

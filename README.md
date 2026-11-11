@@ -211,13 +211,20 @@ In desktop Settings, the plugin manager starts with a three-step onboarding card
 
 The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, capability declarations, optional namespaced scalar settings, and host-owned data provider references. IT Tools renders supported tool pages and registers them for navigation and search. Text, JSON, and bounded table results use host-owned rendering; plugins cannot inject HTML, CSS, Vue components, or custom cell templates. The WASM runtime limits linear memory, module and message sizes, and concurrent workers; it does not enforce an OS-level total memory limit. The `runtime.info`, read-only `settings.read`, and host-owned `data.oui` capabilities are implemented for v2. Settings are persisted in a host-owned plugin namespace and edited in desktop Settings; plugin processes cannot write them. OUI data is read by the host from verified manifest and shard files, queried through a declared text input, and injected as a bounded read-only context. Other capabilities and the process runtime are not complete. The `plugin:create` command creates legacy v1 HTML packages; use `plugin:create:v2` for a buildable WASM v2 scaffold. To sign an existing v2 static manifest and WASM module, use the v2 packer below.
 
-Create a v2 scaffold with a host-rendered text tool:
+Create a v2 scaffold with a host-rendered tool:
 
 ~~~sh
 pnpm run plugin:create:v2 -- --id org.example.my-plugin --name "My plugin"
 ~~~
 
-The generated project contains `plugin.manifest.json`, a minimal `alloc`/`execute`/`free` WASM module, a Zig build script, self-contained `types/` declarations for the v2 manifest, package envelope, command results, and WASM ABI, and a README for `plugin:pack:v2`. It requests no host capabilities and does not provide HTML, CSS, Vue components, or custom rendering templates.
+The default output is text. Add `--output-kind table` to generate a host-rendered table result:
+
+~~~sh
+pnpm run plugin:create:v2 -- \
+  --id org.example.table-plugin --name "Table plugin" --output-kind table
+~~~
+
+The generated project contains `plugin.manifest.json`, a minimal `alloc`/`execute`/`free` WASM module, a Zig build script, self-contained `types/` declarations for the v2 manifest, package envelope, command results, and WASM ABI, and a README for `plugin:pack:v2`. It requests no host capabilities and does not provide HTML, CSS, Vue components, or custom rendering templates. The table template returns valid `columns` and `rows` data that the host renders with the shared table component.
 
 ## Sign a v2 WASM plugin
 

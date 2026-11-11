@@ -69,6 +69,38 @@ test('creates a buildable v2 WASM scaffold with a host-rendered text tool', asyn
   await assert.rejects(() => createPluginV2Scaffold(config), /already exists or cannot be created/);
 });
 
+test('creates a buildable v2 WASM scaffold with a host-rendered table tool', async () => {
+  const temporaryRoot = await mkdtemp(join(os.tmpdir(), 'it-tools-plugin-v2-table-scaffold-'));
+  const directory = resolve(temporaryRoot, 'table-plugin');
+  const config = parseCreatePluginV2Arguments([
+    '--id', 'org.example.table-scaffold',
+    '--name', 'Table scaffold v2 plugin',
+    '--directory', directory,
+    '--output-kind', 'table',
+  ]);
+  const result = await createPluginV2Scaffold(config);
+
+  assert.equal(result.directory, directory);
+  const manifest = JSON.parse(await readFile(join(directory, 'plugin.manifest.json'), 'utf8'));
+  assert.deepEqual(manifest.contributions.tools[0].output, { kind: 'table' });
+  assert.match(await readFile(join(directory, 'README.md'), 'utf8'), /表格结果/);
+  execFileSync(process.execPath, [join(directory, 'plugin', 'build.mjs'), '--output', join(directory, 'extension.wasm')], {
+    cwd: directory,
+    stdio: 'pipe',
+  });
+  const resultValue = executeWasm(await readFile(join(directory, 'extension.wasm')), {
+    commandId: 'org.example.table-scaffold/run-tool',
+    input: {},
+  });
+  assert.deepEqual(resultValue, {
+    kind: 'table',
+    value: {
+      columns: [{ id: 'column1', label: 'Column' }],
+      rows: [['Replace this row']],
+    },
+  });
+});
+
 test('rejects invalid v2 scaffold metadata before writing a directory', () => {
   assert.throws(() => parseCreatePluginV2Arguments(['--id', 'Org.Example', '--name', 'Bad']), /Plugin ID/);
   assert.throws(() => parseCreatePluginV2Arguments([
@@ -81,4 +113,28 @@ test('rejects invalid v2 scaffold metadata before writing a directory', () => {
     '--name', 'Bad',
     '--tool-id', '../escape',
   ]), /Tool ID/);
+  assert.throws(() => parseCreatePluginV2Arguments([
+    '--id', 'org.example.plugin',
+    '--name', 'Bad',
+    '--output-kind', 'json',
+  ]), /Output kind/);
 });
+
+function executeWasm(moduleBytes, request) {
+  const memory = new WebAssembly.Memory({ initial: 16, maximum: 256 });
+  const instance = new WebAssembly.Instance(new WebAssembly.Module(moduleBytes), { env: { memory } });
+  const requestBytes = new TextEncoder().encode(JSON.stringify(request));
+  const requestPointer = instance.exports.alloc(requestBytes.byteLength);
+  new Uint8Array(memory.buffer, requestPointer, requestBytes.byteLength).set(requestBytes);
+  const descriptor = instance.exports.execute(requestPointer, requestBytes.byteLength);
+  const resultPointer = Number(descriptor >> 32n);
+  const resultLength = Number(descriptor & 0xffff_ffffn);
+  const result = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(
+    new Uint8Array(memory.buffer, resultPointer, resultLength),
+  ));
+  instance.exports.free(requestPointer, requestBytes.byteLength);
+  if (resultPointer !== requestPointer) {
+    instance.exports.free(resultPointer, resultLength);
+  }
+  return result;
+}
