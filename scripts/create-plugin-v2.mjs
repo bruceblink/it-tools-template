@@ -20,7 +20,7 @@ const categoryIdPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function usageError(message) {
-  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table]`);
+  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table] [--capability runtime.info]`);
 }
 
 function parseOptionValues(argv) {
@@ -33,7 +33,7 @@ function parseOptionValues(argv) {
     const separator = option.indexOf('=');
     const name = option.slice(2, separator < 0 ? undefined : separator);
     const value = separator < 0 ? argv[index + 1] : option.slice(separator + 1);
-    if (!['id', 'name', 'directory', 'version', 'tool-id', 'tool-title', 'description', 'category-id', 'output-kind'].includes(name)) {
+    if (!['id', 'name', 'directory', 'version', 'tool-id', 'tool-title', 'description', 'category-id', 'output-kind', 'capability'].includes(name)) {
       throw usageError(`Unknown option: --${name}`);
     }
     if (!value || value.startsWith('--') || values.has(name)) {
@@ -58,6 +58,7 @@ export function parseCreatePluginV2Arguments(argv) {
   const description = values.get('description')?.trim() ?? 'A starting point for an IT Tools v2 plugin.';
   const categoryId = values.get('category-id') ?? 'development';
   const outputKind = values.get('output-kind') ?? 'text';
+  const capability = values.get('capability') ?? 'none';
   if (!id || !pluginIdPattern.test(id) || id.length > 128) {
     throw usageError('Plugin ID must use lowercase dot or dash separated segments and be at most 128 characters.');
   }
@@ -82,6 +83,9 @@ export function parseCreatePluginV2Arguments(argv) {
   if (outputKind !== 'text' && outputKind !== 'table') {
     throw usageError('Output kind must be text or table.');
   }
+  if (capability !== 'none' && capability !== 'runtime.info') {
+    throw usageError('Capability must be none or runtime.info.');
+  }
   return {
     id,
     name,
@@ -91,6 +95,7 @@ export function parseCreatePluginV2Arguments(argv) {
     description,
     categoryId,
     outputKind,
+    capability,
     directory: resolve(values.get('directory') ?? join(defaultPluginsDirectory, `${id}-v2`)),
   };
 }
@@ -104,7 +109,7 @@ async function buildFiles(config) {
     name: config.name,
     version: config.version,
     apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
-    requestedCapabilities: [],
+    requestedCapabilities: config.capability === 'none' ? [] : [config.capability],
     activationEvents: [`onTool:${contributionId}`, `onCommand:${commandId}`],
     contributions: {
       tools: [{
@@ -115,7 +120,7 @@ async function buildFiles(config) {
         categoryId: config.categoryId,
         dataProcessing: 'memory-only',
         offline: 'available',
-        capabilities: [],
+        capabilities: config.capability === 'none' ? [] : [config.capability],
         settings: [],
         dataProviders: [],
         inputs: [{
@@ -143,7 +148,7 @@ async function buildFiles(config) {
   const files = new Map([
     ['plugin.manifest.json', `${JSON.stringify(manifest, null, 2)}\n`],
     ['plugin/build.mjs', buildScript],
-    ['plugin/src/extension.c', buildExtensionSource(config.outputKind)],
+    ['plugin/src/extension.c', buildExtensionSource(config.outputKind, config.capability)],
     ['README.md', buildReadme(config, commandId)],
   ]);
   for (const fileName of sdkV2TypeFiles) {
@@ -188,13 +193,16 @@ function readOutputPath(arguments_) {
 }
 `;
 
-function buildExtensionSource(outputKind) {
+function buildExtensionSource(outputKind, capability) {
   const resultText = outputKind === 'table'
     ? '{\\"kind\\":\\"table\\",\\"value\\":{\\"columns\\":[{\\"id\\":\\"column1\\",\\"label\\":\\"Column\\"}],\\"rows\\":[[\\"Replace this row\\"]]}}'
     : '{\\"kind\\":\\"text\\",\\"value\\":\\"Replace this WASM command result.\\"}';
   const resultComment = outputKind === 'table'
     ? '宿主会统一渲染表格结果；请替换列、行和插件逻辑。'
     : '宿主会统一渲染文本结果；请在此处替换插件逻辑和输出内容。';
+  const capabilityComment = capability === 'runtime.info'
+    ? '宿主批准后，请从输入 JSON 的 capabilityContext.runtimeInfo 读取平台和应用版本。'
+    : '当前模板没有请求宿主能力。';
   return `#include <stdint.h>
 
 #define REQUEST_CAPACITY (16u * 1024u)
@@ -213,6 +221,7 @@ void free(uint32_t pointer, uint32_t length) {
 }
 
 // ${resultComment}
+// ${capabilityComment}
 uint64_t execute(uint32_t pointer, uint32_t length) {
   (void)pointer;
   (void)length;
@@ -224,10 +233,13 @@ uint64_t execute(uint32_t pointer, uint32_t length) {
 function buildReadme(config, commandId) {
   const codeMark = String.fromCharCode(96);
   const outputDescription = config.outputKind === 'table' ? '表格结果' : '文本结果';
+  const capabilityDescription = config.capability === 'runtime.info'
+    ? `插件请求 ${codeMark}runtime.info${codeMark}；宿主每次运行前会请求用户批准，并在请求的 ${codeMark}capabilityContext.runtimeInfo${codeMark} 中提供平台和应用版本。`
+    : '插件没有请求宿主能力。';
   return [
     `# ${config.name}`,
     '',
-    `这是一个 IT Tools 插件系统 v2 WASM 脚手架。工具贡献 ${codeMark}${config.id}/${config.toolId}${codeMark} 使用宿主统一工作台渲染文本字段和${outputDescription}。插件没有请求宿主能力。`,
+    `这是一个 IT Tools 插件系统 v2 WASM 脚手架。工具贡献 ${codeMark}${config.id}/${config.toolId}${codeMark} 使用宿主统一工作台渲染文本字段和${outputDescription}。${capabilityDescription}`,
     '',
     '## 开发',
     '',
@@ -284,7 +296,7 @@ async function main(argv) {
   const config = parseCreatePluginV2Arguments(argv);
   const result = await createPluginV2Scaffold(config);
   process.stdout.write(`Created plugin v2 scaffold: ${result.directory}\n`);
-  process.stdout.write(`Runtime: WASM; capabilities: none; output: host-rendered ${config.outputKind}.\n`);
+  process.stdout.write(`Runtime: WASM; capabilities: ${config.capability}; output: host-rendered ${config.outputKind}.\n`);
   process.stdout.write('Build the module with `node plugin/build.mjs`, then sign it with `plugin:pack:v2`.\n');
 }
 

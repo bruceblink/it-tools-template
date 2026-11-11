@@ -224,7 +224,9 @@ pnpm run plugin:create:v2 -- \
   --id org.example.table-plugin --name "Table plugin" --output-kind table
 ~~~
 
-The generated project contains `plugin.manifest.json`, a minimal `alloc`/`execute`/`free` WASM module, a Zig build script, self-contained `types/` declarations for the v2 manifest, package envelope, command results, and WASM ABI, and a README for `plugin:pack:v2`. It requests no host capabilities and does not provide HTML, CSS, Vue components, or custom rendering templates. The table template returns valid `columns` and `rows` data that the host renders with the shared table component.
+The default generated project contains `plugin.manifest.json`, a minimal `alloc`/`execute`/`free` WASM module, a Zig build script, self-contained `types/` declarations for the v2 manifest, package envelope, command results, and WASM ABI, and a README for `plugin:pack:v2`. It requests no host capabilities and does not provide HTML, CSS, Vue components, or custom rendering templates. The table template returns valid `columns` and `rows` data that the host renders with the shared table component.
+
+Add `--capability runtime.info` when the tool needs the host platform and application version. The host asks for approval on each run and provides the values through `capabilityContext.runtimeInfo`.
 
 ## Sign a v2 WASM plugin
 

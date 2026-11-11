@@ -101,6 +101,24 @@ test('creates a buildable v2 WASM scaffold with a host-rendered table tool', asy
   });
 });
 
+test('creates a v2 scaffold with an approved runtime.info capability template', async () => {
+  const temporaryRoot = await mkdtemp(join(os.tmpdir(), 'it-tools-plugin-v2-runtime-info-'));
+  const directory = resolve(temporaryRoot, 'runtime-info-plugin');
+  const config = parseCreatePluginV2Arguments([
+    '--id', 'org.example.runtime-info-scaffold',
+    '--name', 'Runtime info scaffold v2 plugin',
+    '--directory', directory,
+    '--capability', 'runtime.info',
+  ]);
+  await createPluginV2Scaffold(config);
+
+  const manifest = JSON.parse(await readFile(join(directory, 'plugin.manifest.json'), 'utf8'));
+  assert.deepEqual(manifest.requestedCapabilities, ['runtime.info']);
+  assert.deepEqual(manifest.contributions.tools[0].capabilities, ['runtime.info']);
+  assert.match(await readFile(join(directory, 'README.md'), 'utf8'), /capabilityContext\.runtimeInfo/);
+  assert.match(await readFile(join(directory, 'plugin', 'src', 'extension.c'), 'utf8'), /capabilityContext\.runtimeInfo/);
+});
+
 test('rejects invalid v2 scaffold metadata before writing a directory', () => {
   assert.throws(() => parseCreatePluginV2Arguments(['--id', 'Org.Example', '--name', 'Bad']), /Plugin ID/);
   assert.throws(() => parseCreatePluginV2Arguments([
@@ -118,6 +136,11 @@ test('rejects invalid v2 scaffold metadata before writing a directory', () => {
     '--name', 'Bad',
     '--output-kind', 'json',
   ]), /Output kind/);
+  assert.throws(() => parseCreatePluginV2Arguments([
+    '--id', 'org.example.plugin',
+    '--name', 'Bad',
+    '--capability', 'data.oui',
+  ]), /Capability/);
 });
 
 function executeWasm(moduleBytes, request) {
