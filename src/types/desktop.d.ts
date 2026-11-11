@@ -18,8 +18,6 @@ import type {
   ContainerWorkbenchResult,
   DockerContainer,
 } from '../shared/desktop-services/container-workbench';
-import type { ToolCapability, ToolDataProcessing, ToolOfflineSupport } from '../tools/tools.types';
-import type { PluginHostCapability } from '../shared/plugin-capabilities';
 import type { PluginToolCommandResult, PluginToolInputValueMap } from '../shared/plugin-tool-workbench';
 import type {
   DesktopPluginErrorCode as SharedDesktopPluginErrorCode,
@@ -27,35 +25,23 @@ import type {
   DesktopPluginMarketplaceInstallProgress as SharedDesktopPluginMarketplaceInstallProgress,
   DesktopPluginMarketplaceInstallResult as SharedDesktopPluginMarketplaceInstallResult,
   DesktopPluginMarketplaceInstallSource as SharedDesktopPluginMarketplaceInstallSource,
-  DesktopPluginSourceBuildInput as SharedDesktopPluginSourceBuildInput,
-  DesktopPluginSourceBuildProgress as SharedDesktopPluginSourceBuildProgress,
-  DesktopPluginSourceBuildResult as SharedDesktopPluginSourceBuildResult,
-  DesktopPluginInstallSource as SharedDesktopPluginInstallSource,
-  DesktopPluginSourceSnapshotInstallSource as SharedDesktopPluginSourceSnapshotInstallSource,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
   DesktopPluginV2Snapshot as SharedDesktopPluginV2Snapshot,
   DesktopPluginV2SettingsRequest as SharedDesktopPluginV2SettingsRequest,
   DesktopPluginV2SettingsSnapshot as SharedDesktopPluginV2SettingsSnapshot,
   DesktopPluginV2SettingUpdateRequest as SharedDesktopPluginV2SettingUpdateRequest,
   DesktopPluginV2SettingSnapshot as SharedDesktopPluginV2SettingSnapshot,
-  DesktopPluginRuntimeFailureCode,
   DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
 } from '../shared/desktop-services/plugins';
 
 export {};
 
 declare global {
-  type DesktopPluginCapability = PluginHostCapability;
   type DesktopPluginErrorCode = SharedDesktopPluginErrorCode;
   type DesktopPluginMarketplaceInstallInput = SharedDesktopPluginMarketplaceInstallInput;
   type DesktopPluginMarketplaceInstallProgress = SharedDesktopPluginMarketplaceInstallProgress;
-  type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginSnapshot | DesktopPluginV2Snapshot>;
+  type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginV2Snapshot>;
   type DesktopPluginMarketplaceInstallSource = SharedDesktopPluginMarketplaceInstallSource;
-  type DesktopPluginSourceBuildInput = SharedDesktopPluginSourceBuildInput;
-  type DesktopPluginSourceBuildProgress = SharedDesktopPluginSourceBuildProgress;
-  type DesktopPluginSourceBuildResult = SharedDesktopPluginSourceBuildResult<DesktopPluginSnapshot>;
-  type DesktopPluginSourceSnapshotInstallSource = SharedDesktopPluginSourceSnapshotInstallSource;
-  type DesktopPluginInstallSource = SharedDesktopPluginInstallSource;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
   type DesktopPluginV2Snapshot = SharedDesktopPluginV2Snapshot;
   type DesktopPluginV2SettingsRequest = SharedDesktopPluginV2SettingsRequest;
@@ -63,42 +49,6 @@ declare global {
   type DesktopPluginV2SettingUpdateRequest = SharedDesktopPluginV2SettingUpdateRequest;
   type DesktopPluginV2SettingSnapshot = SharedDesktopPluginV2SettingSnapshot;
   type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
-
-  interface DesktopPluginSnapshot {
-    pluginId: string;
-    name: string;
-    version: string;
-    requestedCapabilities: readonly string[];
-    /** Capability IDs that the current Electron host can execute. */
-    supportedCapabilities: readonly DesktopPluginCapability[];
-    contributions: {
-      tools: readonly DesktopPluginToolContribution[];
-    };
-    grantedCapabilities: readonly DesktopPluginCapability[];
-    /** Provenance recorded for a Release or fixed source snapshot install. */
-    source?: DesktopPluginInstallSource;
-    status: 'installed' | 'active' | 'invalid';
-    activeContributionId?: string;
-    /** Embedded renderer target used by the current desktop tool route. */
-    embedded?: {
-      readonly url: string;
-      readonly partition: string;
-    };
-    errorCode?: DesktopPluginErrorCode | DesktopPluginRuntimeFailureCode;
-  }
-
-  interface DesktopPluginToolContribution {
-    id: string;
-    title: string;
-    description: string;
-    keywords: readonly string[];
-    route: string;
-    dataProcessing: ToolDataProcessing;
-    offline: ToolOfflineSupport;
-    capabilities: readonly ToolCapability[];
-    /** Runtime failure recorded for this tool contribution only. */
-    errorCode?: DesktopPluginRuntimeFailureCode;
-  }
 
   interface DesktopPluginSignerSnapshot {
     keyId: string;
@@ -138,7 +88,6 @@ declare global {
       getGitDiff?(repositoryId: string, requestId: string): Promise<GitBridgeResult<GitDiff>>;
       cancelGitRequest?(requestId: string): Promise<GitBridgeResult<boolean>>;
       closeGitRepository?(repositoryId: string): Promise<GitBridgeResult<boolean>>;
-      listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       listPluginV2Packages?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>>;
       listPluginV2Settings?(
         input: DesktopPluginV2SettingsRequest,
@@ -158,19 +107,6 @@ declare global {
       onPluginMarketplaceInstallProgress?(
         callback: (progress: DesktopPluginMarketplaceInstallProgress) => void,
       ): () => void;
-      buildPluginSource?(
-        input: DesktopPluginSourceBuildInput,
-      ): Promise<DesktopPluginOperationResult<DesktopPluginSourceBuildResult>>;
-      cancelPluginSourceBuild?(requestId: string): Promise<DesktopPluginOperationResult<boolean>>;
-      onPluginSourceBuildProgress?(callback: (progress: DesktopPluginSourceBuildProgress) => void): () => void;
-      activatePlugin?(
-        pluginId: string,
-        version: string,
-        grantedCapabilities: readonly DesktopPluginCapability[],
-        contributionId?: string,
-      ): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
-      disablePlugin?(pluginId: string): Promise<DesktopPluginOperationResult<boolean>>;
-      uninstallPlugin?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;
       uninstallPluginV2Package?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>>;
       executePluginV2Command?(input: {
         requestId: string;

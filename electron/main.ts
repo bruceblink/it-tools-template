@@ -25,12 +25,6 @@ import {
   getRequestedMediaTypes,
   type MediaDeviceType,
 } from './media-permissions';
-import {
-  createPluginSandboxWindow,
-  isAllowedPluginEmbeddedView,
-  isPluginRendererUrl,
-  PLUGIN_SCHEME,
-} from './plugin-sandbox';
 import { registerPluginLifecycleIpc } from './plugin-ipc';
 import { registerApiIpc } from './api/api-ipc';
 import { registerGitIpc } from './git/git-ipc';
@@ -56,14 +50,6 @@ protocol.registerSchemesAsPrivileged([{
     corsEnabled: true,
     stream: true,
   },
-}, {
-  scheme: PLUGIN_SCHEME,
-  privileges: {
-    standard: true,
-    secure: true,
-    supportFetchAPI: true,
-    stream: true,
-  },
 }]);
 
 let mainWindow: BrowserWindow | null = null;
@@ -80,7 +66,6 @@ let pluginShutdownPromise: Promise<void> | null = null;
 // These window-scoped grants stay in memory and are discarded when their WebContents closes.
 const grantedMediaTypes = new WeakMap<WebContents, Set<MediaDeviceType>>();
 const pendingMediaPrompts = new WeakMap<WebContents, Map<string, Promise<boolean>>>();
-const pluginRendererIds = new WeakMap<WebContents, string>();
 
 const hasSingleInstanceLock = app.requestSingleInstanceLock();
 if (!hasSingleInstanceLock) {
@@ -117,13 +102,9 @@ else {
       userDataRoot: app.getPath('userData'),
       getMainWindow: () => mainWindow,
       getTrustedRendererUrl: () => trustedRendererUrl,
-      onPluginWebContentsCreated: (contents, pluginId) => pluginRendererIds.set(contents, pluginId),
     });
     updateIpc = await registerUpdateIpc({ getMainWindow: () => mainWindow, trustedRendererUrl: () => trustedRendererUrl });
     await createMainWindow();
-    if (!app.isPackaged && process.env.IT_TOOLS_PLUGIN_SANDBOX_TEST === '1') {
-      await openPluginSandboxProof();
-    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -165,7 +146,6 @@ else {
     storageIpc = null;
   });
 }
-
 function getDevelopmentRendererUrl(candidate?: string) {
   if (app.isPackaged || !candidate) {
     return null;
@@ -329,9 +309,6 @@ function installRuntimeInfoIpc() {
 
 function attachWebContentsSecurity(contents: WebContents) {
   contents.setWindowOpenHandler(({ url, referrer }) => {
-    if (pluginRendererIds.has(contents)) {
-      return { action: 'deny' };
-    }
     const sourceUrl = referrer.url || contents.getURL();
     if (!isTrustedRendererUrl(sourceUrl, trustedRendererUrl)) {
       return { action: 'deny' };
@@ -375,28 +352,10 @@ function attachWebContentsSecurity(contents: WebContents) {
       closeRendererOwnedServices(contents);
     }
   });
-  contents.on('will-attach-webview', (event, webPreferences, params) => {
-    const partition = params.partition ?? '';
-    if (!isAllowedPluginEmbeddedView(params.src ?? '', partition)) {
-      event.preventDefault();
-      return;
-    }
-    // The guest receives no preload or Node integration. Its session policy
-    // controls package files, capability requests, network and downloads.
-    webPreferences.preload = undefined;
-    webPreferences.nodeIntegration = false;
-    webPreferences.contextIsolation = true;
-    webPreferences.sandbox = true;
-    webPreferences.webSecurity = true;
-    webPreferences.webviewTag = false;
-  });
 }
 
 /** Releases renderer-owned desktop services before a full document navigation replaces the page. */
 function closeRendererOwnedServices(contents: WebContents): void {
-  if (pluginRendererIds.has(contents)) {
-    return;
-  }
   apiIpc?.closeRenderer(contents.id);
   gitIpc?.closeRenderer(contents.id);
   storageIpc?.closeRenderer(contents.id);
@@ -404,34 +363,7 @@ function closeRendererOwnedServices(contents: WebContents): void {
 }
 
 function isAllowedRendererNavigation(contents: WebContents, url: string): boolean {
-  const pluginId = pluginRendererIds.get(contents);
-  return pluginId
-    ? isPluginRendererUrl(url, pluginId)
-    : isTrustedRendererUrl(url, trustedRendererUrl);
-}
-
-async function openPluginSandboxProof(): Promise<void> {
-  const packageRoot = resolve(app.getAppPath(), 'electron/plugin-fixtures/sample');
-  for (const pluginId of ['org.it-tools.sandbox-proof', 'org.it-tools.sandbox-proof-peer']) {
-    await createPluginSandboxWindow({
-      pluginId,
-      packageRoot,
-      entrypoint: 'index.html',
-      pluginContext: {
-        id: pluginId,
-        name: 'Sandbox proof',
-        version: '1.0.0',
-      },
-      requestedCapabilities: ['runtime.info', 'clipboard.write'],
-      grantedCapabilities: ['runtime.info'],
-      executeCapability: (call) => {
-        if (call.capability === 'runtime.info') {
-          return { platform: process.platform, version: app.getVersion() };
-        }
-        throw new Error('The sandbox proof does not execute this capability.');
-      },
-    }, (contents, id) => pluginRendererIds.set(contents, id));
-  }
+  return isTrustedRendererUrl(url, trustedRendererUrl);
 }
 
 async function openExternalLink(candidate: string) {
@@ -462,7 +394,7 @@ async function createMainWindow() {
       sandbox: true,
       webSecurity: true,
       allowRunningInsecureContent: false,
-      webviewTag: true,
+      webviewTag: false,
     },
   });
 
@@ -502,7 +434,6 @@ function stopExternalPlugins(): Promise<void> {
   pluginStopPromise = (pluginLifecycleIpc?.stopActivePlugins() ?? Promise.resolve())
     .catch(error => console.error('Failed to stop external plugins before host close.', error))
     .finally(() => {
-      closePluginWindows();
       pluginStopPromise = null;
     });
   return pluginStopPromise;
@@ -516,16 +447,7 @@ function shutdownExternalPlugins(): Promise<void> {
   pluginShutdownPromise = (pluginLifecycleIpc?.shutdown() ?? Promise.resolve())
     .catch(error => console.error('Failed to stop external plugins before app exit.', error))
     .finally(() => {
-      closePluginWindows();
       pluginShutdownPromise = null;
     });
   return pluginShutdownPromise;
-}
-
-function closePluginWindows(): void {
-  for (const window of BrowserWindow.getAllWindows()) {
-    if (!window.isDestroyed() && pluginRendererIds.has(window.webContents)) {
-      window.destroy();
-    }
-  }
 }

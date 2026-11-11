@@ -85,7 +85,6 @@ test('desktop marketplace can install a repository release through the host brid
   await page.addInitScript(() => {
     Object.assign(window, {
       itToolsDesktop: {
-        buildPluginSource: async () => ({ ok: false, error: { code: 'source-build-cancelled' } }),
         installPluginFromMarketplace: async () => ({
           ok: true,
           value: {

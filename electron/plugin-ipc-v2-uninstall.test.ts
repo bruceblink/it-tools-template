@@ -583,7 +583,6 @@ async function registerFixture(options: {
       ? ({ isDestroyed: () => false } as unknown as BrowserWindow)
       : null,
     getTrustedRendererUrl: () => 'app://bundle/',
-    onPluginWebContentsCreated: () => undefined,
   });
   return { packageRoot };
 }

@@ -20,14 +20,11 @@ import type {
 } from '../src/shared/desktop-services/git';
 import {
   isDesktopPluginMarketplaceInstallProgress,
-  isDesktopPluginSourceBuildProgress,
   isDesktopPluginStateChangeEvent,
 } from '../src/shared/desktop-services/plugins';
 import type {
   DesktopPluginMarketplaceInstallInput,
   DesktopPluginMarketplaceInstallProgress,
-  DesktopPluginSourceBuildInput,
-  DesktopPluginSourceBuildProgress,
   DesktopPluginV2SettingsRequest,
   DesktopPluginV2SettingsSnapshot,
   DesktopPluginV2SettingUpdateRequest,
@@ -92,7 +89,6 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.invoke('desktop:git:cancel', { requestId }),
   closeGitRepository: (repositoryId: string): Promise<GitBridgeResult<boolean>> =>
     ipcRenderer.invoke('desktop:git:close', { repositoryId }),
-  listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
   listPluginV2Packages: (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>> =>
     ipcRenderer.invoke('desktop:plugins:v2:list'),
   listPluginV2Settings: (input: DesktopPluginV2SettingsRequest): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>> =>
@@ -108,7 +104,6 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.on('desktop:plugins:changed', listener);
     return () => ipcRenderer.removeListener('desktop:plugins:changed', listener);
   },
-  installPluginPackage: () => ipcRenderer.invoke('desktop:plugins:install'),
   installPluginV2Package: (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>> =>
     ipcRenderer.invoke('desktop:plugins:v2:install'),
   installPluginFromMarketplace: (input: DesktopPluginMarketplaceInstallInput) =>
@@ -124,33 +119,6 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
     ipcRenderer.on('desktop:plugins:marketplace-progress', listener);
     return () => ipcRenderer.removeListener('desktop:plugins:marketplace-progress', listener);
   },
-  buildPluginSource: (input: DesktopPluginSourceBuildInput) =>
-    ipcRenderer.invoke('desktop:plugins:build-source', input),
-  cancelPluginSourceBuild: (requestId: string) =>
-    ipcRenderer.invoke('desktop:plugins:build-source:cancel', { requestId }),
-  onPluginSourceBuildProgress: (callback: (progress: DesktopPluginSourceBuildProgress) => void) => {
-    const listener = (_event: IpcRendererEvent, value: unknown) => {
-      if (isDesktopPluginSourceBuildProgress(value)) {
-        callback(value);
-      }
-    };
-    ipcRenderer.on('desktop:plugins:source-build-progress', listener);
-    return () => ipcRenderer.removeListener('desktop:plugins:source-build-progress', listener);
-  },
-  activatePlugin: (
-    pluginId: string,
-    version: string,
-    grantedCapabilities: readonly string[],
-    contributionId?: string,
-  ) => ipcRenderer.invoke('desktop:plugins:activate', {
-    pluginId,
-    version,
-    grantedCapabilities,
-    ...(contributionId === undefined ? {} : { contributionId }),
-  }),
-  disablePlugin: (pluginId: string) => ipcRenderer.invoke('desktop:plugins:disable', { pluginId }),
-  uninstallPlugin: (pluginId: string, version: string) =>
-    ipcRenderer.invoke('desktop:plugins:uninstall', { pluginId, version }),
   uninstallPluginV2Package: (pluginId: string, version: string): Promise<DesktopPluginOperationResult<boolean>> =>
     ipcRenderer.invoke('desktop:plugins:v2:uninstall', { pluginId, version }),
   executePluginV2Command: (input: {

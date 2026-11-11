@@ -226,11 +226,11 @@ test('migrates and persists first-party extension settings on the app origin', a
 test('loads the desktop plugin manager through the trusted desktop bridge', async () => {
   await page.goto('app://bundle/settings');
   await expect(page.getByRole('heading', { name: 'Desktop plugin packages' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Install signed package' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Install v2 package' })).toBeVisible();
   await expect(page.getByTestId('plugin-manager-onboarding')).toBeVisible();
 
   const results = await page.evaluate(async () => ({
-    plugins: await window.itToolsDesktop!.listPlugins!(),
+    plugins: await window.itToolsDesktop!.listPluginV2Packages!(),
     signers: await window.itToolsDesktop!.listTrustedPluginSigners!(),
   }));
   expect(results.plugins).toMatchObject({ ok: true, value: [] });
