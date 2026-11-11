@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { NAlert, NButton, NCard, NCheckbox, NEmpty, NFormItem, NInput, NSpin, NTag, NText } from 'naive-ui';
 import { createQueuedRefresh } from '@/tools/queued-refresh';
+import { externalPluginV2SupportedCapabilities } from '@/shared/external-plugin-v2';
 
 const { locale } = useI18n();
 const language = computed(() => locale.value === 'zh' ? 'zh' : 'en');
@@ -134,6 +135,10 @@ const messages = {
     v2Installed: 'Signed v2 package installed. Supported tools can appear in navigation and search.',
     v2Uninstalled: 'V2 package removed.',
     v2Tools: 'Declared tools',
+    v2Capabilities: 'Requested capabilities',
+    v2CapabilityRuntimeInfo: 'Runtime information · approval required for each command',
+    v2CapabilityUnsupported: 'Not currently supported by this host',
+    v2PermissionNotice: 'Installing a v2 package does not grant capabilities. The host asks for approval when a command uses them.',
     v2Runtime: 'Runtime',
     v2Invalid: 'Invalid package',
     v2StatusInstalled: 'Installed',
@@ -246,6 +251,10 @@ const messages = {
     v2Installed: '已安装签名 v2 插件包。受支持的工具可以显示在导航和搜索中。',
     v2Uninstalled: '已卸载 v2 插件包。',
     v2Tools: '声明的工具',
+    v2Capabilities: '请求的能力',
+    v2CapabilityRuntimeInfo: '运行时信息 · 每条命令都需要确认',
+    v2CapabilityUnsupported: '当前宿主暂不支持',
+    v2PermissionNotice: '安装 v2 插件包不会自动授予能力。命令使用能力时，宿主会单独请求确认。',
     v2Runtime: '运行时',
     v2Invalid: '插件包无效',
     v2StatusInstalled: '已安装',
@@ -355,6 +364,14 @@ function v2PackageKey(plugin: DesktopPluginV2Snapshot): string {
 
 function isV2PluginAction(plugin: DesktopPluginV2Snapshot, action: V2PluginAction): boolean {
   return v2PluginAction.value?.action === action && v2PluginAction.value.key === v2PackageKey(plugin);
+}
+
+function isV2CapabilitySupported(capability: string): boolean {
+  return externalPluginV2SupportedCapabilities.some(item => item === capability);
+}
+
+function v2CapabilityLabel(capability: string): string {
+  return capability === 'runtime.info' ? text('v2CapabilityRuntimeInfo') : text('v2CapabilityUnsupported');
 }
 
 function packageStatus(plugin: DesktopPluginSnapshot): string {
@@ -1177,6 +1194,20 @@ onUnmounted(() => {
               <span v-if="plugin.errorCode" class="plugin-error-code">
                 {{ text('errorCode') }}: <code>{{ plugin.errorCode }}</code>
               </span>
+            </div>
+            <div v-if="plugin.manifest.requestedCapabilities.length > 0" class="plugin-capability-list">
+              <n-text strong>{{ text('v2Capabilities') }}</n-text>
+              <div v-for="capability in plugin.manifest.requestedCapabilities" :key="capability" class="plugin-capability-row">
+                <div class="plugin-capability-control">
+                  <n-tag size="small" :type="isV2CapabilitySupported(capability) ? 'success' : 'warning'">
+                    {{ capability }}
+                  </n-tag>
+                  <n-text depth="3">{{ v2CapabilityLabel(capability) }}</n-text>
+                </div>
+              </div>
+              <n-alert type="info" :show-icon="false">
+                {{ text('v2PermissionNotice') }}
+              </n-alert>
             </div>
             <div v-if="plugin.manifest.contributions.tools.length > 0" class="plugin-contribution-list">
               <n-text strong>{{ text('v2Tools') }}</n-text>

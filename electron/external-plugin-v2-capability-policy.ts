@@ -2,6 +2,7 @@ import type {
   ExternalPluginV2Manifest,
   ExternalPluginV2ToolDeclaration,
 } from '../src/shared/external-plugin-v2';
+import { externalPluginV2SupportedCapabilities } from '../src/shared/external-plugin-v2';
 import type {
   PluginCapabilityId,
   PluginHostCapability,
@@ -11,7 +12,7 @@ import {
 } from '../src/shared/plugin-capabilities';
 
 // v2 当前只开放主进程能逐命令批准的只读运行时信息能力。
-const supportedCapabilities = new Set<PluginHostCapability>(['runtime.info']);
+const supportedCapabilities = new Set<PluginHostCapability>(externalPluginV2SupportedCapabilities);
 
 export const externalPluginV2CapabilityErrorCodes = Object.freeze([
   'invalid-policy',

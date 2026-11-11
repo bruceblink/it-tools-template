@@ -14,7 +14,7 @@ const v2Package: DesktopPluginV2Snapshot = {
     name: 'Demo plugin',
     version: '1.0.0',
     apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
-    requestedCapabilities: [],
+    requestedCapabilities: ['runtime.info'],
     activationEvents: [],
     contributions: {
       tools: [{
@@ -25,7 +25,7 @@ const v2Package: DesktopPluginV2Snapshot = {
         categoryId: 'development',
         dataProcessing: 'memory-only',
         offline: 'available',
-        capabilities: [],
+        capabilities: ['runtime.info'],
         inputs: [],
         output: { kind: 'text' },
       }],
@@ -113,6 +113,8 @@ describe('desktop plugin wording', () => {
       expect(wrapper.text()).toContain('WASM tools can request runtime information with your approval for each run.');
       expect(wrapper.text()).toContain('Demo plugin');
       expect(wrapper.text()).toContain('Return the submitted value.');
+      expect(wrapper.text()).toContain('runtime.info');
+      expect(wrapper.text()).toContain('approval required for each command');
 
       const installButton = wrapper.findAll('button').find(button => button.text().includes('Install v2 package'));
       expect(installButton).toBeDefined();

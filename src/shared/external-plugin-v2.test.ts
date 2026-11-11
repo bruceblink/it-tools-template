@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  externalPluginV2SupportedCapabilities,
   validateExternalPluginV2Manifest,
   type ExternalPluginV2Manifest,
 } from './external-plugin-v2';
@@ -43,6 +44,10 @@ function createManifest(): ExternalPluginV2Manifest {
 }
 
 describe('external plugin v2 manifest', () => {
+  it('keeps the supported capability list aligned with the v2 execution policy', () => {
+    expect(externalPluginV2SupportedCapabilities).toEqual(['runtime.info']);
+  });
+
   it('accepts a namespaced declarative tool and command', () => {
     const manifest = validateExternalPluginV2Manifest(createManifest());
     expect(manifest.contributions.tools[0]?.inputs[0]).toMatchObject({ kind: 'text', id: 'input' });

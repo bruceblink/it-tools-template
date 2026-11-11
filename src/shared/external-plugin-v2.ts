@@ -1,10 +1,15 @@
-import type { PluginCapabilityId } from './plugin-capabilities';
+import type { PluginCapabilityId, PluginHostCapability } from './plugin-capabilities';
 import { isPluginCapabilityId, pluginCapabilityIds } from './plugin-capabilities';
 import type { ToolDataProcessing, ToolOfflineSupport } from '../tools/tools.types';
 import { isToolDataProcessing, isToolOfflineSupport } from './plugin-tool-metadata';
 
 /** 声明式外部扩展协议版本。实现代码通过扩展宿主 RPC 激活，不提供页面入口。 */
 export const externalPluginV2FormatVersion = 2 as const;
+
+/** 当前 v2 执行端实际开放的能力；授权仍由每条命令的主进程确认完成。 */
+export const externalPluginV2SupportedCapabilities: readonly PluginHostCapability[] = Object.freeze([
+  'runtime.info',
+]);
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
