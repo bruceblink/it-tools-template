@@ -6,6 +6,7 @@ import { deflateRawSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   getPluginPackageSigningPayload,
+  detectPluginPackageFormat,
   PluginPackageError,
   pluginPackageLimits,
   stagePluginPackageArchive,
@@ -45,6 +46,17 @@ afterEach(async () => {
 });
 
 describe('Electron plugin package staging', () => {
+  it('detects the v1 or v2 package envelope before full installation', async () => {
+    const root = await createTemporaryDirectory();
+    const v1Path = join(root, 'v1.itxs');
+    const v2Path = join(root, 'v2.itxs');
+    await writeFile(v1Path, makeSignedArchive());
+    await writeFile(v2Path, makeZip([{ path: 'plugin.json', contents: JSON.stringify({ formatVersion: 2 }) }]));
+
+    await expect(detectPluginPackageFormat(v1Path)).resolves.toBe(1);
+    await expect(detectPluginPackageFormat(v2Path)).resolves.toBe(2);
+  });
+
   it('requires the unified .itxs package extension', async () => {
     const root = await createTemporaryDirectory();
     const archivePath = join(root, 'sample.zip');

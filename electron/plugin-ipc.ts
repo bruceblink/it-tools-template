@@ -10,7 +10,9 @@ import {
   type WebContents,
 } from 'electron';
 import { PluginLifecycleError, PluginLifecycleManager, pluginLifecycleCapabilities } from './plugin-lifecycle';
+import type { PluginLifecycleSnapshot } from './plugin-lifecycle';
 import { PluginPackageError } from './plugin-package-manifest';
+import { detectPluginPackageFormat } from './plugin-package';
 import type { PluginPackageManifest, PluginPackageSigningKey } from './plugin-package';
 import type { PluginCapabilityCall } from './plugin-capability-broker';
 import { pluginHostApiVersion } from './plugin-api-v1';
@@ -27,6 +29,7 @@ import {
   PluginSourceBuildControllerError,
 } from './plugin-source-build-controller';
 import { ExternalPluginV2PackageManager } from './external-plugin-v2-package-manager';
+import type { ExternalPluginV2PackageSnapshot } from './external-plugin-v2-package-manager';
 import { ExternalPluginV2CommandRequests } from './external-plugin-v2-command-requests';
 import { createExternalPluginV2CapabilityPolicy, ExternalPluginV2CapabilityPolicyError } from './external-plugin-v2-capability-policy';
 import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
@@ -58,6 +61,8 @@ export interface PluginLifecycleIpc {
   /** Stop active plugin renderers before the Electron app exits. */
   shutdown: () => Promise<void>;
 }
+
+type MarketplacePluginSnapshot = PluginLifecycleSnapshot | ExternalPluginV2PackageSnapshot;
 
 class PluginIpcInputError extends Error {
   constructor(readonly code: DesktopPluginErrorCode = 'invalid-request', message = 'The plugin management request is invalid.') {
@@ -132,11 +137,16 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   // 首版只允许一个 WASM 进程；进程确认退出后才释放名额。
   let v2WorkerBusy = false;
   const fetchReleaseAsset = createMarketplaceReleaseFetcher(net);
-  const marketplaceController = new PluginMarketplaceInstallController({
+  const marketplaceController = new PluginMarketplaceInstallController<MarketplacePluginSnapshot>({
     tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.marketplace-downloads'),
     fetch: (url, init) => net.fetch(url, init),
     fetchReleaseAsset,
-    installArchive: (archivePath, source) => lifecycleManager.installArchive(archivePath, source),
+    installArchive: async (archivePath, source) => {
+      const formatVersion = await detectPluginPackageFormat(archivePath);
+      return formatVersion === 2
+        ? v2PackageManager.installArchive(archivePath)
+        : lifecycleManager.installArchive(archivePath, source);
+    },
   });
   const sourceBuildController = new PluginSourceBuildController({
     tempRoot: resolve(dependencies.userDataRoot, 'plugins', '.source-builds'),

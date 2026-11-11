@@ -70,7 +70,7 @@ declare global {
   type DesktopPluginErrorCode = SharedDesktopPluginErrorCode;
   type DesktopPluginMarketplaceInstallInput = SharedDesktopPluginMarketplaceInstallInput;
   type DesktopPluginMarketplaceInstallProgress = SharedDesktopPluginMarketplaceInstallProgress;
-  type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginSnapshot>;
+  type DesktopPluginMarketplaceInstallResult = SharedDesktopPluginMarketplaceInstallResult<DesktopPluginSnapshot | DesktopPluginV2Snapshot>;
   type DesktopPluginMarketplaceInstallSource = SharedDesktopPluginMarketplaceInstallSource;
   type DesktopPluginSourceBuildInput = SharedDesktopPluginSourceBuildInput;
   type DesktopPluginSourceBuildProgress = SharedDesktopPluginSourceBuildProgress;

@@ -155,6 +155,53 @@ export async function inspectPluginPackageArchive(
   }
 }
 
+/** 只读取受限包内的根清单版本，用于在市场安装入口选择 v1/v2 管理器。 */
+export async function detectPluginPackageFormat(
+  archivePath: string,
+): Promise<1 | 2> {
+  if (!basename(archivePath).toLowerCase().endsWith('.itxs')) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive must use the .itxs extension.');
+  }
+  const archiveMetadata = await stat(archivePath).catch((error: unknown) => {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive cannot be read.', { cause: error });
+  });
+  if (!archiveMetadata.isFile() || archiveMetadata.size <= 0 || archiveMetadata.size > pluginPackageLimits.maximumArchiveBytes) {
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive is invalid or exceeds the compressed size limit.');
+  }
+
+  let zipFile: ZipFile | undefined;
+  try {
+    zipFile = await yauzl.openPromise(archivePath, {
+      autoClose: false,
+      decodeStrings: true,
+      lazyEntries: true,
+      strictFileNames: true,
+      validateEntrySizes: true,
+    });
+    if (zipFile.fileSize > pluginPackageLimits.maximumArchiveBytes) {
+      throw new PluginPackageError('resource-limit', 'The plugin package archive exceeds the compressed size limit.');
+    }
+    const archive = await inspectArchive(zipFile);
+    const manifestBytes = await readEntryBytes(zipFile, archive.manifestEntry.entry, pluginPackageLimits.maximumManifestBytes);
+    const formatVersion = readManifestFormatVersion(manifestBytes);
+    if (formatVersion !== 1 && formatVersion !== 2) {
+      throw new PluginPackageError('invalid-package', 'The plugin package format is not supported.');
+    }
+    return formatVersion;
+  }
+  catch (error) {
+    if (error instanceof PluginPackageError) {
+      throw error;
+    }
+    throw new PluginPackageError('invalid-archive', 'The plugin package archive could not be inspected safely.', { cause: error });
+  }
+  finally {
+    if (zipFile?.isOpen) {
+      zipFile.close();
+    }
+  }
+}
+
 /** 安全安装 v2 静态文件并保存清单；该函数不会执行入口文件。 */
 export async function stageExternalPluginV2PackageArchive(
   options: StagePluginPackageOptions,
