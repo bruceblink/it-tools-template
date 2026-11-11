@@ -83,6 +83,7 @@ describe('external plugin v2 command bridge', () => {
       name: 'WASM execution demo',
       version: '1.0.0',
       runtime: 'wasm',
+      runtimeStatus: 'ready',
       status: 'installed',
       manifest: {
         formatVersion: 2,

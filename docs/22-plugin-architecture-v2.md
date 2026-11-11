@@ -161,6 +161,8 @@ discover -> validate -> register -> activate -> ready
 5. `ready` 后允许执行已批准的命令和数据提供者。
 6. 超时、崩溃、协议错误和资源超限会记录诊断、清理 RPC、撤销能力并标记插件不可用。一个插件失败不能阻塞内置工具或其他插件。
 
+v2 包的安装状态与运行状态分开管理。包仍为 `installed` 时，宿主会在内存中记录 `runtimeStatus`（`ready` 或 `unavailable`）和可重试的 `runtimeFailureCode`（`transport-error`、`extension-failed`、`timeout` 或 `protocol-error`）。运行失败不会删除工具导航或命令搜索索引；工作台显示插件 ID、版本、稳定错误码和 `Retry` 按钮。命令成功后清除同一包的故障状态。用户取消、权限拒绝和 `invalid-request` 不会标记插件不可用。
+
 工具路由统一指向宿主 `ToolRoutePage` 和 `PluginToolWorkbench`。插件停用或卸载后，工具导航、收藏和命令搜索都删除对应贡献；旧路由显示明确的不可用状态，不打开残留页面。
 
 ## 6. RPC 接口约定
@@ -180,7 +182,7 @@ discover -> validate -> register -> activate -> ready
 }
 ```
 
-响应只允许成功结果或稳定错误码：`invalid-request`、`unsupported-method`、`not-active`、`permission-denied`、`payload-too-large`、`too-many-requests`、`timeout`、`cancelled`、`transport-error`、`extension-failed` 和 `disposed`。
+响应只允许成功结果或稳定错误码：`invalid-request`、`unsupported-method`、`not-active`、`permission-denied`、`payload-too-large`、`too-many-requests`、`timeout`、`cancelled`、`transport-error`、`extension-failed` 和 `disposed`。宿主发现扩展返回值不符合工具结果协议时，在包诊断中记录 `protocol-error`。
 
 每个请求都设置超时、取消入口和响应大小上限。宿主限制并发数、自动重启次数和未完成请求数量。普通 `cancel` 只取消目标请求；同步 WASM 计算需要终止其扩展进程，同一进程的其他活动请求也会失败，其他插件会话不受影响。关闭或停用时先拒绝新请求，再取消活动请求，最后销毁传输资源。
 

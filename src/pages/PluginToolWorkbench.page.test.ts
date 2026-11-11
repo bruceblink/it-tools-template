@@ -62,6 +62,30 @@ describe('PluginToolWorkbench', () => {
     expect(wrapper.text()).toContain('"name": "Ada"');
   });
 
+  it('keeps an unavailable tool visible and offers a retry with stable diagnostics', async () => {
+    const execute = vi.fn(async () => ({ kind: 'json' as const, value: { retried: true } }));
+    const unavailableTool: PluginToolWorkbenchDefinition = {
+      ...tool,
+      runtimeStatus: 'unavailable',
+      runtimeFailureCode: 'transport-error',
+    };
+    const wrapper = mount(PluginToolWorkbench, {
+      props: { tool: unavailableTool, execute },
+      global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en: {} } })] },
+    });
+
+    expect(wrapper.get('.plugin-tool-workbench-runtime-diagnostic').text()).toContain('org.example.plugin · 1.0.0');
+    expect(wrapper.get('.plugin-tool-workbench-runtime-diagnostic').text()).toContain('Stable error code: transport-error');
+    expect(wrapper.get('button[type="submit"]').text()).toContain('Retry');
+
+    await wrapper.get('input').setValue('Ada');
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(execute).toHaveBeenCalledOnce();
+    expect(wrapper.text()).toContain('"retried": true');
+  });
+
   it('renders table results with host-owned columns and rows', async () => {
     const tableTool = { ...tool, resultKind: 'table' as const, fields: [] };
     const execute = vi.fn(async () => ({

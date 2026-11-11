@@ -48,11 +48,44 @@ describe('ExternalPluginV2PackageManager', () => {
       version: '1.0.0',
       runtime: 'process',
       status: 'installed',
+      runtimeStatus: 'ready',
     }) satisfies Partial<ExternalPluginV2PackageSnapshot>]);
     await expect(readFile(join(packageRoot, 'plugin.json'), 'utf8')).resolves.toContain(pluginId);
     await expect(manager.uninstall(pluginId, '1.0.0')).resolves.toBe(true);
     expect(events).toEqual(['uninstalled:org.example.manager-demo@1.0.0']);
     await expect(manager.listInstalled()).resolves.toEqual([]);
+  });
+
+  it('keeps runtime failures in memory and clears them after recovery', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-manager-runtime-'));
+    temporaryDirectories.push(root);
+    const packageRoot = join(root, pluginId, '1.0.0');
+    await mkdir(packageRoot, { recursive: true });
+    const source = createManifest();
+    await writeFile(join(packageRoot, 'plugin.json'), JSON.stringify(signManifest(source)));
+    await writeFile(join(packageRoot, 'extension.mjs'), 'export const activate = () => undefined;');
+
+    const events: string[] = [];
+    const manager = new ExternalPluginV2PackageManager({
+      installRoot: root,
+      hostApiVersion: '2.0.0',
+      trustedSigningKeys,
+      onStateChange: event => events.push(`${event.reason}:${event.runtimeFailureCode ?? 'none'}`),
+    });
+
+    manager.markRuntimeFailure(pluginId, '1.0.0', 'extension-failed');
+    await expect(manager.listInstalled()).resolves.toEqual([expect.objectContaining({
+      pluginId,
+      version: '1.0.0',
+      status: 'installed',
+      runtimeStatus: 'unavailable',
+      runtimeFailureCode: 'extension-failed',
+    })]);
+    manager.clearRuntimeFailure(pluginId, '1.0.0');
+    await expect(manager.listInstalled()).resolves.toEqual([expect.objectContaining({
+      runtimeStatus: 'ready',
+    })]);
+    expect(events).toEqual(['runtime-failure:extension-failed', 'runtime-recovered:none']);
   });
 
   it('keeps an invalid installed package visible as a diagnostic snapshot', async () => {

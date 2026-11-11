@@ -84,6 +84,48 @@ describe('external plugin v2 runtime registry', () => {
     expect(registry.findByRoute('/extensions/org.example.registry-demo/1.0.0/tool')).toBeUndefined();
   });
 
+  it('retains unavailable tools in navigation and exposes retry diagnostics', () => {
+    const registry = new ExternalPluginV2Registry();
+    registry.register(
+      createProjection(),
+      async () => ({ kind: 'text', value: 'ok' }),
+      'manifest-fingerprint',
+      { runtimeStatus: 'unavailable', runtimeFailureCode: 'extension-failed' },
+    );
+
+    const registration = registry.findByRoute('/extensions/org.example.registry-demo/1.0.0/tool');
+    expect(registry.tools.value).toHaveLength(1);
+    expect(registry.commands.value).toHaveLength(1);
+    expect(registration).toMatchObject({
+      runtimeStatus: 'unavailable',
+      runtimeFailureCode: 'extension-failed',
+      workbench: {
+        runtimeStatus: 'unavailable',
+        runtimeFailureCode: 'extension-failed',
+      },
+    });
+  });
+
+  it('updates runtime diagnostics when a package keeps the same manifest fingerprint', () => {
+    const registry = new ExternalPluginV2Registry();
+    const next = new ExternalPluginV2Registry();
+    const fingerprint = 'manifest-fingerprint';
+    registry.register(createProjection(), async () => ({ kind: 'text', value: 'ok' }), fingerprint);
+    next.register(
+      createProjection(),
+      async () => ({ kind: 'text', value: 'ok' }),
+      fingerprint,
+      { runtimeStatus: 'unavailable', runtimeFailureCode: 'timeout' },
+    );
+
+    registry.replaceFrom(next);
+
+    expect(registry.findByRoute('/extensions/org.example.registry-demo/1.0.0/tool')).toMatchObject({
+      runtimeStatus: 'unavailable',
+      runtimeFailureCode: 'timeout',
+    });
+  });
+
   it('rejects a route or command collision between packages', () => {
     const registry = new ExternalPluginV2Registry();
     const projection = createProjection();

@@ -74,6 +74,30 @@ describe('ExternalPluginToolRoute', () => {
     wrapper.unmount();
   });
 
+  it('passes unavailable diagnostics through the v2 route page to the workbench', async () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/extensions/:pluginId/:version/:toolId', component: ExternalPluginV2ToolPage }],
+    });
+    await router.push(toolPath);
+    await router.isReady();
+    externalPluginV2Registry.register(
+      createProjection(),
+      async () => ({ kind: 'text', value: '' }),
+      'manifest-fingerprint',
+      { runtimeStatus: 'unavailable', runtimeFailureCode: 'protocol-error' },
+    );
+
+    const wrapper = shallowMount(ExternalPluginV2ToolPage, { global: { plugins: [router] } });
+    expect(wrapper.getComponent(PluginToolWorkbench).props('tool')).toMatchObject({
+      pluginId,
+      version: '1.0.0',
+      runtimeStatus: 'unavailable',
+      runtimeFailureCode: 'protocol-error',
+    });
+    wrapper.unmount();
+  });
+
   it('updates legacy route metadata when the v2 registry loads after a deep link', async () => {
     const router = createRouter({
       history: createMemoryHistory(),

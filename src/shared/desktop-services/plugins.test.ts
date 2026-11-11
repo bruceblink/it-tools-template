@@ -4,6 +4,7 @@ import {
   desktopPluginMarketplaceInstallPhases,
   desktopPluginSourceBuildPhases,
   desktopPluginRuntimeFailureCodes,
+  desktopPluginV2RuntimeFailureCodes,
   desktopPluginStateChangeReasons,
   isDesktopPluginMarketplaceInstallProgress,
   isDesktopPluginSourceBuildProgress,
@@ -34,6 +35,16 @@ describe('desktop plugin bridge error catalog', () => {
     ))).toBe(false);
   });
 
+  it('keeps v2 retry diagnostics stable and separate from user decisions', () => {
+    expect(desktopPluginV2RuntimeFailureCodes).toEqual([
+      'transport-error',
+      'extension-failed',
+      'timeout',
+      'protocol-error',
+    ]);
+    expect(new Set(desktopPluginV2RuntimeFailureCodes).size).toBe(desktopPluginV2RuntimeFailureCodes.length);
+  });
+
   it('accepts bounded state change events and rejects malformed IPC payloads', () => {
     expect(desktopPluginStateChangeReasons).toEqual([
       'installed',
@@ -41,6 +52,7 @@ describe('desktop plugin bridge error catalog', () => {
       'disabled',
       'uninstalled',
       'runtime-failure',
+      'runtime-recovered',
       'rollback',
     ]);
     expect(isDesktopPluginStateChangeEvent({
@@ -49,6 +61,7 @@ describe('desktop plugin bridge error catalog', () => {
       version: '1.2.3',
       reason: 'runtime-failure',
       contributionId: 'org.example.plugin/example-tool',
+      runtimeFailureCode: 'extension-failed',
     })).toBe(true);
     expect(isDesktopPluginStateChangeEvent({
       schemaVersion: 1,
@@ -62,6 +75,20 @@ describe('desktop plugin bridge error catalog', () => {
       version: '1.2.3',
       reason: 'unknown',
       extra: 'ignored',
+    })).toBe(false);
+    expect(isDesktopPluginStateChangeEvent({
+      schemaVersion: 1,
+      pluginId: 'org.example.plugin',
+      version: '1.2.3',
+      reason: 'runtime-failure',
+      runtimeFailureCode: 'permission-denied',
+    })).toBe(false);
+    expect(isDesktopPluginStateChangeEvent({
+      schemaVersion: 1,
+      pluginId: 'org.example.plugin',
+      version: '1.2.3',
+      reason: 'runtime-recovered',
+      runtimeFailureCode: 'timeout',
     })).toBe(false);
   });
 

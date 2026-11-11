@@ -36,6 +36,7 @@ import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-
 import { createExternalExtensionProcessTransport } from './external-extension-process';
 import type {
   DesktopPluginErrorCode,
+  DesktopPluginV2RuntimeFailureCode,
   DesktopPluginMarketplaceInstallInput,
   DesktopPluginMarketplaceInstallProgress,
   DesktopPluginOperationResult,
@@ -280,9 +281,15 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
         activeRequest.controller.signal,
         capabilityContext,
       );
-      return parsePluginToolCommandResult(result);
+      const parsedResult = parsePluginToolCommandResult(result);
+      v2PackageManager.clearRuntimeFailure(request.pluginId, request.version);
+      return parsedResult;
     }
     catch (error) {
+      const runtimeFailureCode = getExternalPluginV2RuntimeFailureCode(error, phase);
+      if (runtimeFailureCode !== undefined) {
+        v2PackageManager.markRuntimeFailure(request.pluginId, request.version, runtimeFailureCode);
+      }
       console.warn('V2 plugin command failed.', {
         pluginId: request.pluginId,
         version: request.version,
@@ -639,6 +646,26 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
     return error.code;
   }
   return 'operation-failed';
+}
+
+/** 只把扩展宿主或返回协议故障记录为可重试的 v2 不可用状态。 */
+function getExternalPluginV2RuntimeFailureCode(
+  error: unknown,
+  phase: string,
+): DesktopPluginV2RuntimeFailureCode | undefined {
+  if (error instanceof ExternalExtensionRpcError) {
+    if (error.code === 'transport-error'
+      || error.code === 'extension-failed'
+      || error.code === 'timeout') {
+      return error.code;
+    }
+    return undefined;
+  }
+  // invalid-request、权限拒绝和其他入口校验失败不能让工具进入不可用状态。
+  if (phase === 'execute' && error instanceof PluginIpcInputError && error.code === 'operation-failed') {
+    return 'protocol-error';
+  }
+  return undefined;
 }
 
 function parseActivationRequest(value: unknown): {

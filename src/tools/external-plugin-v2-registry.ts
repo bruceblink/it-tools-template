@@ -5,6 +5,10 @@ import type {
   ExternalPluginV2ToolRegistration,
 } from './external-plugin-v2-tools';
 import type { PluginToolCommandExecutor } from '@/shared/plugin-tool-workbench';
+import type {
+  DesktopPluginV2RuntimeFailureCode,
+  DesktopPluginV2RuntimeStatus,
+} from '@/shared/desktop-services/plugins';
 import type { ToolWithCategory } from './tools.types';
 
 export interface ExternalPluginV2RuntimeRegistration {
@@ -13,6 +17,13 @@ export interface ExternalPluginV2RuntimeRegistration {
   readonly tool: ToolWithCategory;
   readonly workbench: ExternalPluginV2ToolRegistration['workbench'];
   readonly execute: PluginToolCommandExecutor;
+  readonly runtimeStatus: DesktopPluginV2RuntimeStatus;
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
+}
+
+export interface ExternalPluginV2RuntimeState {
+  readonly runtimeStatus?: DesktopPluginV2RuntimeStatus;
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
 }
 
 export interface ExternalPluginV2CommandIndexRegistration extends ExternalPluginV2CommandIndexEntry {
@@ -34,6 +45,7 @@ export class ExternalPluginV2Registry {
     projection: ExternalPluginV2RegistryProjection,
     execute: PluginToolCommandExecutor,
     fingerprint?: string,
+    runtimeState?: ExternalPluginV2RuntimeState,
   ): void {
     const pluginId = projection.registrations[0]?.workbench.pluginId
       ?? projection.commands[0]?.pluginId;
@@ -43,7 +55,7 @@ export class ExternalPluginV2Registry {
       throw new Error('An external plugin v2 projection must declare a plugin identity.');
     }
     const packageKey = getPackageKey(pluginId, version);
-    const registration = createPackageRegistration(projection, execute, pluginId, version, fingerprint);
+    const registration = createPackageRegistration(projection, execute, pluginId, version, fingerprint, runtimeState);
     this.assertNoConflicts(packageKey, registration);
     this.packages.set(packageKey, registration);
     this.rebuildIndexes();
@@ -53,7 +65,9 @@ export class ExternalPluginV2Registry {
   replaceFrom(next: ExternalPluginV2Registry): void {
     const packages = [...next.packages.entries()].map(([key, registration]) => {
       const existing = this.packages.get(key);
-      return [key, existing?.fingerprint !== undefined && existing.fingerprint === registration.fingerprint
+      return [key, existing?.fingerprint !== undefined
+        && existing.fingerprint === registration.fingerprint
+        && sameRuntimeState(existing, registration)
         ? existing
         : registration] as const;
     });
@@ -137,6 +151,8 @@ interface PackageRegistration {
   readonly fingerprint?: string;
   readonly tools: readonly ExternalPluginV2RuntimeRegistration[];
   readonly commands: readonly ExternalPluginV2CommandIndexRegistration[];
+  readonly runtimeStatus: DesktopPluginV2RuntimeStatus;
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
 }
 
 function createPackageRegistration(
@@ -145,14 +161,24 @@ function createPackageRegistration(
   pluginId: string,
   version: string,
   fingerprint?: string,
+  runtimeState?: ExternalPluginV2RuntimeState,
 ): PackageRegistration {
   const commandsById = new Map(projection.commands.map(command => [command.id, command]));
+  const runtimeFailureCode = runtimeState?.runtimeFailureCode;
+  const runtimeStatus = runtimeState?.runtimeStatus
+    ?? (runtimeFailureCode === undefined ? 'ready' : 'unavailable');
   const tools = projection.registrations.map(({ tool, workbench }) => ({
     pluginId,
     version,
     tool,
-    workbench,
+    workbench: {
+      ...workbench,
+      runtimeStatus,
+      ...(runtimeFailureCode === undefined ? {} : { runtimeFailureCode }),
+    },
     execute,
+    runtimeStatus,
+    ...(runtimeFailureCode === undefined ? {} : { runtimeFailureCode }),
   }));
   const commands = projection.commands.map(command => ({
     ...command,
@@ -168,7 +194,14 @@ function createPackageRegistration(
     fingerprint,
     tools,
     commands,
+    runtimeStatus,
+    ...(runtimeFailureCode === undefined ? {} : { runtimeFailureCode }),
   };
+}
+
+function sameRuntimeState(left: PackageRegistration, right: PackageRegistration): boolean {
+  return left.runtimeStatus === right.runtimeStatus
+    && left.runtimeFailureCode === right.runtimeFailureCode;
 }
 
 function getPackageKey(pluginId: string, version: string): string {

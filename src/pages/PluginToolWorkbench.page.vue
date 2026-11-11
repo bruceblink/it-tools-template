@@ -21,8 +21,11 @@ const { locale } = useI18n();
 const labels = computed(() => locale.value === 'zh'
   ? {
       run: '运行',
+      retry: '重试',
       cancel: '取消',
       result: '结果',
+      unavailable: '插件暂时不可用，可以重试。',
+      failureCode: '稳定错误码',
       required: '此字段为必填项。',
       tooLong: '输入超过最大长度。',
       invalidNumber: '请输入有效数字。',
@@ -37,8 +40,11 @@ const labels = computed(() => locale.value === 'zh'
     }
   : {
       run: 'Run',
+      retry: 'Retry',
       cancel: 'Cancel',
       result: 'Result',
+      unavailable: 'This plugin is temporarily unavailable. You can retry the command.',
+      failureCode: 'Stable error code',
       required: 'is required.',
       tooLong: 'exceeds the maximum length.',
       invalidNumber: 'must be a valid number.',
@@ -242,6 +248,21 @@ onUnmounted(() => activeController?.abort());
       </template>
 
       <p class="plugin-tool-workbench-description">{{ tool.description }}</p>
+      <n-alert
+        v-if="tool.runtimeStatus === 'unavailable'"
+        type="warning"
+        :show-icon="false"
+        role="status"
+        mb-4
+      >
+        <div>{{ labels.unavailable }}</div>
+        <div class="plugin-tool-workbench-runtime-diagnostic">
+          <span>{{ tool.pluginId }} · {{ tool.version }}</span>
+          <span v-if="tool.runtimeFailureCode">
+            {{ labels.failureCode }}: <code>{{ tool.runtimeFailureCode }}</code>
+          </span>
+        </div>
+      </n-alert>
       <form class="plugin-tool-workbench-form" @submit.prevent="runCommand">
         <n-form-item
           v-for="field in tool.fields"
@@ -300,7 +321,7 @@ onUnmounted(() => activeController?.abort());
         </n-alert>
         <div class="plugin-tool-workbench-actions">
           <n-button attr-type="submit" type="primary" :loading="isRunning">
-            {{ labels.run }}
+            {{ tool.runtimeStatus === 'unavailable' ? labels.retry : labels.run }}
           </n-button>
           <n-button
             v-if="isRunning"
@@ -349,6 +370,14 @@ onUnmounted(() => activeController?.abort());
   margin: 0 0 20px;
   line-height: 1.6;
   color: var(--n-text-color-3);
+}
+
+.plugin-tool-workbench-runtime-diagnostic {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 8px;
+  color: var(--n-text-color-2);
 }
 
 .plugin-tool-workbench-form {

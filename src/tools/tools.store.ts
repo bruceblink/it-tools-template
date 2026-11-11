@@ -112,7 +112,10 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
           component: externalPluginV2ToolComponent,
           icon: Puzzle,
         });
-        nextRegistry.register(projection, execute, JSON.stringify(manifest));
+        nextRegistry.register(projection, execute, JSON.stringify(manifest), {
+          runtimeStatus: snapshot.runtimeStatus,
+          ...(snapshot.runtimeFailureCode === undefined ? {} : { runtimeFailureCode: snapshot.runtimeFailureCode }),
+        });
       }
       catch (error) {
         // 单个包的静态元数据无效时跳过该包，保留其他工具和导航。

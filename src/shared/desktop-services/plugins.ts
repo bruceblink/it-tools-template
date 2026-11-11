@@ -152,6 +152,24 @@ export const desktopPluginRuntimeFailureCodes = Object.freeze([
 
 export type DesktopPluginRuntimeFailureCode = typeof desktopPluginRuntimeFailureCodes[number];
 
+/** v2 扩展宿主失败码；只记录可由用户重试的运行时故障。 */
+export const desktopPluginV2RuntimeFailureCodes = Object.freeze([
+  'transport-error',
+  'extension-failed',
+  'timeout',
+  'protocol-error',
+] as const);
+
+export type DesktopPluginV2RuntimeFailureCode = typeof desktopPluginV2RuntimeFailureCodes[number];
+
+/** v2 工具在内存中的运行状态；安装状态仍由 status 字段单独表示。 */
+export const desktopPluginV2RuntimeStatuses = Object.freeze([
+  'ready',
+  'unavailable',
+] as const);
+
+export type DesktopPluginV2RuntimeStatus = typeof desktopPluginV2RuntimeStatuses[number];
+
 /** Reasons delivered with a desktop plugin lifecycle state change event. */
 export const desktopPluginStateChangeReasons = Object.freeze([
   'installed',
@@ -159,6 +177,7 @@ export const desktopPluginStateChangeReasons = Object.freeze([
   'disabled',
   'uninstalled',
   'runtime-failure',
+  'runtime-recovered',
   'rollback',
 ] as const);
 
@@ -170,6 +189,7 @@ export interface DesktopPluginStateChangeEvent {
   readonly version: string;
   readonly reason: DesktopPluginStateChangeReason;
   readonly contributionId?: string;
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
 }
 
 /** 已验签 v2 包的静态快照；不包含安装路径、签名或入口脚本内容。 */
@@ -180,14 +200,24 @@ export interface DesktopPluginV2Snapshot {
   readonly runtime: 'process' | 'wasm';
   readonly manifest: ExternalPluginV2Manifest;
   readonly status: 'installed' | 'invalid';
+  readonly runtimeStatus: DesktopPluginV2RuntimeStatus;
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
   readonly errorCode?: string;
 }
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const pluginVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 const contributionIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const stateChangeKeys = new Set(['schemaVersion', 'pluginId', 'version', 'reason', 'contributionId']);
+const stateChangeKeys = new Set([
+  'schemaVersion',
+  'pluginId',
+  'version',
+  'reason',
+  'contributionId',
+  'runtimeFailureCode',
+]);
 const stateChangeReasons = new Set<string>(desktopPluginStateChangeReasons);
+const v2RuntimeFailureCodes = new Set<string>(desktopPluginV2RuntimeFailureCodes);
 const marketplaceProgressKeys = new Set([
   'requestId',
   'phase',
@@ -293,12 +323,17 @@ export function isDesktopPluginStateChangeEvent(value: unknown): value is Deskto
   ) {
     return false;
   }
-  return record.contributionId === undefined
-    || (
-      typeof record.contributionId === 'string'
-      && record.contributionId.length <= 256
-      && contributionIdPattern.test(record.contributionId)
-    );
+  if (record.contributionId !== undefined
+    && (typeof record.contributionId !== 'string'
+      || record.contributionId.length > 256
+      || !contributionIdPattern.test(record.contributionId))) {
+    return false;
+  }
+  if (record.runtimeFailureCode !== undefined && record.reason !== 'runtime-failure') {
+    return false;
+  }
+  return record.runtimeFailureCode === undefined
+    || (typeof record.runtimeFailureCode === 'string' && v2RuntimeFailureCodes.has(record.runtimeFailureCode));
 }
 
 /** Result envelope shared by every renderer-facing plugin management operation. */

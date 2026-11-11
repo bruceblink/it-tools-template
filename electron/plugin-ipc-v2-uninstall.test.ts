@@ -208,6 +208,32 @@ describe('v2 plugin uninstall IPC', () => {
     expect(warning).toHaveBeenCalledWith('V2 plugin command failed.', expect.objectContaining({ code: rpcError }));
   });
 
+  it('marks extension failures unavailable and clears the state after a successful retry', async () => {
+    await registerFixture();
+    control.setExecuteError('extension-failed');
+    const failedCommand = invoke('desktop:plugins:v2:execute', createCommandRequest('request-runtime-failure'));
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+    control.finishStop();
+    await expect(failedCommand).resolves.toMatchObject({ ok: false, error: 'operation-failed' });
+    await expect(invoke('desktop:plugins:v2:list', undefined)).resolves.toMatchObject({
+      ok: true,
+      value: [expect.objectContaining({
+        runtimeStatus: 'unavailable',
+        runtimeFailureCode: 'extension-failed',
+      })],
+    });
+
+    control.setExecuteError(undefined);
+    const retry = invoke('desktop:plugins:v2:execute', createCommandRequest('request-runtime-recovery'));
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledTimes(2));
+    control.finishStop();
+    await expect(retry).resolves.toMatchObject({ ok: true, value: { kind: 'text', value: 'completed' } });
+    await expect(invoke('desktop:plugins:v2:list', undefined)).resolves.toMatchObject({
+      ok: true,
+      value: [expect.objectContaining({ runtimeStatus: 'ready' })],
+    });
+  });
+
   it('preserves the command error when worker cleanup times out', async () => {
     await registerFixture();
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -234,6 +260,10 @@ describe('v2 plugin uninstall IPC', () => {
     await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
     control.finishStop();
     await expect(command).resolves.toMatchObject({ ok: false, error: 'cancelled' });
+    await expect(invoke('desktop:plugins:v2:list', undefined)).resolves.toMatchObject({
+      ok: true,
+      value: [expect.objectContaining({ runtimeStatus: 'ready' })],
+    });
   });
 
   // 只有签名清单和对应工具都声明 runtime.info 时，主进程才请求本次授权并发送受限上下文。
@@ -280,6 +310,10 @@ describe('v2 plugin uninstall IPC', () => {
       .resolves.toMatchObject({ ok: false, error: 'permission-denied' });
     expect(control.send).not.toHaveBeenCalled();
     expect(control.dispose).not.toHaveBeenCalled();
+    await expect(invoke('desktop:plugins:v2:list', undefined)).resolves.toMatchObject({
+      ok: true,
+      value: [expect.objectContaining({ runtimeStatus: 'ready' })],
+    });
   });
 
   // 主进程取消 IPC 在授权窗口等待期间生效，用户随后点击允许也不能启动 worker。
@@ -314,6 +348,10 @@ describe('v2 plugin uninstall IPC', () => {
     })).resolves.toEqual({ ok: false, error: 'invalid-request' });
     expect(control.messageBox).not.toHaveBeenCalled();
     expect(control.send).not.toHaveBeenCalled();
+    await expect(invoke('desktop:plugins:v2:list', undefined)).resolves.toMatchObject({
+      ok: true,
+      value: [expect.objectContaining({ runtimeStatus: 'ready' })],
+    });
   });
 
   // 清单请求能力不能替代工具声明；工具没有 runtime.info 时不提示，也不发送上下文。

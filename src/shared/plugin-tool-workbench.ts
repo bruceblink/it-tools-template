@@ -43,6 +43,16 @@ export type PluginToolInputValueMap = Readonly<Record<string, PluginToolInputVal
 /** 宿主支持的插件工具结果类型。 */
 export type PluginToolResultKind = 'text' | 'json' | 'table';
 
+/** v2 工具的内存运行状态；安装状态由桌面包快照单独管理。 */
+export type PluginToolRuntimeStatus = 'ready' | 'unavailable';
+
+/** 可安全显示给用户的 v2 运行失败码。 */
+export type PluginToolRuntimeFailureCode =
+  | 'transport-error'
+  | 'extension-failed'
+  | 'timeout'
+  | 'protocol-error';
+
 export type PluginToolTableCell = string | number | boolean | null;
 
 export interface PluginToolTableColumn {
@@ -74,6 +84,8 @@ export interface PluginToolWorkbenchDefinition {
   readonly commandId: string;
   readonly fields: readonly PluginToolInputField[];
   readonly resultKind: PluginToolResultKind;
+  readonly runtimeStatus?: PluginToolRuntimeStatus;
+  readonly runtimeFailureCode?: PluginToolRuntimeFailureCode;
 }
 
 /** 宿主发送给扩展宿主的命令请求。输入值全部来自声明式字段。 */

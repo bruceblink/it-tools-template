@@ -12,6 +12,10 @@ import {
   type ExternalPluginV2Runtime,
 } from './plugin-package-v2';
 import type { ExternalPluginV2Contributions } from '../src/shared/external-plugin-v2';
+import type {
+  DesktopPluginV2RuntimeFailureCode,
+  DesktopPluginV2RuntimeStatus,
+} from '../src/shared/desktop-services/plugins';
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -28,6 +32,8 @@ export interface ExternalPluginV2PackageSnapshot {
   readonly requestedCapabilities: readonly string[];
   readonly contributions: ExternalPluginV2Contributions;
   readonly status: ExternalPluginV2PackageStatus;
+  readonly runtimeStatus: DesktopPluginV2RuntimeStatus;
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
   readonly errorCode?: string;
 }
 
@@ -41,7 +47,8 @@ export interface ExternalPluginV2ExecutionContext {
 export interface ExternalPluginV2PackageStateChangeEvent {
   readonly pluginId: string;
   readonly version: string;
-  readonly reason: 'installed' | 'uninstalled';
+  readonly reason: 'installed' | 'uninstalled' | 'runtime-failure' | 'runtime-recovered';
+  readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
 }
 
 export interface ExternalPluginV2PackageManagerOptions {
@@ -55,6 +62,8 @@ export interface ExternalPluginV2PackageManagerOptions {
 export class ExternalPluginV2PackageManager {
   private readonly installRoot: string;
   private operationQueue: Promise<void> = Promise.resolve();
+  /** 运行失败只在当前主进程保留，重启应用后由下一次执行重新探测。 */
+  private readonly runtimeFailures = new Map<string, DesktopPluginV2RuntimeFailureCode>();
 
   constructor(private readonly options: ExternalPluginV2PackageManagerOptions) {
     this.installRoot = resolve(options.installRoot);
@@ -77,7 +86,7 @@ export class ExternalPluginV2PackageManager {
             const packageRoot = await this.getInstalledPackageRoot(pluginDirectory.name, versionDirectory.name);
             const manifest = await this.readInstalledManifest(packageRoot);
             await verifyInstalledFiles(packageRoot, manifest);
-            snapshots.push(toSnapshot(manifest));
+            snapshots.push(toSnapshot(manifest, this.runtimeFailures.get(getPackageKey(manifest.id, manifest.version))));
           }
           catch (error) {
             snapshots.push(invalidSnapshot(pluginDirectory.name, versionDirectory.name, getErrorCode(error)));
@@ -93,6 +102,7 @@ export class ExternalPluginV2PackageManager {
   async installArchive(archivePath: string): Promise<ExternalPluginV2PackageSnapshot> {
     return this.runExclusive(async () => {
       const staged = await stageExternalPluginV2PackageArchive(this.stageOptions(archivePath));
+      this.runtimeFailures.delete(getPackageKey(staged.manifest.id, staged.manifest.version));
       const snapshot = toSnapshot(staged.manifest);
       this.options.onStateChange?.({ pluginId: snapshot.pluginId, version: snapshot.version, reason: 'installed' });
       return snapshot;
@@ -107,9 +117,34 @@ export class ExternalPluginV2PackageManager {
       if ((await readdir(pluginRoot)).length === 0) {
         await rmdir(pluginRoot);
       }
+      this.runtimeFailures.delete(getPackageKey(pluginId, version));
       this.options.onStateChange?.({ pluginId, version, reason: 'uninstalled' });
       return true;
     });
+  }
+
+  /** 标记可重试的扩展宿主故障，但保留工具静态索引。 */
+  markRuntimeFailure(pluginId: string, version: string, code: DesktopPluginV2RuntimeFailureCode): void {
+    const key = getPackageKey(pluginId, version);
+    if (this.runtimeFailures.get(key) === code) {
+      return;
+    }
+    this.runtimeFailures.set(key, code);
+    this.options.onStateChange?.({
+      pluginId,
+      version,
+      reason: 'runtime-failure',
+      runtimeFailureCode: code,
+    });
+  }
+
+  /** 成功完成一次命令后清除同一包的故障状态。 */
+  clearRuntimeFailure(pluginId: string, version: string): void {
+    const key = getPackageKey(pluginId, version);
+    if (!this.runtimeFailures.delete(key)) {
+      return;
+    }
+    this.options.onStateChange?.({ pluginId, version, reason: 'runtime-recovered' });
   }
 
   async getInstalledManifest(pluginId: string, version: string): Promise<ExternalPluginV2PackageManifest> {
@@ -195,7 +230,10 @@ export class ExternalPluginV2PackageManager {
   }
 }
 
-function toSnapshot(manifest: ExternalPluginV2PackageManifest): ExternalPluginV2PackageSnapshot {
+function toSnapshot(
+  manifest: ExternalPluginV2PackageManifest,
+  runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode,
+): ExternalPluginV2PackageSnapshot {
   return {
     pluginId: manifest.id,
     name: manifest.name,
@@ -214,6 +252,8 @@ function toSnapshot(manifest: ExternalPluginV2PackageManifest): ExternalPluginV2
     requestedCapabilities: [...manifest.requestedCapabilities],
     contributions: manifest.contributions,
     status: 'installed',
+    runtimeStatus: runtimeFailureCode === undefined ? 'ready' : 'unavailable',
+    ...(runtimeFailureCode === undefined ? {} : { runtimeFailureCode }),
   };
 }
 
@@ -236,8 +276,13 @@ function invalidSnapshot(pluginId: string, version: string, errorCode: string): 
     requestedCapabilities: [],
     contributions: { tools: [], commands: [] },
     status: 'invalid',
+    runtimeStatus: 'ready',
     errorCode,
   };
+}
+
+function getPackageKey(pluginId: string, version: string): string {
+  return `${pluginId}@${version}`;
 }
 
 function getErrorCode(error: unknown): string {

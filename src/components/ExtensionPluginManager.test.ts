@@ -8,6 +8,7 @@ const v2Package: DesktopPluginV2Snapshot = {
   name: 'Demo plugin',
   version: '1.0.0',
   runtime: 'process',
+  runtimeStatus: 'ready',
   manifest: {
     formatVersion: 2,
     id: 'org.example.demo',
