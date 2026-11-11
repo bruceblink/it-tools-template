@@ -28,6 +28,9 @@ import type {
   DesktopPluginMarketplaceInstallProgress,
   DesktopPluginSourceBuildInput,
   DesktopPluginSourceBuildProgress,
+  DesktopPluginV2SettingsRequest,
+  DesktopPluginV2SettingsSnapshot,
+  DesktopPluginV2SettingUpdateRequest,
   DesktopPluginV2Snapshot,
 } from '../src/shared/desktop-services/plugins';
 import type { DesktopUpdateState } from '../src/shared/desktop-services/updates';
@@ -92,6 +95,10 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   listPlugins: () => ipcRenderer.invoke('desktop:plugins:list'),
   listPluginV2Packages: (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>> =>
     ipcRenderer.invoke('desktop:plugins:v2:list'),
+  listPluginV2Settings: (input: DesktopPluginV2SettingsRequest): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:settings:list', input),
+  updatePluginV2Setting: (input: DesktopPluginV2SettingUpdateRequest): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:settings:update', input),
   onPluginStateChanged: (callback: (event: DesktopPluginStateChangeEvent) => void) => {
     const listener = (_event: IpcRendererEvent, value: unknown) => {
       if (isDesktopPluginStateChangeEvent(value)) {

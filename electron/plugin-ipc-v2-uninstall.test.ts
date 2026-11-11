@@ -234,6 +234,39 @@ describe('v2 plugin uninstall IPC', () => {
     });
   });
 
+  it('lists and updates host-owned v2 settings without starting the extension host', async () => {
+    await registerFixture({
+      requestedCapabilities: ['settings.read'],
+      toolCapabilities: ['settings.read'],
+      withSettings: true,
+    });
+
+    await expect(invoke('desktop:plugins:v2:settings:list', { pluginId, version })).resolves.toMatchObject({
+      ok: true,
+      value: {
+        pluginId,
+        version,
+        settings: [{ id: `${pluginId}/endpoint`, value: 'https://default.example' }],
+      },
+    });
+    await expect(invoke('desktop:plugins:v2:settings:update', {
+      pluginId,
+      version,
+      settingId: `${pluginId}/endpoint`,
+      value: 'https://stored.example',
+    })).resolves.toMatchObject({
+      ok: true,
+      value: { settings: [{ id: `${pluginId}/endpoint`, value: 'https://stored.example' }] },
+    });
+    await expect(invoke('desktop:plugins:v2:settings:update', {
+      pluginId,
+      version,
+      settingId: `${pluginId}/endpoint`,
+      value: 123,
+    })).resolves.toEqual({ ok: false, error: 'invalid-request' });
+    expect(control.send).not.toHaveBeenCalled();
+  });
+
   it('preserves the command error when worker cleanup times out', async () => {
     await registerFixture();
     const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -393,6 +426,7 @@ async function registerFixture(options: {
   requestedCapabilities?: readonly PluginCapabilityId[];
   toolCapabilities?: readonly PluginCapabilityId[];
   withMainWindow?: boolean;
+  withSettings?: boolean;
 } = {}): Promise<{ packageRoot: string }> {
   control.reset();
   const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-ipc-'));
@@ -401,6 +435,7 @@ async function registerFixture(options: {
   const wasmBytes = Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
   const toolId = `${pluginId}/runtime-info`;
   const toolCapabilities = options.toolCapabilities;
+  const settingId = `${pluginId}/endpoint`;
   const tool = toolCapabilities === undefined ? undefined : {
     id: toolId,
     title: 'Runtime info tool',
@@ -410,6 +445,7 @@ async function registerFixture(options: {
     dataProcessing: 'memory-only' as const,
     offline: 'available' as const,
     capabilities: toolCapabilities,
+    ...(options.withSettings ? { settings: [settingId] } : {}),
     inputs: [],
     output: { kind: 'text' as const },
   };
@@ -435,6 +471,16 @@ async function registerFixture(options: {
         keywords: ['test'],
         ...(tool ? { toolId } : {}),
       }],
+      ...(options.withSettings ? {
+        settings: [{
+          id: settingId,
+          label: 'Endpoint',
+          description: 'Service endpoint.',
+          type: 'string' as const,
+          defaultValue: 'https://default.example',
+          maxLength: 256,
+        }],
+      } : {}),
     },
     files: [{ path: 'extension.wasm', sha256: createHash('sha256').update(wasmBytes).digest('hex') }],
   };

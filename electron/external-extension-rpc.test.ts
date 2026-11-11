@@ -53,6 +53,18 @@ describe('external extension RPC protocol', () => {
     })).toBeNull();
     expect(parseExternalExtensionRpcRequest({
       protocolVersion: 1,
+      requestId: 'request-settings-foreign-namespace',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/settings`,
+        input: {},
+        requiredCapabilities: ['settings.read'],
+        capabilityContext: { settings: { 'org.example.other/endpoint': true } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
       requestId: 'request-settings',
       pluginId,
       method: 'executeCommand',

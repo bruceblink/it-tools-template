@@ -34,6 +34,10 @@ import type {
   DesktopPluginSourceSnapshotInstallSource as SharedDesktopPluginSourceSnapshotInstallSource,
   DesktopPluginOperationResult as SharedDesktopPluginOperationResult,
   DesktopPluginV2Snapshot as SharedDesktopPluginV2Snapshot,
+  DesktopPluginV2SettingsRequest as SharedDesktopPluginV2SettingsRequest,
+  DesktopPluginV2SettingsSnapshot as SharedDesktopPluginV2SettingsSnapshot,
+  DesktopPluginV2SettingUpdateRequest as SharedDesktopPluginV2SettingUpdateRequest,
+  DesktopPluginV2SettingSnapshot as SharedDesktopPluginV2SettingSnapshot,
   DesktopPluginRuntimeFailureCode,
   DesktopPluginStateChangeEvent as SharedDesktopPluginStateChangeEvent,
 } from '../shared/desktop-services/plugins';
@@ -54,6 +58,10 @@ declare global {
   type DesktopPluginInstallSource = SharedDesktopPluginInstallSource;
   type DesktopPluginOperationResult<T> = SharedDesktopPluginOperationResult<T>;
   type DesktopPluginV2Snapshot = SharedDesktopPluginV2Snapshot;
+  type DesktopPluginV2SettingsRequest = SharedDesktopPluginV2SettingsRequest;
+  type DesktopPluginV2SettingsSnapshot = SharedDesktopPluginV2SettingsSnapshot;
+  type DesktopPluginV2SettingUpdateRequest = SharedDesktopPluginV2SettingUpdateRequest;
+  type DesktopPluginV2SettingSnapshot = SharedDesktopPluginV2SettingSnapshot;
   type DesktopPluginStateChangeEvent = SharedDesktopPluginStateChangeEvent;
 
   interface DesktopPluginSnapshot {
@@ -132,6 +140,12 @@ declare global {
       closeGitRepository?(repositoryId: string): Promise<GitBridgeResult<boolean>>;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       listPluginV2Packages?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>>;
+      listPluginV2Settings?(
+        input: DesktopPluginV2SettingsRequest,
+      ): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>>;
+      updatePluginV2Setting?(
+        input: DesktopPluginV2SettingUpdateRequest,
+      ): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>>;
       onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
       installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       installPluginV2Package?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>>;

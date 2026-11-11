@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ExternalPluginV2Manifest } from '../src/shared/external-plugin-v2';
-import { readExternalPluginV2ToolSettings } from './external-plugin-v2-settings';
+import {
+  readExternalPluginV2Settings,
+  readExternalPluginV2ToolSettings,
+  writeExternalPluginV2Setting,
+} from './external-plugin-v2-settings';
 import { PluginSettingsStore } from './plugin-settings-store';
 
 const pluginId = 'org.example.settings-demo';
@@ -42,6 +46,28 @@ describe('readExternalPluginV2ToolSettings', () => {
       [`${pluginId}/retries`]: 3,
       [`${pluginId}/enabled`]: true,
     });
+  });
+
+  it('returns a complete host settings snapshot and persists validated updates', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-settings-'));
+    temporaryDirectories.push(root);
+    const store = new PluginSettingsStore(join(root, 'settings.json'));
+    await store.load();
+    const manifest = createManifest();
+
+    await expect(readExternalPluginV2Settings(manifest, store)).resolves.toMatchObject({
+      pluginId,
+      version: '1.0.0',
+      settings: [
+        { id: `${pluginId}/endpoint`, value: 'https://default.example' },
+        { id: `${pluginId}/retries`, value: 3 },
+        { id: `${pluginId}/enabled`, value: true },
+      ],
+    });
+    await writeExternalPluginV2Setting(manifest, `${pluginId}/retries`, 5, store);
+    const snapshot = await readExternalPluginV2Settings(manifest, store);
+    expect(snapshot.settings.find(setting => setting.id === `${pluginId}/retries`)).toMatchObject({ value: 5 });
+    await expect(writeExternalPluginV2Setting(manifest, `${pluginId}/retries`, 11, store)).rejects.toThrow(/invalid/);
   });
 });
 

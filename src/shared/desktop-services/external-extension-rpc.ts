@@ -193,6 +193,7 @@ export function parseExternalExtensionRpcRequest(value: unknown): ExternalExtens
         && (value.payload.requiredCapabilities.includes('runtime.info') || value.payload.requiredCapabilities.includes('settings.read')
           ? isExternalExtensionCapabilityContext(
             value.payload.capabilityContext,
+            value.pluginId,
             value.payload.requiredCapabilities.includes('runtime.info'),
             value.payload.requiredCapabilities.includes('settings.read'),
           )
@@ -305,6 +306,7 @@ function isCapabilityList(value: unknown): value is readonly ToolCapability[] {
 
 function isExternalExtensionCapabilityContext(
   value: unknown,
+  pluginId: string,
   requiresRuntimeInfo: boolean,
   requiresSettings: boolean,
 ): value is ExternalExtensionCapabilityContext {
@@ -327,18 +329,22 @@ function isExternalExtensionCapabilityContext(
       || value.runtimeInfo.appVersion.length > 64)) {
     return false;
   }
-  if (requiresSettings && !isExternalExtensionSettingsContext(value.settings)) {
+  if (requiresSettings && !isExternalExtensionSettingsContext(value.settings, pluginId)) {
     return false;
   }
   return true;
 }
 
-function isExternalExtensionSettingsContext(value: unknown): value is Readonly<Record<string, string | number | boolean>> {
+function isExternalExtensionSettingsContext(
+  value: unknown,
+  pluginId: string,
+): value is Readonly<Record<string, string | number | boolean>> {
   if (!isRecord(value) || Object.keys(value).length > 64) {
     return false;
   }
   return Object.entries(value).every(([settingId, settingValue]) => {
     return contributionIdPattern.test(settingId)
+      && settingId.startsWith(`${pluginId}/`)
       && (typeof settingValue === 'string' || typeof settingValue === 'boolean' || (typeof settingValue === 'number' && Number.isFinite(settingValue)))
       && (typeof settingValue !== 'string' || settingValue.length <= 4_096);
   });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NAlert, NButton, NCard, NCheckbox, NEmpty, NFormItem, NInput, NSpin, NTag, NText } from 'naive-ui';
+import { NAlert, NButton, NCard, NCheckbox, NEmpty, NFormItem, NInput, NInputNumber, NSpin, NSwitch, NTag, NText } from 'naive-ui';
 import { createQueuedRefresh } from '@/tools/queued-refresh';
 import { externalPluginV2SupportedCapabilities } from '@/shared/external-plugin-v2';
 
@@ -20,6 +20,8 @@ type PluginManagerBridge = Required<Pick<NonNullable<Window['itToolsDesktop']>,
   | 'cancelPluginSourceBuild'
   | 'onPluginSourceBuildProgress'
   | 'listPluginV2Packages'
+  | 'listPluginV2Settings'
+  | 'updatePluginV2Setting'
   | 'installPluginV2Package'
   | 'uninstallPluginV2Package'
 >;
@@ -29,6 +31,8 @@ const isLoading = ref(true);
 const isBusy = ref(false);
 const plugins = ref<DesktopPluginSnapshot[]>([]);
 const v2Packages = ref<DesktopPluginV2Snapshot[]>([]);
+const v2Settings = reactive<Record<string, DesktopPluginV2SettingsSnapshot | undefined>>({});
+const v2SettingDrafts = reactive<Record<string, string | number | boolean>>({});
 const signers = ref<DesktopPluginSignerSnapshot[]>([]);
 const pluginError = ref<string>();
 const trustStoreError = ref<string>();
@@ -72,6 +76,7 @@ type PluginAction = 'run' | 'stop' | 'remove';
 const pluginAction = ref<{ key: string; action: PluginAction }>();
 type V2PluginAction = 'install' | 'uninstall';
 const v2PluginAction = ref<{ key?: string; action: V2PluginAction }>();
+const v2SettingAction = ref<{ key: string; settingId: string }>();
 const canBuildSource = computed(() => {
   if (typeof window === 'undefined') {
     return false;
@@ -129,7 +134,7 @@ const messages = {
     v2Install: 'Install v2 package',
     v2InstallInProgress: 'Installing v2 package…',
     v2Empty: 'No v2 plugin packages are installed.',
-    v2ExecutionPending: 'WASM tools can request runtime information with your approval for each run. Other host capabilities and the process runtime are not available yet.',
+    v2ExecutionPending: 'WASM tools can request runtime information or declared settings with your approval for each run. Settings are edited in the host; plugin write access and the process runtime are not available.',
     v2Uninstall: 'Uninstall package',
     v2UninstallInProgress: 'Uninstalling v2 package…',
     v2Installed: 'Signed v2 package installed. Supported tools can appear in navigation and search.',
@@ -137,8 +142,14 @@ const messages = {
     v2Tools: 'Declared tools',
     v2Capabilities: 'Requested capabilities',
     v2CapabilityRuntimeInfo: 'Runtime information · approval required for each command',
+    v2CapabilitySettingsRead: 'Declared settings · approval required for each command',
     v2CapabilityUnsupported: 'Not currently supported by this host',
     v2PermissionNotice: 'Installing a v2 package does not grant capabilities. The host asks for approval when a command uses them.',
+    v2Settings: 'Host settings',
+    v2SettingsIntro: 'Edit non-secret settings in the host. A tool receives only the settings it declares when you run it.',
+    v2SaveSetting: 'Save setting',
+    v2SettingSaved: 'Plugin setting saved.',
+    v2SettingsUnavailable: 'The plugin settings store is unavailable. The host did not change the setting.',
     v2Runtime: 'Runtime',
     v2Invalid: 'Invalid package',
     v2StatusInstalled: 'Installed',
@@ -245,7 +256,7 @@ const messages = {
     v2Install: '安装 v2 插件包',
     v2InstallInProgress: '正在安装 v2 插件包…',
     v2Empty: '尚未安装 v2 插件包。',
-    v2ExecutionPending: 'WASM 工具每次运行时可请求运行时信息，需经你批准。其他宿主能力和进程运行时暂未开放。',
+    v2ExecutionPending: 'WASM 工具每次运行时可请求运行时信息或读取声明的设置，需经你批准。设置由宿主管理；插件写入能力和进程运行时暂未开放。',
     v2Uninstall: '卸载插件包',
     v2UninstallInProgress: '正在卸载 v2 插件包…',
     v2Installed: '已安装签名 v2 插件包。受支持的工具可以显示在导航和搜索中。',
@@ -253,8 +264,14 @@ const messages = {
     v2Tools: '声明的工具',
     v2Capabilities: '请求的能力',
     v2CapabilityRuntimeInfo: '运行时信息 · 每条命令都需要确认',
+    v2CapabilitySettingsRead: '声明的设置 · 每条命令都需要确认',
     v2CapabilityUnsupported: '当前宿主暂不支持',
     v2PermissionNotice: '安装 v2 插件包不会自动授予能力。命令使用能力时，宿主会单独请求确认。',
+    v2Settings: '宿主设置',
+    v2SettingsIntro: '在宿主中编辑非秘密设置。工具运行时只会收到它声明读取的设置。',
+    v2SaveSetting: '保存设置',
+    v2SettingSaved: '插件设置已保存。',
+    v2SettingsUnavailable: '插件设置存储不可用。宿主没有修改设置。',
     v2Runtime: '运行时',
     v2Invalid: '插件包无效',
     v2StatusInstalled: '已安装',
@@ -362,6 +379,67 @@ function v2PackageKey(plugin: DesktopPluginV2Snapshot): string {
   return `${plugin.pluginId}:${plugin.version}`;
 }
 
+function v2SettingKey(plugin: DesktopPluginV2Snapshot, settingId: string): string {
+  return `${v2PackageKey(plugin)}:${settingId}`;
+}
+
+/** 从主进程快照读取设置值，保证编辑控件不直接接触持久化文件。 */
+function v2SettingsFor(plugin: DesktopPluginV2Snapshot): readonly DesktopPluginV2SettingSnapshot[] {
+  return v2Settings[v2PackageKey(plugin)]?.settings ?? [];
+}
+
+function v2SettingDraftValue(
+  plugin: DesktopPluginV2Snapshot,
+  setting: DesktopPluginV2SettingSnapshot,
+): string | number | boolean {
+  return v2SettingDrafts[v2SettingKey(plugin, setting.id)] ?? setting.value;
+}
+
+function v2StringSettingValue(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): string {
+  const value = v2SettingDraftValue(plugin, setting);
+  return typeof value === 'string' ? value : '';
+}
+
+function v2NumberSettingValue(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): number {
+  const value = v2SettingDraftValue(plugin, setting);
+  return typeof value === 'number' ? value : 0;
+}
+
+function v2BooleanSettingValue(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): boolean {
+  const value = v2SettingDraftValue(plugin, setting);
+  return typeof value === 'boolean' ? value : false;
+}
+
+function updateV2SettingDraft(
+  plugin: DesktopPluginV2Snapshot,
+  setting: DesktopPluginV2SettingSnapshot,
+  value: string | number | boolean | null,
+): void {
+  if (value === null) {
+    v2SettingDrafts[v2SettingKey(plugin, setting.id)] = setting.value;
+    return;
+  }
+  v2SettingDrafts[v2SettingKey(plugin, setting.id)] = value;
+}
+
+function isV2SettingSaving(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): boolean {
+  const action = v2SettingAction.value;
+  return action?.key === v2PackageKey(plugin) && action.settingId === setting.id;
+}
+
+function isV2SettingDirty(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): boolean {
+  return !Object.is(v2SettingDraftValue(plugin, setting), setting.value);
+}
+
+/** 刷新包列表后同步每个已安装 v2 包的宿主设置快照。 */
+function applyV2Settings(snapshot: DesktopPluginV2SettingsSnapshot): void {
+  const key = `${snapshot.pluginId}:${snapshot.version}`;
+  v2Settings[key] = snapshot;
+  for (const setting of snapshot.settings) {
+    v2SettingDrafts[`${key}:${setting.id}`] = setting.value;
+  }
+}
+
 function isV2PluginAction(plugin: DesktopPluginV2Snapshot, action: V2PluginAction): boolean {
   return v2PluginAction.value?.action === action && v2PluginAction.value.key === v2PackageKey(plugin);
 }
@@ -371,7 +449,13 @@ function isV2CapabilitySupported(capability: string): boolean {
 }
 
 function v2CapabilityLabel(capability: string): string {
-  return capability === 'runtime.info' ? text('v2CapabilityRuntimeInfo') : text('v2CapabilityUnsupported');
+  if (capability === 'runtime.info') {
+    return text('v2CapabilityRuntimeInfo');
+  }
+  if (capability === 'settings.read') {
+    return text('v2CapabilitySettingsRead');
+  }
+  return text('v2CapabilityUnsupported');
 }
 
 function packageStatus(plugin: DesktopPluginSnapshot): string {
@@ -556,6 +640,40 @@ const sourceBuildProgressMessage = computed(() => {
   return text('operationCancelled');
 });
 
+async function refreshV2Settings(
+  bridge: PluginManagerBridge,
+  packages: readonly DesktopPluginV2Snapshot[],
+): Promise<void> {
+  for (const key of Object.keys(v2Settings)) {
+    delete v2Settings[key];
+  }
+  for (const key of Object.keys(v2SettingDrafts)) {
+    delete v2SettingDrafts[key];
+  }
+  if (!bridge.listPluginV2Settings) {
+    return;
+  }
+  const candidates = packages.filter(plugin => (
+    plugin.status === 'installed' && (plugin.manifest.contributions.settings?.length ?? 0) > 0
+  ));
+  const results = await Promise.all(candidates.map(async plugin => {
+    try {
+      return await bridge.listPluginV2Settings!({ pluginId: plugin.pluginId, version: plugin.version });
+    }
+    catch {
+      return { ok: false as const, error: 'operation-failed' as const };
+    }
+  }));
+  for (const result of results) {
+    if (result.ok) {
+      applyV2Settings(result.value);
+    }
+    else {
+      pluginError.value = displayPluginError(result.error);
+    }
+  }
+}
+
 const refresh = createQueuedRefresh(async () => {
   const bridge = getPluginBridge();
   if (!bridge) {
@@ -599,6 +717,9 @@ const refresh = createQueuedRefresh(async () => {
     if (!v2Result.ok) {
       pluginError.value = displayPluginError(v2Result.error);
     }
+    if (v2Result.ok) {
+      await refreshV2Settings(bridge, v2Result.value);
+    }
   }
   catch {
     pluginError.value = text('operationFailed');
@@ -607,6 +728,46 @@ const refresh = createQueuedRefresh(async () => {
     isLoading.value = false;
   }
 });
+
+/** 将用户编辑的单个设置交给主进程校验并原子保存。 */
+async function saveV2Setting(
+  plugin: DesktopPluginV2Snapshot,
+  setting: DesktopPluginV2SettingSnapshot,
+): Promise<void> {
+  const bridge = getPluginBridge();
+  const value = v2SettingDraftValue(plugin, setting);
+  if (!bridge?.updatePluginV2Setting || !isV2SettingDirty(plugin, setting)) {
+    return;
+  }
+  v2SettingAction.value = { key: v2PackageKey(plugin), settingId: setting.id };
+  isBusy.value = true;
+  pluginError.value = undefined;
+  notice.value = undefined;
+  try {
+    const result = await bridge.updatePluginV2Setting({
+      pluginId: plugin.pluginId,
+      version: plugin.version,
+      settingId: setting.id,
+      value,
+    });
+    if (!result.ok) {
+      pluginError.value = result.error === 'store-unavailable' || result.error === 'invalid-store'
+        ? text('v2SettingsUnavailable')
+        : displayPluginError(result.error);
+    }
+    else {
+      applyV2Settings(result.value);
+      notice.value = text('v2SettingSaved');
+    }
+  }
+  catch {
+    pluginError.value = text('v2SettingsUnavailable');
+  }
+  finally {
+    v2SettingAction.value = undefined;
+    isBusy.value = false;
+  }
+}
 
 async function installPlugin(): Promise<void> {
   const bridge = getPluginBridge();
@@ -1216,6 +1377,54 @@ onUnmounted(() => {
                 <n-text depth="3">{{ tool.description }}</n-text>
               </div>
             </div>
+            <div v-if="v2SettingsFor(plugin).length > 0" class="plugin-settings-list">
+              <n-text strong>{{ text('v2Settings') }}</n-text>
+              <n-text depth="3">{{ text('v2SettingsIntro') }}</n-text>
+              <div
+                v-for="setting in v2SettingsFor(plugin)"
+                :key="setting.id"
+                class="plugin-setting-row"
+              >
+                <div class="plugin-setting-copy">
+                  <n-text strong>{{ setting.label }}</n-text>
+                  <n-text depth="3">{{ setting.description }}</n-text>
+                  <code>{{ setting.id }}</code>
+                </div>
+                <div class="plugin-setting-control">
+                  <n-input
+                    v-if="setting.type === 'string'"
+                    :value="v2StringSettingValue(plugin, setting)"
+                    :maxlength="setting.maxLength"
+                    :aria-label="setting.label"
+                    @update:value="value => updateV2SettingDraft(plugin, setting, value)"
+                  />
+                  <n-input-number
+                    v-else-if="setting.type === 'number'"
+                    :value="v2NumberSettingValue(plugin, setting)"
+                    :min="setting.minimum"
+                    :max="setting.maximum"
+                    :precision="setting.integer ? 0 : undefined"
+                    :aria-label="setting.label"
+                    @update:value="value => updateV2SettingDraft(plugin, setting, value)"
+                  />
+                  <n-switch
+                    v-else
+                    :value="v2BooleanSettingValue(plugin, setting)"
+                    :aria-label="setting.label"
+                    @update:value="value => updateV2SettingDraft(plugin, setting, value)"
+                  />
+                  <n-button
+                    size="small"
+                    type="primary"
+                    :disabled="isBusy || !isV2SettingDirty(plugin, setting)"
+                    :loading="isV2SettingSaving(plugin, setting)"
+                    @click="saveV2Setting(plugin, setting)"
+                  >
+                    {{ text('v2SaveSetting') }}
+                  </n-button>
+                </div>
+              </div>
+            </div>
             <div class="plugin-package-actions">
               <n-button
                 quaternary
@@ -1343,6 +1552,10 @@ onUnmounted(() => {
   .plugin-install-action {
     grid-column: 1 / -1;
   }
+
+  .plugin-setting-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .plugin-contribution-link {
@@ -1444,6 +1657,42 @@ onUnmounted(() => {
   gap: 2px;
   padding-top: 6px;
   border-top: 1px solid var(--n-border-color);
+}
+
+.plugin-settings-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--n-border-color);
+  border-radius: 8px;
+}
+
+.plugin-setting-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 360px);
+  gap: 12px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--n-border-color);
+}
+
+.plugin-setting-copy,
+.plugin-setting-control {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.plugin-setting-copy code {
+  overflow-wrap: anywhere;
+  color: var(--n-text-color-3);
+  font-size: 0.78rem;
+}
+
+.plugin-setting-control {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 
 .plugin-capability-list {

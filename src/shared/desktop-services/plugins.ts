@@ -1,4 +1,8 @@
-import type { ExternalPluginV2Manifest } from '../external-plugin-v2';
+import type {
+  ExternalPluginV2Manifest,
+  ExternalPluginV2SettingDeclaration,
+  ExternalPluginV2SettingValue,
+} from '../external-plugin-v2';
 
 /** Stable error codes returned by the trusted desktop plugin bridge. */
 export const desktopPluginErrorCodes = Object.freeze([
@@ -203,6 +207,30 @@ export interface DesktopPluginV2Snapshot {
   readonly runtimeStatus: DesktopPluginV2RuntimeStatus;
   readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
   readonly errorCode?: string;
+}
+
+/** 宿主设置页展示的 v2 设置；值始终经过声明类型和边界校验。 */
+export interface DesktopPluginV2SettingSnapshot extends ExternalPluginV2SettingDeclaration {
+  readonly value: ExternalPluginV2SettingValue;
+}
+
+/** v2 包的宿主设置快照，不包含安装路径或签名数据。 */
+export interface DesktopPluginV2SettingsSnapshot {
+  readonly pluginId: string;
+  readonly version: string;
+  readonly settings: readonly DesktopPluginV2SettingSnapshot[];
+}
+
+/** 从已安装 v2 包读取宿主设置的请求。 */
+export interface DesktopPluginV2SettingsRequest {
+  readonly pluginId: string;
+  readonly version: string;
+}
+
+/** 宿主设置页保存单个 v2 设置的请求。 */
+export interface DesktopPluginV2SettingUpdateRequest extends DesktopPluginV2SettingsRequest {
+  readonly settingId: string;
+  readonly value: ExternalPluginV2SettingValue;
 }
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;

@@ -34,7 +34,11 @@ import { ExternalPluginV2CommandRequests } from './external-plugin-v2-command-re
 import { createExternalPluginV2CapabilityPolicy, ExternalPluginV2CapabilityPolicyError } from './external-plugin-v2-capability-policy';
 import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
 import { createExternalExtensionProcessTransport } from './external-extension-process';
-import { readExternalPluginV2ToolSettings } from './external-plugin-v2-settings';
+import {
+  readExternalPluginV2Settings,
+  readExternalPluginV2ToolSettings,
+  writeExternalPluginV2Setting,
+} from './external-plugin-v2-settings';
 import type {
   DesktopPluginErrorCode,
   DesktopPluginV2RuntimeFailureCode,
@@ -43,6 +47,8 @@ import type {
   DesktopPluginOperationResult,
   DesktopPluginSourceBuildInput,
   DesktopPluginSourceBuildProgress,
+  DesktopPluginV2SettingUpdateRequest,
+  DesktopPluginV2SettingsRequest,
 } from '../src/shared/desktop-services/plugins';
 import {
   isPluginToolCommandResult,
@@ -55,6 +61,7 @@ import type {
 } from '../src/shared/desktop-services/external-extension-rpc';
 import type {
   ExternalPluginV2SettingDeclaration,
+  ExternalPluginV2SettingValue,
 } from '../src/shared/external-plugin-v2';
 
 export interface PluginIpcDependencies {
@@ -179,6 +186,30 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     event,
     dependencies,
     () => v2PackageManager.listInstalled(),
+  ));
+  ipcMain.handle('desktop:plugins:v2:settings:list', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    async () => {
+      const request = parseExternalPluginV2SettingsRequest(value);
+      assertV2PackageNotUninstalling(v2Uninstalling, request);
+      const execution = await v2PackageManager.getInstalledExecutionContext(request.pluginId, request.version);
+      return readExternalPluginV2Settings(execution.manifest, pluginSettingsStore);
+    },
+  ));
+  ipcMain.handle('desktop:plugins:v2:settings:update', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    async () => {
+      const request = parseExternalPluginV2SettingUpdateRequest(value);
+      assertV2PackageNotUninstalling(v2Uninstalling, request);
+      const execution = await v2PackageManager.getInstalledExecutionContext(request.pluginId, request.version);
+      const setting = execution.manifest.contributions.settings?.find(candidate => candidate.id === request.settingId);
+      if (!setting || !isValidExternalPluginV2SettingValue(setting, request.value)) {
+        throw new PluginIpcInputError('invalid-request', 'The v2 plugin setting is not declared or has an invalid value.');
+      }
+      return writeExternalPluginV2Setting(execution.manifest, request.settingId, request.value, pluginSettingsStore);
+    },
   ));
   ipcMain.handle('desktop:plugins:install', event => runPluginManagementIpc(event, dependencies, async () => {
     const selection = await dialog.showOpenDialog(getPluginManagementWindow(dependencies), {
@@ -511,6 +542,8 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       ipcMain.removeHandler('desktop:plugins:build-source');
       ipcMain.removeHandler('desktop:plugins:build-source:cancel');
       ipcMain.removeHandler('desktop:plugins:v2:list');
+      ipcMain.removeHandler('desktop:plugins:v2:settings:list');
+      ipcMain.removeHandler('desktop:plugins:v2:settings:update');
       ipcMain.removeHandler('desktop:plugins:v2:install');
       ipcMain.removeHandler('desktop:plugins:v2:execute');
       ipcMain.removeHandler('desktop:plugins:v2:cancel');
@@ -865,6 +898,73 @@ function parsePluginVersionRequest(value: unknown): { pluginId: string; version:
     throw new PluginIpcInputError();
   }
   return { pluginId: value.pluginId, version: value.version };
+}
+
+function parseExternalPluginV2SettingsRequest(value: unknown): DesktopPluginV2SettingsRequest {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['pluginId', 'version'])
+    || typeof value.pluginId !== 'string'
+    || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(value.pluginId)
+    || typeof value.version !== 'string'
+    || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)) {
+    throw new PluginIpcInputError();
+  }
+  return { pluginId: value.pluginId, version: value.version };
+}
+
+/** 设置更新入口只接受有限标量；声明类型和数值范围由已验签清单再次校验。 */
+function parseExternalPluginV2SettingUpdateRequest(value: unknown): DesktopPluginV2SettingUpdateRequest {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['pluginId', 'version', 'settingId', 'value'])
+    || typeof value.pluginId !== 'string'
+    || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(value.pluginId)
+    || typeof value.version !== 'string'
+    || !/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(value.version)
+    || typeof value.settingId !== 'string'
+    || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.settingId)
+    || !value.settingId.startsWith(`${value.pluginId}/`)
+    || !isExternalPluginV2SettingValue(value.value)) {
+    throw new PluginIpcInputError();
+  }
+  return {
+    pluginId: value.pluginId,
+    version: value.version,
+    settingId: value.settingId,
+    value: value.value,
+  };
+}
+
+/** 设置读写与卸载共用同一包级互斥边界，避免返回即将删除的数据。 */
+function assertV2PackageNotUninstalling(
+  uninstalling: ReadonlySet<string>,
+  request: DesktopPluginV2SettingsRequest,
+): void {
+  if (uninstalling.has(`${request.pluginId}@${request.version}`)) {
+    throw new PluginIpcInputError('active-limit', 'The requested v2 plugin package is being uninstalled.');
+  }
+}
+
+function isExternalPluginV2SettingValue(value: unknown): value is ExternalPluginV2SettingValue {
+  return typeof value === 'string'
+    || typeof value === 'boolean'
+    || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function isValidExternalPluginV2SettingValue(
+  declaration: ExternalPluginV2SettingDeclaration,
+  value: ExternalPluginV2SettingValue,
+): boolean {
+  if (declaration.type === 'string') {
+    return typeof value === 'string' && value.length <= (declaration.maxLength ?? 4_096);
+  }
+  if (declaration.type === 'boolean') {
+    return typeof value === 'boolean';
+  }
+  return typeof value === 'number'
+    && Number.isFinite(value)
+    && (declaration.integer !== true || Number.isSafeInteger(value))
+    && (declaration.minimum === undefined || value >= declaration.minimum)
+    && (declaration.maximum === undefined || value <= declaration.maximum);
 }
 
 function parseExternalPluginV2CommandRequest(value: unknown): {
