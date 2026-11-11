@@ -20,7 +20,7 @@ const categoryIdPattern = /^[a-z][a-z0-9-]{0,63}$/;
 const stableVersionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
 function usageError(message) {
-  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table] [--capability runtime.info|settings.read]`);
+  return new Error(`${message}\nUsage: pnpm plugin:create:v2 -- --id <plugin-id> --name <display-name> [--directory <path>] [--version <semver>] [--tool-id <slug>] [--tool-title <title>] [--description <text>] [--category-id <slug>] [--output-kind text|table] [--capability runtime.info|settings.read|data.oui]`);
 }
 
 function parseOptionValues(argv) {
