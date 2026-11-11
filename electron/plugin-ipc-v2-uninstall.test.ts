@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { ExternalExtensionRpcError } from './external-extension-rpc';
+import type { ExternalExtensionRpcHost } from './external-extension-rpc';
 import {
   getExternalPluginV2PackageSigningPayload,
   type ExternalPluginV2UnsignedPackageManifest,
@@ -124,7 +125,7 @@ vi.mock('./external-extension-process', () => ({
   },
 }));
 
-import { registerPluginLifecycleIpc } from './plugin-ipc';
+import { disposeAllV2Hosts, registerPluginLifecycleIpc, snapshotV2Hosts } from './plugin-ipc';
 
 const pluginId = 'org.example.ipc-uninstall-demo';
 const version = '1.0.0';
@@ -143,6 +144,19 @@ afterEach(async () => {
 });
 
 describe('v2 plugin uninstall IPC', () => {
+  it('disposes only hosts captured when a stop operation begins', async () => {
+    const oldHost = { dispose: vi.fn(async () => undefined) } as unknown as ExternalExtensionRpcHost;
+    const newHost = { dispose: vi.fn(async () => undefined) } as unknown as ExternalExtensionRpcHost;
+    const hosts = new Map<string, ExternalExtensionRpcHost>([['old', oldHost]]);
+    const hostsToStop = snapshotV2Hosts(hosts);
+    hosts.set('new', newHost);
+
+    await disposeAllV2Hosts(hostsToStop);
+
+    expect(oldHost.dispose).toHaveBeenCalledOnce();
+    expect(newHost.dispose).not.toHaveBeenCalled();
+  });
+
   // 使用真实注册流程和包管理器；只有模拟的 utility process 退出事件由测试控制。
   it('waits for the worker exit event before deleting the installed package', async () => {
     const state = await registerFixture();

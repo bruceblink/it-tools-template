@@ -459,8 +459,11 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     // 主窗口关闭只停止活动插件；市场和源码构建控制器必须继续保留到应用退出。
     stopActivePlugins: async () => {
       activeV2Commands.abortAll();
+      // 先固定当前 v2 宿主集合。等待 v1 窗口停止期间，旧 worker 可能退出并释放运行名额；
+      // 新窗口随后启动的 v2 宿主不能被本次旧窗口停止流程处理。
+      const hostsToStop = snapshotV2Hosts(v2Hosts);
       await lifecycleManager.stopActivePlugins();
-      await disposeAllV2Hosts(v2Hosts);
+      await disposeAllV2Hosts(hostsToStop);
     },
     shutdown: async () => {
       await marketplaceController.dispose();
@@ -879,7 +882,14 @@ async function disposeV2Host(hosts: Map<string, ExternalExtensionRpcHost>, plugi
   await host.dispose();
 }
 
-async function disposeAllV2Hosts(hosts: Map<string, ExternalExtensionRpcHost>): Promise<void> {
+/** 固定停止开始时的宿主集合，避免等待其他生命周期任务时处理后来启动的宿主。 */
+export function snapshotV2Hosts(
+  hosts: ReadonlyMap<string, ExternalExtensionRpcHost>,
+): Map<string, ExternalExtensionRpcHost> {
+  return new Map(hosts);
+}
+
+export async function disposeAllV2Hosts(hosts: ReadonlyMap<string, ExternalExtensionRpcHost>): Promise<void> {
   const activeHosts = [...hosts.values()];
   // 退出回调负责移除已停止的宿主；超时的宿主留在表中，便于诊断和重试。
   await Promise.all(activeHosts.map(host => host.dispose()));
