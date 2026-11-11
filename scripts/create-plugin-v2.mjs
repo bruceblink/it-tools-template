@@ -83,8 +83,8 @@ export function parseCreatePluginV2Arguments(argv) {
   if (outputKind !== 'text' && outputKind !== 'table') {
     throw usageError('Output kind must be text or table.');
   }
-  if (capability !== 'none' && capability !== 'runtime.info' && capability !== 'settings.read') {
-    throw usageError('Capability must be none, runtime.info, or settings.read.');
+  if (capability !== 'none' && capability !== 'runtime.info' && capability !== 'settings.read' && capability !== 'data.oui') {
+    throw usageError('Capability must be none, runtime.info, settings.read, or data.oui.');
   }
   return {
     id,
@@ -104,7 +104,9 @@ async function buildFiles(config) {
   const contributionId = `${config.id}/${config.toolId}`;
   const commandId = `${config.id}/run-${config.toolId}`;
   const settingId = `${config.id}/preferred-mode`;
+  const providerId = `${config.id}/oui`;
   const usesSettings = config.capability === 'settings.read';
+  const usesData = config.capability === 'data.oui';
   const manifest = {
     formatVersion: 2,
     id: config.id,
@@ -120,20 +122,29 @@ async function buildFiles(config) {
         description: config.description,
         keywords: ['plugin', config.toolId],
         categoryId: config.categoryId,
-        dataProcessing: 'memory-only',
+        dataProcessing: usesData ? 'local-data' : 'memory-only',
         offline: 'available',
         capabilities: config.capability === 'none' ? [] : [config.capability],
         settings: usesSettings ? [settingId] : [],
-        dataProviders: [],
-        inputs: [{
-          kind: 'text',
-          id: 'input',
-          label: 'Input',
-          description: 'Replace this field with the input your command needs.',
-          multiline: true,
-          required: false,
-          maxLength: 16_384,
-        }],
+        dataProviders: usesData ? [{ id: providerId, queryInputId: 'address' }] : [],
+        inputs: usesData
+          ? [{
+              kind: 'text',
+              id: 'address',
+              label: 'MAC address',
+              description: 'The host queries the declared OUI provider with this value.',
+              required: true,
+              maxLength: 17,
+            }]
+          : [{
+              kind: 'text',
+              id: 'input',
+              label: 'Input',
+              description: 'Replace this field with the input your command needs.',
+              multiline: true,
+              required: false,
+              maxLength: 16_384,
+            }],
         output: { kind: config.outputKind },
       }],
       commands: [{
@@ -151,7 +162,15 @@ async function buildFiles(config) {
         defaultValue: 'default',
         maxLength: 128,
       }] : [],
-      dataProviders: [],
+      dataProviders: usesData ? [{
+        id: providerId,
+        label: 'OUI vendor data',
+        description: 'Host-owned vendor records indexed by MAC prefix.',
+        kind: 'oui.vendor',
+        version: '1.0.0',
+        schemaVersion: 1,
+        maxBytes: 512,
+      }] : [],
     },
   };
   const files = new Map([
@@ -213,6 +232,8 @@ function buildExtensionSource(outputKind, capability) {
     ? '宿主批准后，请从输入 JSON 的 capabilityContext.runtimeInfo 读取平台和应用版本。'
     : capability === 'settings.read'
       ? '宿主批准后，请从输入 JSON 的 capabilityContext.settings 读取清单声明的设置。'
+      : capability === 'data.oui'
+        ? '宿主批准后，请从输入 JSON 的 capabilityContext.data 读取声明的 OUI 数据。'
       : '当前模板没有请求宿主能力。';
   return `#include <stdint.h>
 
@@ -248,6 +269,8 @@ function buildReadme(config, commandId) {
     ? `插件请求 ${codeMark}runtime.info${codeMark}；宿主每次运行前会请求用户批准，并在请求的 ${codeMark}capabilityContext.runtimeInfo${codeMark} 中提供平台和应用版本。`
     : config.capability === 'settings.read'
       ? `插件请求 ${codeMark}settings.read${codeMark}；宿主每次运行前会请求用户批准，并在请求的 ${codeMark}capabilityContext.settings${codeMark} 中提供清单声明的非秘密设置。`
+      : config.capability === 'data.oui'
+        ? `插件请求 ${codeMark}data.oui${codeMark}；宿主每次运行前会请求用户批准，并在请求的 ${codeMark}capabilityContext.data${codeMark} 中提供声明的 OUI 数据。`
       : '插件没有请求宿主能力。';
   return [
     `# ${config.name}`,

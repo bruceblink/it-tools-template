@@ -230,6 +230,8 @@ Add `--capability runtime.info` when the tool needs the host platform and applic
 
 Add `--capability settings.read` when the tool needs a host-managed setting. The scaffold adds a namespaced `preferred-mode` declaration; the host asks for approval on each run and provides the value through `capabilityContext.settings`.
 
+Add `--capability data.oui` when the tool needs host-owned OUI data. The scaffold adds a namespaced provider and a required MAC address input; the host asks for approval on each run and provides the bounded result through `capabilityContext.data`.
+
 ## Sign a v2 WASM plugin
 
 Use Node.js 24 and the repository's pinned pnpm version. Create a `plugin.manifest.json` containing the v2 static manifest fields shown in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). Do not add `runtime`, `entrypoint`, `files`, or `signature`; the packer creates those package fields. The manifest API range must include host API `2.0.0`.

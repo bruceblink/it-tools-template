@@ -147,6 +147,43 @@ test('creates a v2 scaffold with a host-managed settings.read capability templat
   assert.match(await readFile(join(directory, 'plugin', 'src', 'extension.c'), 'utf8'), /capabilityContext\.settings/);
 });
 
+test('creates a v2 scaffold with a host-owned data.oui capability template', async () => {
+  const temporaryRoot = await mkdtemp(join(os.tmpdir(), 'it-tools-plugin-v2-oui-'));
+  const directory = resolve(temporaryRoot, 'oui-plugin');
+  const config = parseCreatePluginV2Arguments([
+    '--id', 'org.example.oui-scaffold',
+    '--name', 'OUI scaffold v2 plugin',
+    '--directory', directory,
+    '--capability', 'data.oui',
+  ]);
+  await createPluginV2Scaffold(config);
+
+  const manifest = JSON.parse(await readFile(join(directory, 'plugin.manifest.json'), 'utf8'));
+  const providerId = 'org.example.oui-scaffold/oui';
+  assert.deepEqual(manifest.requestedCapabilities, ['data.oui']);
+  assert.deepEqual(manifest.contributions.tools[0].capabilities, ['data.oui']);
+  assert.deepEqual(manifest.contributions.tools[0].dataProviders, [{ id: providerId, queryInputId: 'address' }]);
+  assert.deepEqual(manifest.contributions.tools[0].inputs, [{
+    kind: 'text',
+    id: 'address',
+    label: 'MAC address',
+    description: 'The host queries the declared OUI provider with this value.',
+    required: true,
+    maxLength: 17,
+  }]);
+  assert.deepEqual(manifest.contributions.dataProviders, [{
+    id: providerId,
+    label: 'OUI vendor data',
+    description: 'Host-owned vendor records indexed by MAC prefix.',
+    kind: 'oui.vendor',
+    version: '1.0.0',
+    schemaVersion: 1,
+    maxBytes: 512,
+  }]);
+  assert.match(await readFile(join(directory, 'README.md'), 'utf8'), /capabilityContext\.data/);
+  assert.match(await readFile(join(directory, 'plugin', 'src', 'extension.c'), 'utf8'), /capabilityContext\.data/);
+});
+
 test('rejects invalid v2 scaffold metadata before writing a directory', () => {
   assert.throws(() => parseCreatePluginV2Arguments(['--id', 'Org.Example', '--name', 'Bad']), /Plugin ID/);
   assert.throws(() => parseCreatePluginV2Arguments([
@@ -167,7 +204,7 @@ test('rejects invalid v2 scaffold metadata before writing a directory', () => {
   assert.throws(() => parseCreatePluginV2Arguments([
     '--id', 'org.example.plugin',
     '--name', 'Bad',
-    '--capability', 'data.oui',
+    '--capability', 'settings.write',
   ]), /Capability/);
 });
 
