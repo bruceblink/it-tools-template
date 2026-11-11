@@ -95,11 +95,14 @@ test('keeps v2 package controls usable across themes and narrow widths', async (
       await page.reload();
       for (const width of [1280, 560, 390]) {
         await page.setViewportSize({ width, height: 900 });
-        const card = page.locator('.v2-plugin-package-card');
-        await card.scrollIntoViewIfNeeded();
-        const heading = card.locator('.v2-plugin-section-heading');
+        const region = page.getByRole('region', {
+          name: language === 'zh' ? '桌面插件包' : 'Desktop plugin packages',
+          exact: true,
+        });
+        await region.scrollIntoViewIfNeeded();
+        const heading = region.locator('.plugin-section-heading');
         const description = await heading.locator('p').boundingBox();
-        const button = heading.getByRole('button', { name: language === 'zh' ? '安装 v2 插件包' : 'Install v2 package' });
+        const button = region.getByRole('button', { name: language === 'zh' ? '安装 v2 插件包' : 'Install v2 package' });
         const buttonBox = await button.boundingBox();
         const bounds = await heading.boundingBox();
         expect(description).not.toBeNull();
@@ -109,7 +112,7 @@ test('keeps v2 package controls usable across themes and narrow widths', async (
         if (width <= 560) {
           expect(buttonBox!.y).toBeGreaterThanOrEqual(description!.y + description!.height);
         }
-        expect(await card.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
+        expect(await region.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true);
         await button.focus();
         await expect(button).toBeFocused();
       }

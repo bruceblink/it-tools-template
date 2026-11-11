@@ -527,16 +527,6 @@ onBeforeUnmount(() => {
               >
                 {{ t('pluginMarketplace.installRelease') }}
               </n-button>
-              <n-button
-                tag="a"
-                size="small"
-                type="primary"
-                :href="repository.htmlUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {{ t('pluginMarketplace.openRepository') }}
-              </n-button>
             </div>
           </template>
         </n-card>
@@ -549,7 +539,7 @@ onBeforeUnmount(() => {
       </n-button>
     </div>
 
-    <n-modal v-model:show="detailsVisible" preset="card" class="repository-modal" @close="closeDetails">
+    <n-modal v-model:show="detailsVisible" preset="card" :closable="false" class="repository-modal" @close="closeDetails">
       <template #header>
         <div v-if="selectedRepository" class="repository-modal-heading">
           <div>
@@ -850,8 +840,14 @@ onBeforeUnmount(() => {
   padding: 24px 0 0;
 }
 
-.repository-modal {
-  width: min(720px, calc(100vw - 32px));
+:global(.repository-modal) {
+  width: min(760px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+}
+
+:global(.repository-modal .n-card__content) {
+  max-height: min(68vh, 720px);
+  overflow-y: auto;
 }
 
 .repository-detail-list {
@@ -862,6 +858,7 @@ onBeforeUnmount(() => {
 
 .repository-detail-list > div {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 10px;
@@ -880,6 +877,7 @@ onBeforeUnmount(() => {
 
 .manifest-summary-heading {
   align-items: flex-start;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 

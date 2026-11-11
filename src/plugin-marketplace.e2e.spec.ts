@@ -40,14 +40,13 @@ test('plugin marketplace lists repositories and opens manifest reference details
     });
   });
 
-  await page.route('https://api.github.com/repos/example/demo-plugin/contents/plugin.source.json**', async route => {
+  await page.route('https://api.github.com/repos/example/demo-plugin/contents/plugin.manifest.json**', async route => {
     const manifest = {
-      formatVersion: 1,
+      formatVersion: 2,
       id: 'example/demo-plugin',
       name: 'Demo plugin',
       version: '1.0.0',
-      apiVersion: { minInclusive: '1.4.0', maxExclusive: '2.0.0' },
-      entrypoint: 'index.html',
+      apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
       requestedCapabilities: ['runtime.info'],
       contributions: { tools: [] },
     };
@@ -94,6 +93,7 @@ test('desktop marketplace can install a repository release through the host brid
               version: '1.0.0',
             },
             source: {
+              kind: 'release',
               repository: 'example/demo-plugin',
               tagName: 'v1.0.0',
               commitSha: 'a'.repeat(40),
@@ -140,11 +140,9 @@ test('desktop marketplace can install a repository release through the host brid
   await page.goto('/plugin-marketplace');
   const repositoryCard = page.getByTestId('plugin-repository-42');
   await expect(repositoryCard.getByRole('button', { name: 'Install latest release' })).toBeVisible();
+  await expect(repositoryCard.getByRole('button', { name: 'Details' })).toBeVisible();
+  await expect(repositoryCard.getByRole('link', { name: 'Open repository' })).toHaveCount(0);
   await repositoryCard.getByRole('button', { name: 'Details' }).click();
-  await expect(page.getByRole('link', { name: 'Build from a fixed commit' })).toHaveAttribute(
-    'href',
-    '/settings?pluginOwner=example&pluginName=demo-plugin',
-  );
   await page.getByRole('button', { name: 'Close plugin details' }).click();
   await repositoryCard.getByRole('button', { name: 'Install latest release' }).click();
   await expect(page.getByText('Installed Demo plugin 1.0.0 from release v1.0.0.', { exact: false })).toBeVisible();
