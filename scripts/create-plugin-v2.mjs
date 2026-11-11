@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +6,14 @@ import { fileURLToPath } from 'node:url';
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDirectory, '..');
 const defaultPluginsDirectory = join(repositoryRoot, 'plugins');
+const sdkV2Directory = join(repositoryRoot, 'plugins', 'sdk-v2');
+const sdkV2TypeFiles = [
+  'it-tools-plugin-v2.d.ts',
+  'plugin-v2-json.d.ts',
+  'plugin-v2-manifest.d.ts',
+  'plugin-v2-package.d.ts',
+  'plugin-v2-wasm.d.ts',
+];
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 const pluginToolIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const categoryIdPattern = /^[a-z][a-z0-9-]{0,63}$/;
@@ -82,7 +90,7 @@ export function parseCreatePluginV2Arguments(argv) {
   };
 }
 
-function buildFiles(config) {
+async function buildFiles(config) {
   const contributionId = `${config.id}/${config.toolId}`;
   const commandId = `${config.id}/run-${config.toolId}`;
   const manifest = {
@@ -129,6 +137,9 @@ function buildFiles(config) {
     ['plugin/src/extension.c', buildExtensionSource()],
     ['README.md', buildReadme(config, commandId)],
   ]);
+  for (const fileName of sdkV2TypeFiles) {
+    files.set(join('types', fileName), await readFile(join(sdkV2Directory, fileName), 'utf8'));
+  }
   return files;
 }
 
@@ -231,7 +242,7 @@ function buildReadme(config, commandId) {
 
 /** 创建不覆盖已有目录的 v2 插件脚手架。 */
 export async function createPluginV2Scaffold(config) {
-  const files = buildFiles(config);
+  const files = await buildFiles(config);
   await mkdir(dirname(config.directory), { recursive: true });
   try {
     await mkdir(config.directory);

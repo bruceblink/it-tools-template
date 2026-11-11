@@ -217,7 +217,7 @@ Create a v2 scaffold with a host-rendered text tool:
 pnpm run plugin:create:v2 -- --id org.example.my-plugin --name "My plugin"
 ~~~
 
-The generated project contains `plugin.manifest.json`, a minimal `alloc`/`execute`/`free` WASM module, a Zig build script, and a README for `plugin:pack:v2`. It requests no host capabilities and does not provide HTML, CSS, Vue components, or custom rendering templates.
+The generated project contains `plugin.manifest.json`, a minimal `alloc`/`execute`/`free` WASM module, a Zig build script, self-contained `types/` declarations for the v2 manifest, package envelope, command results, and WASM ABI, and a README for `plugin:pack:v2`. It requests no host capabilities and does not provide HTML, CSS, Vue components, or custom rendering templates.
 
 ## Sign a v2 WASM plugin
 

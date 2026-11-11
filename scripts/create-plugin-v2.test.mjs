@@ -22,9 +22,16 @@ test('creates a buildable v2 WASM scaffold with a host-rendered text tool', asyn
   const result = await createPluginV2Scaffold(config);
 
   assert.equal(result.directory, directory);
-  assert.deepEqual((await readdir(directory)).sort(), ['README.md', 'plugin', 'plugin.manifest.json']);
+  assert.deepEqual((await readdir(directory)).sort(), ['README.md', 'plugin', 'plugin.manifest.json', 'types']);
   assert.deepEqual((await readdir(join(directory, 'plugin'))).sort(), ['build.mjs', 'src']);
   assert.deepEqual((await readdir(join(directory, 'plugin', 'src'))).sort(), ['extension.c']);
+  assert.deepEqual((await readdir(join(directory, 'types'))).sort(), [
+    'it-tools-plugin-v2.d.ts',
+    'plugin-v2-json.d.ts',
+    'plugin-v2-manifest.d.ts',
+    'plugin-v2-package.d.ts',
+    'plugin-v2-wasm.d.ts',
+  ]);
   const manifest = JSON.parse(await readFile(join(directory, 'plugin.manifest.json'), 'utf8'));
   assert.equal(manifest.formatVersion, 2);
   assert.deepEqual(manifest.apiVersion, { minInclusive: '2.0.0', maxExclusive: '3.0.0' });

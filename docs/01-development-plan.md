@@ -82,7 +82,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 ### P0：插件开发闭环（PLUGIN-DEVEX-FOUNDATION-001）
 
-- 现有基础：`plugin:create` 可以生成 legacy 源码清单、静态页面和五个自包含 SDK 声明；`plugin:create:v2` 可以生成 v2 清单、最小 WASM ABI 和构建说明；`plugin:validate`、`plugin:pack` 和 `plugin:keygen` 已有安全边界；`plugins/capability-demo/` 提供能力调用示例；`scripts/plugin-project.test.mjs` 已验证仓库外 TypeScript 项目。
+- 现有基础：`plugin:create` 可以生成 legacy 源码清单、静态页面和五个自包含 SDK 声明；`plugin:create:v2` 可以生成 v2 清单、最小 WASM ABI、构建说明和自包含 v2 类型声明；`plugin:validate`、`plugin:pack` 和 `plugin:keygen` 已有安全边界；`plugins/capability-demo/` 提供能力调用示例；`scripts/plugin-project.test.mjs` 和 `scripts/plugin-v2-project.test.mjs` 已验证仓库外 TypeScript 项目。
 - 主要缺口：真实 GitHub 源码和 Release 资产的完整安装证据仍不完整。Electron 窗口的构建、信任、授权、运行、停止和恢复流程已由 Xorg dummy display 下的 E2E 覆盖；市场详情现在可以把仓库所有者和名称带入源码构建表单；固定 commit 仍需用户核对并填写，签名密钥仍需在桌面端选择。
 - 已完成切片：`plugin:build-source` 和桌面源码构建入口固定 commit，流式下载并校验源码快照，拒绝危险 tar 条目，执行源码校验和可选 TypeScript `--noEmit`，使用仓库外 Ed25519 私钥生成并安装 `.itxs`，保存独立的 `source-snapshot` 来源摘要。流程不运行仓库脚本、不安装依赖，也不加载原始源码。
 - 下一步：补真实 GitHub Release 资产安装验收，并继续完善固定 commit 的审查提示，不绕过签名、信任和隔离边界。
