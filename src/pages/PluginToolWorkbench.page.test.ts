@@ -62,6 +62,29 @@ describe('PluginToolWorkbench', () => {
     expect(wrapper.text()).toContain('"name": "Ada"');
   });
 
+  it('renders table results with host-owned columns and rows', async () => {
+    const tableTool = { ...tool, resultKind: 'table' as const, fields: [] };
+    const execute = vi.fn(async () => ({
+      kind: 'table' as const,
+      value: {
+        columns: [{ id: 'name', label: 'Name' }, { id: 'count', label: 'Count' }],
+        rows: [['alpha', 2] as const],
+      },
+    }));
+    const wrapper = mount(PluginToolWorkbench, {
+      props: { tool: tableTool, execute },
+      global: { plugins: [createI18n({ legacy: false, locale: 'en', messages: { en: {} } })] },
+    });
+
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.find('table').exists()).toBe(true);
+    expect(wrapper.text()).toContain('Name');
+    expect(wrapper.text()).toContain('alpha');
+    expect(wrapper.text()).toContain('2');
+  });
+
   it('does not execute a command when a required field is empty', async () => {
     const execute = vi.fn();
     const wrapper = mount(PluginToolWorkbench, {

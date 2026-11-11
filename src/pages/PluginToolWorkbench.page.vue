@@ -8,6 +8,7 @@ import type {
   PluginToolInputField,
   PluginToolInputValue,
   PluginToolInputValueMap,
+  PluginToolTableValue,
   PluginToolWorkbenchDefinition,
 } from '@/shared/plugin-tool-workbench';
 
@@ -106,6 +107,24 @@ function getSelectOptions(field: PluginToolInputField) {
   return field.type === 'select'
     ? field.options.map(option => ({ label: option.label, value: option.value }))
     : [];
+}
+
+type PluginToolTableRow = Record<string, unknown>;
+
+// 使用宿主表格列定义，插件结果不能注入自定义渲染器。
+function getTableHeaders(table: PluginToolTableValue): Record<string, string> {
+  return Object.fromEntries(table.columns.map(column => [column.id, column.label]));
+}
+
+// 将协议中的数组行映射为 Naive UI 表格数据，并补齐空单元格。
+function getTableRows(table: PluginToolTableValue): PluginToolTableRow[] {
+  return table.rows.map(row => Object.fromEntries(
+    table.columns.map((column, index) => [column.id, row[index] ?? null]),
+  ));
+}
+
+function getTableMinimumWidth(table: PluginToolTableValue): number {
+  return Math.max(640, table.columns.length * 160);
 }
 
 function cancelCommand(): void {
@@ -299,7 +318,15 @@ onUnmounted(() => activeController?.abort());
         {{ commandError }}
       </n-alert>
       <n-card v-if="result" class="plugin-tool-workbench-result" :title="labels.result" size="small" mt-4>
-        <pre class="plugin-tool-workbench-text-result">{{ result.kind === 'json' ? JSON.stringify(result.value, null, 2) : result.value }}</pre>
+        <div v-if="result.kind === 'table'" class="plugin-tool-workbench-table-wrapper">
+          <c-table
+            :data="getTableRows(result.value)"
+            :headers="getTableHeaders(result.value)"
+            :description="labels.result"
+            :style="{ minWidth: `${getTableMinimumWidth(result.value)}px` }"
+          />
+        </div>
+        <pre v-else class="plugin-tool-workbench-text-result">{{ result.kind === 'json' ? JSON.stringify(result.value, null, 2) : result.value }}</pre>
       </n-card>
     </n-card>
   </div>
@@ -350,6 +377,11 @@ onUnmounted(() => activeController?.abort());
 .plugin-tool-workbench-result :deep(.n-card-content) {
   min-width: 0;
   overflow: auto;
+}
+
+.plugin-tool-workbench-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .plugin-tool-workbench-text-result {

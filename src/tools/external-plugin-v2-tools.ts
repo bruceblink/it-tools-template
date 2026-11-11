@@ -144,9 +144,6 @@ function toWorkbenchDefinition(
   command: ExternalPluginV2CommandDeclaration,
 ): PluginToolWorkbenchDefinition {
   const fields = declaration.inputs.map(toWorkbenchField);
-  if (declaration.output.kind === 'table') {
-    throw new Error(`Plugin tool ${declaration.id} declares unsupported table output.`);
-  }
   return {
     pluginId: manifest.id,
     version: manifest.version,

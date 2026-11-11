@@ -216,7 +216,7 @@ function mapWasmError(error: unknown): WorkerFailureCode {
 }
 
 function isPluginToolCommandResult(value: ExternalExtensionRpcJsonValue): value is ExternalExtensionRpcJsonValue & {
-  kind: 'text' | 'json';
+  kind: 'text' | 'json' | 'table';
   value: ExternalExtensionRpcJsonValue;
 } {
   if (!isRecord(value)) {
@@ -225,7 +225,13 @@ function isPluginToolCommandResult(value: ExternalExtensionRpcJsonValue): value 
   if (value.kind === 'text') {
     return typeof value.value === 'string';
   }
-  return value.kind === 'json' && isJsonValue(value.value);
+  if (value.kind === 'json') {
+    return isJsonValue(value.value);
+  }
+  if (value.kind !== 'table' || !isRecord(value.value)) {
+    return false;
+  }
+  return isJsonValue(value.value);
 }
 
 function isJsonValue(value: unknown, depth = 0): value is ExternalExtensionRpcJsonValue {

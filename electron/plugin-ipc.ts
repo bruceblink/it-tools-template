@@ -42,7 +42,11 @@ import type {
   DesktopPluginSourceBuildInput,
   DesktopPluginSourceBuildProgress,
 } from '../src/shared/desktop-services/plugins';
-import type { PluginToolCommandResult, PluginToolInputValueMap } from '../src/shared/plugin-tool-workbench';
+import {
+  isPluginToolCommandResult,
+  type PluginToolCommandResult,
+  type PluginToolInputValueMap,
+} from '../src/shared/plugin-tool-workbench';
 import type {
   ExternalExtensionCapabilityContext,
   ExternalExtensionRpcJsonValue,
@@ -852,32 +856,10 @@ function isPluginToolInputMap(value: unknown): value is PluginToolInputValueMap 
 }
 
 function parsePluginToolCommandResult(value: ExternalExtensionRpcJsonValue | undefined): PluginToolCommandResult {
-  if (!isRecord(value) || (value.kind !== 'text' && value.kind !== 'json')) {
+  if (!isPluginToolCommandResult(value)) {
     throw new PluginIpcInputError('operation-failed', 'The v2 extension returned an invalid command result.');
   }
-  if (value.kind === 'text' && typeof value.value === 'string') {
-    return { kind: 'text', value: value.value };
-  }
-  if (value.kind === 'json' && isJsonValue(value.value)) {
-    return { kind: 'json', value: value.value };
-  }
-  throw new PluginIpcInputError('operation-failed', 'The v2 extension returned an invalid command result.');
-}
-
-function isJsonValue(value: unknown, depth = 0): value is ExternalExtensionRpcJsonValue {
-  if (depth > 16 || value === null || typeof value === 'string' || typeof value === 'boolean') {
-    return value === null || typeof value === 'string' || typeof value === 'boolean';
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value);
-  }
-  if (Array.isArray(value)) {
-    return value.every(item => isJsonValue(item, depth + 1));
-  }
-  if (!isRecord(value)) {
-    return false;
-  }
-  return Object.values(value).every(item => isJsonValue(item, depth + 1));
+  return value;
 }
 
 async function disposeV2Host(hosts: Map<string, ExternalExtensionRpcHost>, pluginId: string, version: string): Promise<void> {

@@ -10,7 +10,7 @@ import { toolsWithCategory } from './index';
 import { ExternalPluginV2Registry, externalPluginV2Registry } from './external-plugin-v2-registry';
 import { projectExternalPluginV2Manifest } from './external-plugin-v2-tools';
 import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
-import type { PluginToolCommandExecutor, PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
+import { isPluginToolCommandResult, type PluginToolCommandExecutor, type PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
 import type { DesktopPluginErrorCode } from '@/shared/desktop-services/plugins';
 
 const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
@@ -86,33 +86,6 @@ function createPluginToolCommandError(code: DesktopPluginErrorCode): Error & {
     ? code
     : 'operation-failed';
   return Object.assign(new Error('The plugin command could not be completed.'), { code: safeCode });
-}
-
-function isPluginToolCommandResult(value: unknown): value is PluginToolCommandResult {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const record = value as Record<string, unknown>;
-  if (record.kind === 'text') {
-    return typeof record.value === 'string';
-  }
-  return record.kind === 'json' && isJsonValue(record.value);
-}
-
-function isJsonValue(value: unknown, depth = 0): boolean {
-  if (depth > 16 || value === null || typeof value === 'string' || typeof value === 'boolean') {
-    return value === null || typeof value === 'string' || typeof value === 'boolean';
-  }
-  if (typeof value === 'number') {
-    return Number.isFinite(value);
-  }
-  if (Array.isArray(value)) {
-    return value.every(item => isJsonValue(item, depth + 1));
-  }
-  if (typeof value !== 'object') {
-    return false;
-  }
-  return Object.values(value).every(item => isJsonValue(item, depth + 1));
 }
 
 async function refreshExternalPluginV2Tools(): Promise<void> {

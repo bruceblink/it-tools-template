@@ -100,6 +100,27 @@ describe('external plugin v2 registry projection', () => {
     ]);
   });
 
+  it('projects the host-owned table result type', () => {
+    const baseManifest = createManifest();
+    const manifest = {
+      ...baseManifest,
+      contributions: {
+        ...baseManifest.contributions,
+        tools: [{
+          ...baseManifest.contributions.tools[0]!,
+          output: { kind: 'table' as const },
+        }],
+      },
+    } as unknown as ExternalPluginV2Manifest;
+
+    const projection = projectExternalPluginV2Manifest(manifest, {
+      component: async () => ({} as Component),
+      icon: {} as Component,
+    });
+
+    expect(projection.registrations[0]?.workbench.resultKind).toBe('table');
+  });
+
   it('rejects multiple commands bound to one tool', () => {
     const manifest = createManifest();
     const duplicateCommand = {
