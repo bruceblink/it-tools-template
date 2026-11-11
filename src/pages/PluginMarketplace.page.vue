@@ -614,6 +614,9 @@ onBeforeUnmount(() => {
               <n-tag size="small" type="success">
                 API {{ selectedManifest.apiVersion.minInclusive }} – {{ selectedManifest.apiVersion.maxExclusive }}
               </n-tag>
+              <n-tag v-if="selectedManifest.formatVersion >= 2" size="small" type="info">
+                v2{{ selectedManifest.runtime ? ` · ${selectedManifest.runtime.toUpperCase()}` : '' }}
+              </n-tag>
             </div>
             <p>{{ t('pluginMarketplace.manifestNotice') }}</p>
             <div v-if="selectedManifest.requestedCapabilities.length > 0" class="repository-topics">

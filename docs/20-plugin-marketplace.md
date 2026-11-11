@@ -14,10 +14,10 @@ topic:it-tools-plugin archived:false fork:false
 
 - 添加 it-tools-plugin GitHub topic；
 - 提供仓库描述和 README；
-- 推荐提交 plugin.source.json，市场会在详情窗口读取它的 API 版本、能力声明和工具贡献元数据；
+- 推荐提交 plugin.source.json，市场会在详情窗口读取它的 API 版本、能力声明和工具贡献元数据；v2 插件可以提交 plugin.manifest.json，市场会在缺少旧清单时读取它；
 - 不要把私钥、凭据或未经审查的发布资产提交到仓库。
 
-市场读取 GitHub 的仓库元数据和 plugin.source.json 摘要，不执行仓库代码，不在 Web 页面下载 .itxs 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程复用本地安装器完成签名、哈希和资源限制校验。桌面详情还提供“从固定提交构建”入口；该入口只传递仓库身份，commit 和签名密钥仍由用户在设置页核对或选择。
+市场读取 GitHub 的仓库元数据和 plugin.source.json/plugin.manifest.json 摘要，不执行仓库代码，不在 Web 页面下载 .itxs 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程按包格式选择 v1 或 v2 管理器完成签名、哈希和资源限制校验。桌面详情还提供“从固定提交构建”入口；该入口只传递仓库身份，commit 和签名密钥仍由用户在设置页核对或选择。
 
 ## 配置
 

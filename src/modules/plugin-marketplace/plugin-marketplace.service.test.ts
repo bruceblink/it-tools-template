@@ -153,6 +153,34 @@ describe('plugin marketplace GitHub adapter', () => {
     await expect(fetchPluginManifest(repository())).resolves.toBeNull();
   });
 
+  it('falls back to the v2 source manifest when the legacy manifest is absent', async () => {
+    const manifest = {
+      formatVersion: 2,
+      id: 'example/demo-plugin',
+      name: 'Demo plugin',
+      version: '2.0.0',
+      apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
+      requestedCapabilities: ['runtime.info'],
+      contributions: { tools: [] },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('missing', { status: 404, statusText: 'Not Found' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        type: 'file',
+        encoding: 'base64',
+        content: btoa(JSON.stringify(manifest)),
+      }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(fetchPluginManifest(repository())).resolves.toMatchObject({
+      formatVersion: 2,
+      id: 'example/demo-plugin',
+      requestedCapabilities: ['runtime.info'],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain('/contents/plugin.manifest.json');
+  });
+
   it('preserves API status and rate-limit information for the UI', async () => {
     const reset = String(Math.floor(Date.now() / 1000) + 120);
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ message: 'rate limit' }), {
