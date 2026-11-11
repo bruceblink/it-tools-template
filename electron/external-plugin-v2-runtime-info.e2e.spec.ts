@@ -74,7 +74,7 @@ test('requires a fresh native confirmation before exposing runtime.info to WASM'
   await page.getByLabel('Ed25519 public key (PEM)').fill(signerPublicKey);
   await page.getByRole('button', { name: 'Preview fingerprint' }).click();
   await page.getByRole('button', { name: 'Trust this signer' }).click();
-  await expect(page.getByText('Signer key added. Plugin capabilities still require separate approval.')).toBeVisible();
+  await expect(page.getByText('Signer key added.')).toBeVisible();
 
   const archivePath = join(temporaryDirectory, 'runtime-info.itxs');
   await installV2Package(archivePath);
@@ -99,7 +99,7 @@ test('requires a fresh native confirmation before exposing runtime.info to WASM'
   const afterReject = await readNativeMessageBoxCalls();
   expect(afterReject).toHaveLength(1);
   expect(afterReject[0]).toMatchObject({
-    message: `${pluginName} (${pluginId}) requests runtime.info for ${toolTitle}.`,
+    message: `${pluginName} (${pluginId}) requests read-only capabilities for ${toolTitle}.`,
     buttons: ['Allow once / 本次允许', 'Cancel / 取消'],
   });
 

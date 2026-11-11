@@ -17,11 +17,9 @@ describe('plugin management IPC sender validation', () => {
     expect(isTrustedDesktopSender({ senderFrame: childFrame, sender: { mainFrame } }, trustedRendererUrl)).toBe(false);
   });
 
-  it('rejects plugin frames and lookalike application origins', () => {
-    const pluginFrame = { url: 'it-plugin://org.example.sandbox/index.html' };
+  it('rejects lookalike application origins', () => {
     const forgedFrame = { url: 'app://bundle.attacker.test/settings' };
 
-    expect(isTrustedDesktopSender({ senderFrame: pluginFrame, sender: { mainFrame: pluginFrame } }, trustedRendererUrl)).toBe(false);
     expect(isTrustedDesktopSender({ senderFrame: forgedFrame, sender: { mainFrame: forgedFrame } }, trustedRendererUrl)).toBe(false);
   });
 

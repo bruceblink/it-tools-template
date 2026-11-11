@@ -1,6 +1,6 @@
 import { get, useStorage } from '@vueuse/core';
 import { defineStore } from 'pinia';
-import { onScopeDispose, shallowRef } from 'vue';
+import { onScopeDispose } from 'vue';
 import { Puzzle } from '@vicons/tabler';
 import type { MaybeRef, Ref } from 'vue';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';

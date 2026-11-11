@@ -28,6 +28,6 @@ watch(registration, (tool) => {
   </div>
   <ExternalPluginV2ToolPage v-else-if="isV2" />
   <n-alert v-else type="warning" :show-icon="false" role="alert">
-    This plugin tool is no longer available because legacy plugin tools are not supported.
+    This plugin tool is unavailable because the installed v2 package is not registered.
   </n-alert>
 </template>

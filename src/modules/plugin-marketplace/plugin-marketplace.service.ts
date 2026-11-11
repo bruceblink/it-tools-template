@@ -55,7 +55,6 @@ export interface PluginManifestSummary {
     readonly minInclusive: string;
     readonly maxExclusive: string;
   };
-  readonly entrypoint?: string;
   readonly requestedCapabilities: readonly string[];
   readonly toolContributions: readonly PluginManifestToolContribution[];
 }
@@ -342,12 +341,9 @@ function normalizeManifest(value: unknown): PluginManifestSummary | null {
   const version = asString(record?.version);
   const minInclusive = asString(apiVersion?.minInclusive);
   const maxExclusive = asString(apiVersion?.maxExclusive);
-  const formatVersion = typeof record?.formatVersion === 'number' && Number.isSafeInteger(record.formatVersion)
-    ? record.formatVersion
-    : 1;
+  const formatVersion = record?.formatVersion === 2 ? 2 : undefined;
   const runtime = record?.runtime === 'process' || record?.runtime === 'wasm' ? record.runtime : undefined;
-  const entrypoint = asString(record?.entrypoint) ?? undefined;
-  if (!id || !name || !version || !minInclusive || !maxExclusive || (formatVersion === 1 && !entrypoint)) {
+  if (!id || !name || !version || !minInclusive || !maxExclusive || formatVersion !== 2) {
     return null;
   }
 
@@ -379,7 +375,6 @@ function normalizeManifest(value: unknown): PluginManifestSummary | null {
     name,
     version,
     apiVersion: { minInclusive, maxExclusive },
-    ...(entrypoint === undefined ? {} : { entrypoint }),
     requestedCapabilities,
     toolContributions,
   };
@@ -393,27 +388,21 @@ export async function fetchPluginManifest(
   if (!owner || !name) {
     return null;
   }
-  for (const fileName of ['plugin.source.json', 'plugin.manifest.json'] as const) {
-    const endpoint = createApiUrl(
-      'repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(name) + '/contents/' + fileName,
-    );
-    endpoint.searchParams.set('ref', repository.defaultBranch);
-    try {
-      const payload = await fetchJson<GithubContentResponse>(endpoint, signal);
-      if (payload.type !== 'file' || payload.encoding !== 'base64' || typeof payload.content !== 'string') {
-        continue;
-      }
-      const manifest = normalizeManifest(JSON.parse(decodeBase64Utf8(payload.content)));
-      if (manifest) {
-        return manifest;
-      }
+  const endpoint = createApiUrl(
+    'repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(name) + '/contents/plugin.manifest.json',
+  );
+  endpoint.searchParams.set('ref', repository.defaultBranch);
+  try {
+    const payload = await fetchJson<GithubContentResponse>(endpoint, signal);
+    if (payload.type !== 'file' || payload.encoding !== 'base64' || typeof payload.content !== 'string') {
+      return null;
     }
-    catch (error) {
-      if (error instanceof PluginMarketplaceApiError && error.status === 404) {
-        continue;
-      }
-      throw error;
-    }
+    return normalizeManifest(JSON.parse(decodeBase64Utf8(payload.content)));
   }
-  return null;
+  catch (error) {
+    if (error instanceof PluginMarketplaceApiError && error.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }

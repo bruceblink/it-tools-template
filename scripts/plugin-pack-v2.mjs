@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-import { createHash, createPrivateKey, sign } from 'node:crypto';
+import { createHash, createPrivateKey, generateKeyPairSync, sign } from 'node:crypto';
 import { open, lstat, mkdir, realpath, rm } from 'node:fs/promises';
 import { dirname, extname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { pluginPackageLimits } from './plugin-pack.mjs';
 import { createStoredZip } from './stored-zip.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,6 +12,13 @@ const supportedHostApiVersion = '2.0.0';
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const maximumSourceManifestBytes = 64 * 1024;
 const maximumPrivateKeyBytes = 16 * 1024;
+const pluginPackageLimits = Object.freeze({
+  maximumArchiveBytes: 64 * 1024 * 1024,
+  maximumExpandedBytes: 128 * 1024 * 1024,
+  maximumAssetBytes: 16 * 1024 * 1024,
+  maximumManifestBytes: 1024 * 1024,
+  maximumPathSegments: 32,
+});
 const privateKeyMarker = /-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----/;
 let externalPluginV2ValidatorPromise;
 
@@ -141,6 +147,44 @@ async function validateSourceManifest(value) {
 export async function validateExternalPluginV2SourceManifest(manifestPath) {
   const manifest = await validateSourceManifest(await readSourceManifest(manifestPath));
   return { pluginId: manifest.id, version: manifest.version };
+}
+
+/** 在仓库外生成 v2 Ed25519 签名密钥，避免私钥进入源码或安装包。 */
+export async function generateExternalPluginV2SigningKey({ outputDirectory, keyId }) {
+  assertKeyId(keyId);
+  const appRealRoot = await realpath(repositoryRoot);
+  const output = resolve(outputDirectory);
+  if (isContainedPath(appRealRoot, output)) {
+    throw new Error('Store generated signing keys outside the repository.');
+  }
+  await mkdir(output, { recursive: true, mode: 0o700 });
+  const realOutput = await realpath(output);
+  if (isContainedPath(appRealRoot, realOutput)) {
+    throw new Error('Store generated signing keys outside the repository.');
+  }
+  const privateKeyPath = resolve(realOutput, `${keyId}.private.pem`);
+  const publicKeyPath = resolve(realOutput, `${keyId}.public.pem`);
+  const { privateKey, publicKey } = generateKeyPairSync('ed25519');
+  const privateBytes = Buffer.from(privateKey.export({ type: 'pkcs8', format: 'pem' }));
+  const publicBytes = Buffer.from(publicKey.export({ type: 'spki', format: 'pem' }));
+  let privateCreated = false;
+  try {
+    await writeExclusive(privateKeyPath, privateBytes, 0o600);
+    privateCreated = true;
+    await writeExclusive(publicKeyPath, publicBytes, 0o644);
+  }
+  catch (error) {
+    if (privateCreated) {
+      await rm(privateKeyPath, { force: true });
+    }
+    throw error;
+  }
+  const fingerprintHex = createHash('sha256')
+    .update(publicKey.export({ type: 'spki', format: 'der' }))
+    .digest('hex')
+    .toUpperCase();
+  const fingerprint = `SHA256:${fingerprintHex.match(/.{2}/g).join(':')}`;
+  return { keyId, privateKeyPath, publicKeyPath, fingerprint };
 }
 
 async function loadExternalPluginV2Validator() {
@@ -325,6 +369,7 @@ function assertFlags(flags, required) {
 function getUsage() {
   return [
     'IT Tools signed Electron v2 WASM plugin commands',
+    '  pnpm run plugin:keygen:v2 --key-id <publisher> --output-directory <external-directory>',
     '  pnpm run plugin:validate:v2 --manifest <v2-manifest.json>',
     '  pnpm run plugin:pack:v2 --manifest <v2-manifest.json> --wasm <plugin.wasm> --entrypoint <package-path.wasm>',
     '    --private-key <external.pem> --key-id <publisher> --output <package.itxs>',
@@ -338,12 +383,21 @@ async function runCli(argv) {
     process.stdout.write(getUsage());
     return;
   }
-  if (command !== 'pack' && command !== 'validate' && !command?.startsWith('--')) {
+  if (command !== 'keygen' && command !== 'pack' && command !== 'validate' && !command?.startsWith('--')) {
     throw new Error('Unknown v2 plugin command. Run `pnpm run plugin:validate:v2 --help` for usage.');
   }
 
   const commandArguments = arguments_[0] === '--' ? arguments_.slice(1) : arguments_;
-  const flags = command === 'pack' || command === 'validate' ? parseFlags(commandArguments) : parseFlags(argv);
+  const flags = command === 'keygen' || command === 'pack' || command === 'validate' ? parseFlags(commandArguments) : parseFlags(argv);
+  if (command === 'keygen') {
+    assertFlags(flags, ['key-id', 'output-directory']);
+    const result = await generateExternalPluginV2SigningKey({
+      keyId: flags['key-id'],
+      outputDirectory: flags['output-directory'],
+    });
+    process.stdout.write(`Generated v2 Ed25519 signer ${result.keyId} (${result.fingerprint}): ${result.privateKeyPath}\n`);
+    return;
+  }
   if (command === 'validate') {
     assertFlags(flags, ['manifest']);
     const result = await validateExternalPluginV2SourceManifest(flags.manifest);

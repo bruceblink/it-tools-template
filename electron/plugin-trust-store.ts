@@ -3,13 +3,17 @@ import { open } from 'node:fs/promises';
 import { lstat, mkdir, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import type { PluginPackageSigningKey } from './plugin-package';
-import { isValidPluginId } from './plugin-sandbox';
 
 const keyIdPattern = /^[a-z0-9][a-z0-9._-]{0,127}$/;
 const maximumTrustStoreBytes = 256 * 1024;
 const maximumTrustedKeys = 64;
 const maximumPluginIdsPerKey = 32;
 const maximumPublicKeyBytes = 16 * 1024;
+const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
+
+function isValidPluginId(value: string): boolean {
+  return value.length <= 128 && pluginIdPattern.test(value);
+}
 
 export const pluginTrustStoreLimits = Object.freeze({
   maximumTrustedKeys,

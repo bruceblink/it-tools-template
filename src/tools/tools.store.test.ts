@@ -138,7 +138,6 @@ describe('external plugin v2 command bridge', () => {
       configurable: true,
       writable: true,
       value: {
-        listPlugins: vi.fn(async () => ({ ok: true as const, value: [] })),
         listPluginV2Packages: listV2,
         onPluginStateChanged: (callback: () => void) => { notifyChange = callback; return () => {}; },
       },

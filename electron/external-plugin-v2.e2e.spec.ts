@@ -106,7 +106,7 @@ test('installs and runs signed WASM tools through navigation, search, failure, a
   await page.getByRole('button', { name: 'Preview fingerprint' }).click();
   await expect(page.locator('.signer-preview code')).toContainText('SHA256:');
   await page.getByRole('button', { name: 'Trust this signer' }).click();
-  await expect(page.getByText('Signer key added. Plugin capabilities still require separate approval.')).toBeVisible();
+  await expect(page.getByText('Signer key added.')).toBeVisible();
 
   await installV2Package(join(temporaryDirectory, 'wasm-e2e.itxs'), `plugin-v2-package-${wasmPluginId}-1.0.0`);
   await page.reload();

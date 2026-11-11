@@ -23,7 +23,7 @@ This repository is a maintained fork of [CorentinTh/it-tools](https://github.com
 
 - **117 web tools** in Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, and Data.
 - **Desktop workbenches** for API requests, Git, S3-compatible object storage, and read-only Docker container browsing.
-- **Extensions and plugins:** trusted first-party extensions and an evolving v2 signed external extension model with host-rendered tools, separate signer trust, and a restricted WASM runtime for pure computation. The existing HTML/webview package flow remains legacy during migration.
+- **Extensions and plugins:** trusted first-party extensions and an evolving v2 signed external extension model with host-rendered tools, separate signer trust, and a restricted WASM runtime for pure computation. Only the host-rendered v2 package flow is supported.
 - **Desktop updates:** optional automatic checks and user-confirmed download and installation from GitHub Releases.
 - **Nine web languages:** English, Chinese, German, French, Spanish, Portuguese, Ukrainian, Vietnamese, and Norwegian.
 - **PWA support:** the application shell is precached; visited tool assets are cached by the service worker for later offline use.
@@ -166,50 +166,17 @@ pnpm electron:package:mac
 
 Run desktop smoke tests with pnpm test:e2e:electron. The platform matrix is maintained in [.github/workflows/electron-desktop.yml](.github/workflows/electron-desktop.yml).
 
-## Create a legacy external plugin
+## Create an external plugin
 
-Create a plugin source package with a versioned manifest, one namespaced tool contribution, a minimal isolated page, self-contained SDK type declarations, and a local README:
-
-~~~sh
-pnpm run plugin:create --id org.example.my-plugin --name "My plugin"
-~~~
-
-The default output is `plugins/org.example.my-plugin`. Use `--directory` for a project outside the repository, and review `plugin.source.json` before signing. The `types/` directory contains five self-contained SDK declarations for TypeScript projects. The scaffold targets renderer API `1.4.0`, keeps signing keys outside the source directory, and accepts optional capability declarations:
+Only the v2 host-rendered plugin model is supported. Create a WASM scaffold with a declarative manifest, host-rendered fields and results, and self-contained v2 types:
 
 ~~~sh
-pnpm run plugin:create --id org.example.my-plugin --name "My plugin" --capabilities runtime.info
+pnpm run plugin:create:v2 -- --id org.example.my-plugin --name "My plugin"
 ~~~
 
-The generated package is metadata and UI only. Validate it before creating signing material:
+The desktop Settings plugin manager installs, lists, configures, and uninstalls signed v2 packages. Installed tools use the existing navigation, command search, and workspace UI. The host owns rendering, settings, capability approval, cancellation, timeout handling, failure recovery, and lifecycle state.
 
-~~~sh
-pnpm run plugin:validate --source plugins/org.example.my-plugin
-~~~
-
-The command checks the source manifest, API range, contribution namespace, capability declarations, package paths, file types, and resource limits without reading a private key or writing an archive. `plugin:pack` repeats the same checks before signing. A valid package still does not grant a capability until the desktop host and user approve it.
-
-For a repeatable external-project build, run one command. It validates the source, runs the repository TypeScript compiler when you provide an external `tsconfig.json`, and signs without overwriting an existing package:
-
-~~~sh
-pnpm run plugin:build --source ./dist/plugin --tsconfig ./tsconfig.json \
-  --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
-  --key-id plugin-publisher --output ./artifacts/plugin.itxs
-~~~
-
-For a reviewed GitHub source snapshot, pin a full commit and use the explicit source-build command. The command downloads the snapshot, rejects unsafe archive entries, validates the extracted source, performs the optional no-emit TypeScript check, and signs the package with the external key:
-
-~~~sh
-corepack pnpm plugin:build-source -- \
-  --owner example --name my-plugin --commit <40-char-commit-sha> \
-  --private-key "$HOME/.config/it-tools/plugin-publisher.private.pem" \
-  --key-id plugin-publisher --output ./artifacts/my-plugin.itxs
-~~~
-
-The source-build command does not run repository scripts, install dependencies, or load source directly in Electron. You can also enter the owner, repository, full commit SHA, and signer key ID in the desktop Settings source-build card; the main process selects the private key and installs the generated package. Review the signer fingerprint and approve only the required capabilities. The snapshot commit and archive SHA-256 are reported for review; they do not prove that a published Release was built from that source.
-
-In desktop Settings, the plugin manager starts with a three-step onboarding card that links to the read-only marketplace, explains signer trust, and separates requested, supported, selected, and active capabilities. It also lists, installs, and removes signed v2 packages, shows their declared tools, and edits their non-secret host settings. A v2 WASM tool can request `runtime.info`, the settings it declares, or host-owned OUI data; the desktop host asks for approval on each run and sends a bounded read-only snapshot. Plugin processes cannot write settings, and the process runtime is not available yet.
-
-The new plugin direction is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, capability declarations, optional namespaced scalar settings, and host-owned data provider references. IT Tools renders supported tool pages and registers them for navigation and search. Text, JSON, and bounded table results use host-owned rendering; plugins cannot inject HTML, CSS, Vue components, or custom cell templates. The WASM runtime limits linear memory, module and message sizes, and concurrent workers; it does not enforce an OS-level total memory limit. The `runtime.info`, read-only `settings.read`, and host-owned `data.oui` capabilities are implemented for v2. Settings are persisted in a host-owned plugin namespace and edited in desktop Settings; plugin processes cannot write them. OUI data is read by the host from verified manifest and shard files, queried through a declared text input, and injected as a bounded read-only context. Other capabilities and the process runtime are not complete. The `plugin:create` command creates legacy v1 HTML packages; use `plugin:create:v2` for a buildable WASM v2 scaffold. To sign an existing v2 static manifest and WASM module, use the v2 packer below.
+The plugin architecture is documented in [Plugin system v2 design](docs/22-plugin-architecture-v2.md). A v2 extension contributes commands, declarative fields, result types, capability declarations, optional namespaced scalar settings, and host-owned data provider references. IT Tools renders supported tool pages and registers them for navigation and search. Text, JSON, and bounded table results use host-owned rendering; plugins cannot inject HTML, CSS, Vue components, or custom cell templates. The `runtime.info`, read-only `settings.read`, and host-owned `data.oui` capabilities are implemented for v2. Settings are persisted in a host-owned plugin namespace and edited in desktop Settings; plugin processes cannot write them. OUI data is read by the host from verified manifest and shard files, queried through a declared text input, and injected as a bounded read-only context.
 
 Create a v2 scaffold with a host-rendered tool:
 
@@ -239,7 +206,7 @@ Use Node.js 24 and the repository's pinned pnpm version. Create a `plugin.manife
 Create a signing key outside the repository, then pack the existing WASM module:
 
 ~~~sh
-pnpm run plugin:keygen --key-id example-publisher --output-directory "$HOME/.config/it-tools/plugin-keys"
+pnpm run plugin:keygen:v2 --key-id example-publisher --output-directory "$HOME/.config/it-tools/plugin-keys"
 pnpm run plugin:pack:v2 \
   --manifest ./plugin.manifest.json \
   --wasm ./build/plugin.wasm \
@@ -265,7 +232,7 @@ For a complete C-to-WASM example, see [the WASM integer doubling plugin](plugins
 
 Open /plugin-marketplace to browse community plugin repositories. The directory queries the GitHub REST API for public repositories tagged with the it-tools-plugin topic, shows repository and manifest metadata, and links back to GitHub. In the desktop app, the page can install the latest eligible signed Release through the host bridge, showing progress and cancellation; the package is streamed to a temporary local directory and then passed to the existing verifier. The marketplace does not store, proxy, execute, or distribute plugin packages.
 
-Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a plugin.source.json manifest, and publish exactly one signed `.itxs` asset in the latest stable Release for desktop direct install. The page reads source metadata only as reference data; signing, trust, capability approval, and installation remain part of the desktop workflow. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
+Plugin authors should add the it-tools-plugin topic, keep a clear README, commit a `plugin.manifest.json` v2 manifest, and publish exactly one signed `.itxs` asset in the latest stable Release for desktop direct install. See the marketplace directory contract in docs/20-plugin-marketplace.md and the installation flow in docs/21-plugin-install-flow.md.
 
 ## Architecture and project docs
 
@@ -277,7 +244,7 @@ The web and desktop apps share the same Vue application, tool catalog, routes, t
 | Tool registry (`src/tools/`) | Defines tool identity, category, supported platforms, data-processing mode, offline availability, and required capabilities. |
 | Web entry (`src/main.ts`) | Runs browser-supported tools and registers the PWA service worker after startup. |
 | Desktop host (`electron/`, `electron-renderer/`) | Reuses the shared UI and exposes local workbenches through a narrow preload and IPC interface. Main-process services own native operations and their resources. |
-| Extension host (`src/extensions/`, v2 RPC boundary, `electron/plugin-*`) | Loads trusted first-party extensions, prepares host-rendered v2 contributions, and keeps legacy signed packages isolated during migration. |
+| Extension host (`src/extensions/`, v2 RPC boundary, `electron/plugin-*`) | Loads trusted first-party extensions and prepares host-rendered v2 contributions. |
 
 For example, a tool route is selected from the registry, filtered for the current platform, and loaded when the user opens it. Browser operations use the platform adapter. Desktop-only workbenches call the preload bridge, which forwards the request to the responsible host service. The web build must not include desktop drivers or IPC modules.
 
@@ -288,10 +255,6 @@ The plugin marketplace is a read-only GitHub directory, not a package host. A de
 The [main development plan](docs/01-development-plan.md) is the only document that tracks priorities, unfinished work, code review findings, and acceptance conditions. The documents below are technical references only; they do not contain a second roadmap or schedule. Completed plans and duplicate development logs have been removed; Git retains their history. The unapproved Excalidraw assessment is archived under `docs/archive/`. Dated performance reports and licenses remain in `docs/`.
 
 - [Performance and plugin architecture](docs/07-performance-extensibility-design.md): loading, caching, platform boundaries, workers, and evidence limits
-- [Desktop plugin package format](docs/08-electron-plugin-package-format-v1.md): signed archive format
-- [Plugin development API](docs/09-electron-plugin-capability-api-v1.md): versioned runtime interface
-- [Plugin lifecycle](docs/10-electron-plugin-lifecycle-v1.md): install, enable, disable, rollback, and uninstall
-- [Plugin quickstart](docs/11-electron-plugin-mvp-quickstart.md): development and local validation
 - [First-party extension SDK v0](docs/extension-sdk-v0.md): trusted extensions bundled with the application
 - [Plugin system v2 design](docs/22-plugin-architecture-v2.md): host-rendered contributions, extension host RPC, capabilities, and migration boundaries
 - [Cross-project capability matrix](docs/14-cross-project-capability-matrix.md): independent project scope

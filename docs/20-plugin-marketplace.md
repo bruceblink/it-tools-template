@@ -14,10 +14,10 @@ topic:it-tools-plugin archived:false fork:false
 
 - 添加 it-tools-plugin GitHub topic；
 - 提供仓库描述和 README；
-- 推荐提交 plugin.source.json，市场会在详情窗口读取它的 API 版本、能力声明和工具贡献元数据；v2 插件可以提交 plugin.manifest.json，市场会在缺少旧清单时读取它；
+- 提交 `plugin.manifest.json`，市场会在详情窗口读取 v2 API 版本、能力声明和工具贡献元数据；
 - 不要把私钥、凭据或未经审查的发布资产提交到仓库。
 
-市场读取 GitHub 的仓库元数据和 plugin.source.json/plugin.manifest.json 摘要，不执行仓库代码，不在 Web 页面下载 .itxs 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程按包格式选择 v1 或 v2 管理器完成签名、哈希和资源限制校验。桌面详情还提供“从固定提交构建”入口；该入口只传递仓库身份，commit 和签名密钥仍由用户在设置页核对或选择。
+市场读取 GitHub 的仓库元数据和 `plugin.manifest.json` 摘要，不执行仓库代码，不在 Web 页面下载 `.itxs` 文件，也不把结果写入应用后端。Electron 直装会重新读取仓库和 Release 元数据，并在主进程使用 v2 管理器完成签名、哈希和资源限制校验。
 
 ## 配置
 
@@ -36,7 +36,7 @@ topic:it-tools-plugin archived:false fork:false
 
 - /plugin-marketplace 提供搜索、排序、分页、仓库卡片和详情窗口；
 - 卡片只显示仓库公开元数据；
-- 详情窗口可读取 plugin.source.json，但明确标记为参考信息；
+- 详情窗口可读取 `plugin.manifest.json`，并明确标记为参考信息；
 - “打开仓库”和 README 链接均在新窗口打开；
 - Web 和 Electron 共用目录页面；Electron 卡片提供“安装最新 Release”，Web 页面只提供导航和参考信息；自定义 API 代理不会显示固定 GitHub 直装按钮；
 - Electron 页面显示发现、下载、校验和安装进度，支持取消和重试；直装失败时显示稳定错误类型，用户可回到插件设置核对签名者或改用仓库说明中的开发者构建流程。
@@ -48,6 +48,6 @@ topic:it-tools-plugin archived:false fork:false
 - 仓库仍是公开、未归档、非 fork，并保留 `it-tools-plugin` topic；
 - 最新稳定 Release 恰好包含一个 `.itxs` 资产，资产大小不超过宿主包上限，下载地址属于 GitHub Release 路径；
 - 主进程重新读取 Release tag 对应的 commit SHA，限制重定向到 GitHub 下载域名，并在写入临时目录后流式核对实际大小和 SHA-256；
-- 下载资产随后交给现有生命周期安装器；安装来源写入 `.plugin-provenance.json` 作为可丢失的诊断元数据，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
+- 下载资产随后交给 v2 包管理器；安装过程保留阶段、摘要和错误状态，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
 
-市场不把源码直载作为安装回退。需要审查或开发时，使用固定 commit 的源码快照和 `plugin:build` 完成显式本地构建，边界见[插件市场安装流程](21-plugin-install-flow.md)。
+市场不把源码直载作为安装回退。需要开发时，请使用 v2 脚手架和 `plugin:pack:v2` 完成显式本地构建，边界见[插件市场安装流程](21-plugin-install-flow.md)。

@@ -96,7 +96,6 @@ declare global {
         input: DesktopPluginV2SettingUpdateRequest,
       ): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>>;
       onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
-      installPluginPackage?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot | null>>;
       installPluginV2Package?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>>;
       installPluginFromMarketplace?(
         input: DesktopPluginMarketplaceInstallInput,

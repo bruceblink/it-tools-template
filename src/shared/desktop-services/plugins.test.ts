@@ -2,12 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   desktopPluginErrorCodes,
   desktopPluginMarketplaceInstallPhases,
-  desktopPluginSourceBuildPhases,
-  desktopPluginRuntimeFailureCodes,
   desktopPluginV2RuntimeFailureCodes,
   desktopPluginStateChangeReasons,
   isDesktopPluginMarketplaceInstallProgress,
-  isDesktopPluginSourceBuildProgress,
   isDesktopPluginStateChangeEvent,
 } from './plugins';
 
@@ -23,18 +20,6 @@ describe('desktop plugin bridge error catalog', () => {
     ]));
   });
 
-  it('keeps runtime failure codes separate from operation errors', () => {
-    expect(new Set(desktopPluginRuntimeFailureCodes).size).toBe(desktopPluginRuntimeFailureCodes.length);
-    expect(desktopPluginRuntimeFailureCodes).toEqual([
-      'renderer-crashed',
-      'renderer-unresponsive',
-      'window-closed',
-    ]);
-    expect(desktopPluginRuntimeFailureCodes.some(code => (
-      desktopPluginErrorCodes.includes(code as typeof desktopPluginErrorCodes[number])
-    ))).toBe(false);
-  });
-
   it('keeps v2 retry diagnostics stable and separate from user decisions', () => {
     expect(desktopPluginV2RuntimeFailureCodes).toEqual([
       'transport-error',
@@ -48,26 +33,23 @@ describe('desktop plugin bridge error catalog', () => {
   it('accepts bounded state change events and rejects malformed IPC payloads', () => {
     expect(desktopPluginStateChangeReasons).toEqual([
       'installed',
-      'activated',
-      'disabled',
       'uninstalled',
       'runtime-failure',
       'runtime-recovered',
-      'rollback',
     ]);
     expect(isDesktopPluginStateChangeEvent({
       schemaVersion: 1,
       pluginId: 'org.example.plugin',
       version: '1.2.3',
       reason: 'runtime-failure',
-      contributionId: 'org.example.plugin/example-tool',
       runtimeFailureCode: 'extension-failed',
     })).toBe(true);
     expect(isDesktopPluginStateChangeEvent({
       schemaVersion: 1,
       pluginId: 'C:\\secret',
       version: '1.2.3',
-      reason: 'activated',
+      reason: 'installed',
+      contributionId: 'org.example.plugin/example-tool',
     })).toBe(false);
     expect(isDesktopPluginStateChangeEvent({
       schemaVersion: 1,
@@ -134,28 +116,4 @@ describe('desktop plugin bridge error catalog', () => {
     })).toBe(true);
   });
 
-  it('validates fixed source-build progress events', () => {
-    expect(desktopPluginSourceBuildPhases).toEqual([
-      'selecting-key',
-      'building',
-      'installing',
-      'completed',
-      'cancelled',
-    ]);
-    expect(isDesktopPluginSourceBuildProgress({
-      requestId: 'source-1',
-      phase: 'building',
-      repository: 'example/demo-plugin',
-      commitSha: 'a'.repeat(40),
-    })).toBe(true);
-    expect(isDesktopPluginSourceBuildProgress({
-      requestId: 'source-1',
-      phase: 'building',
-      commitSha: 'not-a-commit',
-    })).toBe(false);
-    expect(isDesktopPluginSourceBuildProgress({
-      requestId: 'source-1',
-      phase: 'unknown',
-    })).toBe(false);
-  });
 });

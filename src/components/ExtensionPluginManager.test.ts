@@ -81,11 +81,6 @@ const v2SettingUpdate = vi.fn(async (input: DesktopPluginV2SettingUpdateRequest)
 }));
 
 const desktopBridge = {
-  listPlugins: vi.fn(async (): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>> => ({ ok: true, value: [] })),
-  installPluginPackage: vi.fn(),
-  activatePlugin: vi.fn(),
-  disablePlugin: vi.fn(),
-  uninstallPlugin: vi.fn(),
   listTrustedPluginSigners: vi.fn(async (): Promise<DesktopPluginOperationResult<DesktopPluginSignerSnapshot[]>> => ({ ok: true, value: [] })),
   previewPluginSigner: vi.fn(),
   trustPluginSigner: vi.fn(),

@@ -149,7 +149,7 @@ const text = (key: keyof typeof messages.en) => activeMessages.value[key];
 
 function getPluginBridge(): PluginManagerBridge | undefined {
   const bridge = window.itToolsDesktop;
-  if (!bridge?.listPluginV2Packages || !bridge.listTrustedPluginSigners || !bridge.previewPluginSigner || !bridge.trustPluginSigner || !bridge.revokePluginSigner) return undefined;
+  if (!bridge?.listPluginV2Packages || !bridge.listTrustedPluginSigners || !bridge.previewPluginSigner || !bridge.trustPluginSigner || !bridge.revokePluginSigner) {return undefined;}
   return bridge as PluginManagerBridge;
 }
 
@@ -172,37 +172,37 @@ function isV2SettingDirty(plugin: DesktopPluginV2Snapshot, setting: DesktopPlugi
 function applyV2Settings(snapshot: DesktopPluginV2SettingsSnapshot): void {
   const key = `${snapshot.pluginId}:${snapshot.version}`;
   v2Settings[key] = snapshot;
-  for (const setting of snapshot.settings) v2SettingDrafts[`${key}:${setting.id}`] = setting.value;
+  for (const setting of snapshot.settings) {v2SettingDrafts[`${key}:${setting.id}`] = setting.value;}
 }
 
 function isV2PluginAction(plugin: DesktopPluginV2Snapshot, action: V2PluginAction): boolean { return v2PluginAction.value?.action === action && v2PluginAction.value.key === v2PackageKey(plugin); }
 function isV2CapabilitySupported(capability: string): boolean { return externalPluginV2SupportedCapabilities.some(item => item === capability); }
 function v2CapabilityLabel(capability: string): string {
-  if (capability === 'runtime.info') return text('v2CapabilityRuntimeInfo');
-  if (capability === 'settings.read') return text('v2CapabilitySettingsRead');
-  if (capability === 'data.oui') return text('v2CapabilityDataOui');
+  if (capability === 'runtime.info') {return text('v2CapabilityRuntimeInfo');}
+  if (capability === 'settings.read') {return text('v2CapabilitySettingsRead');}
+  if (capability === 'data.oui') {return text('v2CapabilityDataOui');}
   return text('v2CapabilityUnsupported');
 }
 function displayPluginError(error: string): string {
-  if (error.startsWith('data-')) return text('dataProviderFailed');
-  if (error === 'store-unavailable' || error === 'invalid-store') return text('v2SettingsUnavailable');
-  if (error === 'invalid-key' || error === 'trust-confirmation-required') return text('invalidKey');
-  if (error === 'cancelled') return text('operationCancelled');
+  if (error.startsWith('data-')) {return text('dataProviderFailed');}
+  if (error === 'store-unavailable' || error === 'invalid-store') {return text('v2SettingsUnavailable');}
+  if (error === 'invalid-key' || error === 'trust-confirmation-required') {return text('invalidKey');}
+  if (error === 'cancelled') {return text('operationCancelled');}
   return text('operationFailed');
 }
 
 async function refreshV2Settings(bridge: PluginManagerBridge, packages: readonly DesktopPluginV2Snapshot[]): Promise<void> {
-  for (const key of Object.keys(v2Settings)) delete v2Settings[key];
-  for (const key of Object.keys(v2SettingDrafts)) delete v2SettingDrafts[key];
-  if (!bridge.listPluginV2Settings) return;
+  for (const key of Object.keys(v2Settings)) {delete v2Settings[key];}
+  for (const key of Object.keys(v2SettingDrafts)) {delete v2SettingDrafts[key];}
+  if (!bridge.listPluginV2Settings) {return;}
   const candidates = packages.filter(plugin => plugin.status === 'installed' && (plugin.manifest.contributions.settings?.length ?? 0) > 0);
   const results = await Promise.all(candidates.map(async plugin => {
     try { return await bridge.listPluginV2Settings!({ pluginId: plugin.pluginId, version: plugin.version }); }
     catch { return { ok: false as const, error: 'operation-failed' as const }; }
   }));
   for (const result of results) {
-    if (result.ok) applyV2Settings(result.value);
-    else pluginError.value = displayPluginError(result.error);
+    if (result.ok) {applyV2Settings(result.value);}
+    else {pluginError.value = displayPluginError(result.error);}
   }
 }
 
@@ -216,9 +216,9 @@ const refresh = createQueuedRefresh(async () => {
     const [v2Result, signerResult] = await Promise.all([bridge.listPluginV2Packages(), bridge.listTrustedPluginSigners()]);
     v2Packages.value = v2Result.ok ? v2Result.value : [];
     signers.value = signerResult.ok ? signerResult.value : [];
-    if (!v2Result.ok) pluginError.value = displayPluginError(v2Result.error);
-    if (!signerResult.ok) trustStoreError.value = displayPluginError(signerResult.error);
-    if (v2Result.ok) await refreshV2Settings(bridge, v2Result.value);
+    if (!v2Result.ok) {pluginError.value = displayPluginError(v2Result.error);}
+    if (!signerResult.ok) {trustStoreError.value = displayPluginError(signerResult.error);}
+    if (v2Result.ok) {await refreshV2Settings(bridge, v2Result.value);}
   }
   catch { pluginError.value = text('operationFailed'); }
   finally { isLoading.value = false; }
@@ -226,14 +226,14 @@ const refresh = createQueuedRefresh(async () => {
 
 async function installV2Plugin(): Promise<void> {
   const bridge = getPluginBridge();
-  if (!bridge?.installPluginV2Package) return;
+  if (!bridge?.installPluginV2Package) {return;}
   v2PluginAction.value = { action: 'install' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
   try {
     const result = await bridge.installPluginV2Package();
-    if (!result.ok) pluginError.value = displayPluginError(result.error);
+    if (!result.ok) {pluginError.value = displayPluginError(result.error);}
     else if (result.value) { notice.value = text('v2Installed'); await refresh(); }
   }
   catch { pluginError.value = text('operationFailed'); }
@@ -242,14 +242,14 @@ async function installV2Plugin(): Promise<void> {
 
 async function uninstallV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void> {
   const bridge = getPluginBridge();
-  if (!bridge?.uninstallPluginV2Package) return;
+  if (!bridge?.uninstallPluginV2Package) {return;}
   v2PluginAction.value = { key: v2PackageKey(plugin), action: 'uninstall' };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
   try {
     const result = await bridge.uninstallPluginV2Package(plugin.pluginId, plugin.version);
-    if (!result.ok) pluginError.value = displayPluginError(result.error);
+    if (!result.ok) {pluginError.value = displayPluginError(result.error);}
     else if (result.value) { notice.value = text('v2Uninstalled'); await refresh(); }
   }
   catch { pluginError.value = text('operationFailed'); }
@@ -260,14 +260,14 @@ async function uninstallV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void>
 async function saveV2Setting(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): Promise<void> {
   const bridge = getPluginBridge();
   const value = v2SettingDraftValue(plugin, setting);
-  if (!bridge?.updatePluginV2Setting || !isV2SettingDirty(plugin, setting)) return;
+  if (!bridge?.updatePluginV2Setting || !isV2SettingDirty(plugin, setting)) {return;}
   v2SettingAction.value = { key: v2PackageKey(plugin), settingId: setting.id };
   isBusy.value = true;
   pluginError.value = undefined;
   notice.value = undefined;
   try {
     const result = await bridge.updatePluginV2Setting({ pluginId: plugin.pluginId, version: plugin.version, settingId: setting.id, value });
-    if (!result.ok) pluginError.value = displayPluginError(result.error);
+    if (!result.ok) {pluginError.value = displayPluginError(result.error);}
     else { applyV2Settings(result.value); notice.value = text('v2SettingSaved'); }
   }
   catch { pluginError.value = text('v2SettingsUnavailable'); }
@@ -279,14 +279,14 @@ function signerInput(): DesktopPluginSignerInput {
 }
 async function previewSigner(): Promise<void> {
   const bridge = getPluginBridge();
-  if (!bridge) return;
+  if (!bridge) {return;}
   isBusy.value = true;
   trustStoreError.value = undefined;
   signerPreview.value = undefined;
   try {
     const result = await bridge.previewPluginSigner(signerInput());
-    if (!result.ok) trustStoreError.value = displayPluginError(result.error);
-    else signerPreview.value = result.value;
+    if (!result.ok) {trustStoreError.value = displayPluginError(result.error);}
+    else {signerPreview.value = result.value;}
   }
   catch { trustStoreError.value = text('invalidKey'); }
   finally { isBusy.value = false; }
@@ -294,13 +294,13 @@ async function previewSigner(): Promise<void> {
 async function trustSigner(): Promise<void> {
   const bridge = getPluginBridge();
   const preview = signerPreview.value;
-  if (!bridge || !preview) return;
+  if (!bridge || !preview) {return;}
   isBusy.value = true;
   trustStoreError.value = undefined;
   notice.value = undefined;
   try {
     const result = await bridge.trustPluginSigner(signerInput(), preview.fingerprint);
-    if (!result.ok) trustStoreError.value = displayPluginError(result.error);
+    if (!result.ok) {trustStoreError.value = displayPluginError(result.error);}
     else if (result.value) {
       signerForm.keyId = '';
       signerForm.pluginIds = '';
@@ -315,13 +315,13 @@ async function trustSigner(): Promise<void> {
 }
 async function revokeSigner(signer: DesktopPluginSignerSnapshot): Promise<void> {
   const bridge = getPluginBridge();
-  if (!bridge) return;
+  if (!bridge) {return;}
   isBusy.value = true;
   trustStoreError.value = undefined;
   notice.value = undefined;
   try {
     const result = await bridge.revokePluginSigner(signer.keyId);
-    if (!result.ok) trustStoreError.value = displayPluginError(result.error);
+    if (!result.ok) {trustStoreError.value = displayPluginError(result.error);}
     else if (result.value) { notice.value = text('signerRemoved'); await refresh(); }
   }
   catch { trustStoreError.value = text('operationFailed'); }
@@ -331,7 +331,7 @@ async function revokeSigner(signer: DesktopPluginSignerSnapshot): Promise<void> 
 watch(signerForm, () => { signerPreview.value = undefined; }, { deep: true });
 let disposePluginStateChange: (() => void) | undefined;
 onMounted(() => {
-  disposePluginStateChange = window.itToolsDesktop?.onPluginStateChanged?.(() => { if (!isBusy.value) void refresh(); });
+  disposePluginStateChange = window.itToolsDesktop?.onPluginStateChanged?.(() => { if (!isBusy.value) {void refresh();} });
   void refresh();
 });
 onUnmounted(() => disposePluginStateChange?.());

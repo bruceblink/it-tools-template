@@ -108,14 +108,13 @@ describe('plugin marketplace GitHub adapter', () => {
     expect(requestUrl.searchParams.get('q')).toContain('topic:it-tools-plugin');
   });
 
-  it('reads a source manifest without downloading a plugin package', async () => {
+  it('reads the v2 manifest without downloading a plugin package', async () => {
     const manifest = {
-      formatVersion: 1,
+      formatVersion: 2,
       id: 'example/demo-plugin',
       name: 'Demo plugin',
       version: '1.0.0',
-      apiVersion: { minInclusive: '1.4.0', maxExclusive: '2.0.0' },
-      entrypoint: 'index.html',
+      apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
       requestedCapabilities: ['runtime.info'],
       contributions: {
         tools: [{
@@ -140,7 +139,7 @@ describe('plugin marketplace GitHub adapter', () => {
     expect(result?.toolContributions[0]?.title).toBe('Demo');
     const request = fetchMock.mock.calls[0] as unknown as [RequestInfo | URL] | undefined;
     const requestUrl = new URL(String(request?.[0] ?? ''));
-    expect(requestUrl.pathname).toBe('/repos/example/demo-plugin/contents/plugin.source.json');
+    expect(requestUrl.pathname).toBe('/repos/example/demo-plugin/contents/plugin.manifest.json');
     expect(requestUrl.searchParams.get('ref')).toBe('main');
   });
 
@@ -153,7 +152,7 @@ describe('plugin marketplace GitHub adapter', () => {
     await expect(fetchPluginManifest(repository())).resolves.toBeNull();
   });
 
-  it('falls back to the v2 source manifest when the legacy manifest is absent', async () => {
+  it('returns the v2 manifest when it is present', async () => {
     const manifest = {
       formatVersion: 2,
       id: 'example/demo-plugin',
@@ -164,7 +163,6 @@ describe('plugin marketplace GitHub adapter', () => {
       contributions: { tools: [] },
     };
     const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response('missing', { status: 404, statusText: 'Not Found' }))
       .mockResolvedValueOnce(new Response(JSON.stringify({
         type: 'file',
         encoding: 'base64',
@@ -177,8 +175,8 @@ describe('plugin marketplace GitHub adapter', () => {
       id: 'example/demo-plugin',
       requestedCapabilities: ['runtime.info'],
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(String(fetchMock.mock.calls[1]?.[0])).toContain('/contents/plugin.manifest.json');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/contents/plugin.manifest.json');
   });
 
   it('preserves API status and rate-limit information for the UI', async () => {

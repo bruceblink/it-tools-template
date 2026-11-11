@@ -110,7 +110,7 @@ flowchart LR
 开发者可以复用已有的 v2 静态清单和 `.wasm` 文件。`plugin:pack:v2` 不编译插件，也不生成清单。输入清单只包含本节定义的贡献声明；打包器会在签名封套中加入 `runtime: "wasm"`、入口路径、文件 SHA-256 和 Ed25519 签名。v2 清单的 `apiVersion` 必须包含当前宿主 API `2.0.0`。
 
 ```sh
-pnpm run plugin:keygen --key-id example-publisher --output-directory "$HOME/.config/it-tools/plugin-keys"
+pnpm run plugin:keygen:v2 --key-id example-publisher --output-directory "$HOME/.config/it-tools/plugin-keys"
 pnpm run plugin:pack:v2 \
   --manifest ./plugin.manifest.json \
   --wasm ./build/plugin.wasm \
@@ -120,7 +120,7 @@ pnpm run plugin:pack:v2 \
   --output ./artifacts/example-plugin.itxs
 ```
 
-`--manifest` 指向不含 `runtime`、`entrypoint`、`files` 和 `signature` 的 v2 静态清单。`--wasm` 指向开发者已有的 WASM 文件；`--entrypoint` 指定它在安装包内的相对路径。当前打包命令只收录这一份 WASM 文件，不收录额外资源。输出包使用与 v1 相同的确定性未压缩 ZIP 容器和 `.itxs` 扩展名，但采用 `IT Tools Electron Plugin Package v2` 签名域。
+`--manifest` 指向不含 `runtime`、`entrypoint`、`files` 和 `signature` 的 v2 静态清单。`--wasm` 指向开发者已有的 WASM 文件；`--entrypoint` 指定它在安装包内的相对路径。当前打包命令只收录这一份 WASM 文件，不收录额外资源。输出包使用确定性未压缩 ZIP 容器和 `.itxs` 扩展名，但采用 `IT Tools Electron Plugin Package v2` 签名域。
 
 在编译和签名前，可以运行只读校验命令：
 
@@ -202,15 +202,13 @@ WASM 执行器已经接入独立扩展宿主，支持纯计算命令和经用户
 
 当前 v2 执行能力支持 `runtime.info`、只读 `settings.read` 和宿主拥有的 `data.oui`，支持列表由共享协议常量提供给主进程策略和桌面管理器。设置值由宿主设置页编辑并保存到插件专属命名空间；每次命令运行前，主进程只读取当前工具引用的设置和 OUI 数据，并将经过类型、哈希、查询和边界校验的快照发送到扩展宿主。管理器会显示包请求的能力和宿主支持状态；使用这些能力的命令都需要每次确认。用户拒绝后不启动命令；批准只对当前命令有效，下次运行仍需确认。渲染进程不能指定或修改运行时信息、设置或数据快照。`settings.write`、其他 v2 能力请求会被拒绝。
 
-插件设置保存在插件专属命名空间。v2 宿主设置页负责编辑值，v2 工具只能通过本次授权的 `settings.read` 快照读取自己声明的设置；当前不提供 v2 插件写入入口。legacy v1 插件的版本化设置 API 仍受原有能力代理约束。插件不能直接读写应用 SQLite、配置文件、凭据或其他插件目录。文件、网络和进程能力必须分别申请，并由能力代理执行入口层校验。
+插件设置保存在插件专属命名空间。v2 宿主设置页负责编辑值，v2 工具只能通过本次授权的 `settings.read` 快照读取自己声明的设置；当前不提供插件写入入口。插件不能直接读写应用 SQLite、配置文件、凭据或其他插件目录。文件、网络和进程能力必须分别申请，并由能力代理执行入口层校验。
 
 扩展宿主崩溃时，主进程保留工具索引但将工具标记为不可用；用户可以重启或禁用插件。重启达到上限后停止自动重试，保留诊断信息，避免主窗口进入循环故障。
 
-## 8. 兼容策略
+## 8. 支持边界
 
-现有 v1 HTML/webview 插件保留为 legacy 兼容路径，用于迁移已安装包和读取旧设置。legacy 包不进入 v2 的统一声明式工具注册，除非完成清单转换和显式迁移。目前设置页分别提供 v1 和 v2 安装入口；迁移工具应生成新的 v2 清单和签名包，不把旧 HTML 页面伪装成原生工具。
-
-旧版 `ExternalPluginTool.page.vue`、`createPluginEmbeddedWindow` 和 `it-plugin://` 页面服务属于 legacy 运行时。它们不能成为 v2 工具工作台的依赖。v2 的路由、索引、搜索和权限逻辑应与 legacy 适配器分开。
+当前只支持 v2 声明式插件。插件包必须包含 v2 清单、签名入口和受限文件列表。宿主不加载 HTML/webview 插件，不提供旧版窗口、旧版能力 API 或旧版包格式的管理入口。
 
 ## 9. 分阶段实施和验收
 
@@ -232,7 +230,7 @@ WASM 执行器已经接入独立扩展宿主，支持纯计算命令和经用户
 
 为纯计算、解析、转换和校验提供不导入 WASI 的 WASM 运行时。已验证输入输出边界、线性内存上限、超时、签名和安装后篡改；继续验证升级、回滚、禁用及目标平台资源控制。
 
-每个阶段都使用独立提交和对应回归。回退只撤销该阶段的 v2 适配器、协议和测试，不删除用户安装数据、设置或 legacy 迁移记录。
+每个阶段都使用独立提交和对应回归。回退只撤销该阶段的 v2 适配器、协议和测试，不删除用户安装数据或设置。
 
 ## 参考
 

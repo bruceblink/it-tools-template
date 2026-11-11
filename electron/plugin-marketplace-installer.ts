@@ -564,6 +564,7 @@ export async function installPluginMarketplaceRelease<TSnapshot>(
       totalBytes: release.asset.size,
     });
     const source: PluginMarketplaceReleaseSource = {
+      kind: 'release',
       repository: release.repository,
       tagName: release.tagName,
       commitSha: release.commitSha,
