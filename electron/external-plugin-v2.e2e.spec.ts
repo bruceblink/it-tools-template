@@ -159,19 +159,11 @@ test('installs and runs signed WASM tools through navigation, search, failure, a
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"status": "complete"');
 
   await page.getByRole('switch', { name: 'Spin forever' }).click();
-  await page.evaluate(() => {
-    const target = window as typeof window & { __pluginEvents?: unknown[] };
-    target.__pluginEvents = [];
-    window.itToolsDesktop!.onPluginStateChanged?.(event => target.__pluginEvents?.push(event));
-  });
   await page.getByRole('button', { name: 'Run' }).click();
   await expect(page.getByText('The plugin command timed out.', { exact: true })).toBeVisible();
-  console.log('runtime snapshot after timeout', await page.evaluate(() => window.itToolsDesktop!.listPluginV2Packages!()));
-  console.log('runtime events after timeout', await page.evaluate(() => (window as typeof window & { __pluginEvents?: unknown[] }).__pluginEvents));
   await expect(page.getByRole('button', { name: 'Retry', exact: true })).toBeVisible();
   await expect(page.locator('.plugin-tool-workbench-runtime-diagnostic')).toContainText('Stable error code: timeout');
 
-  await page.getByRole('switch', { name: 'Spin forever' }).click();
   await page.getByRole('button', { name: 'Retry', exact: true }).click();
   await expect(page.locator('.plugin-tool-workbench-result pre')).toContainText('"status": "complete"');
 
