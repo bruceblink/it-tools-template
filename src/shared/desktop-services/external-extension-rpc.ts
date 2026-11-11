@@ -44,9 +44,10 @@ export interface ExternalExtensionRuntimeInfoContext {
   readonly appVersion: string;
 }
 
-/** 当前只承载经用户本次批准的 runtime.info 数据。 */
+/** 当前只承载经用户本次批准的只读宿主数据。 */
 export interface ExternalExtensionCapabilityContext {
-  readonly runtimeInfo: ExternalExtensionRuntimeInfoContext;
+  readonly runtimeInfo?: ExternalExtensionRuntimeInfoContext;
+  readonly settings?: Readonly<Record<string, string | number | boolean>>;
 }
 
 /** 扩展宿主适配器只返回这些稳定错误码。 */
@@ -189,8 +190,12 @@ export function parseExternalExtensionRpcRequest(value: unknown): ExternalExtens
         && value.payload.commandId.startsWith(`${value.pluginId}/`)
         && isJsonValue(value.payload.input)
         && isCapabilityList(value.payload.requiredCapabilities)
-        && (value.payload.requiredCapabilities.includes('runtime.info')
-          ? isExternalExtensionCapabilityContext(value.payload.capabilityContext)
+        && (value.payload.requiredCapabilities.includes('runtime.info') || value.payload.requiredCapabilities.includes('settings.read')
+          ? isExternalExtensionCapabilityContext(
+            value.payload.capabilityContext,
+            value.payload.requiredCapabilities.includes('runtime.info'),
+            value.payload.requiredCapabilities.includes('settings.read'),
+          )
           : value.payload.capabilityContext === undefined)
         ? { ...base, method: 'executeCommand', payload: {
             commandId: value.payload.commandId,
@@ -298,16 +303,45 @@ function isCapabilityList(value: unknown): value is readonly ToolCapability[] {
     && value.every(capability => typeof capability === 'string' && capabilityIds.has(capability as ToolCapability));
 }
 
-function isExternalExtensionCapabilityContext(value: unknown): value is ExternalExtensionCapabilityContext {
-  return isRecord(value)
-    && hasExactKeys(value, ['runtimeInfo'])
-    && isRecord(value.runtimeInfo)
-    && hasExactKeys(value.runtimeInfo, ['platform', 'appVersion'])
-    && typeof value.runtimeInfo.platform === 'string'
-    && externalExtensionRuntimePlatforms.includes(value.runtimeInfo.platform as ExternalExtensionRuntimePlatform)
-    && typeof value.runtimeInfo.appVersion === 'string'
-    && value.runtimeInfo.appVersion.length > 0
-    && value.runtimeInfo.appVersion.length <= 64;
+function isExternalExtensionCapabilityContext(
+  value: unknown,
+  requiresRuntimeInfo: boolean,
+  requiresSettings: boolean,
+): value is ExternalExtensionCapabilityContext {
+  if (!isRecord(value)) {
+    return false;
+  }
+  const keys = Object.keys(value);
+  if (keys.some(key => key !== 'runtimeInfo' && key !== 'settings')
+    || (requiresRuntimeInfo !== ('runtimeInfo' in value))
+    || (requiresSettings !== ('settings' in value))) {
+    return false;
+  }
+  if (requiresRuntimeInfo
+    && (!isRecord(value.runtimeInfo)
+      || !hasExactKeys(value.runtimeInfo, ['platform', 'appVersion'])
+      || typeof value.runtimeInfo.platform !== 'string'
+      || !externalExtensionRuntimePlatforms.includes(value.runtimeInfo.platform as ExternalExtensionRuntimePlatform)
+      || typeof value.runtimeInfo.appVersion !== 'string'
+      || value.runtimeInfo.appVersion.length === 0
+      || value.runtimeInfo.appVersion.length > 64)) {
+    return false;
+  }
+  if (requiresSettings && !isExternalExtensionSettingsContext(value.settings)) {
+    return false;
+  }
+  return true;
+}
+
+function isExternalExtensionSettingsContext(value: unknown): value is Readonly<Record<string, string | number | boolean>> {
+  if (!isRecord(value) || Object.keys(value).length > 64) {
+    return false;
+  }
+  return Object.entries(value).every(([settingId, settingValue]) => {
+    return contributionIdPattern.test(settingId)
+      && (typeof settingValue === 'string' || typeof settingValue === 'boolean' || (typeof settingValue === 'number' && Number.isFinite(settingValue)))
+      && (typeof settingValue !== 'string' || settingValue.length <= 4_096);
+  });
 }
 
 function isJsonValue(value: unknown, depth = 0): value is ExternalExtensionRpcJsonValue {

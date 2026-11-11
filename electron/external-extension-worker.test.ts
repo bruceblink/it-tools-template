@@ -117,6 +117,30 @@ describe('ExternalExtensionWorkerRuntime', () => {
     } satisfies ExternalExtensionRpcRequest)).resolves.toBeUndefined();
   });
 
+  it('accepts a one-command settings.read grant and its bounded context', async () => {
+    const { config, runtime } = await createRuntime();
+    await expect(runtime.handle(request('activate', config, {
+      version: config.version,
+      grantedCapabilities: ['settings.read'],
+    }))).resolves.toMatchObject({ ok: true, result: { ready: true, runtime: 'wasm' } });
+
+    await expect(runtime.handle({
+      protocolVersion: 1,
+      requestId: 'settings-1',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/echo`,
+        input: {},
+        requiredCapabilities: ['settings.read'],
+        capabilityContext: { settings: { [`${pluginId}/endpoint`]: 'https://example.test' } },
+      },
+    } satisfies ExternalExtensionRpcRequest)).resolves.toMatchObject({
+      ok: true,
+      result: { kind: 'text', value: 'ok' },
+    });
+  });
+
   it('rejects unsupported host APIs and clears loaded bytes on disposal', async () => {
     const { config, runtime } = await createRuntime();
     await runtime.handle(request('activate', config));

@@ -9,6 +9,7 @@ export const externalPluginV2FormatVersion = 2 as const;
 /** 当前 v2 执行端实际开放的能力；授权仍由每条命令的主进程确认完成。 */
 export const externalPluginV2SupportedCapabilities: readonly PluginHostCapability[] = Object.freeze([
   'runtime.info',
+  'settings.read',
 ]);
 
 const pluginIdPattern = /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;

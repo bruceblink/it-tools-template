@@ -53,6 +53,88 @@ describe('external extension RPC protocol', () => {
     })).toBeNull();
     expect(parseExternalExtensionRpcRequest({
       protocolVersion: 1,
+      requestId: 'request-settings',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/settings`,
+        input: {},
+        requiredCapabilities: ['settings.read'],
+        capabilityContext: { settings: { [`${pluginId}/endpoint`]: 'https://example.test' } },
+      },
+    })).toMatchObject({
+      method: 'executeCommand',
+      payload: { requiredCapabilities: ['settings.read'] },
+    });
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-runtime-settings',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/runtime-settings`,
+        input: {},
+        requiredCapabilities: ['runtime.info', 'settings.read'],
+        capabilityContext: {
+          runtimeInfo: { platform: 'darwin', appVersion: '1.0.0' },
+          settings: { [`${pluginId}/endpoint`]: 'https://example.test' },
+        },
+      },
+    })).toMatchObject({
+      method: 'executeCommand',
+      payload: { requiredCapabilities: ['runtime.info', 'settings.read'] },
+    });
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-settings-missing',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/settings`,
+        input: {},
+        requiredCapabilities: ['settings.read'],
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-settings-extra',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/settings`,
+        input: {},
+        requiredCapabilities: [],
+        capabilityContext: { settings: { [`${pluginId}/endpoint`]: 'https://example.test' } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-settings-invalid-key',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/settings`,
+        input: {},
+        requiredCapabilities: ['settings.read'],
+        capabilityContext: { settings: { invalid: true } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-settings-too-many',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/settings`,
+        input: {},
+        requiredCapabilities: ['settings.read'],
+        capabilityContext: {
+          settings: Object.fromEntries(Array.from({ length: 65 }, (_, index) => [`${pluginId}/setting-${index}`, true])),
+        },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
       requestId: 'request-runtime-info-extra',
       pluginId,
       method: 'executeCommand',
@@ -211,8 +293,8 @@ describe('ExternalExtensionRpcHost', () => {
       .rejects.toMatchObject({ code: 'not-active' });
   });
 
-  // 只有获得 runtime.info 本次授权的主进程调用方可以附带上下文。
-  it('sends runtime.info context only with the matching one-command grant', async () => {
+  // 只有获得只读能力本次授权的主进程调用方可以附带上下文。
+  it('sends runtime and settings context only with matching one-command grants', async () => {
     const requests: ExternalExtensionRpcRequest[] = [];
     const transport = createInProcessExternalExtensionRpcTransport(request => {
       requests.push(request);
@@ -242,9 +324,36 @@ describe('ExternalExtensionRpcHost', () => {
         capabilityContext,
       },
     });
+
+    const settingsHost = new ExternalExtensionRpcHost({
+      pluginId,
+      version: '1.0.0',
+      grantedCapabilities: ['settings.read'],
+      transport: createInProcessExternalExtensionRpcTransport(request => {
+        requests.push(request);
+        return {
+          protocolVersion: 1,
+          requestId: request.requestId,
+          pluginId,
+          ok: true,
+          result: null,
+        };
+      }),
+    });
+    const settingsContext = { settings: { [`${pluginId}/endpoint`]: 'https://example.test' } };
+    await settingsHost.activate();
+    await settingsHost.executeCommand(`${pluginId}/settings`, {}, ['settings.read'], undefined, settingsContext);
+    await settingsHost.dispose();
+
+    expect(requests.find(request => request.method === 'executeCommand' && request.payload.requiredCapabilities[0] === 'settings.read')).toMatchObject({
+      payload: {
+        requiredCapabilities: ['settings.read'],
+        capabilityContext: settingsContext,
+      },
+    });
   });
 
-  it('does not construct a v2 host with capabilities outside runtime.info', () => {
+  it('does not construct a v2 host with capabilities outside the read-only v2 set', () => {
     expect(() => new ExternalExtensionRpcHost({
       pluginId,
       version: '1.0.0',

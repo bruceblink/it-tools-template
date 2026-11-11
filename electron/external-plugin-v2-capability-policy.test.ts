@@ -115,7 +115,7 @@ describe('v2 capability policy', () => {
     );
   });
 
-  it('exposes only runtime.info to v2 even when v1 supports another requested capability', () => {
+  it('exposes supported v2 capabilities while keeping unrelated v1 capabilities unavailable', () => {
     const policy = createExternalPluginV2CapabilityPolicy(manifest, []);
     const clipboardTool = {
       ...manifest,

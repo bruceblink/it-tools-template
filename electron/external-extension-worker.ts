@@ -20,7 +20,7 @@ export class ExternalExtensionWorkerRuntime {
   private active = false;
   private disposed = false;
   private moduleBytes: Uint8Array | undefined;
-  /** 本次命令进程只保存已批准的 runtime.info 授权，dispose 时清空。 */
+  /** 本次命令进程只保存已批准的只读上下文授权，dispose 时清空。 */
   private readonly grantedCapabilities = new Set<string>();
 
   constructor(private readonly launchConfig: ExternalExtensionWorkerLaunchConfig | undefined) {}
@@ -69,7 +69,7 @@ export class ExternalExtensionWorkerRuntime {
     if (request.payload.version !== this.launchConfig?.version) {
       return failure(request, 'invalid-request');
     }
-    if (request.payload.grantedCapabilities.some(capability => capability !== 'runtime.info')) {
+    if (request.payload.grantedCapabilities.some(capability => capability !== 'runtime.info' && capability !== 'settings.read')) {
       return failure(request, 'permission-denied');
     }
     if (this.active) {
@@ -100,11 +100,15 @@ export class ExternalExtensionWorkerRuntime {
     request: Extract<ExternalExtensionRpcRequest, { method: 'executeCommand' }>,
   ): ExternalExtensionRpcResponse {
     if (request.payload.requiredCapabilities.some(capability => (
-      capability !== 'runtime.info' || !this.grantedCapabilities.has(capability)
+      (capability !== 'runtime.info' && capability !== 'settings.read') || !this.grantedCapabilities.has(capability)
     ))) {
       return failure(request, 'permission-denied');
     }
-    if (request.payload.requiredCapabilities.includes('runtime.info') !== (request.payload.capabilityContext !== undefined)) {
+    const requiresRuntimeInfo = request.payload.requiredCapabilities.includes('runtime.info');
+    const requiresSettings = request.payload.requiredCapabilities.includes('settings.read');
+    if ((requiresRuntimeInfo || requiresSettings) !== (request.payload.capabilityContext !== undefined)
+      || requiresRuntimeInfo !== (request.payload.capabilityContext?.runtimeInfo !== undefined)
+      || requiresSettings !== (request.payload.capabilityContext?.settings !== undefined)) {
       return failure(request, 'permission-denied');
     }
     if (!this.moduleBytes) {

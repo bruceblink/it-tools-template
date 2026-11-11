@@ -34,6 +34,7 @@ import { ExternalPluginV2CommandRequests } from './external-plugin-v2-command-re
 import { createExternalPluginV2CapabilityPolicy, ExternalPluginV2CapabilityPolicyError } from './external-plugin-v2-capability-policy';
 import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
 import { createExternalExtensionProcessTransport } from './external-extension-process';
+import { readExternalPluginV2ToolSettings } from './external-plugin-v2-settings';
 import type {
   DesktopPluginErrorCode,
   DesktopPluginV2RuntimeFailureCode,
@@ -52,6 +53,9 @@ import type {
   ExternalExtensionCapabilityContext,
   ExternalExtensionRpcJsonValue,
 } from '../src/shared/desktop-services/external-extension-rpc';
+import type {
+  ExternalPluginV2SettingDeclaration,
+} from '../src/shared/external-plugin-v2';
 
 export interface PluginIpcDependencies {
   userDataRoot: string;
@@ -233,10 +237,18 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       const requestedCapabilities = tool ? requestedPolicy.getToolCapabilities(tool.id) : [];
       throwIfV2CommandAborted(activeRequest.controller.signal);
       if (requestedCapabilities.length > 0) {
-        if (requestedCapabilities.length !== 1 || requestedCapabilities[0] !== 'runtime.info') {
+        if (requestedCapabilities.some(capability => capability !== 'runtime.info' && capability !== 'settings.read')) {
           throw new ExternalPluginV2CapabilityPolicyError('unsupported-capability');
         }
-        const approved = await confirmExternalPluginV2RuntimeInfo(dependencies, manifest.id, manifest.name, tool!.title);
+        const approved = await confirmExternalPluginV2Capabilities(
+          dependencies,
+          manifest.id,
+          manifest.name,
+          tool!.title,
+          requestedCapabilities,
+          tool?.settings ?? [],
+          manifest.contributions.settings ?? [],
+        );
         if (!approved) {
           throw new ExternalPluginV2CapabilityPolicyError('permission-denied');
         }
@@ -244,8 +256,14 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       throwIfV2CommandAborted(activeRequest.controller.signal);
       const policy = createExternalPluginV2CapabilityPolicy(manifest, requestedCapabilities);
       const grantedCapabilities = tool ? policy.authorizeTool(tool.id) : [];
-      const capabilityContext: ExternalExtensionCapabilityContext | undefined = grantedCapabilities.includes('runtime.info')
-        ? { runtimeInfo: { platform: process.platform, appVersion: app.getVersion() } }
+      const settings = grantedCapabilities.includes('settings.read') && tool
+        ? await readExternalPluginV2ToolSettings(manifest, tool, pluginSettingsStore)
+        : undefined;
+      const capabilityContext: ExternalExtensionCapabilityContext | undefined = grantedCapabilities.includes('runtime.info') || settings !== undefined
+        ? {
+            ...(grantedCapabilities.includes('runtime.info') ? { runtimeInfo: { platform: process.platform, appVersion: app.getVersion() } } : {}),
+            ...(settings === undefined ? {} : { settings }),
+          }
         : undefined;
       const key = `${request.pluginId}@${request.version}`;
       host = new ExternalExtensionRpcHost({
@@ -541,18 +559,33 @@ async function confirmPluginCapabilities(
   return confirmation.response === 1 ? [] : null;
 }
 
-/** 每次执行只向用户申请该工具签名声明的 runtime.info，不保存授权结果。 */
-async function confirmExternalPluginV2RuntimeInfo(
+/** 每次执行只向用户申请该工具声明的只读能力，不保存授权结果。 */
+async function confirmExternalPluginV2Capabilities(
   dependencies: PluginIpcDependencies,
   pluginId: string,
   pluginName: string,
   toolTitle: string,
+  capabilities: readonly string[],
+  settingIds: readonly string[],
+  settingDeclarations: readonly ExternalPluginV2SettingDeclaration[],
 ): Promise<boolean> {
+  const settingLabels = new Map(settingDeclarations.map(setting => [setting.id, setting.label]));
+  const capabilityDetails = capabilities.map(capability => {
+    if (capability === 'runtime.info') {
+      return '- Read platform and app version / 读取运行平台和应用版本';
+    }
+    if (capability === 'settings.read') {
+      const labels = settingIds.map(settingId => settingLabels.get(settingId) ?? settingId);
+      const suffix = labels.length > 0 ? ` (${labels.join(', ')})` : '';
+      return `- Read this plugin's settings${suffix} / 读取此插件的设置${suffix}`;
+    }
+    return `- ${capability}`;
+  }).join('\n');
   const confirmation = await dialog.showMessageBox(getPluginManagementWindow(dependencies), {
     type: 'warning',
     title: 'Plugin capability request / 插件能力请求',
-    message: `${pluginName} (${pluginId}) requests runtime.info for ${toolTitle}.`,
-    detail: 'This command can read the platform and app version. Approval applies only to this command. / 此命令可以读取运行平台和应用版本。本次授权仅对当前命令有效。',
+    message: `${pluginName} (${pluginId}) requests read-only capabilities for ${toolTitle}.`,
+    detail: `${capabilityDetails}\n\nApproval applies only to this command. / 本次授权仅对当前命令有效。`,
     buttons: ['Allow once / 本次允许', 'Cancel / 取消'],
     defaultId: 1,
     cancelId: 1,
