@@ -2,6 +2,7 @@ import { flushPromises, shallowMount } from '@vue/test-utils';
 import { createI18n } from 'vue-i18n';
 import { createMemoryHistory, createRouter } from 'vue-router';
 import { defineComponent } from 'vue';
+import { NAlert } from 'naive-ui';
 import { afterEach, describe, expect, it } from 'vitest';
 import ExternalPluginToolRoute from './ExternalPluginToolRoute.page.vue';
 import ExternalPluginV2ToolPage from './ExternalPluginV2Tool.page.vue';
@@ -98,7 +99,7 @@ describe('ExternalPluginToolRoute', () => {
     wrapper.unmount();
   });
 
-  it('updates legacy route metadata when the v2 registry loads after a deep link', async () => {
+  it('shows a clear unavailable state when a deep link is not registered by v2', async () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [{
@@ -107,9 +108,9 @@ describe('ExternalPluginToolRoute', () => {
         component: ExternalPluginToolRoute,
         meta: {
           isTool: true,
-          name: 'External plugin tool',
-          description: 'Run an installed plugin tool inside the IT Tools workspace.',
-          keywords: ['plugin', 'external', 'desktop'],
+          name: 'Plugin tool',
+          description: 'Run a host-rendered plugin tool inside the IT Tools workspace.',
+          keywords: ['plugin', 'extension', 'desktop'],
           translationKey: 'external-plugin-tool',
           contentWidth: 'wide',
         },
@@ -127,12 +128,15 @@ describe('ExternalPluginToolRoute', () => {
       },
     });
 
-    expect(router.currentRoute.value.meta.name).toBe('External plugin tool');
+    expect(router.currentRoute.value.meta.name).toBe('Plugin tool');
     expect(wrapper.findComponent(ExternalPluginV2ToolPage).exists()).toBe(false);
     expect(wrapper.get('[role="status"]').text()).toBe('Loading plugin tools…');
 
-    externalPluginV2Registry.register(createProjection(), async () => ({ kind: 'text', value: '' }));
     externalPluginV2Registry.initialized.value = true;
+    await flushPromises();
+    expect(wrapper.getComponent(NAlert).props('type')).toBe('warning');
+
+    externalPluginV2Registry.register(createProjection(), async () => ({ kind: 'text', value: '' }));
     await flushPromises();
 
     expect(router.currentRoute.value.meta).toMatchObject({
@@ -144,17 +148,6 @@ describe('ExternalPluginToolRoute', () => {
     expect(router.currentRoute.value.meta.translationKey).toMatch(/^external-plugin-/);
     expect(wrapper.findComponent(ExternalPluginV2ToolPage).exists()).toBe(true);
 
-    externalPluginV2Registry.clear();
-    await flushPromises();
-
-    expect(router.currentRoute.value.meta).toMatchObject({
-      name: 'External plugin tool',
-      description: 'Run an installed plugin tool inside the IT Tools workspace.',
-      keywords: ['plugin', 'external', 'desktop'],
-      translationKey: 'external-plugin-tool',
-      contentWidth: 'wide',
-    });
-    expect(wrapper.findComponent(ExternalPluginV2ToolPage).exists()).toBe(false);
     wrapper.unmount();
   });
 });

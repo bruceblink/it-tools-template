@@ -6,7 +6,7 @@ import { tools } from './tools';
 import { config } from './config';
 import { layouts } from '@/layouts';
 import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
-import { applyExternalPluginV2RouteMeta, legacyExternalPluginToolMeta } from '@/pages/external-plugin-v2-route-meta';
+import { applyExternalPluginV2RouteMeta, externalPluginToolRouteMeta } from '@/pages/external-plugin-v2-route-meta';
 
 const toolsRoutes = tools.map(({ path, name, component, translationKey, description, keywords, contentWidth, extensionOwned }) => ({
   path,
@@ -59,7 +59,7 @@ const router = createRouter({
       meta: {
         layout: layouts.toolLayout,
         isTool: true,
-        ...legacyExternalPluginToolMeta,
+        ...externalPluginToolRouteMeta,
       },
     },
     {
@@ -86,9 +86,6 @@ router.beforeEach(async (to) => {
   if (v2Tool) {
     applyExternalPluginV2RouteMeta(to.meta, v2Tool.tool);
     return true;
-  }
-  if (to.name === 'external-plugin-tool') {
-    Object.assign(to.meta, legacyExternalPluginToolMeta);
   }
   if (to.meta.extensionOwned === true) {
     const { activateExtensionToolRoute } = await import('./extensions/route-activation-runtime');

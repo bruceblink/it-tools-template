@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, watch } from 'vue';
+import { computed, watch } from 'vue';
+import { NAlert } from 'naive-ui';
 import { useRoute } from 'vue-router';
 import ExternalPluginV2ToolPage from './ExternalPluginV2Tool.page.vue';
 import { externalPluginV2Registry } from '@/tools/external-plugin-v2-registry';
-import { applyExternalPluginV2RouteMeta, restoreLegacyExternalPluginRouteMeta } from './external-plugin-v2-route-meta';
+import { applyExternalPluginV2RouteMeta } from './external-plugin-v2-route-meta';
 
 const route = useRoute();
-const LegacyPage = defineAsyncComponent(() => import('./ExternalPluginTool.page.vue'));
 const registration = computed(() => externalPluginV2Registry.tools.value
   .some(tool => tool.path === route.path)
   ? externalPluginV2Registry.findByRoute(route.path)
@@ -18,9 +18,7 @@ const registryReady = externalPluginV2Registry.initialized;
 watch(registration, (tool) => {
   if (tool) {
     applyExternalPluginV2RouteMeta(route.meta, tool.tool);
-    return;
   }
-  restoreLegacyExternalPluginRouteMeta(route.meta);
 }, { immediate: true });
 </script>
 
@@ -29,5 +27,7 @@ watch(registration, (tool) => {
     Loading plugin tools…
   </div>
   <ExternalPluginV2ToolPage v-else-if="isV2" />
-  <LegacyPage v-else />
+  <n-alert v-else type="warning" :show-icon="false" role="alert">
+    This plugin tool is no longer available because legacy plugin tools are not supported.
+  </n-alert>
 </template>

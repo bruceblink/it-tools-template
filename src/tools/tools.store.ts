@@ -4,7 +4,6 @@ import { onScopeDispose, shallowRef } from 'vue';
 import { Puzzle } from '@vicons/tabler';
 import type { MaybeRef, Ref } from 'vue';
 import type { ToolCategory, ToolReference, ToolWithCategory } from './tools.types';
-import { projectExternalPluginTools as projectExternalPluginToolRegistry } from './external-plugin-tools';
 import { createQueuedRefresh } from './queued-refresh';
 import { toolsWithCategory } from './index';
 import { ExternalPluginV2Registry, externalPluginV2Registry } from './external-plugin-v2-registry';
@@ -13,14 +12,7 @@ import { validateExternalPluginV2Manifest } from '@/shared/external-plugin-v2';
 import { isPluginToolCommandResult, type PluginToolCommandExecutor, type PluginToolCommandResult } from '@/shared/plugin-tool-workbench';
 import type { DesktopPluginErrorCode } from '@/shared/desktop-services/plugins';
 
-const externalPluginToolComponent = () => import('@/pages/ExternalPluginTool.page.vue');
 const externalPluginV2ToolComponent = () => import('@/pages/ExternalPluginV2Tool.page.vue');
-function projectDesktopExternalPluginTools(snapshots: readonly DesktopPluginSnapshot[]): ToolWithCategory[] {
-  return projectExternalPluginToolRegistry(snapshots, {
-    component: externalPluginToolComponent,
-    icon: Puzzle,
-  });
-}
 
 export function createExternalPluginV2CommandExecutor(): PluginToolCommandExecutor {
   return async (request, signal): Promise<PluginToolCommandResult> => {
@@ -140,24 +132,18 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
 export const useToolStore = defineStore('tools', () => {
   const favoriteToolsName = useStorage('favoriteToolsName', []) as Ref<string[]>;
   const { t } = useI18n();
-  const externalPluginTools = shallowRef<ToolWithCategory[]>([]);
   const refreshExternalPluginTools = createQueuedRefresh(async () => {
     const bridge = typeof window === 'undefined' ? undefined : window.itToolsDesktop;
     if (!bridge) {
-      externalPluginTools.value = [];
       externalPluginV2Registry.clear();
       externalPluginV2Registry.initialized.value = true;
       return;
     }
     try {
-      const [legacyResult] = await Promise.all([
-        bridge.listPlugins?.() ?? Promise.resolve({ ok: true as const, value: [] as DesktopPluginSnapshot[] }),
-        refreshExternalPluginV2Tools(),
-      ]);
-      externalPluginTools.value = legacyResult.ok ? projectDesktopExternalPluginTools(legacyResult.value) : [];
+      await refreshExternalPluginV2Tools();
     }
     catch {
-      externalPluginTools.value = [];
+      externalPluginV2Registry.clear();
     }
   });
 
@@ -171,7 +157,6 @@ export const useToolStore = defineStore('tools', () => {
 
   const tools = computed<ToolWithCategory[]>(() => [
     ...toolsWithCategory,
-    ...externalPluginTools.value,
     ...externalPluginV2Registry.tools.value,
   ].map((tool) => {
     return ({
