@@ -69,7 +69,11 @@ export class ExternalExtensionWorkerRuntime {
     if (request.payload.version !== this.launchConfig?.version) {
       return failure(request, 'invalid-request');
     }
-    if (request.payload.grantedCapabilities.some(capability => capability !== 'runtime.info' && capability !== 'settings.read')) {
+    if (request.payload.grantedCapabilities.some(capability => (
+      capability !== 'runtime.info'
+      && capability !== 'settings.read'
+      && capability !== 'data.oui'
+    ))) {
       return failure(request, 'permission-denied');
     }
     if (this.active) {
@@ -100,15 +104,21 @@ export class ExternalExtensionWorkerRuntime {
     request: Extract<ExternalExtensionRpcRequest, { method: 'executeCommand' }>,
   ): ExternalExtensionRpcResponse {
     if (request.payload.requiredCapabilities.some(capability => (
-      (capability !== 'runtime.info' && capability !== 'settings.read') || !this.grantedCapabilities.has(capability)
+      (
+        capability !== 'runtime.info'
+        && capability !== 'settings.read'
+        && capability !== 'data.oui'
+      ) || !this.grantedCapabilities.has(capability)
     ))) {
       return failure(request, 'permission-denied');
     }
     const requiresRuntimeInfo = request.payload.requiredCapabilities.includes('runtime.info');
     const requiresSettings = request.payload.requiredCapabilities.includes('settings.read');
-    if ((requiresRuntimeInfo || requiresSettings) !== (request.payload.capabilityContext !== undefined)
+    const requiresData = request.payload.requiredCapabilities.includes('data.oui');
+    if ((requiresRuntimeInfo || requiresSettings || requiresData) !== (request.payload.capabilityContext !== undefined)
       || requiresRuntimeInfo !== (request.payload.capabilityContext?.runtimeInfo !== undefined)
-      || requiresSettings !== (request.payload.capabilityContext?.settings !== undefined)) {
+      || requiresSettings !== (request.payload.capabilityContext?.settings !== undefined)
+      || requiresData !== (request.payload.capabilityContext?.data !== undefined)) {
       return failure(request, 'permission-denied');
     }
     if (!this.moduleBytes) {

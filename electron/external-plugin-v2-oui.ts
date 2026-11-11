@@ -200,9 +200,7 @@ function createFileResourceReader(baseDirectory: string): ExternalPluginV2OuiRes
     const canonicalRoot = await realpath(root).catch(error => {
       throw new ExternalPluginV2OuiError('resource-unavailable', 'The OUI data directory could not be resolved.', { cause: error });
     });
-    if (canonicalRoot !== root) {
-      throw new ExternalPluginV2OuiError('path-invalid', 'The OUI data directory must be canonical.');
-    }
+    // 使用 canonicalRoot 解析子路径；系统级别的 /var -> /private/var 别名不应被误判为目录链接。
     const candidate = resolve(canonicalRoot, relativePath);
     if (!isContainedPath(canonicalRoot, candidate)) {
       throw new ExternalPluginV2OuiError('path-invalid', 'The OUI resource escaped its data directory.');

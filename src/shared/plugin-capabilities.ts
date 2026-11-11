@@ -34,6 +34,12 @@ export const pluginHostCapabilityIds: readonly PluginHostCapability[] = Object.f
   'settings.write',
 ]);
 
+/** 隔离的 v2 WASM 宿主当前支持的能力 ID。 */
+export type PluginV2HostCapability = Extract<
+  PluginCapabilityId,
+  'runtime.info' | 'settings.read' | 'data.oui'
+>;
+
 /** Capabilities currently exposed to the trusted first-party extension host. */
 export type FirstPartyExtensionCapability = Extract<
   PluginCapabilityId,

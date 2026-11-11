@@ -134,7 +134,7 @@ const messages = {
     v2Install: 'Install v2 package',
     v2InstallInProgress: 'Installing v2 package…',
     v2Empty: 'No v2 plugin packages are installed.',
-    v2ExecutionPending: 'WASM tools can request runtime information or declared settings with your approval for each run. Settings are edited in the host; plugin write access and the process runtime are not available.',
+    v2ExecutionPending: 'WASM tools can request runtime information, declared settings, or host OUI data with your approval for each run. Settings are edited in the host; plugin write access and the process runtime are not available.',
     v2Uninstall: 'Uninstall package',
     v2UninstallInProgress: 'Uninstalling v2 package…',
     v2Installed: 'Signed v2 package installed. Supported tools can appear in navigation and search.',
@@ -143,6 +143,7 @@ const messages = {
     v2Capabilities: 'Requested capabilities',
     v2CapabilityRuntimeInfo: 'Runtime information · approval required for each command',
     v2CapabilitySettingsRead: 'Declared settings · approval required for each command',
+    v2CapabilityDataOui: 'Host OUI data · approval required for each command',
     v2CapabilityUnsupported: 'Not currently supported by this host',
     v2PermissionNotice: 'Installing a v2 package does not grant capabilities. The host asks for approval when a command uses them.',
     v2Settings: 'Host settings',
@@ -242,6 +243,7 @@ const messages = {
     trustUnavailable: 'The trust store is unavailable. The app did not replace or clear its contents.',
     invalidKey: 'The signer key, fingerprint confirmation, or plugin ID list is invalid.',
     operationCancelled: 'Operation cancelled.',
+    dataProviderFailed: 'The host data provider request could not be completed.',
     operationFailed: 'The operation could not be completed.',
   },
   zh: {
@@ -256,7 +258,7 @@ const messages = {
     v2Install: '安装 v2 插件包',
     v2InstallInProgress: '正在安装 v2 插件包…',
     v2Empty: '尚未安装 v2 插件包。',
-    v2ExecutionPending: 'WASM 工具每次运行时可请求运行时信息或读取声明的设置，需经你批准。设置由宿主管理；插件写入能力和进程运行时暂未开放。',
+    v2ExecutionPending: 'WASM 工具每次运行时可请求运行时信息、读取声明的设置或查询宿主 OUI 数据，需经你批准。设置由宿主管理；插件写入能力和进程运行时暂未开放。',
     v2Uninstall: '卸载插件包',
     v2UninstallInProgress: '正在卸载 v2 插件包…',
     v2Installed: '已安装签名 v2 插件包。受支持的工具可以显示在导航和搜索中。',
@@ -265,6 +267,7 @@ const messages = {
     v2Capabilities: '请求的能力',
     v2CapabilityRuntimeInfo: '运行时信息 · 每条命令都需要确认',
     v2CapabilitySettingsRead: '声明的设置 · 每条命令都需要确认',
+    v2CapabilityDataOui: '宿主 OUI 数据 · 每条命令都需要确认',
     v2CapabilityUnsupported: '当前宿主暂不支持',
     v2PermissionNotice: '安装 v2 插件包不会自动授予能力。命令使用能力时，宿主会单独请求确认。',
     v2Settings: '宿主设置',
@@ -364,6 +367,7 @@ const messages = {
     trustUnavailable: '信任存储不可用。应用没有替换或清空其中的数据。',
     invalidKey: '签名密钥、指纹确认或插件 ID 列表无效。',
     operationCancelled: '操作已取消。',
+    dataProviderFailed: '无法完成宿主数据提供者请求。',
     operationFailed: '无法完成此操作。',
   },
 } as const;
@@ -454,6 +458,9 @@ function v2CapabilityLabel(capability: string): string {
   }
   if (capability === 'settings.read') {
     return text('v2CapabilitySettingsRead');
+  }
+  if (capability === 'data.oui') {
+    return text('v2CapabilityDataOui');
   }
   return text('v2CapabilityUnsupported');
 }
@@ -577,6 +584,9 @@ function displayPluginError(error: string): string {
   }
   if (error === 'cancelled') {
     return text('operationCancelled');
+  }
+  if (error.startsWith('data-')) {
+    return text('dataProviderFailed');
   }
   if (error === 'source-build-key-cancelled' || error === 'source-build-cancelled') {
     return text('operationCancelled');

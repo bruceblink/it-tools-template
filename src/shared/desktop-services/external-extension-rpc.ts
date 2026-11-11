@@ -48,6 +48,7 @@ export interface ExternalExtensionRuntimeInfoContext {
 export interface ExternalExtensionCapabilityContext {
   readonly runtimeInfo?: ExternalExtensionRuntimeInfoContext;
   readonly settings?: Readonly<Record<string, string | number | boolean>>;
+  readonly data?: Readonly<Record<string, ExternalExtensionRpcJsonValue>>;
 }
 
 /** 扩展宿主适配器只返回这些稳定错误码。 */
@@ -190,12 +191,15 @@ export function parseExternalExtensionRpcRequest(value: unknown): ExternalExtens
         && value.payload.commandId.startsWith(`${value.pluginId}/`)
         && isJsonValue(value.payload.input)
         && isCapabilityList(value.payload.requiredCapabilities)
-        && (value.payload.requiredCapabilities.includes('runtime.info') || value.payload.requiredCapabilities.includes('settings.read')
+        && (value.payload.requiredCapabilities.includes('runtime.info')
+          || value.payload.requiredCapabilities.includes('settings.read')
+          || value.payload.requiredCapabilities.includes('data.oui')
           ? isExternalExtensionCapabilityContext(
             value.payload.capabilityContext,
             value.pluginId,
             value.payload.requiredCapabilities.includes('runtime.info'),
             value.payload.requiredCapabilities.includes('settings.read'),
+            value.payload.requiredCapabilities.includes('data.oui'),
           )
           : value.payload.capabilityContext === undefined)
         ? { ...base, method: 'executeCommand', payload: {
@@ -309,14 +313,16 @@ function isExternalExtensionCapabilityContext(
   pluginId: string,
   requiresRuntimeInfo: boolean,
   requiresSettings: boolean,
+  requiresData: boolean,
 ): value is ExternalExtensionCapabilityContext {
   if (!isRecord(value)) {
     return false;
   }
   const keys = Object.keys(value);
-  if (keys.some(key => key !== 'runtimeInfo' && key !== 'settings')
+  if (keys.some(key => key !== 'runtimeInfo' && key !== 'settings' && key !== 'data')
     || (requiresRuntimeInfo !== ('runtimeInfo' in value))
-    || (requiresSettings !== ('settings' in value))) {
+    || (requiresSettings !== ('settings' in value))
+    || (requiresData !== ('data' in value))) {
     return false;
   }
   if (requiresRuntimeInfo
@@ -330,6 +336,9 @@ function isExternalExtensionCapabilityContext(
     return false;
   }
   if (requiresSettings && !isExternalExtensionSettingsContext(value.settings, pluginId)) {
+    return false;
+  }
+  if (requiresData && !isExternalExtensionDataContext(value.data, pluginId)) {
     return false;
   }
   return true;
@@ -348,6 +357,20 @@ function isExternalExtensionSettingsContext(
       && (typeof settingValue === 'string' || typeof settingValue === 'boolean' || (typeof settingValue === 'number' && Number.isFinite(settingValue)))
       && (typeof settingValue !== 'string' || settingValue.length <= 4_096);
   });
+}
+
+function isExternalExtensionDataContext(
+  value: unknown,
+  pluginId: string,
+): value is Readonly<Record<string, ExternalExtensionRpcJsonValue>> {
+  if (!isRecord(value) || Object.keys(value).length > 32) {
+    return false;
+  }
+  return Object.entries(value).every(([providerId, providerValue]) => (
+    contributionIdPattern.test(providerId)
+      && providerId.startsWith(`${pluginId}/`)
+      && isJsonValue(providerValue)
+  ));
 }
 
 function isJsonValue(value: unknown, depth = 0): value is ExternalExtensionRpcJsonValue {

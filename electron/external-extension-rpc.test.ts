@@ -98,6 +98,33 @@ describe('external extension RPC protocol', () => {
     });
     expect(parseExternalExtensionRpcRequest({
       protocolVersion: 1,
+      requestId: 'request-data',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/data`,
+        input: { address: '20:37:06:12:34:56' },
+        requiredCapabilities: ['data.oui'],
+        capabilityContext: { data: { [`${pluginId}/oui`]: { vendor: 'Example vendor', dataVersion: '1.2.0' } } },
+      },
+    })).toMatchObject({
+      method: 'executeCommand',
+      payload: { requiredCapabilities: ['data.oui'] },
+    });
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
+      requestId: 'request-data-foreign',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/data`,
+        input: {},
+        requiredCapabilities: ['data.oui'],
+        capabilityContext: { data: { 'org.example.other/oui': { vendor: null } } },
+      },
+    })).toBeNull();
+    expect(parseExternalExtensionRpcRequest({
+      protocolVersion: 1,
       requestId: 'request-settings-missing',
       pluginId,
       method: 'executeCommand',
@@ -362,6 +389,29 @@ describe('ExternalExtensionRpcHost', () => {
         requiredCapabilities: ['settings.read'],
         capabilityContext: settingsContext,
       },
+    });
+
+    const dataHost = new ExternalExtensionRpcHost({
+      pluginId,
+      version: '1.0.0',
+      grantedCapabilities: ['data.oui'],
+      transport: createInProcessExternalExtensionRpcTransport(request => {
+        requests.push(request);
+        return {
+          protocolVersion: 1,
+          requestId: request.requestId,
+          pluginId,
+          ok: true,
+          result: null,
+        };
+      }),
+    });
+    const dataContext = { data: { [`${pluginId}/oui`]: { vendor: 'Example vendor', dataVersion: '1.2.0' } } };
+    await dataHost.activate();
+    await dataHost.executeCommand(`${pluginId}/data`, {}, ['data.oui'], undefined, dataContext);
+    await dataHost.dispose();
+    expect(requests.find(request => request.method === 'executeCommand' && request.payload.requiredCapabilities[0] === 'data.oui')).toMatchObject({
+      payload: { requiredCapabilities: ['data.oui'], capabilityContext: dataContext },
     });
   });
 

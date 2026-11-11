@@ -30,6 +30,7 @@ const control = vi.hoisted(() => {
   let onStopped: (() => void) | undefined;
   let executeError: RpcFailure | undefined;
   let holdExecution = false;
+  let appPath = '/test/app';
   const messageBox = vi.fn(async () => ({ response: 0 }));
   const responseFor = (request: RpcRequest) => {
     if (request.method === 'executeCommand' && executeError) {
@@ -68,6 +69,8 @@ const control = vi.hoisted(() => {
     dispose,
     messageBox,
     setExecuteError: (code: RpcFailure | undefined) => { executeError = code; },
+    setAppPath: (value: string) => { appPath = value; },
+    getAppPath: () => appPath,
     holdExecuteCommand: () => { holdExecution = true; },
     setStoppedCallback: (callback: (() => void) | undefined) => { onStopped = callback; },
     finishStop: () => {
@@ -97,6 +100,7 @@ const control = vi.hoisted(() => {
       heldExecutions.clear();
       executeError = undefined;
       holdExecution = false;
+      appPath = '/test/app';
       send.mockClear();
       dispose.mockClear();
       messageBox.mockReset();
@@ -106,7 +110,7 @@ const control = vi.hoisted(() => {
 });
 
 vi.mock('electron', () => ({
-  app: { getAppPath: () => '/test/app', getVersion: () => '1.0.0' },
+  app: { getAppPath: control.getAppPath, getVersion: () => '1.0.0' },
   BrowserWindow: class BrowserWindow {},
   clipboard: { writeText: vi.fn() },
   dialog: { showMessageBox: control.messageBox, showOpenDialog: vi.fn() },
@@ -406,6 +410,38 @@ describe('v2 plugin uninstall IPC', () => {
     await expect(command).resolves.toMatchObject({ ok: true, value: { kind: 'text', value: 'completed' } });
   });
 
+  it('asks for data.oui and injects only the declared host data', async () => {
+    await registerFixture({
+      requestedCapabilities: ['data.oui'],
+      toolCapabilities: ['data.oui'],
+      withDataProvider: true,
+      withMainWindow: true,
+    });
+    const command = invoke(
+      'desktop:plugins:v2:execute',
+      createCommandRequest('request-data-provider', { address: '20:37:06:12:34:56' }),
+    );
+    await vi.waitFor(() => expect(control.dispose).toHaveBeenCalledOnce());
+
+    expect(control.messageBox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      detail: expect.stringContaining('OUI'),
+    }));
+    const executeRequest = control.send.mock.calls.find(([request]) => request.method === 'executeCommand')?.[0];
+    expect(executeRequest?.payload).toEqual({
+      commandId,
+      input: { address: '20:37:06:12:34:56' },
+      requiredCapabilities: ['data.oui'],
+      capabilityContext: {
+        data: {
+          [`${pluginId}/oui`]: { vendor: 'Example vendor', dataVersion: '1.2.0' },
+        },
+      },
+    });
+
+    control.finishStop();
+    await expect(command).resolves.toMatchObject({ ok: true, value: { kind: 'text', value: 'completed' } });
+  });
+
   // 首版策略不支持其他能力，必须在任何原生授权提示或 worker 启动前拒绝。
   it('keeps every capability except runtime.info denied', async () => {
     await registerFixture({
@@ -427,6 +463,7 @@ async function registerFixture(options: {
   toolCapabilities?: readonly PluginCapabilityId[];
   withMainWindow?: boolean;
   withSettings?: boolean;
+  withDataProvider?: boolean;
 } = {}): Promise<{ packageRoot: string }> {
   control.reset();
   const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-ipc-'));
@@ -436,6 +473,7 @@ async function registerFixture(options: {
   const toolId = `${pluginId}/runtime-info`;
   const toolCapabilities = options.toolCapabilities;
   const settingId = `${pluginId}/endpoint`;
+  const providerId = `${pluginId}/oui`;
   const tool = toolCapabilities === undefined ? undefined : {
     id: toolId,
     title: 'Runtime info tool',
@@ -446,7 +484,10 @@ async function registerFixture(options: {
     offline: 'available' as const,
     capabilities: toolCapabilities,
     ...(options.withSettings ? { settings: [settingId] } : {}),
-    inputs: [],
+    ...(options.withDataProvider ? { dataProviders: [{ id: providerId, queryInputId: 'address' }] } : {}),
+    inputs: options.withDataProvider
+      ? [{ kind: 'text' as const, id: 'address', label: 'MAC address' }]
+      : [],
     output: { kind: 'text' as const },
   };
   const unsignedManifest: ExternalPluginV2UnsignedPackageManifest = {
@@ -481,6 +522,17 @@ async function registerFixture(options: {
           maxLength: 256,
         }],
       } : {}),
+      ...(options.withDataProvider ? {
+        dataProviders: [{
+          id: providerId,
+          label: 'OUI data',
+          description: 'Host-owned OUI vendor data.',
+          kind: 'oui.vendor' as const,
+          version: '1.2.0',
+          schemaVersion: 1,
+          maxBytes: 1024,
+        }],
+      } : {}),
     },
     files: [{ path: 'extension.wasm', sha256: createHash('sha256').update(wasmBytes).digest('hex') }],
   };
@@ -504,6 +556,27 @@ async function registerFixture(options: {
   }));
   await writeFile(join(packageRoot, 'plugin.json'), JSON.stringify(signedManifest));
   await writeFile(join(packageRoot, 'extension.wasm'), wasmBytes);
+  if (options.withDataProvider) {
+    const dataDirectory = join(root, 'out', 'renderer', 'assets', 'oui-data');
+    await mkdir(dataDirectory, { recursive: true });
+    const shardBytes = Buffer.from('{"203706":"Example vendor"}\n', 'utf8');
+    const shardHash = createHash('sha256').update(shardBytes).digest('hex');
+    await writeFile(join(dataDirectory, `oui-203-${shardHash.slice(0, 16)}.json`), shardBytes);
+    await writeFile(join(dataDirectory, 'manifest.json'), JSON.stringify({
+      schemaVersion: 1,
+      dataVersion: '1.2.0',
+      recordCount: 1,
+      shards: [{
+        prefix: '203',
+        file: `oui-203-${shardHash.slice(0, 16)}.json`,
+        sha256: shardHash,
+        recordCount: 1,
+        rawBytes: shardBytes.length,
+        gzipBytes: shardBytes.length,
+      }],
+    }));
+    control.setAppPath(root);
+  }
   lifecycle = await registerPluginLifecycleIpc({
     userDataRoot: root,
     getMainWindow: () => options.withMainWindow
@@ -516,8 +589,8 @@ async function registerFixture(options: {
 }
 
 /** 构造通过 IPC 入口校验的命令请求。 */
-function createCommandRequest(requestId: string): Record<string, unknown> {
-  return { requestId, pluginId, version, commandId, input: {} };
+function createCommandRequest(requestId: string, input: Record<string, unknown> = {}): Record<string, unknown> {
+  return { requestId, pluginId, version, commandId, input };
 }
 
 /** 以可信主窗口事件调用已注册的 Electron IPC 处理器。 */

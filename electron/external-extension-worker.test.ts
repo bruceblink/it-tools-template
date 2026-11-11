@@ -141,6 +141,30 @@ describe('ExternalExtensionWorkerRuntime', () => {
     });
   });
 
+  it('accepts a one-command data.oui grant and its bounded context', async () => {
+    const { config, runtime } = await createRuntime();
+    await expect(runtime.handle(request('activate', config, {
+      version: config.version,
+      grantedCapabilities: ['data.oui'],
+    }))).resolves.toMatchObject({ ok: true, result: { ready: true, runtime: 'wasm' } });
+
+    await expect(runtime.handle({
+      protocolVersion: 1,
+      requestId: 'data-1',
+      pluginId,
+      method: 'executeCommand',
+      payload: {
+        commandId: `${pluginId}/echo`,
+        input: {},
+        requiredCapabilities: ['data.oui'],
+        capabilityContext: { data: { [`${pluginId}/oui`]: { vendor: null, dataVersion: '1.2.0' } } },
+      },
+    } satisfies ExternalExtensionRpcRequest)).resolves.toMatchObject({
+      ok: true,
+      result: { kind: 'text', value: 'ok' },
+    });
+  });
+
   it('rejects unsupported host APIs and clears loaded bytes on disposal', async () => {
     const { config, runtime } = await createRuntime();
     await runtime.handle(request('activate', config));

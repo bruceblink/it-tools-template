@@ -45,7 +45,7 @@ function createManifest(): ExternalPluginV2Manifest {
 
 describe('external plugin v2 manifest', () => {
   it('keeps the supported capability list aligned with the v2 execution policy', () => {
-    expect(externalPluginV2SupportedCapabilities).toEqual(['runtime.info', 'settings.read']);
+    expect(externalPluginV2SupportedCapabilities).toEqual(['runtime.info', 'settings.read', 'data.oui']);
   });
 
   it('accepts a namespaced declarative tool and command', () => {

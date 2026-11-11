@@ -49,6 +49,13 @@ export const desktopPluginErrorCodes = Object.freeze([
   'source-build-failed',
   'cancelled',
   'timeout',
+  'data-query-invalid',
+  'data-provider-invalid',
+  'data-provider-unavailable',
+  'data-resource-limit',
+  'data-integrity-mismatch',
+  'data-timeout',
+  'data-cancelled',
   'operation-failed',
 ] as const);
 

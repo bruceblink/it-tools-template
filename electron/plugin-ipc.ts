@@ -35,6 +35,11 @@ import { createExternalPluginV2CapabilityPolicy, ExternalPluginV2CapabilityPolic
 import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
 import { createExternalExtensionProcessTransport } from './external-extension-process';
 import {
+  ExternalPluginV2DataError,
+  readExternalPluginV2ToolData,
+} from './external-plugin-v2-data';
+import { createExternalPluginV2OuiReader } from './external-plugin-v2-oui';
+import {
   readExternalPluginV2Settings,
   readExternalPluginV2ToolSettings,
   writeExternalPluginV2Setting,
@@ -62,6 +67,7 @@ import type {
 import type {
   ExternalPluginV2SettingDeclaration,
   ExternalPluginV2SettingValue,
+  ExternalPluginV2DataProviderDeclaration,
 } from '../src/shared/external-plugin-v2';
 
 export interface PluginIpcDependencies {
@@ -94,6 +100,9 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
   const signingKeys = new Map<string, PluginPackageSigningKey>();
   const trustStore = new PluginTrustStore(resolve(dependencies.userDataRoot, 'plugins', 'trusted-keys.json'), signingKeys);
   const pluginSettingsStore = new PluginSettingsStore(resolve(dependencies.userDataRoot, 'plugins', 'settings.json'));
+  const externalPluginV2OuiReader = createExternalPluginV2OuiReader({
+    baseDirectory: resolve(app.getAppPath(), 'out/renderer/assets/oui-data'),
+  });
   try {
     await trustStore.load();
   }
@@ -268,7 +277,11 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       const requestedCapabilities = tool ? requestedPolicy.getToolCapabilities(tool.id) : [];
       throwIfV2CommandAborted(activeRequest.controller.signal);
       if (requestedCapabilities.length > 0) {
-        if (requestedCapabilities.some(capability => capability !== 'runtime.info' && capability !== 'settings.read')) {
+        if (requestedCapabilities.some(capability => (
+          capability !== 'runtime.info'
+          && capability !== 'settings.read'
+          && capability !== 'data.oui'
+        ))) {
           throw new ExternalPluginV2CapabilityPolicyError('unsupported-capability');
         }
         const approved = await confirmExternalPluginV2Capabilities(
@@ -279,6 +292,8 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
           requestedCapabilities,
           tool?.settings ?? [],
           manifest.contributions.settings ?? [],
+          tool?.dataProviders ?? [],
+          manifest.contributions.dataProviders ?? [],
         );
         if (!approved) {
           throw new ExternalPluginV2CapabilityPolicyError('permission-denied');
@@ -290,10 +305,20 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       const settings = grantedCapabilities.includes('settings.read') && tool
         ? await readExternalPluginV2ToolSettings(manifest, tool, pluginSettingsStore)
         : undefined;
-      const capabilityContext: ExternalExtensionCapabilityContext | undefined = grantedCapabilities.includes('runtime.info') || settings !== undefined
+      const data = grantedCapabilities.includes('data.oui') && tool
+        ? await readExternalPluginV2ToolData(
+            manifest,
+            tool,
+            request.input,
+            externalPluginV2OuiReader,
+            activeRequest.controller.signal,
+          )
+        : undefined;
+      const capabilityContext: ExternalExtensionCapabilityContext | undefined = grantedCapabilities.includes('runtime.info') || settings !== undefined || data !== undefined
         ? {
             ...(grantedCapabilities.includes('runtime.info') ? { runtimeInfo: { platform: process.platform, appVersion: app.getVersion() } } : {}),
             ...(settings === undefined ? {} : { settings }),
+            ...(data === undefined ? {} : { data }),
           }
         : undefined;
       const key = `${request.pluginId}@${request.version}`;
@@ -601,8 +626,11 @@ async function confirmExternalPluginV2Capabilities(
   capabilities: readonly string[],
   settingIds: readonly string[],
   settingDeclarations: readonly ExternalPluginV2SettingDeclaration[],
+  dataProviderIds: readonly { readonly id: string; readonly queryInputId?: string }[],
+  dataProviderDeclarations: readonly ExternalPluginV2DataProviderDeclaration[],
 ): Promise<boolean> {
   const settingLabels = new Map(settingDeclarations.map(setting => [setting.id, setting.label]));
+  const dataProviderLabels = new Map(dataProviderDeclarations.map(provider => [provider.id, provider.label]));
   const capabilityDetails = capabilities.map(capability => {
     if (capability === 'runtime.info') {
       return '- Read platform and app version / 读取运行平台和应用版本';
@@ -611,6 +639,11 @@ async function confirmExternalPluginV2Capabilities(
       const labels = settingIds.map(settingId => settingLabels.get(settingId) ?? settingId);
       const suffix = labels.length > 0 ? ` (${labels.join(', ')})` : '';
       return `- Read this plugin's settings${suffix} / 读取此插件的设置${suffix}`;
+    }
+    if (capability === 'data.oui') {
+      const labels = dataProviderIds.map(provider => dataProviderLabels.get(provider.id) ?? provider.id);
+      const suffix = labels.length > 0 ? ` (${labels.join(', ')})` : '';
+      return `- Read host OUI data${suffix} / 读取宿主 OUI 数据${suffix}`;
     }
     return `- ${capability}`;
   }).join('\n');
@@ -701,6 +734,27 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
   }
   if (error instanceof ExternalPluginV2CapabilityPolicyError) {
     return error.code === 'unsupported-capability' ? 'unsupported-capability' : 'permission-denied';
+  }
+  if (error instanceof ExternalPluginV2DataError) {
+    if (error.code === 'query-invalid') {
+      return 'data-query-invalid';
+    }
+    if (error.code === 'provider-invalid') {
+      return 'data-provider-invalid';
+    }
+    if (error.code === 'resource-limit') {
+      return 'data-resource-limit';
+    }
+    if (error.code === 'integrity-mismatch') {
+      return 'data-integrity-mismatch';
+    }
+    if (error.code === 'timeout') {
+      return 'data-timeout';
+    }
+    if (error.code === 'cancelled') {
+      return 'data-cancelled';
+    }
+    return 'data-provider-unavailable';
   }
   if (
     error instanceof PluginLifecycleError
