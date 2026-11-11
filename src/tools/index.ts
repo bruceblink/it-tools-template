@@ -122,7 +122,7 @@ import { tool as yamlViewer } from './yaml-viewer';
 import { validateToolRegistry } from './tool-registry';
 import { filterToolCategoriesForPlatform } from './platform-filter';
 import { defineTool } from './tool';
-import { Database, DeviceDesktop } from '@vicons/tabler';
+import { DeviceDesktop } from '@vicons/tabler';
 import { translate } from '@/plugins/i18n.plugin';
 
 type DeclaredToolCategory = ToolCategory & { id: string };
@@ -130,38 +130,6 @@ type DeclaredToolCategory = ToolCategory & { id: string };
 // Keep desktop-only definitions inline so the Web build can remove their metadata and component imports.
 const desktopTools = import.meta.env.ELECTRON
   ? [
-      defineTool({
-        id: 'builtin/database-manager',
-        categoryId: 'development',
-        translationKey: 'database-manager',
-        name: translate('tools.database-manager.title'),
-        path: '/database-manager',
-        description: translate('tools.database-manager.description'),
-        keywords: ['database', 'postgresql', 'mysql', 'sqlite', 'sql', 'table', 'schema'],
-        component: () => loadBuiltinToolComponent('database-manager/database-manager.vue'),
-        icon: Database,
-        platforms: ['electron'],
-        dataProcessing: 'network',
-        offline: 'conditional',
-        capabilities: [],
-        contentWidth: 'wide',
-      }),
-      defineTool({
-        id: 'builtin/system-monitor',
-        categoryId: 'development',
-        translationKey: 'system-monitor',
-        name: translate('tools.system-monitor.title'),
-        path: '/system-monitor',
-        description: translate('tools.system-monitor.description'),
-        keywords: ['system', 'monitor', 'cpu', 'memory', 'disk', 'network', 'process'],
-        component: () => loadBuiltinToolComponent('system-monitor/system-monitor.vue'),
-        icon: DeviceDesktop,
-        platforms: ['electron'],
-        dataProcessing: 'local-data',
-        offline: 'available',
-        capabilities: [],
-        contentWidth: 'wide',
-      }),
       defineTool({
         id: 'builtin/api-client',
         categoryId: 'development',

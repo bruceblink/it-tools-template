@@ -15,14 +15,14 @@
   <img alt="Tech stack" src="https://img.shields.io/badge/stack-Vue%203%20%2B%20Vite%20%2B%20Naive%20UI-42b883">
 </p>
 
-IT Tools is a privacy-friendly collection of browser-based utilities. The web app processes normal tool input locally in the browser, works as a PWA, and does not require an application server for the built-in tools. The same Vue interface also powers a desktop app with local database, system, storage, and container workbenches.
+IT Tools is a privacy-friendly collection of browser-based utilities. The web app processes normal tool input locally in the browser, works as a PWA, and does not require an application server for the built-in tools. The same Vue interface also powers a desktop app with storage and container workbenches.
 
 This repository is a maintained fork of [CorentinTh/it-tools](https://github.com/CorentinTh/it-tools). It adds more tools, broader translations, lazy route loading, offline caching, platform-aware tool registration, and a desktop extension surface.
 
 ## What is included
 
 - **117 web tools** in Crypto, Converter, Web, Images & Videos, Development, Network, Math, Measurement, Text, and Data.
-- **Desktop workbenches** for PostgreSQL, MySQL, and SQLite databases; system monitoring; API requests; Git; S3-compatible object storage; and read-only Docker container browsing.
+- **Desktop workbenches** for API requests, Git, S3-compatible object storage, and read-only Docker container browsing.
 - **Extensions and plugins:** trusted first-party extensions and an evolving v2 signed external extension model with host-rendered tools, separate signer trust, and a restricted WASM runtime for pure computation. The existing HTML/webview package flow remains legacy during migration.
 - **Desktop updates:** optional automatic checks and user-confirmed download and installation from GitHub Releases.
 - **Nine web languages:** English, Chinese, German, French, Spanish, Portuguese, Ukrainian, Vietnamese, and Norwegian.
@@ -265,7 +265,6 @@ The [main development plan](docs/01-development-plan.md) is the only document th
 - [Plugin quickstart](docs/11-electron-plugin-mvp-quickstart.md): development and local validation
 - [First-party extension SDK v0](docs/extension-sdk-v0.md): trusted extensions bundled with the application
 - [Plugin system v2 design](docs/22-plugin-architecture-v2.md): host-rendered contributions, extension host RPC, capabilities, and migration boundaries
-- [Database and system workbenches](docs/13-database-system-monitor-design.md): desktop data and sampling boundaries
 - [Cross-project capability matrix](docs/14-cross-project-capability-matrix.md): independent project scope
 - [Object storage workbench](docs/15-object-storage-workbench-design.md): S3-compatible browsing and transfers
 - [Container workbench](docs/17-container-workbench-design.md): read-only local Docker container list
@@ -283,7 +282,7 @@ Before opening a pull request, run:
 pnpm validate
 ~~~
 
-This runs header consistency checks, script tests, type checks, lint, unit tests, the production build, Web platform isolation checks, and the Electron build. Browser and database acceptance suites are run separately when the change needs them.
+This runs header consistency checks, script tests, type checks, lint, unit tests, the production build, Web platform isolation checks, and the Electron build. Browser acceptance suites are run separately when the change needs them.
 
 For a local release preview:
 

@@ -29,11 +29,11 @@ Web/PWA 与 Electron 共享 Vue 组件、工具注册、路由、校验、主题
 | --- | --- | --- |
 | 启动与资源 | 浏览器入口、SPA 回退、Service Worker | `app://bundle/` 本地协议，不注册 Web Service Worker |
 | 原生操作 | 浏览器 API 和站点权限 | 固定 preload 方法、主进程来源检查和受限桌面服务 |
-| 工具注册 | 仅注册支持 Web 的工具 | 可注册数据库、系统监视、API、Git、对象存储和容器工作台 |
+| 工具注册 | 仅注册支持 Web 的工具 | 可注册 API、Git、对象存储和容器工作台 |
 | 外部包 | 不安装 `.itxs` | 校验、信任、授权后在隔离窗口运行 |
 | 存储 | 页面内容默认内存；普通偏好可本地保存 | 凭据、插件设置和运行 Session 按各自边界管理，不与 Web 或 Ramag 共享 |
 
-Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Node integration。主进程校验调用来源、主框架、参数和会话归属；不向页面提供任意文件路径、Shell、通用网络代理或数据库驱动。插件不复用应用主窗口的 preload。
+Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Node integration。主进程校验调用来源、主框架、参数和会话归属；不向页面提供任意文件路径、Shell 或通用网络代理。插件不复用应用主窗口的 preload。
 
 ## 3. 工具注册与按需加载
 
@@ -109,7 +109,6 @@ Electron 主窗口保持 sandbox、context isolation、webSecurity 和关闭 Nod
 | 保留的证据 | 用途与限制 |
 | --- | --- |
 | [2026-10-25 主线基线](performance-baseline-2026-10-25-main.json) | 对应报告中版本的 Web/Electron 测量，不代表当前提交 |
-| [系统监视器长时资源](performance-system-monitor-resource-2026-10-24.json) | Windows 30 分钟及路由清理观测，不代表其他平台或全部资源计数 |
 | [Worker 保留引用](performance-worker-retainers-2026-10-18.json) | 对应工具和事件目标的引用分析，不覆盖全部页面 |
 | [插件渲染器资源](performance-plugin-renderer-2026-10-18.json) | 注入压力与强制崩溃路径，不证明全部自然故障或长期无泄漏 |
 | [真实窗口记录](performance-window-2026-10-18.json) | 旧版窗口的有限样本，不能替代当前版本验收 |

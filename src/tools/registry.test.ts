@@ -77,7 +77,7 @@ describe('tool registry integrity', () => {
     const indexedPaths = indexedTools.map(({ path }) => normalizeRoute(path)).sort();
     const registeredPaths = registeredTools.map(({ path }) => normalizeRoute(path)).sort();
 
-    expect(registeredTools).toHaveLength(123);
+    expect(registeredTools).toHaveLength(121);
     expect(new Set(indexedPaths).size).toBe(indexedPaths.length);
     expect(registeredPaths).toEqual(indexedPaths);
     const registeredExtensionTools = registeredTools.filter(({ extensionOwned }) => extensionOwned);
@@ -129,8 +129,6 @@ describe('tool registry integrity', () => {
     }
 
     for (const path of [
-      '/database-manager',
-      '/system-monitor',
       '/api-client',
       '/git-workbench',
       '/object-storage',

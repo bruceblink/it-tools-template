@@ -22,14 +22,13 @@
 | ID | 能力 | 当前 Ramag 实现 | it-tools-template 目标 | Web | Electron | GPUI | Ramag 处理 |
 |---|---|---|---|---|---|---|---|
 | CAP-001 | 117 个通用工具和纯计算 | JSON Path、工具目录和部分纯 Rust 核心 | 统一工具目录、Vue 页面、WASM 和测试样例 | 支持 | 支持 | 移除重复入口 | 迁移 |
-| CAP-002 | PostgreSQL、MySQL、SQLite 数据库 | dbclient 与三类 SQL 基础设施 | Electron 数据库工作台 | 不支持或只显示说明 | 支持 | 移除产品入口 | 迁移 |
 | CAP-003 | Redis 与 MongoDB | 专用工具和基础设施 | Electron 数据与文档工作台 | 不支持或只显示说明 | 支持 | 移除产品入口 | 迁移 |
 | CAP-004 | API 请求工作台 | API 工具和 HTTP 基础设施 | Electron 请求、环境、历史和响应工作台 | 受浏览器策略限制 | 支持 | 移除产品入口 | 迁移 |
 | CAP-005 | Kafka 与 MQTT | 消息工具和客户端基础设施 | Electron 消息连接、主题、消息和取消流程 | 平台限制 | 支持 | 移除产品入口 | 迁移 |
 | CAP-006 | Git | VCS 工具和 Git 基础设施 | Electron 仓库、分支、差异和提交工作台 | 不支持 | 支持 | 移除产品入口 | 迁移 |
 | CAP-007 | 对象存储 | COS/OSS/S3 工具和 OpenDAL 基础设施 | Electron Bucket、对象和传输工作台 | 受凭据和 CORS 限制 | 支持 | 移除产品入口 | 迁移 |
 | CAP-008 | 容器管理 | Docker/Kubernetes 工具和客户端 | Electron 容器、镜像、日志和执行工作台 | 不支持 | 支持 | 移除产品入口 | 迁移 |
-| CAP-009 | 剪贴板历史和普通系统监控 | 剪贴板工具、System Pulse 和本地存储 | Electron 主进程、托盘、采样和页面 | 浏览器剪贴板；无后台历史 | 支持 | 移除产品入口 | 迁移 |
+| CAP-009 | 剪贴板历史 | 剪贴板工具和本地存储 | 当前不纳入 it-tools-template 主线 | 浏览器剪贴板；无后台历史 | 不支持 | 移除产品入口 | 暂缓 |
 | CAP-010 | 更新和桌面分发 | Ramag 更新基础设施 | Electron Builder、安装包和更新流程 | PWA 发布流程 | 支持 | 不负责 | 迁移 |
 | CAP-011 | SSH、SFTP、PTY 和端口转发 | SSH、终端、隧道和连接生命周期 | 当前不纳入 it-tools-template 主线 | 不支持 | 不支持 | 通过 GPUI 原生工作区 | 保留 |
 | CAP-012 | Ramag 本地秘密存储 | 加密存储和系统凭据库 | 独立使用 Electron 系统存储 | 不保存秘密 | 独立管理应用秘密 | 独立管理 Ramag 秘密 | 条件保留 |

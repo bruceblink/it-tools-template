@@ -1,14 +1,4 @@
 tools:
-  system-monitor:
-    title: 系统监视器
-    description: 查看本机 CPU、内存、磁盘、网络和进程活动。
-    stageNotice: 工作区已就绪。下一阶段将接入实时系统采样。
-    waitingForSampler: 正在等待系统采集器。
-    metrics:
-      cpu: CPU
-      memory: 内存
-      disk: 磁盘
-      network: 网络
   api-client:
     title: API 客户端
     description: 在桌面应用中发送受限 HTTP 请求并查看响应。

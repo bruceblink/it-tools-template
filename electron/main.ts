@@ -32,8 +32,6 @@ import {
   PLUGIN_SCHEME,
 } from './plugin-sandbox';
 import { registerPluginLifecycleIpc } from './plugin-ipc';
-import { registerDatabaseIpc } from './database/database-ipc';
-import { registerSystemMonitorIpc } from './system-monitor/system-monitor-ipc';
 import { registerApiIpc } from './api/api-ipc';
 import { registerGitIpc } from './git/git-ipc';
 import { registerStorageIpc } from './object-storage/storage-ipc';
@@ -69,8 +67,6 @@ protocol.registerSchemesAsPrivileged([{
 }]);
 
 let mainWindow: BrowserWindow | null = null;
-let databaseIpc: ReturnType<typeof registerDatabaseIpc> | null = null;
-let systemMonitorIpc: ReturnType<typeof registerSystemMonitorIpc> | null = null;
 let apiIpc: ReturnType<typeof registerApiIpc> | null = null;
 let gitIpc: ReturnType<typeof registerGitIpc> | null = null;
 let storageIpc: ReturnType<typeof registerStorageIpc> | null = null;
@@ -109,15 +105,6 @@ else {
     await installAppProtocol();
     installPermissionPolicy();
     installRuntimeInfoIpc();
-    databaseIpc = registerDatabaseIpc({
-      trustedRendererUrl: () => trustedRendererUrl,
-      workerPath: resolve(app.getAppPath(), 'out/main/database-worker.cjs'),
-      userDataRoot: app.getPath('userData'),
-    });
-    systemMonitorIpc = registerSystemMonitorIpc({
-      trustedRendererUrl: () => trustedRendererUrl,
-      workerPath: resolve(app.getAppPath(), 'out/main/system-monitor-worker.cjs'),
-    });
     apiIpc = registerApiIpc({
       trustedRendererUrl: () => trustedRendererUrl,
     });
@@ -168,10 +155,6 @@ else {
     pluginLifecycleIpc = null;
     updateIpc?.shutdown();
     updateIpc = null;
-    databaseIpc?.shutdown();
-    databaseIpc = null;
-    systemMonitorIpc?.shutdown();
-    systemMonitorIpc = null;
     apiIpc?.shutdown();
     apiIpc = null;
     gitIpc?.shutdown();
@@ -414,8 +397,6 @@ function closeRendererOwnedServices(contents: WebContents): void {
   if (pluginRendererIds.has(contents)) {
     return;
   }
-  databaseIpc?.closeRenderer(contents.id);
-  systemMonitorIpc?.closeRenderer(contents.id);
   apiIpc?.closeRenderer(contents.id);
   gitIpc?.closeRenderer(contents.id);
   storageIpc?.closeRenderer(contents.id);
@@ -493,8 +474,6 @@ async function createMainWindow() {
     }
   });
   window.on('closed', () => {
-    databaseIpc?.closeRenderer(rendererId);
-    systemMonitorIpc?.closeRenderer(rendererId);
     apiIpc?.closeRenderer(rendererId);
     gitIpc?.closeRenderer(rendererId);
     storageIpc?.closeRenderer(rendererId);

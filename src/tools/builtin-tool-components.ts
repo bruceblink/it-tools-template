@@ -7,19 +7,15 @@ const sharedToolComponents = import.meta.glob<ComponentModule>([
   './*/**/*.vue',
   '!./api-client/**/*.vue',
   '!./container-workbench/**/*.vue',
-  '!./database-manager/**/*.vue',
   '!./git-workbench/**/*.vue',
   '!./object-storage/**/*.vue',
-  '!./system-monitor/**/*.vue',
 ]);
 
 const desktopToolComponents = import.meta.glob<ComponentModule>([
   './api-client/**/*.vue',
   './container-workbench/**/*.vue',
-  './database-manager/**/*.vue',
   './git-workbench/**/*.vue',
   './object-storage/**/*.vue',
-  './system-monitor/**/*.vue',
 ]);
 
 const componentLoaders: Record<string, ComponentLoader> = import.meta.env.ELECTRON

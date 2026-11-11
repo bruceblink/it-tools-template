@@ -8,11 +8,6 @@ const projectRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const distDirectory = join(projectRoot, 'dist');
 const scannedExtensions = new Set(['.css', '.html', '.js', '.json', '.map', '.webmanifest']);
 const forbiddenMarkers = [
-  'systeminformation',
-  'desktop:system-monitor:',
-  'desktop:database:',
-  'mysql2',
-  'pg-query-stream',
   'node:sqlite',
   '@aws-sdk/client-s3',
   'desktop:object-storage:',
@@ -35,7 +30,7 @@ async function listFiles(directory) {
   return files;
 }
 
-test('production Web bundle excludes desktop-only database and system monitor code', async () => {
+test('production Web bundle excludes desktop-only dependencies', async () => {
   const files = await listFiles(distDirectory);
   assert.ok(files.length > 0, 'the production Web bundle must exist before isolation checks run');
 

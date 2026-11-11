@@ -24,7 +24,7 @@ it-tools-template 独立负责 Web/PWA 工具、Electron 工作台、桌面分�
 | --- | --- | --- |
 | 通用工具 | 117 个工具、9 个语言包、按需路由、平台化工具注册 | 保持现有 URL、收藏和输入输出；只处理有证据的问题 |
 | Web/PWA | 应用壳缓存、访问后资源缓存、构建体积检查 | 默认客户端处理；不新增账号、同步或后端服务 |
-| Electron 工作台 | 三引擎数据库、系统监视、API、Git、S3 兼容对象浏览与传输、只读容器列表 | 已交付功能进入维护；不把模块名称解释为完整协议或全部操作均已支持 |
+| Electron 工作台 | API、Git、S3 兼容对象浏览与传输、只读容器列表 | 已交付功能进入维护；不把模块名称解释为完整协议或全部操作均已支持 |
 | 第一方扩展 | SDK v0、按需激活、命令、设置迁移和数据提供器 | 仅运行项目维护的受信任代码 |
 | 外部插件 | 签名包、信任管理、能力授权、工具贡献、设置、升级回退与停用恢复 | 仅支持 Electron；当前宿主 API 为 `1.4.0`；历史三平台自动化记录保留，macOS 重开窗口存在已确认缺陷，手工安装和自然故障仍需补齐 |
 | 项目边界 | [能力归属矩阵](14-cross-project-capability-matrix.md) | 该矩阵用于说明边界，不表示其中的目标能力已进入排期 |
@@ -124,9 +124,6 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 - `MARKETPLACE-OWNER-001`：已关闭。安装器、源码快照、来源记录和市场配置统一接受单字符 GitHub owner；安装器和源码快照回归分别覆盖 owner `A`，并继续保留仓库身份、topic、签名和来源校验。仍需真实 GitHub 仓库资产验收，但单字符 owner 不再被本地格式校验误拒。
 - `MAC-REOPEN-001`：代码已区分“关闭主窗口并停止活动插件”和“最终退出应用”。[`electron/main.ts`](../electron/main.ts) 关闭主窗口时调用 `stopExternalPlugins()`，[`electron/plugin-lifecycle.ts`](../electron/plugin-lifecycle.ts) 保留 `shutdown()` 的永久退出语义；当前插件生命周期定向回归和 Linux Xorg dummy display Electron E2E 通过。真实 macOS 从 Dock 重开后的安装、启用、停用和卸载仍未执行，继续作为平台证据缺口，不再作为已确认代码缺陷。
-- `MONITOR-SORT-001`：系统监视器会把缺失 CPU 指标的进程排在有效值前面。证据：[`electron/system-monitor/system-info.ts`](../electron/system-monitor/system-info.ts) 的排序调用（142–148 行）交换比较参数，但 `compareMetric()`（220–230 行）的空值顺序没有一起反转。此前调用真实 `normalizeProcessSnapshot()` 复现：`cpu=NaN` 排在 `cpu=80` 前；2,000 条缺失指标与一条 `cpu=99` 的数据经过上限截断后，有效高 CPU 进程被丢弃。前端重新排序无法恢复已丢弃行。修复只调整有效值降序与空值末尾规则，保留 2,000 行上限。验收覆盖有效值与空值混排、CPU 相同后的内存排序、全部空值及超过上限的输入，再检查页面排序和分页。回退只撤销排序与对应测试，不改采集协议。
-- 数据库、系统监视、对象存储和容器工作台的完整真实窗口流程尚未统一验收。覆盖连接、分页、筛选、查询、编辑冲突、文件选择、传输确认、取消、断开和关闭；按模块实际支持范围执行。
-- 系统监视器需要睡眠恢复、PID 重用和更完整的服务、连接、订阅、监听器及缓存点计数。Windows 已有 30 分钟与 20 次路由切换报告，不能据此推断所有计数均已覆盖。
 - PDF 检查已有合成签名与篡改样例；真实外部签名文件和证书链仍缺验证。摄像头需逐平台验证真实设备、授权拒绝后的恢复和设备切换。
 - Firefox 此前的定向 E2E 再次因 `spawn UNKNOWN` 启动失败，未取得页面执行结果。后续三浏览器验收需先恢复该运行环境；启动失败或环境跳过均不计为通过。非中英文语言包的完整性仍需单独审查。
 - 元标签输出的复制参数已有组件测试，但测试使用 `CopyableStub`，没有经过真实 `TextareaCopyable` 和复制适配器。补充该工具的真实复制链路回归；这属于证据缺口，不是已确认复制失败，不重新安排已完成的输出属性修复。
@@ -141,7 +138,6 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 ### 维护队列：隔离与生命周期验收
 
-- 历史文档记录 Electron CI 运行 `41909808822` 通过 Linux、macOS、Windows，包含 Linux MySQL/SQLite 元数据、三平台 smoke、插件沙箱和 macOS 五次生命周期重复回归。本次没有查询或监测该运行，也没有验证当前提交的三平台 CI；不能将历史结果扩大为当前版本通过。
 - Windows 真实窗口已有部分安装、拒绝授权、剪贴板代理和撤销签名者记录，不能代表完整安装到卸载流程。补齐 `runtime.info` 授权、真实系统剪贴板、升级失败回退和卸载操作。
 - Linux/macOS 需独立验证插件来源、存储、网络、导航、下载、Worker、卡死和崩溃清理。强制崩溃测试只证明该注入路径；自然故障结果按实际观测记录。
 - 已实现的请求时限、执行器超时或授权撤销时的 `AbortSignal`、最多 8 个未结束后台执行、关闭幂等与关闭超时后继续清理，均保留为维护基线。此前插件客户端、能力代理和生命周期定向测试通过 3 个文件、44 项测试；不再将这些实现列为下一项开发。
@@ -155,7 +151,6 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 - 修复后重新测量冷启动、首次和重复工具导航、输入处理、渲染更新、空闲 CPU、进程组内存和安装体积。Web 使用生产构建，Electron 使用同一提交的解包应用，各至少运行 20 次。2026-11-05 无显示服务环境的无头 Chromium 报告为 [`docs/performance-baseline-2026-11-05-web.json`](performance-baseline-2026-11-05-web.json)：启动中位数 1127.35 ms、p95 1358.4 ms；首次导航中位数 153.1–347.58 ms、p95 197.72–440.89 ms；重复导航中位数 134.77–341.74 ms、p95 165.92–433.6 ms。该次功能 E2E 通过 15/15 项。以上结果属于报告所记环境；本次 Windows 审查没有重跑 20 次基线，不能沿用当时“当前环境没有显示服务”的描述。后续在可用真实桌面或 Linux Xvfb 环境补 Electron 测量。
 - Linux/macOS 缺少与 Windows 对应的固定环境基线。真实窗口响应时间与自动化输入耗时分别记录，不能相互替代。
-- 系统监视器历史工作集峰值约 115.33 MiB，高于原定 64 MiB 附加内存目标。先明确附加内存计算口径，再定位缓存或采集开销；不能把两种口径直接等同。
 - Electron Math Evaluator Worker 历史构建仍高于 500 KiB 候选目标。先测当前产物和实际加载成本，再决定是否继续拆分；Worker 资源单列，不混入工具静态入口预算。
 - 继续验证首个工具导航与延后 PWA 注册、懒路由依赖并行加载的实际效果。保留构建检查：8 MiB 应用壳预缓存、300 KiB 首屏 JavaScript gzip、500 KiB 工具新增静态 JavaScript gzip。
 - 此前构建有第三方 `js-sha256` 的 `eval`、大块体积、浏览器端 `path`/`tls` 外部化、未匹配 scrollbar 样式和 PWA `inlineDynamicImports` 弃用警告。此前构建已通过；本次未重跑构建。这些提示不直接证明运行失败。先确认实际加载路径和影响，再按受影响功能处理，不通过关闭检查消除提示。
@@ -196,13 +191,10 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | 插件市场直装流程 | `pnpm exec vitest run electron/plugin-marketplace-download.test.ts electron/plugin-marketplace-installer.test.ts electron/plugin-marketplace-controller.test.ts electron/plugin-provenance-store.test.ts electron/plugin-source-snapshot.test.ts --reporter=dot`、`pnpm typecheck:electron`、`pnpm typecheck:app`、`pnpm lint --max-warnings 0`；受控响应验证逐跳地址、大小、摘要、临时文件清理和签名安装；真实 GitHub Release 与 Electron 窗口验收仍待补充；普通模式不允许原始源码直载 |
 | 插件平台 P0 开发闭环 | `pnpm test:plugin-source-build`、源码来源和生命周期定向回归、`pnpm typecheck:electron`、`pnpm typecheck:app`；使用 CLI 或桌面设置源码卡片完成固定提交下载、受限解压、校验、可选类型检查、签名打包、安装和来源记录，再信任、授权并运行；真实窗口验收仍待补充 |
 | 插件平台 P1/P3 宿主与运行时 | `pnpm test:e2e:electron electron/plugin-manager.e2e.spec.ts electron/plugin-sandbox.e2e.spec.ts`；记录安装、信任、能力授权、贡献工具、停止、升级回退、崩溃和清理的真实窗口范围 |
-| 维护队列中的缺陷 | `MAC-REOPEN-001`：在 macOS 执行真实重开窗口流程并补平台证据；`MONITOR-SORT-001`：`pnpm exec vitest run electron/system-monitor/system-info.test.ts`；已关闭的 owner 和 API timer 项保留现有回归，发布前纳入适用的 `pnpm check` |
 | 插件 CLI 与 SDK | `pnpm test:plugin-scaffold`、`pnpm test:plugin-pack`、`pnpm test:plugin-sdk`、`pnpm test:plugin-project`；复核独立生成项目 |
 | Web/PWA | `pnpm test:e2e`；离线定向检查 `pnpm test:e2e src/pwa-cache.e2e.spec.ts` |
 | Electron 与插件 | `pnpm test:e2e:electron`；真实窗口优先使用 Computer Use，不可用时记录有限启动、恢复检查和无头测试范围 |
-| 数据库集成 | `pnpm test:e2e:postgres`、`pnpm test:e2e:mysql`、`pnpm test:e2e:sqlite`；PostgreSQL 17+、MySQL 8.4+ 使用 WSL 内的本地 Docker，先核验发行版、Docker 状态与端口，再按脚本要求连接；SQLite 使用临时文件 |
 | 对象存储与容器 | `pnpm test:e2e:object-storage`、`pnpm test:e2e:container-workbench`；通过 WSL 使用本地 Docker，记录发行版、服务、镜像版本、端口、启动和清理 |
-| 系统监视器长时资源 | `pnpm test:e2e:electron electron/system-monitor-resource.e2e.spec.ts`，设置 `IT_TOOLS_SYSTEM_MONITOR_SOAK_MS=1800000`；检查 30 分钟采样和 20 次路由切换 |
 | 性能基线 | 先构建当前平台解包应用，再执行 `node scripts/performance-baseline.mjs --runs 20 --platform all --electron-app-dir . --output docs/performance-baseline-YYYY-MM-DD-main.json`；无显示服务时先执行 `pnpm test:e2e --project=chromium src/app.e2e.spec.ts src/pwa-cache.e2e.spec.ts`，再用 `--platform web` 运行同一性能脚本；新建报告，不覆盖历史报告 |
 | Docker 与响应头 | 通过 WSL 构建实际目标镜像；按脚本运行环境执行 `pnpm headers:check`、`pnpm headers:docker`，核验 Docker 调用确实到达 WSL 服务；记录镜像和容器清理 |
 | 发布 | 使用仓库 release 流程；核对目标提交、CI 任务、包和校验和，按 tag 提交范围生成发布说明 |
@@ -225,7 +217,6 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 | [性能与插件平台设计说明](07-performance-extensibility-design.md) | 平台边界、加载与缓存、任务执行器、插件架构和资源口径 |
 | [插件包格式](08-electron-plugin-package-format-v1.md)、[开发 API](09-electron-plugin-capability-api-v1.md)、[生命周期](10-electron-plugin-lifecycle-v1.md)、[使用说明](11-electron-plugin-mvp-quickstart.md) | 外部插件版本化接口和操作方法 |
 | [第一方扩展 SDK v0](extension-sdk-v0.md) | 仓库内受信任扩展的接口和限制 |
-| [数据库与系统监视器设计](13-database-system-monitor-design.md) | 页面、数据、查询、采集和清理边界 |
 | [能力归属矩阵](14-cross-project-capability-matrix.md) | 双项目能力范围和独立实现边界 |
 | [对象存储设计](15-object-storage-workbench-design.md)、[容器设计](17-container-workbench-design.md) | 现有工作台范围、资源限制和回退方法 |
 | `docs/archive/18-excalidraw-integration-assessment.md` | 已归档的未批准评估，不属于当前开发路线 |

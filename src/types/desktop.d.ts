@@ -1,29 +1,4 @@
 import type {
-  DatabaseBatchMutationInput,
-  DatabaseBatchMutationResponse,
-  DatabaseBridgeResult,
-  DatabaseAccessMode,
-  DatabaseCellUpdateInput,
-  DatabaseStatementResult,
-  DatabaseSchemaInfo,
-  DatabaseStructureInfo,
-  DatabaseTableInfo,
-  MySqlConnectionInput,
-  MySqlSessionInfo,
-  PostgresConnectionInput,
-  PostgresConnectionProfile,
-  PostgresConnectionProfileInput,
-  PostgresDataPage,
-  PostgresDataPageInput,
-  PostgresSessionInfo,
-  SQLiteSessionInfo,
-} from '../shared/desktop-services/database';
-import type {
-  SystemMonitorBridgeResult,
-  SystemMonitorSample,
-  SystemMonitorSessionInfo,
-} from '../shared/desktop-services/system-monitor';
-import type {
   ApiBridgeResult,
   ApiRequestInput,
   ApiResponse,
@@ -147,45 +122,6 @@ declare global {
         platform: string;
         version: string;
       }>;
-      connectPostgres?(input: PostgresConnectionInput): Promise<DatabaseBridgeResult<PostgresSessionInfo>>;
-      connectMySql?(input: MySqlConnectionInput): Promise<DatabaseBridgeResult<MySqlSessionInfo>>;
-      connectSQLite?(accessMode: DatabaseAccessMode): Promise<DatabaseBridgeResult<SQLiteSessionInfo | null>>;
-      disconnectDatabase?(sessionId: string): Promise<DatabaseBridgeResult<boolean>>;
-      listDatabaseSchemas?(sessionId: string): Promise<DatabaseBridgeResult<DatabaseSchemaInfo[]>>;
-      listDatabaseTables?(sessionId: string, schema: string): Promise<DatabaseBridgeResult<DatabaseTableInfo[]>>;
-      getDatabaseStructure?(
-        sessionId: string,
-        schema: string,
-        table: string,
-      ): Promise<DatabaseBridgeResult<DatabaseStructureInfo>>;
-      getDatabaseDataPage?(
-        sessionId: string,
-        requestId: string,
-        schema: string,
-        table: string,
-        page: PostgresDataPageInput,
-      ): Promise<DatabaseBridgeResult<PostgresDataPage>>;
-      updateDatabaseCell?(
-        sessionId: string,
-        input: DatabaseCellUpdateInput,
-      ): Promise<DatabaseBridgeResult<boolean>>;
-      applyDatabaseBatchMutation?(
-        sessionId: string,
-        input: DatabaseBatchMutationInput,
-      ): Promise<DatabaseBridgeResult<DatabaseBatchMutationResponse>>;
-      runDatabaseQuery?(
-        sessionId: string,
-        requestId: string,
-        sql: string,
-        offset: number,
-      ): Promise<DatabaseBridgeResult<DatabaseStatementResult>>;
-      cancelDatabaseDataPage?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
-      cancelDatabaseQuery?(sessionId: string, requestId: string): Promise<DatabaseBridgeResult<boolean>>;
-      listPostgresProfiles?(): Promise<DatabaseBridgeResult<PostgresConnectionProfile[]>>;
-      savePostgresProfile?(
-        input: PostgresConnectionProfileInput,
-      ): Promise<DatabaseBridgeResult<PostgresConnectionProfile>>;
-      deletePostgresProfile?(profileId: string): Promise<DatabaseBridgeResult<boolean>>;
       runApiRequest?(input: ApiRequestInput): Promise<ApiBridgeResult<ApiResponse>>;
       cancelApiRequest?(requestId: string): Promise<ApiBridgeResult<boolean>>;
       selectGitRepository?(): Promise<GitBridgeResult<GitRepositoryInfo | null>>;
@@ -194,14 +130,6 @@ declare global {
       getGitDiff?(repositoryId: string, requestId: string): Promise<GitBridgeResult<GitDiff>>;
       cancelGitRequest?(requestId: string): Promise<GitBridgeResult<boolean>>;
       closeGitRepository?(repositoryId: string): Promise<GitBridgeResult<boolean>>;
-      startSystemMonitor?(intervalMs?: number): Promise<SystemMonitorBridgeResult<SystemMonitorSessionInfo>>;
-      setSystemMonitorPaused?(
-        subscriptionId: string,
-        paused: boolean,
-      ): Promise<SystemMonitorBridgeResult<boolean>>;
-      refreshSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
-      stopSystemMonitor?(subscriptionId: string): Promise<SystemMonitorBridgeResult<boolean>>;
-      onSystemMonitorSample?(callback: (sample: SystemMonitorSample) => void): () => void;
       listPlugins?(): Promise<DesktopPluginOperationResult<DesktopPluginSnapshot[]>>;
       listPluginV2Packages?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>>;
       onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
