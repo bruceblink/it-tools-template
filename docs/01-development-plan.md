@@ -82,7 +82,7 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 
 ### P0：插件开发闭环（PLUGIN-DEVEX-FOUNDATION-001）
 
-- 现有基础：`plugin:create` 可以生成源码清单、静态页面和五个自包含 SDK 声明；`plugin:validate`、`plugin:pack` 和 `plugin:keygen` 已有安全边界；`plugins/capability-demo/` 提供能力调用示例；`scripts/plugin-project.test.mjs` 已验证仓库外 TypeScript 项目。
+- 现有基础：`plugin:create` 可以生成 legacy 源码清单、静态页面和五个自包含 SDK 声明；`plugin:create:v2` 可以生成 v2 清单、最小 WASM ABI 和构建说明；`plugin:validate`、`plugin:pack` 和 `plugin:keygen` 已有安全边界；`plugins/capability-demo/` 提供能力调用示例；`scripts/plugin-project.test.mjs` 已验证仓库外 TypeScript 项目。
 - 主要缺口：真实 GitHub 源码和 Release 资产的完整安装证据仍不完整。Electron 窗口的构建、信任、授权、运行、停止和恢复流程已由 Xorg dummy display 下的 E2E 覆盖；市场详情现在可以把仓库所有者和名称带入源码构建表单；固定 commit 仍需用户核对并填写，签名密钥仍需在桌面端选择。
 - 已完成切片：`plugin:build-source` 和桌面源码构建入口固定 commit，流式下载并校验源码快照，拒绝危险 tar 条目，执行源码校验和可选 TypeScript `--noEmit`，使用仓库外 Ed25519 私钥生成并安装 `.itxs`，保存独立的 `source-snapshot` 来源摘要。流程不运行仓库脚本、不安装依赖，也不加载原始源码。
 - 下一步：补真实 GitHub Release 资产安装验收，并继续完善固定 commit 的审查提示，不绕过签名、信任和隔离边界。
@@ -100,8 +100,8 @@ macOS 插件生命周期重复测试曾在一次回滚窗口中让 `runtime-proo
 ### P2：SDK 与 API 打磨（PLUGIN-SDK-API-001）
 
 - 现有基础：宿主渲染器 API 为 `1.4.0`，四项能力可执行；五个声明文件可复制到外部项目；错误码和能力目录已有独立回归。
-- 主要缺口：SDK 目前以复制声明文件为主，交付形式、版本兼容矩阵和升级说明尚未固定；示例主要覆盖能力调用，缺少 API 不兼容、未授权、停用、恢复和工具贡献的完整模板；已声明但未执行的能力需要明确路线或暂缓承诺。
-- 下一步：确定 SDK 的版本化交付方式，整理最小 TypeScript/JavaScript 示例和错误处理模板，维护宿主 API、包格式和 SDK 声明的兼容矩阵；对新增能力先写明用途、权限、资源限制和失败处理。
+- 主要缺口：SDK 目前以复制声明文件为主，交付形式、版本兼容矩阵和升级说明尚未固定；v2 脚手架目前提供无能力的文本工具模板，缺少 API 不兼容、未授权、停用、恢复和其他结果类型的完整模板；已声明但未执行的能力需要明确路线或暂缓承诺。
+- 下一步：确定 SDK 的版本化交付方式，整理最小 TypeScript/JavaScript 示例和错误处理模板，维护宿主 API、包格式和 SDK 声明的兼容矩阵；为 v2 脚手架补充表格结果、能力申请和失败恢复示例；对新增能力先写明用途、权限、资源限制和失败处理。
 - 验收：仓库外项目无需引用内部 `src/` 即可类型检查、校验和打包；升级 API 后能明确识别兼容范围；示例覆盖成功、拒绝、超时、停用和恢复。
 
 ### P3：运行时验证与能力边界（PLUGIN-RUNTIME-VALIDATION-001）
