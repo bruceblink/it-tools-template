@@ -118,6 +118,14 @@ pnpm run plugin:pack:v2 \
 
 `--manifest` 指向不含 `runtime`、`entrypoint`、`files` 和 `signature` 的 v2 静态清单。`--wasm` 指向开发者已有的 WASM 文件；`--entrypoint` 指定它在安装包内的相对路径。当前打包命令只收录这一份 WASM 文件，不收录额外资源。输出包使用与 v1 相同的确定性未压缩 ZIP 容器和 `.itxs` 扩展名，但采用 `IT Tools Electron Plugin Package v2` 签名域。
 
+在编译和签名前，可以运行只读校验命令：
+
+```sh
+pnpm run plugin:validate:v2 --manifest ./plugin.manifest.json
+```
+
+该命令只读取并校验静态清单，输出插件 ID 和版本。它不读取私钥，不读取或执行 WASM，不创建安装包。清单不能包含 `runtime`、`entrypoint`、`files` 或 `signature`；这些字段只由 `plugin:pack:v2` 加入签名封套。
+
 打包器调用 `validateExternalPluginV2Manifest` 检查完整静态清单和 API 兼容范围，再检查入口路径、文件大小和密钥类型。它为 WASM 文件计算小写十六进制 SHA-256 并签名，但不会编译或执行 WASM。安装器在安装时会再次校验 v2 清单、可信签名者和所有文件哈希；扩展宿主在执行时再检查 WASM ABI 和模块资源。签名密钥必须存放在仓库外，输出文件已存在时命令会失败且不会覆盖。
 
 ## 4. 宿主渲染的工具模型

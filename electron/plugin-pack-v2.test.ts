@@ -22,6 +22,47 @@ afterEach(async () => {
 });
 
 describe('v2 WASM package authoring', () => {
+  it('validates a static manifest without reading signing or WASM inputs', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-validate-v2-'));
+    temporaryDirectories.push(root);
+    const sourceManifestPath = join(root, 'plugin.manifest.json');
+    await writeFile(sourceManifestPath, JSON.stringify(createSourceManifest(), null, 2));
+
+    const result = runValidator(sourceManifestPath);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Validated v2 manifest ${pluginId} 1.0.0`);
+    expect(result.stderr).toBe('');
+  });
+
+  it('rejects package envelope fields in a static manifest', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-validate-v2-invalid-'));
+    temporaryDirectories.push(root);
+    const sourceManifestPath = join(root, 'plugin.manifest.json');
+    await writeFile(sourceManifestPath, JSON.stringify({
+      ...createSourceManifest(),
+      runtime: 'wasm',
+    }));
+
+    const result = runValidator(sourceManifestPath);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('contains unsupported or missing fields');
+  });
+
+  it('lists validation and packaging commands in help output', () => {
+    const result = spawnSync(process.execPath, [
+      '--disable-warning=ExperimentalWarning',
+      '--experimental-transform-types',
+      packerPath,
+      '--help',
+    ], { encoding: 'utf8' });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain('pnpm run plugin:validate:v2 --manifest <v2-manifest.json>');
+    expect(result.stdout).toContain('pnpm run plugin:pack:v2 --manifest <v2-manifest.json>');
+  });
+
   it('signs existing manifest and WASM, then installs and executes through the v2 receiver', async () => {
     const root = await mkdtemp(join(tmpdir(), 'it-tools-plugin-pack-v2-'));
     temporaryDirectories.push(root);
@@ -201,5 +242,15 @@ function runPacker(options: {
     '--private-key', options.privateKey,
     '--key-id', options.keyId,
     '--output', options.output,
+  ], { encoding: 'utf8' });
+}
+
+function runValidator(manifestPath: string) {
+  return spawnSync(process.execPath, [
+    '--disable-warning=ExperimentalWarning',
+    '--experimental-transform-types',
+    packerPath,
+    'validate',
+    '--manifest', manifestPath,
   ], { encoding: 'utf8' });
 }

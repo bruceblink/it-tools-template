@@ -137,6 +137,12 @@ async function validateSourceManifest(value) {
   return validateExternalPluginV2Manifest(value, supportedHostApiVersion);
 }
 
+/** 只读取并校验 v2 静态清单，不读取私钥、WASM 或输出包。 */
+export async function validateExternalPluginV2SourceManifest(manifestPath) {
+  const manifest = await validateSourceManifest(await readSourceManifest(manifestPath));
+  return { pluginId: manifest.id, version: manifest.version };
+}
+
 async function loadExternalPluginV2Validator() {
   register('./typescript-extensionless-loader.mjs', import.meta.url);
   return import('../src/shared/external-plugin-v2.ts');
@@ -318,7 +324,8 @@ function assertFlags(flags, required) {
 
 function getUsage() {
   return [
-    'IT Tools signed Electron v2 WASM plugin package command',
+    'IT Tools signed Electron v2 WASM plugin commands',
+    '  pnpm run plugin:validate:v2 --manifest <v2-manifest.json>',
     '  pnpm run plugin:pack:v2 --manifest <v2-manifest.json> --wasm <plugin.wasm> --entrypoint <package-path.wasm>',
     '    --private-key <external.pem> --key-id <publisher> --output <package.itxs>',
     '',
@@ -331,11 +338,18 @@ async function runCli(argv) {
     process.stdout.write(getUsage());
     return;
   }
-  if (command !== 'pack' && !command?.startsWith('--')) {
-    throw new Error('Unknown v2 plugin package command. Run `pnpm run plugin:pack:v2 --help` for usage.');
+  if (command !== 'pack' && command !== 'validate' && !command?.startsWith('--')) {
+    throw new Error('Unknown v2 plugin command. Run `pnpm run plugin:validate:v2 --help` for usage.');
   }
 
-  const flags = parseFlags(command === 'pack' ? arguments_ : argv);
+  const commandArguments = arguments_[0] === '--' ? arguments_.slice(1) : arguments_;
+  const flags = command === 'pack' || command === 'validate' ? parseFlags(commandArguments) : parseFlags(argv);
+  if (command === 'validate') {
+    assertFlags(flags, ['manifest']);
+    const result = await validateExternalPluginV2SourceManifest(flags.manifest);
+    process.stdout.write(`Validated v2 manifest ${result.pluginId} ${result.version}: ${resolve(flags.manifest)}\n`);
+    return;
+  }
   assertFlags(flags, ['manifest', 'wasm', 'entrypoint', 'private-key', 'key-id', 'output']);
   const result = await packExternalPluginV2Package({
     manifestPath: flags.manifest,

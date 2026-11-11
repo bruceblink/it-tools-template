@@ -84,6 +84,7 @@
     "plugin:keygen": "node scripts/plugin-pack.mjs keygen",
     "plugin:pack": "node scripts/plugin-pack.mjs pack",
     "plugin:pack:v2": "node --disable-warning=ExperimentalWarning --experimental-transform-types scripts/plugin-pack-v2.mjs",
+    "plugin:validate:v2": "node --disable-warning=ExperimentalWarning --experimental-transform-types scripts/plugin-pack-v2.mjs validate",
     "plugin:build": "node scripts/plugin-build.mjs",
     "plugin:build-source": "node --disable-warning=ExperimentalWarning --experimental-transform-types scripts/plugin-source-build.mjs",
     "plugin:validate": "node scripts/plugin-pack.mjs validate",

@@ -236,6 +236,14 @@ pnpm run plugin:pack:v2 \
   --output ./artifacts/example-plugin.itxs
 ~~~
 
+Validate the static manifest before compiling or signing. This command reads only `plugin.manifest.json`; it does not read a private key, load the WASM file, execute plugin code, or write an archive:
+
+~~~sh
+pnpm run plugin:validate:v2 --manifest ./plugin.manifest.json
+~~~
+
+The command prints the validated plugin ID and version. It rejects package envelope fields such as `runtime`, `entrypoint`, `files`, and `signature`; those fields are added by `plugin:pack:v2`.
+
 The package contains the signed v2 manifest and the selected WASM file. The packer uses the host's shared v2 manifest validator, then checks the signing key, entrypoint path, and file limits. The desktop installer rechecks the manifest, signer trust, and file hashes; the extension host checks the WASM ABI when it executes the module. Run `pnpm run test:plugin-pack:v2` for a packer-to-installer-to-WASM execution check. Signing does not grant requested capabilities.
 
 For a complete C-to-WASM example, see [the WASM integer doubling plugin](plugins/wasm-double/README.md). It includes a declarative manifest, a Zig build command, and an opt-in test against the production WASM executor.
