@@ -104,6 +104,12 @@ describe('ExternalPluginV2PackageManager', () => {
       entrypointSha256: manifest.files[0]!.sha256,
     });
     await writeFile(join(packageRoot, 'helper.mjs'), 'export const value = 2;');
+    await expect(manager.listInstalled()).resolves.toEqual([expect.objectContaining({
+      pluginId,
+      version: '1.0.0',
+      status: 'invalid',
+      errorCode: 'file-hash-mismatch',
+    })]);
     await expect(manager.getInstalledExecutionContext(pluginId, '1.0.0'))
       .rejects.toMatchObject({ code: 'file-hash-mismatch' });
     await truncate(join(packageRoot, 'helper.mjs'), pluginPackageLimits.maximumAssetBytes + 1);

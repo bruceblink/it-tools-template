@@ -76,6 +76,7 @@ export class ExternalPluginV2PackageManager {
           try {
             const packageRoot = await this.getInstalledPackageRoot(pluginDirectory.name, versionDirectory.name);
             const manifest = await this.readInstalledManifest(packageRoot);
+            await verifyInstalledFiles(packageRoot, manifest);
             snapshots.push(toSnapshot(manifest));
           }
           catch (error) {
