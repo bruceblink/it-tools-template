@@ -149,15 +149,65 @@ describe('ExternalPluginV2PackageManager', () => {
     await expect(manager.getInstalledExecutionContext(pluginId, '1.0.0'))
       .rejects.toMatchObject({ code: 'resource-limit' });
   });
+
+  it('selects one active version and persists version switching and disable state', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-manager-lifecycle-'));
+    temporaryDirectories.push(root);
+    await writeInstalledPackage(root, '1.0.0');
+    await writeInstalledPackage(root, '2.0.0');
+    const manager = createManager(root);
+
+    await expect(manager.listInstalled()).resolves.toEqual([
+      expect.objectContaining({ version: '1.0.0', active: false, enabled: true }),
+      expect.objectContaining({ version: '2.0.0', active: true, enabled: true }),
+    ]);
+    await expect(manager.activate(pluginId, '1.0.0')).resolves.toMatchObject({ version: '1.0.0', active: true });
+    await expect(manager.setEnabled(pluginId, '1.0.0', false)).resolves.toMatchObject({ version: '1.0.0', active: true, enabled: false });
+
+    const reloaded = createManager(root);
+    await expect(reloaded.listInstalled()).resolves.toEqual([
+      expect.objectContaining({ version: '1.0.0', active: true, enabled: false }),
+      expect.objectContaining({ version: '2.0.0', active: false, enabled: false }),
+    ]);
+  });
+
+  it('falls back to the highest verified version when the active package is removed', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'it-tools-v2-manager-fallback-'));
+    temporaryDirectories.push(root);
+    await writeInstalledPackage(root, '1.0.0');
+    await writeInstalledPackage(root, '2.0.0');
+    const manager = createManager(root);
+
+    await expect(manager.uninstall(pluginId, '2.0.0')).resolves.toBe(true);
+    await expect(manager.listInstalled()).resolves.toEqual([
+      expect.objectContaining({ version: '1.0.0', active: true, enabled: true }),
+    ]);
+  });
 });
 
-function createManifest(): ExternalPluginV2UnsignedPackageManifest {
+function createManager(root: string): ExternalPluginV2PackageManager {
+  return new ExternalPluginV2PackageManager({
+    installRoot: root,
+    hostApiVersion: '2.0.0',
+    trustedSigningKeys,
+  });
+}
+
+async function writeInstalledPackage(root: string, version: string): Promise<void> {
+  const packageRoot = join(root, pluginId, version);
+  await mkdir(packageRoot, { recursive: true });
+  const source = createManifest(version);
+  await writeFile(join(packageRoot, 'plugin.json'), JSON.stringify(signManifest(source)));
+  await writeFile(join(packageRoot, 'extension.mjs'), 'export const activate = () => undefined;');
+}
+
+function createManifest(version = '1.0.0'): ExternalPluginV2UnsignedPackageManifest {
   const source = 'export const activate = () => undefined;';
   return {
     formatVersion: 2,
     id: pluginId,
     name: 'Manager demo',
-    version: '1.0.0',
+    version,
     apiVersion: { minInclusive: '2.0.0', maxExclusive: '3.0.0' },
     runtime: 'process',
     entrypoint: 'extension.mjs',

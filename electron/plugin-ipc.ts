@@ -19,6 +19,7 @@ import { PluginMarketplaceInstallController } from './plugin-marketplace-control
 import { createMarketplaceReleaseFetcher } from './plugin-marketplace-download';
 import { ExternalPluginV2PackageManager } from './external-plugin-v2-package-manager';
 import type { ExternalPluginV2PackageSnapshot } from './external-plugin-v2-package-manager';
+import { ExternalPluginV2LifecycleStoreError } from './external-plugin-v2-lifecycle-store';
 import { ExternalPluginV2CommandRequests } from './external-plugin-v2-command-requests';
 import { createExternalPluginV2CapabilityPolicy, ExternalPluginV2CapabilityPolicyError } from './external-plugin-v2-capability-policy';
 import { ExternalExtensionRpcError, ExternalExtensionRpcHost } from './external-extension-rpc';
@@ -169,6 +170,38 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
     }
     return v2PackageManager.installArchive(selection.filePaths[0]!);
   }));
+  ipcMain.handle('desktop:plugins:v2:activate', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    async () => {
+      const request = parsePluginVersionRequest(value);
+      assertV2PackageNotUninstalling(v2Uninstalling, request);
+      // 切换活动版本前停止同一插件的旧宿主，避免旧命令继续使用即将隐藏的工具状态。
+      const installed = await v2PackageManager.listInstalled();
+      const activeVersion = installed.find(packageInfo => packageInfo.pluginId === request.pluginId && packageInfo.active)?.version;
+      for (const version of new Set([activeVersion, request.version])) {
+        if (version === undefined) {
+          continue;
+        }
+        activeV2Commands.abortPackage(request.pluginId, version);
+        await disposeV2Host(v2Hosts, request.pluginId, version);
+      }
+      return v2PackageManager.activate(request.pluginId, request.version);
+    },
+  ));
+  ipcMain.handle('desktop:plugins:v2:enabled', (event, value: unknown) => runPluginManagementIpc(
+    event,
+    dependencies,
+    async () => {
+      const request = parsePluginEnabledRequest(value);
+      assertV2PackageNotUninstalling(v2Uninstalling, request);
+      if (!request.enabled) {
+        activeV2Commands.abortPackage(request.pluginId, request.version);
+        await disposeV2Host(v2Hosts, request.pluginId, request.version);
+      }
+      return v2PackageManager.setEnabled(request.pluginId, request.version, request.enabled);
+    },
+  ));
   ipcMain.handle('desktop:plugins:v2:execute', (event, value: unknown) => runPluginManagementIpc(event, dependencies, async () => {
     const request = parseExternalPluginV2CommandRequest(value);
     if (v2Uninstalling.has(`${request.pluginId}@${request.version}`)) {
@@ -425,6 +458,8 @@ export async function registerPluginLifecycleIpc(dependencies: PluginIpcDependen
       ipcMain.removeHandler('desktop:plugins:v2:settings:list');
       ipcMain.removeHandler('desktop:plugins:v2:settings:update');
       ipcMain.removeHandler('desktop:plugins:v2:install');
+      ipcMain.removeHandler('desktop:plugins:v2:activate');
+      ipcMain.removeHandler('desktop:plugins:v2:enabled');
       ipcMain.removeHandler('desktop:plugins:v2:execute');
       ipcMain.removeHandler('desktop:plugins:v2:cancel');
       ipcMain.removeHandler('desktop:plugins:v2:uninstall');
@@ -531,7 +566,7 @@ function getPluginOperationErrorCode(error: unknown): DesktopPluginErrorCode {
     }
     return 'data-provider-unavailable';
   }
-  if (error instanceof PluginPackageError || error instanceof PluginTrustStoreError || error instanceof PluginMarketplaceInstallError) {
+  if (error instanceof PluginPackageError || error instanceof PluginTrustStoreError || error instanceof PluginMarketplaceInstallError || error instanceof ExternalPluginV2LifecycleStoreError) {
     return error.code;
   }
   return 'operation-failed';
@@ -604,6 +639,17 @@ function parsePluginVersionRequest(value: unknown): { pluginId: string; version:
     throw new PluginIpcInputError();
   }
   return { pluginId: value.pluginId, version: value.version };
+}
+
+function parsePluginEnabledRequest(value: unknown): { pluginId: string; version: string; enabled: boolean } {
+  if (!isRecord(value)
+    || !hasExactKeys(value, ['pluginId', 'version', 'enabled'])
+    || typeof value.pluginId !== 'string'
+    || typeof value.version !== 'string'
+    || typeof value.enabled !== 'boolean') {
+    throw new PluginIpcInputError();
+  }
+  return { pluginId: value.pluginId, version: value.version, enabled: value.enabled };
 }
 
 function parseExternalPluginV2SettingsRequest(value: unknown): DesktopPluginV2SettingsRequest {

@@ -85,6 +85,8 @@ describe('external plugin v2 command bridge', () => {
       runtime: 'wasm',
       runtimeStatus: 'ready',
       status: 'installed',
+      active: true,
+      enabled: true,
       manifest: {
         formatVersion: 2,
         id: pluginId,

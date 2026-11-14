@@ -97,6 +97,8 @@ declare global {
       ): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>>;
       onPluginStateChanged?(callback: (event: DesktopPluginStateChangeEvent) => void): () => void;
       installPluginV2Package?(): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>>;
+      activatePluginV2Package?(pluginId: string, version: string): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot>>;
+      setPluginV2PackageEnabled?(pluginId: string, version: string, enabled: boolean): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot>>;
       installPluginFromMarketplace?(
         input: DesktopPluginMarketplaceInstallInput,
       ): Promise<DesktopPluginOperationResult<DesktopPluginMarketplaceInstallResult>>;

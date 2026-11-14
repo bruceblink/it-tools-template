@@ -34,6 +34,10 @@ describe('desktop plugin bridge error catalog', () => {
     expect(desktopPluginStateChangeReasons).toEqual([
       'installed',
       'uninstalled',
+      'activated',
+      'deactivated',
+      'enabled',
+      'disabled',
       'runtime-failure',
       'runtime-recovered',
     ]);

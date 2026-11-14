@@ -43,6 +43,8 @@ const v2Package: DesktopPluginV2Snapshot = {
     },
   },
   status: 'installed',
+  active: true,
+  enabled: true,
 };
 
 const v2List = vi.fn(async (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot[]>> => ({
@@ -56,6 +58,14 @@ const v2Install = vi.fn(async (): Promise<DesktopPluginOperationResult<DesktopPl
 const v2Uninstall = vi.fn(async (): Promise<DesktopPluginOperationResult<boolean>> => ({
   ok: true,
   value: true,
+}));
+const v2Activate = vi.fn(async (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot>> => ({
+  ok: true,
+  value: { ...v2Package, active: true },
+}));
+const v2SetEnabled = vi.fn(async (_pluginId: string, _version: string, enabled: boolean): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot>> => ({
+  ok: true,
+  value: { ...v2Package, enabled },
 }));
 const v2SettingsList = vi.fn(async (): Promise<DesktopPluginOperationResult<DesktopPluginV2SettingsSnapshot>> => ({
   ok: true,
@@ -89,6 +99,8 @@ const desktopBridge = {
   listPluginV2Settings: v2SettingsList,
   updatePluginV2Setting: v2SettingUpdate,
   installPluginV2Package: v2Install,
+  activatePluginV2Package: v2Activate,
+  setPluginV2PackageEnabled: v2SetEnabled,
   uninstallPluginV2Package: v2Uninstall,
 } as unknown as NonNullable<Window['itToolsDesktop']>;
 
@@ -102,8 +114,12 @@ function setDesktopBridge(bridge?: Window['itToolsDesktop']): void {
 afterEach(() => {
   Object.defineProperty(window, 'itToolsDesktop', { configurable: true, writable: true, value: previousBridge });
   v2List.mockClear();
+  v2List.mockReset();
+  v2List.mockResolvedValue({ ok: true, value: [v2Package] });
   v2Install.mockClear();
   v2Uninstall.mockClear();
+  v2Activate.mockClear();
+  v2SetEnabled.mockClear();
   v2SettingsList.mockClear();
   v2SettingUpdate.mockClear();
 });
@@ -195,6 +211,40 @@ describe('desktop plugin wording', () => {
         value: 'https://updated.example',
       });
       expect(wrapper.text()).toContain('Plugin setting saved.');
+    }
+    finally {
+      wrapper.unmount();
+    }
+  });
+
+  it('switches the active version and disables an active package through the lifecycle bridge', async () => {
+    setDesktopBridge(desktopBridge);
+    const inactive = { ...v2Package, active: false };
+    v2List.mockReset();
+    v2List
+      .mockResolvedValueOnce({ ok: true, value: [inactive] })
+      .mockResolvedValue({ ok: true, value: [{ ...v2Package, active: true, enabled: true }] });
+    const wrapper = mount(ExtensionPluginManager, {
+      global: {
+        plugins: [createI18n({ legacy: false, locale: 'en', messages: { en: {} } })],
+        stubs: ['router-link'],
+      },
+    });
+    try {
+      await flushPromises();
+      const activateButton = wrapper.findAll('button').find(button => button.text().includes('Use this version'));
+      expect(activateButton).toBeDefined();
+      await activateButton!.trigger('click');
+      await flushPromises();
+      expect(v2Activate).toHaveBeenCalledWith(v2Package.pluginId, v2Package.version);
+      expect(wrapper.text()).toContain('Active plugin version changed.');
+
+      const disableButton = wrapper.findAll('button').find(button => button.text().includes('Disable package'));
+      expect(disableButton).toBeDefined();
+      await disableButton!.trigger('click');
+      await flushPromises();
+      expect(v2SetEnabled).toHaveBeenCalledWith(v2Package.pluginId, v2Package.version, false);
+      expect(wrapper.text()).toContain('Plugin package disabled.');
     }
     finally {
       wrapper.unmount();

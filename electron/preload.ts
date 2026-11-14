@@ -106,6 +106,10 @@ contextBridge.exposeInMainWorld('itToolsDesktop', Object.freeze({
   },
   installPluginV2Package: (): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot | null>> =>
     ipcRenderer.invoke('desktop:plugins:v2:install'),
+  activatePluginV2Package: (pluginId: string, version: string): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:activate', { pluginId, version }),
+  setPluginV2PackageEnabled: (pluginId: string, version: string, enabled: boolean): Promise<DesktopPluginOperationResult<DesktopPluginV2Snapshot>> =>
+    ipcRenderer.invoke('desktop:plugins:v2:enabled', { pluginId, version, enabled }),
   installPluginFromMarketplace: (input: DesktopPluginMarketplaceInstallInput) =>
     ipcRenderer.invoke('desktop:plugins:install-from-marketplace', input),
   cancelPluginMarketplaceInstall: (requestId: string) =>

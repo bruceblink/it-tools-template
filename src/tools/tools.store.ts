@@ -95,7 +95,7 @@ async function refreshExternalPluginV2Tools(): Promise<void> {
     const execute = createExternalPluginV2CommandExecutor();
     const nextRegistry = new ExternalPluginV2Registry();
     for (const snapshot of result.value) {
-      if (snapshot.status !== 'installed') {
+      if (snapshot.status !== 'installed' || !snapshot.active || !snapshot.enabled) {
         continue;
       }
       try {

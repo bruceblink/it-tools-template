@@ -115,6 +115,10 @@ export type DesktopPluginV2RuntimeStatus = typeof desktopPluginV2RuntimeStatuses
 export const desktopPluginStateChangeReasons = Object.freeze([
   'installed',
   'uninstalled',
+  'activated',
+  'deactivated',
+  'enabled',
+  'disabled',
   'runtime-failure',
   'runtime-recovered',
 ] as const);
@@ -137,6 +141,10 @@ export interface DesktopPluginV2Snapshot {
   readonly runtime: 'process' | 'wasm';
   readonly manifest: ExternalPluginV2Manifest;
   readonly status: 'installed' | 'invalid';
+  /** 当前版本是否是插件唯一进入导航和搜索索引的活动版本。 */
+  readonly active: boolean;
+  /** 用户是否允许该版本注册到宿主并执行命令。 */
+  readonly enabled: boolean;
   readonly runtimeStatus: DesktopPluginV2RuntimeStatus;
   readonly runtimeFailureCode?: DesktopPluginV2RuntimeFailureCode;
   readonly errorCode?: string;

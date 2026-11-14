@@ -48,6 +48,6 @@ topic:it-tools-plugin archived:false fork:false
 - 仓库仍是公开、未归档、非 fork，并保留 `it-tools-plugin` topic；
 - 最新稳定 Release 恰好包含一个 `.itxs` 资产，资产大小不超过宿主包上限，下载地址属于 GitHub Release 路径；
 - 主进程重新读取 Release tag 对应的 commit SHA，限制重定向到 GitHub 下载域名，并在写入临时目录后流式核对实际大小和 SHA-256；
-- 下载资产随后交给 v2 包管理器；安装过程保留阶段、摘要和错误状态，签名者未受信任、版本重复或包清单无效时不会自动放宽规则。
+- 下载资产随后交给 v2 包管理器；安装过程保留阶段、摘要和错误状态，签名者未受信任、同一版本重复或包清单无效时不会自动放宽规则。新版本安装完成后成为活动版本，旧版本保留供回退。
 
 市场不把源码直载作为安装回退。需要开发时，请使用 v2 脚手架和 `plugin:pack:v2` 完成显式本地构建，边界见[插件市场安装流程](21-plugin-install-flow.md)。

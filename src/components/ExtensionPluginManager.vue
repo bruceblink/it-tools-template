@@ -15,6 +15,8 @@ type PluginManagerBridge = Required<Pick<NonNullable<Window['itToolsDesktop']>,
   | 'listPluginV2Settings'
   | 'updatePluginV2Setting'
   | 'installPluginV2Package'
+  | 'activatePluginV2Package'
+  | 'setPluginV2PackageEnabled'
   | 'uninstallPluginV2Package'
 >;
 
@@ -31,7 +33,7 @@ const trustStoreError = ref<string>();
 const notice = ref<string>();
 const signerForm = reactive({ keyId: '', pluginIds: '', publicKey: '' });
 const signerPreview = ref<DesktopPluginSignerSnapshot>();
-type V2PluginAction = 'install' | 'uninstall';
+type V2PluginAction = 'install' | 'uninstall' | 'activate' | 'enabled';
 const v2PluginAction = ref<{ key?: string; action: V2PluginAction }>();
 const v2SettingAction = ref<{ key: string; settingId: string }>();
 
@@ -50,6 +52,18 @@ const messages = {
     v2ExecutionPending: 'WASM tools can request runtime information, declared settings, or host OUI data with your approval for each run.',
     v2Uninstall: 'Uninstall package',
     v2UninstallInProgress: 'Uninstalling v2 package…',
+    v2Activate: 'Use this version',
+    v2ActivateInProgress: 'Switching active version…',
+    v2Enable: 'Enable package',
+    v2Disable: 'Disable package',
+    v2EnableInProgress: 'Updating package state…',
+    v2Active: 'Active version',
+    v2Inactive: 'Installed version',
+    v2Enabled: 'Enabled',
+    v2Disabled: 'Disabled',
+    v2Activated: 'Active plugin version changed.',
+    v2EnabledNotice: 'Plugin package enabled.',
+    v2DisabledNotice: 'Plugin package disabled.',
     v2Installed: 'Signed v2 package installed. Supported tools can appear in navigation and search.',
     v2Uninstalled: 'V2 package removed.',
     v2Tools: 'Declared tools',
@@ -103,6 +117,18 @@ const messages = {
     v2ExecutionPending: 'WASM 工具每次运行时可请求运行时信息、声明的设置或宿主 OUI 数据，并需要取得确认。',
     v2Uninstall: '卸载插件包',
     v2UninstallInProgress: '正在卸载 v2 插件包…',
+    v2Activate: '使用此版本',
+    v2ActivateInProgress: '正在切换活动版本…',
+    v2Enable: '启用插件包',
+    v2Disable: '停用插件包',
+    v2EnableInProgress: '正在更新插件状态…',
+    v2Active: '活动版本',
+    v2Inactive: '已安装版本',
+    v2Enabled: '已启用',
+    v2Disabled: '已停用',
+    v2Activated: '已切换活动插件版本。',
+    v2EnabledNotice: '插件包已启用。',
+    v2DisabledNotice: '插件包已停用。',
     v2Installed: '已安装签名 v2 插件包。受支持的工具可以显示在导航和搜索中。',
     v2Uninstalled: '已卸载 v2 插件包。',
     v2Tools: '声明的工具',
@@ -256,6 +282,38 @@ async function uninstallV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void>
   finally { v2PluginAction.value = undefined; isBusy.value = false; }
 }
 
+async function activateV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void> {
+  const bridge = getPluginBridge();
+  if (!bridge?.activatePluginV2Package || plugin.active) {return;}
+  v2PluginAction.value = { key: v2PackageKey(plugin), action: 'activate' };
+  isBusy.value = true;
+  pluginError.value = undefined;
+  notice.value = undefined;
+  try {
+    const result = await bridge.activatePluginV2Package(plugin.pluginId, plugin.version);
+    if (!result.ok) {pluginError.value = displayPluginError(result.error);}
+    else {notice.value = text('v2Activated'); await refresh();}
+  }
+  catch { pluginError.value = text('operationFailed'); }
+  finally { v2PluginAction.value = undefined; isBusy.value = false; }
+}
+
+async function toggleV2Plugin(plugin: DesktopPluginV2Snapshot): Promise<void> {
+  const bridge = getPluginBridge();
+  if (!bridge?.setPluginV2PackageEnabled) {return;}
+  v2PluginAction.value = { key: v2PackageKey(plugin), action: 'enabled' };
+  isBusy.value = true;
+  pluginError.value = undefined;
+  notice.value = undefined;
+  try {
+    const result = await bridge.setPluginV2PackageEnabled(plugin.pluginId, plugin.version, !plugin.enabled);
+    if (!result.ok) {pluginError.value = displayPluginError(result.error);}
+    else {notice.value = text(plugin.enabled ? 'v2DisabledNotice' : 'v2EnabledNotice'); await refresh();}
+  }
+  catch { pluginError.value = text('operationFailed'); }
+  finally { v2PluginAction.value = undefined; isBusy.value = false; }
+}
+
 /** 将用户编辑的单个设置交给主进程校验并原子保存。 */
 async function saveV2Setting(plugin: DesktopPluginV2Snapshot, setting: DesktopPluginV2SettingSnapshot): Promise<void> {
   const bridge = getPluginBridge();
@@ -363,7 +421,7 @@ onUnmounted(() => disposePluginStateChange?.());
           <n-alert type="info" :show-icon="false" mb-4>{{ text('v2ExecutionPending') }}</n-alert>
           <div class="plugin-package-list">
             <n-card v-for="plugin in v2Packages" :key="v2PackageKey(plugin)" :title="plugin.name" class="plugin-package-card" :data-test-id="`plugin-v2-package-${plugin.pluginId}-${plugin.version}`">
-              <div class="plugin-package-meta"><n-text>{{ plugin.pluginId }} · {{ plugin.version }}</n-text><n-tag :type="plugin.status === 'installed' ? 'success' : 'error'">{{ plugin.status === 'installed' ? text('v2StatusInstalled') : text('v2Invalid') }}</n-tag></div>
+              <div class="plugin-package-meta"><n-text>{{ plugin.pluginId }} · {{ plugin.version }}</n-text><div class="plugin-package-tags"><n-tag :type="plugin.status === 'installed' ? 'success' : 'error'">{{ plugin.status === 'installed' ? text('v2StatusInstalled') : text('v2Invalid') }}</n-tag><n-tag v-if="plugin.active" type="info">{{ text('v2Active') }}</n-tag><n-tag v-else type="default">{{ text('v2Inactive') }}</n-tag><n-tag :type="plugin.enabled ? 'success' : 'warning'">{{ plugin.enabled ? text('v2Enabled') : text('v2Disabled') }}</n-tag></div></div>
               <div class="plugin-diagnostics" :aria-label="text('diagnostics')"><span>{{ text('packageId') }}: <code>{{ plugin.pluginId }}</code></span><span>{{ text('packageVersion') }}: <code>{{ plugin.version }}</code></span><span>{{ text('v2Runtime') }}: <code>{{ plugin.runtime }}</code></span><span v-if="plugin.errorCode" class="plugin-error-code">{{ text('errorCode') }}: <code>{{ plugin.errorCode }}</code></span></div>
               <div v-if="plugin.manifest.requestedCapabilities.length > 0" class="plugin-capability-list">
                 <n-text strong>{{ text('v2Capabilities') }}</n-text>
@@ -383,7 +441,7 @@ onUnmounted(() => disposePluginStateChange?.());
                   </div>
                 </div>
               </div>
-              <div class="plugin-package-actions"><n-button quaternary :disabled="isBusy" :loading="isV2PluginAction(plugin, 'uninstall')" @click="uninstallV2Plugin(plugin)">{{ isV2PluginAction(plugin, 'uninstall') ? text('v2UninstallInProgress') : text('v2Uninstall') }}</n-button></div>
+              <div class="plugin-package-actions"><div class="plugin-package-lifecycle-actions"><n-button v-if="!plugin.active" quaternary :disabled="isBusy || plugin.status !== 'installed'" :loading="isV2PluginAction(plugin, 'activate')" @click="activateV2Plugin(plugin)">{{ isV2PluginAction(plugin, 'activate') ? text('v2ActivateInProgress') : text('v2Activate') }}</n-button><n-button v-if="plugin.active" quaternary :disabled="isBusy || plugin.status !== 'installed'" :loading="isV2PluginAction(plugin, 'enabled')" @click="toggleV2Plugin(plugin)">{{ isV2PluginAction(plugin, 'enabled') ? text('v2EnableInProgress') : plugin.enabled ? text('v2Disable') : text('v2Enable') }}</n-button></div><n-button quaternary :disabled="isBusy" :loading="isV2PluginAction(plugin, 'uninstall')" @click="uninstallV2Plugin(plugin)">{{ isV2PluginAction(plugin, 'uninstall') ? text('v2UninstallInProgress') : text('v2Uninstall') }}</n-button></div>
             </n-card>
           </div>
         </n-card>
@@ -407,6 +465,7 @@ onUnmounted(() => disposePluginStateChange?.());
 <style scoped>
 .electron-plugin-manager { display: grid; gap: 16px; margin-top: 32px; }
 .plugin-package-meta, .plugin-package-actions, .trusted-signer-row, .signer-preview { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.plugin-package-tags, .plugin-package-lifecycle-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .plugin-section-heading { display: grid; gap: 16px; min-width: 0; }
 .plugin-section-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .v2-plugin-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }

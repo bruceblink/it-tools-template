@@ -155,7 +155,7 @@ discover -> validate -> register -> activate -> ready
                                       |
                          timeout / crash / protocol error
                                       v
-                                  disable -> diagnose -> restart
+                         switch-version / disable -> diagnose -> restart
 ```
 
 1. `discover` 扫描插件安装目录和市场来源记录，不执行插件代码。
@@ -165,7 +165,7 @@ discover -> validate -> register -> activate -> ready
 5. `ready` 后允许执行已批准的命令和数据提供者。
 6. 超时、崩溃、协议错误和资源超限会记录诊断、清理 RPC、撤销能力并标记插件不可用。一个插件失败不能阻塞内置工具或其他插件。
 
-v2 包的安装状态与运行状态分开管理。包仍为 `installed` 时，宿主会在内存中记录 `runtimeStatus`（`ready` 或 `unavailable`）和可重试的 `runtimeFailureCode`（`transport-error`、`extension-failed`、`timeout` 或 `protocol-error`）。运行失败不会删除工具导航或命令搜索索引；工作台显示插件 ID、版本、稳定错误码和 `Retry` 按钮。命令成功后清除同一包的故障状态。用户取消、权限拒绝和 `invalid-request` 不会标记插件不可用。
+v2 包的安装状态、活动版本、启用状态和运行状态分开管理。包仍为 `installed` 时，宿主会在内存中记录 `runtimeStatus`（`ready` 或 `unavailable`）和可重试的 `runtimeFailureCode`（`transport-error`、`extension-failed`、`timeout` 或 `protocol-error`）。同一插件可以保留多个已验签版本，但只有持久化的 `activeVersion` 且 `enabled` 的版本会进入导航和命令搜索。安装新版本会先完整暂存和校验，再切换活动版本；旧版本保留，用户可以切回经过校验的旧版本。停用只撤销当前版本的索引和执行入口，不删除安装文件或设置。运行失败不会删除工具导航或命令搜索索引；工作台显示插件 ID、版本、稳定错误码和 `Retry` 按钮。命令成功后清除同一包的故障状态。用户取消、权限拒绝和 `invalid-request` 不会标记插件不可用。
 
 工具路由统一指向宿主 `ToolRoutePage` 和 `PluginToolWorkbench`。插件停用或卸载后，工具导航、收藏和命令搜索都删除对应贡献；旧路由显示明确的不可用状态，不打开残留页面。
 
@@ -224,11 +224,11 @@ WASM 执行器已经接入独立扩展宿主，支持纯计算命令和经用户
 
 ### 阶段三：权限和设置隔离
 
-接入能力代理、插件专属设置和诊断记录。验证未声明、未支持和未批准能力全部被拒绝；停用、卸载、重启和版本切换清理活动请求与授权。
+接入能力代理、插件专属设置和诊断记录。验证未声明、未支持和未批准能力全部被拒绝；停用、卸载、重启和版本切换清理活动请求与授权。活动版本和启用状态由宿主持久化，切换失败保留旧版本。
 
 ### 阶段四：WASM 计算插件
 
-为纯计算、解析、转换和校验提供不导入 WASI 的 WASM 运行时。已验证输入输出边界、线性内存上限、超时、签名和安装后篡改；继续验证升级、回滚、禁用及目标平台资源控制。
+为纯计算、解析、转换和校验提供不导入 WASI 的 WASM 运行时。已验证输入输出边界、线性内存上限、超时、签名、安装后篡改、版本切换、回退和停用状态；继续验证目标平台资源控制和真实窗口操作。
 
 每个阶段都使用独立提交和对应回归。回退只撤销该阶段的 v2 适配器、协议和测试，不删除用户安装数据或设置。
 
